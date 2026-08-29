@@ -90,9 +90,10 @@ if (stId && !allDay) {
     const f = rec.fields || {};
     const name = String(f['Room Name'] || '').trim();
     if (!name) continue;
-    // Session Types is the live mapping. Session Types 2 is stale - it lists Studio 4
-    // for Post Mixing, which the studio does not run there.
-    const links = [].concat(f['Session Types'] || []);
+    // Session Types = the type's Priority rooms; Session Types 2 = its Last Resort rooms.
+    // Both are legitimate to book. Preferring Priority is a matter for the summary, not
+    // for this guard - it only blocks rooms the type is not run in at all.
+    const links = [].concat(f['Session Types'] || [], f['Session Types 2'] || []);
     if (links.length && links.indexOf(stId) === -1) unsuitable.push(name);
   }
   if (unsuitable.length) {
