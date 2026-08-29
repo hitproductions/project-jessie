@@ -90,7 +90,9 @@ if (stId && !allDay) {
     const f = rec.fields || {};
     const name = String(f['Room Name'] || '').trim();
     if (!name) continue;
-    const links = [].concat(f['Session Types 2'] || [], f['Session Types'] || []);
+    // Session Types is the live mapping. Session Types 2 is stale - it lists Studio 4
+    // for Post Mixing, which the studio does not run there.
+    const links = [].concat(f['Session Types'] || []);
     if (links.length && links.indexOf(stId) === -1) unsuitable.push(name);
   }
   if (unsuitable.length) {
