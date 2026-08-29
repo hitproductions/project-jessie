@@ -216,6 +216,13 @@ sub-workflow's `Check Conflicts` node.
 
 ## 8. Unresolved — the confirmation gate
 
+> **Amended 2026-08-30, after reading execution 2048.** The diagnosis below is wrong. The
+> v27–v29 runs died on `Duplicate key 'Rooms' found with different description or type` in
+> the `Create Event` tool — the agent node threw before the model ran, on every message.
+> `Gate Context` worked correctly (6 items in, 1 out, no error). The gate was never tested.
+> v36 no longer has the duplicate. Full detail in CLAUDE.md, "What the logs settled".
+> The rest of this section is kept as written, for the design and the alternative.
+
 **The problem:** Jessie books without presenting a summary and waiting. It has been given the rule in the
 system prompt *and* in the Create Event tool description, and ignores both. This is the largest remaining
 hole and it is not fixable by prompting at this model size.

@@ -42,12 +42,53 @@ source of truth for what is running.
    Tool node with seven `$fromAI` inputs, plus prompt surgery to delete the conflict-check
    and post-create sections the sub-workflow now owns. Disable the old `Create Event`
    rather than deleting it.
-2. **Pull an execution for the confirmation-gate problem** — HANDOFF.md §8. Three blind
-   fixes (v27–v29) were reverted; the next move is `./scripts/n8n execs` then
-   `./scripts/n8n exec <id> --errors` on a v28 or v29 run. Do not attempt a fourth blind fix.
-3. **Check the Slack Trigger's 24-hour execution count** — it is on `any_event` with
-   `watchWorkspace: true`. Scoping it wrong makes Jessie deaf, so watch executions while changing it.
-4. Everything else is in HANDOFF.md §9, including three decisions that are Tara's to make.
+2. **Rebuild the confirmation gate** — HANDOFF.md §8, and read "What the logs settled"
+   below first. The gate itself was never the problem and was never actually tested.
+3. Everything else is in HANDOFF.md §9, including three decisions that are Tara's to make.
+   The Slack Trigger scoping (§9.4) is lower priority than the handoff implies — see below.
+
+## What the logs settled — 2026-08-30
+
+First reading of real execution data, from execution `2048` (the v28 run) and `2045`/`2046`
+(v27). HANDOFF.md §8 predates this and is wrong on the cause; §8 carries a pointer here.
+
+**The v27–v29 failures were a duplicate `$fromAI` key, not the gate.**
+
+```
+Jessie AI Agent: 1 item(s) ERROR
+    message: Duplicate key 'Rooms' found with different description or type
+    from   : Create Event
+```
+
+`Create Event` called `$fromAI('Rooms', …)` twice with two different descriptions. n8n builds
+the tool schema before the model is called, so the agent node threw on every message
+regardless of content, returned nothing, and Slack rejected the empty text as `no_text`.
+
+Consequences for the plan:
+
+- `Gate Context` worked. Execution 2048 shows 6 items in, 1 item out, no error — v28's
+  collapse fix did its job. The gate design is **untested, not disproven**. A fourth attempt
+  is worth making.
+- v29's "the fallback fires on every message" was the symptom of the same error, not
+  evidence against a retry loop. There was never a retry loop.
+- v27 had two independent faults: the fan-out (`Get Recent Messages: 6 → agent: 6 items`)
+  *and* the duplicate key. Fixing the first in v28 only exposed the second.
+- v36 has the duplicate gone and the last eight live runs show no agent error.
+
+**Landmine.** v36's `Search Events for Deletion` still calls `$fromAI('booking_date', …)`
+twice. It is legal only because the two copies are character-identical. Edit one and not the
+other and the same failure comes back. Check every tool node's `$fromAI` keys for collisions
+before and after any change that adds tool inputs — Book Session adds seven.
+
+**Execution volume is about 107/day**, not thousands: 250 runs from Aug 27 09:24Z to Aug 29
+17:21Z, 245 success, 4 error, 1 canceled. §9.4 is tidying, not an emergency, and scoping the
+trigger wrong makes Jessie deaf — so it can wait until after launch.
+
+**The repo matches the server.** Checked 2026-08-30 with `./scripts/n8n pull`. The only
+differences are n8n stripping values equal to node defaults on save
+(`contextWindowLength: 5`, `inputSource`, an empty `ai_tool` array on the dead
+`Search records in Airtable` node). `Jessie — Book Session` is `active: true` on the server,
+which for a sub-workflow means callable, not wired.
 
 ## Reference data
 
