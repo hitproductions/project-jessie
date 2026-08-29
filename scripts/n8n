@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Thin wrapper over the n8n public API. Reads credentials from ../.env
+#
+#   ./scripts/n8n list                     list workflows (id, name, active)
+#   ./scripts/n8n get <id>                 print one workflow as JSON
+#   ./scripts/n8n pull <id> <file>         save a workflow to a file
+#   ./scripts/n8n push <id> <file>         upload a file over a workflow (PUT)
+#   ./scripts/n8n execs [id] [limit]       recent executions, newest first
+#   ./scripts/n8n exec <execId>            one execution in full, with data
+#   ./scripts/n8n exec <execId> --errors   just the nodes that errored
+#
+# push sends only name/nodes/connections/settings — the API rejects the rest.
+set -euo pipefail
+
+here="$(cd "$(dirname "$0")/.." && pwd)"
+[ -f "$here/.env" ] || { echo "No $here/.env — copy .env.example and add your key." >&2; exit 1; }
+set -a; . "$here/.env"; set +a
+: "${N8N_BASE_URL:?N8N_BASE_URL missing from .env}"
+: "${N8N_API_KEY:?N8N_API_KEY missing from .env}"
+
+api() { curl -sS -H "X-N8N-API-KEY: $N8N_API_KEY" -H 'Accept: application/json' "$@"; }
+MAIN_ID="uVVYVB2M7kxpLleI"   # Project Jessie
+SUB_ID="EUG3sGXkfsJSYIMz"    # Jessie — Book Session
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  list)
+    api "$N8N_BASE_URL/api/v1/workflows?limit=100" | python3 -c '
+import json,sys
+for w in json.load(sys.stdin).get("data", []):
+    print(f"{w[\"id\"]:20} {\"active\" if w.get(\"active\") else \"      \"}  {w[\"name\"]}")'
+    ;;
+  get)
+    api "$N8N_BASE_URL/api/v1/workflows/${1:?workflow id}" | python3 -m json.tool
+    ;;
+  pull)
+    id="${1:?workflow id}"; out="${2:?output file}"
+    api "$N8N_BASE_URL/api/v1/workflows/$id" | python3 -m json.tool > "$out"
+    echo "saved $out"
+    ;;
+  push)
+    id="${1:?workflow id}"; src="${2:?source file}"
+    body="$(python3 -c '
+import json,sys
+w = json.load(open(sys.argv[1]))
+json.dump({k: w[k] for k in ("name","nodes","connections","settings") if k in w}, sys.stdout)' "$src")"
+    printf "About to PUT %s over workflow %s. Type yes to continue: " "$src" "$id"
+    read -r ok; [ "$ok" = "yes" ] || { echo "aborted"; exit 1; }
+    api -X PUT -H 'Content-Type: application/json' -d "$body" \
+      "$N8N_BASE_URL/api/v1/workflows/$id" | python3 -c '
+import json,sys
+w=json.load(sys.stdin); print("updated:", w.get("name"), w.get("updatedAt", ""))'
+    ;;
+  execs)
+    id="${1:-$MAIN_ID}"; limit="${2:-20}"
+    api "$N8N_BASE_URL/api/v1/executions?workflowId=$id&limit=$limit" | python3 -c '
+import json,sys
+for e in json.load(sys.stdin).get("data", []):
+    print(f"{e[\"id\"]:>8}  {e.get(\"status\",\"?\"):10} {e.get(\"startedAt\",\"\")}  {e.get(\"mode\",\"\")}")'
+    ;;
+  exec)
+    eid="${1:?execution id}"; mode="${2:-}"
+    raw="$(api "$N8N_BASE_URL/api/v1/executions/$eid?includeData=true")"
+    if [ "$mode" = "--errors" ]; then
+      printf '%s' "$raw" | python3 -c '
+import json,sys
+e = json.load(sys.stdin)
+print("status:", e.get("status"), "| started:", e.get("startedAt"))
+run = (e.get("data") or {}).get("resultData") or {}
+if run.get("error"): print("workflow error:", json.dumps(run["error"])[:2000])
+for name, runs in (run.get("runData") or {}).items():
+    for r in runs:
+        items = ((r.get("data") or {}).get("main") or [[]])[0]
+        print(f"{name}: {len(items)} item(s)" + (" ERROR" if r.get("error") else ""))
+        if r.get("error"): print("   ", json.dumps(r["error"])[:1500])'
+    else
+      printf '%s' "$raw" | python3 -m json.tool
+    fi
+    ;;
+  ids) echo "main $MAIN_ID"; echo "sub  $SUB_ID" ;;
+  *) sed -n '2,17p' "$0" ;;
+esac
