@@ -1,0 +1,267 @@
+{
+  "name": "ZZ probe - Gemini OpenAI compat (returns error bodies)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bb000000-0000-4000-8000-manualtrigg1",
+      "name": "Run"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"model\": \"gemini-3.6-flash\", \"messages\": [{\"role\": \"user\", \"content\": \"Say OK.\"}]}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        -180
+      ],
+      "id": "bb000000-0000-4000-8000-probe1bare01",
+      "name": "1 bare call",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "openAiApi": {
+          "id": "Slp7rq9KHeWKrheX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"model\": \"gemini-3.6-flash\", \"messages\": [{\"role\": \"user\", \"content\": \"Say OK.\"}], \"temperature\": 0.2}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        -60
+      ],
+      "id": "bb000000-0000-4000-8000-probe2temp01",
+      "name": "2 with temperature",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "openAiApi": {
+          "id": "Slp7rq9KHeWKrheX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"model\": \"gemini-3.6-flash\", \"messages\": [{\"role\": \"user\", \"content\": \"Say OK.\"}], \"temperature\": 0.2, \"frequency_penalty\": 0, \"presence_penalty\": 0}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        60
+      ],
+      "id": "bb000000-0000-4000-8000-probe3pens01",
+      "name": "3 with penalties",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "openAiApi": {
+          "id": "Slp7rq9KHeWKrheX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"model\": \"gemini-3.6-flash\", \"messages\": [{\"role\": \"user\", \"content\": \"Say OK.\"}], \"tools\": [{\"type\": \"function\", \"function\": {\"name\": \"session_types\", \"description\": \"Look up a session type.\", \"parameters\": {\"type\": \"object\", \"properties\": {\"type\": {\"type\": \"string\"}}, \"required\": [\"type\"]}}}]}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        180
+      ],
+      "id": "bb000000-0000-4000-8000-probe4tools1",
+      "name": "4 with tools",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "openAiApi": {
+          "id": "Slp7rq9KHeWKrheX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"model\": \"gemini-3.6-flash\", \"messages\": [{\"role\": \"user\", \"content\": \"Say OK.\"}], \"reasoning_effort\": \"low\"}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        300
+      ],
+      "id": "bb000000-0000-4000-8000-probe5reason",
+      "name": "5 with reasoning_effort",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "openAiApi": {
+          "id": "Slp7rq9KHeWKrheX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"model\": \"models/gemini-3.6-flash\", \"messages\": [{\"role\": \"user\", \"content\": \"Say OK.\"}]}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        420
+      ],
+      "id": "bb000000-0000-4000-8000-probe6prefix",
+      "name": "6 models/ prefix",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "openAiApi": {
+          "id": "Slp7rq9KHeWKrheX",
+          "name": "OpenAI account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Run": {
+      "main": [
+        [
+          {
+            "node": "1 bare call",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "2 with temperature",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "3 with penalties",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "4 with tools",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "5 with reasoning_effort",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "6 models/ prefix",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

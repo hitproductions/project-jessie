@@ -48,6 +48,21 @@ const ROOMS = {
   'Lobby': 'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com'
 };
 
+// --- required fields ----------------------------------------------------
+// $fromAI inputs carry defaults so a partial tool call reaches this node instead
+// of failing n8n's schema validation, which killed the whole turn and dropped the
+// conversation into the error branch. Missing pieces are answered, not crashed.
+const missing = [];
+if (!String(REQ.summary || '').trim())   missing.push('a title');
+if (!String(REQ.start_iso || '').trim()) missing.push('a start time');
+if (!String(REQ.end_iso || '').trim())   missing.push('an end time');
+if (!String(REQ.rooms || '').trim())     missing.push('a room');
+if (missing.length) {
+  return [{ json: { verdict:'REJECTED', reason:'MISSING_DETAILS', missing,
+    human:'Nothing was booked - the booking is still missing ' + missing.join(', ')
+        + '. Ask the requester for what is missing, then present the summary again.' } }];
+}
+
 // --- confirmation gate -------------------------------------------------
 // `confirmed` is computed by Gate Context in the calling workflow from real
 // Slack history: the last thing Jessie said must be a summary ending in the

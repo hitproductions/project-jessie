@@ -1,0 +1,177 @@
+{
+  "name": "ZZ test - Gemini via OpenAI-compatible endpoint",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "aa000000-0000-4000-8000-chattrigger1",
+      "name": "Chat",
+      "webhookId": "9c1f1c4e-0000-4000-8000-modelswaptest"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a test harness. You must never answer from your own knowledge.\n- Any question about a session type: call Session Types first and quote Min Duration (mins), Max Duration (mins) and Room Requirements exactly as returned.\n- Any request to book: call Book Session. Relay its `human` field verbatim. Do not rephrase it, do not retry, do not apologise for it.\nIf you answer either without calling the tool, the test has failed.",
+          "maxIterations": 6
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        240,
+        0
+      ],
+      "id": "aa000000-0000-4000-8000-testagent001",
+      "name": "Test Agent"
+    },
+    {
+      "parameters": {
+        "model": "REPLACE-WITH-MODEL-NAME",
+        "options": {
+          "temperature": 0.2,
+          "reasoningEffort": "low"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        140,
+        220
+      ],
+      "id": "aa000000-0000-4000-8000-geminioaicom",
+      "name": "Gemini via OpenAI API"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblxEvRNPneUhQxUv",
+          "mode": "list",
+          "cachedResultName": "Session Types",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tblxEvRNPneUhQxUv"
+        },
+        "filterByFormula": "={{ $fromAI('session_type_filter', 'Airtable formula to find the matching Session Type record. Match on {Type} using the EXACT value as it appears in the table - one of: Band Recording, Celebrity Recording, Event, Localization Dubbing, Localization Editing, Localization Mixing, Meeting, Music Mixing, Music Vox Recording, Post Mixing, QC, VO Recording. Do not abbreviate or paraphrase the value (e.g. use \"Localization Dubbing\", not \"Loc Dubbing\"). If the requester described a need rather than naming a type, match on {Room Requirements} or {Engineer Role Required} instead.', 'string') }}",
+        "options": {},
+        "descriptionType": "manual",
+        "toolDescription": "Look up a session type to get its Min Duration, Max Duration, Room Requirements and Engineer Role Required. Call this once the requester has named the kind of session. The Engineer Role Required field is also what determines which department the booking belongs to. It also carries Priority and Last Resort room lists, but they return record ids - use Rooms and Studios to turn a session type into room names."
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        360,
+        220
+      ],
+      "id": "aa000000-0000-4000-8000-sessiontypes",
+      "name": "Session Types",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Create a booking. In this test harness it always refuses, because confirmed is hard-wired to false - that is expected. Relay the human field verbatim.",
+        "workflowId": {
+          "__rl": true,
+          "value": "EUG3sGXkfsJSYIMz",
+          "mode": "list",
+          "cachedResultName": "Jessie — Book Session"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "summary": "={{ $fromAI('summary', 'Calendar title.', 'string') }}",
+            "start_iso": "={{ $fromAI('start', 'ISO 8601 start with +08:00.', 'string') }}",
+            "end_iso": "={{ $fromAI('end', 'ISO 8601 end with +08:00.', 'string') }}",
+            "rooms": "={{ $fromAI('rooms', 'Exact room name.', 'string') }}",
+            "description": "={{ $fromAI('description', 'Engineer only.', 'string') }}",
+            "all_day": "false",
+            "exclude_event_id": "",
+            "confirmed": "false",
+            "session_type": "={{ $fromAI('session_type', 'Session type exactly as in Airtable.', 'string') }}",
+            "duration_override": "false",
+            "client": "={{ $fromAI('client', 'Client name.', 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        580,
+        220
+      ],
+      "id": "aa000000-0000-4000-8000-booksessiont",
+      "name": "Book Session"
+    }
+  ],
+  "connections": {
+    "Chat": {
+      "main": [
+        [
+          {
+            "node": "Test Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini via OpenAI API": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Test Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session Types": {
+      "ai_tool": [
+        [
+          {
+            "node": "Test Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book Session": {
+      "ai_tool": [
+        [
+          {
+            "node": "Test Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

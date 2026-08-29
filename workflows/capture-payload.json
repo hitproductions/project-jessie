@@ -1,0 +1,103 @@
+{
+  "name": "ZZ capture - what n8n sends to the model",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gemini-capture",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cc000000-0000-4000-8000-capturehook1",
+      "name": "Capture Hook",
+      "webhookId": "7a2b9c10-0000-4000-8000-geminicapture"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Captures exactly what n8n's OpenAI node sends, then answers with a minimal\n// valid chat-completion so the agent does not error while we look.\nconst body = $json.body || {};\nconst store = $getWorkflowStaticData('global');\nstore.last = { at: new Date().toISOString(), keys: Object.keys(body).sort(), body: body };\nreturn [{ json: { captured_keys: Object.keys(body).sort(), body: body } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "cc000000-0000-4000-8000-capturecode1",
+      "name": "Capture"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  id: 'chatcmpl-capture', object: 'chat.completion', created: 0,\n  model: ($('Capture').first().json.body || {}).model || 'capture',\n  choices: [{ index: 0, finish_reason: 'stop',\n              message: { role: 'assistant', content: 'captured' } }],\n  usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "cc000000-0000-4000-8000-fakeresponse",
+      "name": "Fake Completion"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        0
+      ],
+      "id": "cc000000-0000-4000-8000-respondhook1",
+      "name": "Respond"
+    }
+  ],
+  "connections": {
+    "Capture Hook": {
+      "main": [
+        [
+          {
+            "node": "Capture",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capture": {
+      "main": [
+        [
+          {
+            "node": "Fake Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fake Completion": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
