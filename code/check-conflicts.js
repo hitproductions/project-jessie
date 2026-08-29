@@ -74,6 +74,32 @@ if (!allDay && !override && (Number.isFinite(minD) || Number.isFinite(maxD))) {
   }
 }
 
+// --- room suitability --------------------------------------------------
+// Session Types.Room Requirements names a capability ("Stereo Mixing"), and
+// Rooms & Studios.Room Type is the array of capabilities a room actually has.
+// Silent when either side is missing - a room the table does not know about is
+// caught by UNKNOWN_ROOM below, and a missing requirement is not a reason to block.
+const requirement = String(ST['Room Requirements'] || '').trim();
+if (requirement && !allDay) {
+  let roomRecs = [];
+  try { roomRecs = $('Get Rooms').all().map(i => ((i && i.json) || {}).fields || {}); } catch (e) { roomRecs = []; }
+  const unsuitable = [];
+  for (const rec of roomRecs) {
+    const name = String(rec['Room Name'] || '').trim();
+    if (!name) continue;
+    const types = [].concat(rec['Room Type'] || []).map(t => String(t).trim().toLowerCase());
+    if (types.length && types.indexOf(requirement.toLowerCase()) === -1) {
+      unsuitable.push({ room: name, has: rec['Room Type'] });
+    }
+  }
+  if (unsuitable.length) {
+    const names = unsuitable.map(u => u.room).join(', ');
+    return [{ json: { verdict:'REJECTED', reason:'ROOM_UNSUITABLE', unsuitable, requirement,
+      human: 'Nothing was booked. ' + (ST['Type'] || 'This session type') + ' needs a room that does '
+           + requirement + ', and ' + names + ' does not. Tell the requester and offer a room that does.' } }];
+  }
+}
+
 const wantedNames = String(REQ.rooms || '').split(',').map(r => r.trim()).filter(r => r.length);
 if (!wantedNames.length) {
   return [{ json: { verdict:'REJECTED', reason:'NO_ROOM', human:'No room was given, so nothing was booked.' } }];
