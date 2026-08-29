@@ -75,28 +75,30 @@ if (!allDay && !override && (Number.isFinite(minD) || Number.isFinite(maxD))) {
 }
 
 // --- room suitability --------------------------------------------------
-// Session Types.Room Requirements names a capability ("Stereo Mixing"), and
-// Rooms & Studios.Room Type is the array of capabilities a room actually has.
-// Silent when either side is missing - a room the table does not know about is
-// caught by UNKNOWN_ROOM below, and a missing requirement is not a reason to block.
-const requirement = String(ST['Room Requirements'] || '').trim();
-if (requirement && !allDay) {
+// Rooms & Studios links each room to the session types it serves (Session
+// Types 2). That link is the authority, NOT Room Type: Studio 1's Room Type
+// lists "Stereo Mixing" but the studio does not use it for Post Mixing, and
+// only Studios 4, 5 and 6 are linked to Post Mixing.
+// Silent when the session type was not supplied or a room carries no links.
+const stId = (function(){ try { return $('Get Session Type').first().json.id || ''; }
+                          catch (e) { return ''; } })();
+if (stId && !allDay) {
   let roomRecs = [];
-  try { roomRecs = $('Get Rooms').all().map(i => ((i && i.json) || {}).fields || {}); } catch (e) { roomRecs = []; }
+  try { roomRecs = $('Get Rooms').all().map(i => (i && i.json) || {}); } catch (e) { roomRecs = []; }
   const unsuitable = [];
   for (const rec of roomRecs) {
-    const name = String(rec['Room Name'] || '').trim();
+    const f = rec.fields || {};
+    const name = String(f['Room Name'] || '').trim();
     if (!name) continue;
-    const types = [].concat(rec['Room Type'] || []).map(t => String(t).trim().toLowerCase());
-    if (types.length && types.indexOf(requirement.toLowerCase()) === -1) {
-      unsuitable.push({ room: name, has: rec['Room Type'] });
-    }
+    const links = [].concat(f['Session Types 2'] || [], f['Session Types'] || []);
+    if (links.length && links.indexOf(stId) === -1) unsuitable.push(name);
   }
   if (unsuitable.length) {
-    const names = unsuitable.map(u => u.room).join(', ');
-    return [{ json: { verdict:'REJECTED', reason:'ROOM_UNSUITABLE', unsuitable, requirement,
-      human: 'Nothing was booked. ' + (ST['Type'] || 'This session type') + ' needs a room that does '
-           + requirement + ', and ' + names + ' does not. Tell the requester and offer a room that does.' } }];
+    return [{ json: { verdict:'REJECTED', reason:'ROOM_UNSUITABLE', unsuitable,
+      session_type: ST['Type'] || null,
+      human: 'Nothing was booked. ' + (ST['Type'] || 'That session type') + ' is not run in '
+           + unsuitable.join(', ') + '. Ask Rooms and Studios which rooms are set up for '
+           + (ST['Type'] || 'it') + ' and offer those instead.' } }];
   }
 }
 
