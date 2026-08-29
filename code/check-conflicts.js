@@ -30,6 +30,23 @@ const ROOMS = {
   'Lobby': 'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com'
 };
 
+// --- confirmation gate -------------------------------------------------
+// `confirmed` is computed by Gate Context in the calling workflow from real
+// Slack history: the last thing Jessie said must be a summary ending in the
+// marker line, and the requester must have replied after it. Send Reply runs
+// after the agent, so a summary written in THIS turn is not in Slack yet and
+// cannot satisfy this. The model never supplies this value.
+const confirmed = REQ.confirmed === true || String(REQ.confirmed).toLowerCase() === 'true';
+const roomList = String(REQ.rooms || '').split(',').map(r => r.trim()).filter(r => r.length);
+const mBoothOnly = roomList.length > 0 && roomList.every(r => /^M[1-8]$/i.test(r));
+if (!confirmed && !mBoothOnly) {
+  return [{ json: { verdict:'REJECTED', reason:'NOT_CONFIRMED',
+    human:'Nothing was booked, because the requester has not approved this booking yet. '
+        + 'Present the complete booking summary now, end it with the line "Confirm to book.", '
+        + 'and stop. Book it only after they reply approving it. Do not call this tool again '
+        + 'in this response.' } }];
+}
+
 const wantedNames = String(REQ.rooms || '').split(',').map(r => r.trim()).filter(r => r.length);
 if (!wantedNames.length) {
   return [{ json: { verdict:'REJECTED', reason:'NO_ROOM', human:'No room was given, so nothing was booked.' } }];
