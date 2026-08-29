@@ -118,7 +118,11 @@ const stF = stRec.fields || {};
 const priorityIds = [].concat(stF['Priority'] || []);
 const lastIds     = [].concat(stF['Last Resort'] || []);
 
-if ((priorityIds.length || lastIds.length) && !allDay) {
+const roomOverride = REQ.room_override === true || String(REQ.room_override).toLowerCase() === 'true';
+// The ranking is a recommendation, not a rule: the studio does run sessions in
+// non-standard rooms when it has to. Refuse once so the requester is told, then
+// book it if they say to go ahead - the same shape as the duration limits.
+if ((priorityIds.length || lastIds.length) && !allDay && !roomOverride) {
   let allRooms = [];
   try { allRooms = $('Get Rooms').all().map(i => (i && i.json) || {}); } catch (e) { allRooms = []; }
   const nameOf = {};
