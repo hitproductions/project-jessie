@@ -90,6 +90,13 @@ differences are n8n stripping values equal to node defaults on save
 `Search records in Airtable` node). `Jessie — Book Session` is `active: true` on the server,
 which for a sub-workflow means callable, not wired.
 
+## Waiting on other people
+
+[PENDING.md](PENDING.md) — Airtable data problems for Tel, Slack scopes and n8n node versions for
+Howard. Each entry says how it was found and what it breaks. Check it before re-deriving anything
+about room capabilities: several fields in Rooms & Studios contradict each other, and which one
+Jessie trusts is a decision that has already been made.
+
 ## Reference data
 
 Verified against Airtable on 2026-08-30. Don't re-derive it; read it out of Airtable if
