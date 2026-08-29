@@ -47,6 +47,33 @@ if (!confirmed && !mBoothOnly) {
         + 'in this response.' } }];
 }
 
+// --- duration limits ---------------------------------------------------
+// Session Types holds Min/Max Duration (mins). Enforced here because this is
+// the only path that creates a booking. Silent when the session type was not
+// supplied or not found - an internal room has no session type, and a lookup
+// failure must not block a booking that is otherwise fine.
+const ST = (function(){ try { return ($('Get Session Type').first().json || {}).fields || {}; }
+                        catch (e) { return {}; } })();
+const minD = Number(ST['Min Duration (mins)']);
+const maxD = Number(ST['Max Duration (mins)']);
+const override = REQ.duration_override === true || String(REQ.duration_override).toLowerCase() === 'true';
+const allDay = REQ.all_day === true || String(REQ.all_day).toLowerCase() === 'true';
+if (!allDay && !override && (Number.isFinite(minD) || Number.isFinite(maxD))) {
+  const mins = Math.round((new Date(REQ.end_iso).getTime() - new Date(REQ.start_iso).getTime()) / 60000);
+  const tooShort = Number.isFinite(minD) && mins < minD;
+  const tooLong  = Number.isFinite(maxD) && mins > maxD;
+  if (mins > 0 && (tooShort || tooLong)) {
+    const range = (Number.isFinite(minD) ? minD : '?') + '-' + (Number.isFinite(maxD) ? maxD : '?');
+    return [{ json: { verdict:'REJECTED', reason:'DURATION_OUT_OF_RANGE',
+      requested_mins: mins, min_mins: Number.isFinite(minD) ? minD : null,
+      max_mins: Number.isFinite(maxD) ? maxD : null,
+      human: 'Nothing was booked. A ' + (ST['Type'] || 'session') + ' runs ' + range
+           + ' minutes and this one is ' + mins + '. Tell the requester the length they asked for and the '
+           + 'allowed range, and ask whether they want to adjust it. If they say to book it anyway, they '
+           + 'must say so in their own message first - only then book it again as an override.' } }];
+  }
+}
+
 const wantedNames = String(REQ.rooms || '').split(',').map(r => r.trim()).filter(r => r.length);
 if (!wantedNames.length) {
   return [{ json: { verdict:'REJECTED', reason:'NO_ROOM', human:'No room was given, so nothing was booked.' } }];
