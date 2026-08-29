@@ -74,34 +74,74 @@ if (!allDay && !override && (Number.isFinite(minD) || Number.isFinite(maxD))) {
   }
 }
 
-// --- room suitability --------------------------------------------------
-// Rooms & Studios links each room to the session types it serves (Session
-// Types 2). That link is the authority, NOT Room Type: Studio 1's Room Type
-// lists "Stereo Mixing" but the studio does not use it for Post Mixing, and
-// only Studios 4, 5 and 6 are linked to Post Mixing.
-// Silent when the session type was not supplied or a room carries no links.
-const stId = (function(){ try { return $('Get Session Type').first().json.id || ''; }
-                          catch (e) { return ''; } })();
-if (stId && !allDay) {
-  let roomRecs = [];
-  try { roomRecs = $('Get Rooms').all().map(i => (i && i.json) || {}); } catch (e) { roomRecs = []; }
-  const unsuitable = [];
-  for (const rec of roomRecs) {
-    const f = rec.fields || {};
-    const name = String(f['Room Name'] || '').trim();
-    if (!name) continue;
-    // Session Types = the type's Priority rooms; Session Types 2 = its Last Resort rooms.
-    // Both are legitimate to book. Preferring Priority is a matter for the summary, not
-    // for this guard - it only blocks rooms the type is not run in at all.
-    const links = [].concat(f['Session Types'] || [], f['Session Types 2'] || []);
-    if (links.length && links.indexOf(stId) === -1) unsuitable.push(name);
+// --- room ranking ------------------------------------------------------
+// Session Types ranks rooms per type: Priority first, Last Resort only when
+// every Priority room is taken. Both lists are record ids, so Get Rooms
+// returns every bookable room and the ids are resolved here. The model is not
+// consulted and cannot skip this.
+const stRec = (function(){ try { return $('Get Session Type').first().json || {}; }
+                           catch (e) { return {}; } })();
+const stF = stRec.fields || {};
+const priorityIds = [].concat(stF['Priority'] || []);
+const lastIds     = [].concat(stF['Last Resort'] || []);
+
+if ((priorityIds.length || lastIds.length) && !allDay) {
+  let allRooms = [];
+  try { allRooms = $('Get Rooms').all().map(i => (i && i.json) || {}); } catch (e) { allRooms = []; }
+  const nameOf = {};
+  for (const r of allRooms) { if (r.id) nameOf[r.id] = String((r.fields || {})['Room Name'] || '').trim(); }
+  const priorityNames = priorityIds.map(id => nameOf[id]).filter(Boolean);
+  const lastNames     = lastIds.map(id => nameOf[id]).filter(Boolean);
+  const asked = String(REQ.rooms || '').split(',').map(r => r.trim()).filter(r => r.length);
+  const lower = a => a.map(x => x.toLowerCase());
+
+  // a room in neither list is not run for this session type at all
+  if (priorityNames.length || lastNames.length) {
+    const known = lower(priorityNames.concat(lastNames));
+    const notRun = asked.filter(r => known.indexOf(r.toLowerCase()) === -1);
+    if (notRun.length) {
+      return [{ json: { verdict:'REJECTED', reason:'ROOM_UNSUITABLE', unsuitable: notRun,
+        priority: priorityNames, last_resort: lastNames,
+        human: (stF['Type'] || 'That session type') + ' is not run in ' + notRun.join(', ')
+             + '. Nothing was booked. Offer these instead: ' + priorityNames.join(', ') + '.' } }];
+    }
   }
-  if (unsuitable.length) {
-    return [{ json: { verdict:'REJECTED', reason:'ROOM_UNSUITABLE', unsuitable,
-      session_type: ST['Type'] || null,
-      human: 'Nothing was booked. ' + (ST['Type'] || 'That session type') + ' is not run in '
-           + unsuitable.join(', ') + '. Ask Rooms and Studios which rooms are set up for '
-           + (ST['Type'] || 'it') + ' and offer those instead.' } }];
+
+  // a Last Resort room is only allowed when every Priority room is busy
+  const askedLastResort = asked.filter(r => lower(lastNames).indexOf(r.toLowerCase()) !== -1
+                                         && lower(priorityNames).indexOf(r.toLowerCase()) === -1);
+  if (askedLastResort.length && priorityNames.length) {
+    // occupancy computed inline: roomsOf() is declared below and closes over
+    // `keys`, which is not initialised yet at this point in the script.
+    const roomKeys = Object.keys(ROOMS);
+    const exclude = String(REQ.exclude_event_id || '').trim();
+    const busy = {};
+    for (const item of $input.all()) {
+      const ev = (item && item.json) || {};
+      if (!ev.id) continue;
+      if (exclude && ev.id === exclude) continue;
+      const s0 = new Date(ev.start && (ev.start.dateTime || ev.start.date)).getTime();
+      const e0 = new Date(ev.end   && (ev.end.dateTime   || ev.end.date)).getTime();
+      if (!(s0 < new Date(REQ.end_iso).getTime() && e0 > new Date(REQ.start_iso).getTime())) continue;
+      const emails = (ev.attendees || []).map(a => String(a.email || '').toLowerCase());
+      const loc = String(ev.location || '').toLowerCase();
+      const firstSeg = String(ev.summary || '').split(' - ')[0].trim().toLowerCase();
+      for (const k of roomKeys) {
+        const lk = k.toLowerCase();
+        if (emails.indexOf(ROOMS[k].toLowerCase()) !== -1 || (loc && loc.indexOf(lk) !== -1) || firstSeg === lk) {
+          busy[lk] = true;
+        }
+      }
+    }
+    const freePriority = priorityNames.filter(r => !busy[r.toLowerCase()]);
+    if (freePriority.length) {
+      return [{ json: { verdict:'REJECTED', reason:'ROOM_NOT_PRIORITY',
+        requested: askedLastResort, free_priority: freePriority, last_resort: lastNames,
+        human: askedLastResort.join(', ') + ' is a last-resort room for '
+             + (stF['Type'] || 'this session type') + ', and these priority rooms are free at that time: '
+             + freePriority.join(', ') + '. Nothing was booked. Offer one of those. Only use a '
+             + 'last-resort room when every priority room is taken.' } }];
+    }
   }
 }
 
