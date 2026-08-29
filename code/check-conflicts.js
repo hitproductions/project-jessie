@@ -1,5 +1,15 @@
 const REQ = $('When Executed by Another Workflow').first().json;
 
+// Get Events In Window is an HTTP Request against the Calendar API and returns
+// one item holding an `items` array. Older shape - one n8n item per event - is
+// still accepted so this node works either way.
+const EVENTS = (function(){
+  const raw = $input.all();
+  if (raw.length === 1 && raw[0] && raw[0].json && Array.isArray(raw[0].json.items)) return raw[0].json.items;
+  return raw.map(i => (i && i.json) || {}).filter(e => e && e.id);
+})();
+
+
 const ROOMS = {
   'Studio 1': 'hitproductions.net_3737303833303637363538@resource.calendar.google.com',
   'Studio 2': 'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com',
@@ -116,9 +126,8 @@ if ((priorityIds.length || lastIds.length) && !allDay) {
     const roomKeys = Object.keys(ROOMS);
     const exclude = String(REQ.exclude_event_id || '').trim();
     const busy = {};
-    for (const item of $input.all()) {
-      const ev = (item && item.json) || {};
-      if (!ev.id) continue;
+    for (const ev of EVENTS) {
+      if (!ev || !ev.id) continue;
       if (exclude && ev.id === exclude) continue;
       const s0 = new Date(ev.start && (ev.start.dateTime || ev.start.date)).getTime();
       const e0 = new Date(ev.end   && (ev.end.dateTime   || ev.end.date)).getTime();
@@ -182,9 +191,8 @@ const reqStart = ms(REQ.start_iso), reqEnd = ms(REQ.end_iso);
 const exclude = String(REQ.exclude_event_id || '').trim();
 const conflicts = [], unverifiable = [];
 
-for (const item of $input.all()) {
-  const ev = item.json || {};
-  if (!ev.id) continue;
+for (const ev of EVENTS) {
+  if (!ev || !ev.id) continue;
   if (exclude && ev.id === exclude) continue;
 
   const evStart = ms(ev.start && (ev.start.dateTime || ev.start.date));
