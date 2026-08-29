@@ -28,7 +28,8 @@ case "$cmd" in
     api "$N8N_BASE_URL/api/v1/workflows?limit=100" | python3 -c '
 import json,sys
 for w in json.load(sys.stdin).get("data", []):
-    print(f"{w[\"id\"]:20} {\"active\" if w.get(\"active\") else \"      \"}  {w[\"name\"]}")'
+    state = "active" if w.get("active") else "      "
+    print("%-20s %s  %s" % (w["id"], state, w["name"]))'
     ;;
   get)
     api "$N8N_BASE_URL/api/v1/workflows/${1:?workflow id}" | python3 -m json.tool
@@ -56,7 +57,7 @@ w=json.load(sys.stdin); print("updated:", w.get("name"), w.get("updatedAt", ""))
     api "$N8N_BASE_URL/api/v1/executions?workflowId=$id&limit=$limit" | python3 -c '
 import json,sys
 for e in json.load(sys.stdin).get("data", []):
-    print(f"{e[\"id\"]:>8}  {e.get(\"status\",\"?\"):10} {e.get(\"startedAt\",\"\")}  {e.get(\"mode\",\"\")}")'
+    print("%8s  %-10s %-26s %s" % (e["id"], e.get("status","?"), e.get("startedAt",""), e.get("mode","")))'
     ;;
   exec)
     eid="${1:?execution id}"; mode="${2:-}"
@@ -67,12 +68,25 @@ import json,sys
 e = json.load(sys.stdin)
 print("status:", e.get("status"), "| started:", e.get("startedAt"))
 run = (e.get("data") or {}).get("resultData") or {}
-if run.get("error"): print("workflow error:", json.dumps(run["error"])[:2000])
+we = run.get("error") or {}
+if we:
+    print("workflow error:", we.get("message", "")[:300], "| from:", (we.get("node") or {}).get("name", ""))
 for name, runs in (run.get("runData") or {}).items():
     for r in runs:
-        items = ((r.get("data") or {}).get("main") or [[]])[0]
-        print(f"{name}: {len(items)} item(s)" + (" ERROR" if r.get("error") else ""))
-        if r.get("error"): print("   ", json.dumps(r["error"])[:1500])'
+        branches = (r.get("data") or {}).get("main") or []
+        counts = "/".join(str(len(b or [])) for b in branches) or "0"
+        print(name + ": " + counts + " item(s)" + (" ERROR" if r.get("error") else ""))
+        err = r.get("error") or {}
+        if err:
+            node = (err.get("node") or {}).get("name", "")
+            print("    message:", err.get("message", "")[:300])
+            if err.get("description"): print("    hint   :", str(err["description"])[:300])
+            if node: print("    from   :", node)
+        for b in branches:
+            for it in (b or []):
+                j = it.get("json") if isinstance(it, dict) else None
+                if isinstance(j, dict) and "output" in j:
+                    print("    output :", str(j["output"])[:200].replace("\n", " "))'
     else
       printf '%s' "$raw" | python3 -m json.tool
     fi
