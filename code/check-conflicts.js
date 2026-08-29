@@ -4,9 +4,17 @@ const REQ = $('When Executed by Another Workflow').first().json;
 // one item holding an `items` array. Older shape - one n8n item per event - is
 // still accepted so this node works either way.
 const EVENTS = (function(){
-  const raw = $input.all();
-  if (raw.length === 1 && raw[0] && raw[0].json && Array.isArray(raw[0].json.items)) return raw[0].json.items;
-  return raw.map(i => (i && i.json) || {}).filter(e => e && e.id);
+  // Get Events In Window is an HTTP Request. If it ever runs more than once it
+  // emits one copy of the whole response per input item, so flatten every
+  // `items` array found and de-duplicate by event id. A bare event object per
+  // item is accepted too, so the old calendar node still works here.
+  const out = [], seen = {};
+  for (const it of $input.all()) {
+    const j = (it && it.json) || {};
+    const list = Array.isArray(j.items) ? j.items : (j && j.id ? [j] : []);
+    for (const ev of list) { if (ev && ev.id && !seen[ev.id]) { seen[ev.id] = 1; out.push(ev); } }
+  }
+  return out;
 })();
 
 
