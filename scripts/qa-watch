@@ -22,7 +22,7 @@ def api(p):
     try: return json.loads(o)
     except Exception: return {}
 ids=[e["id"] for e in json.load(open("/tmp/qa_list.json"))["data"] if int(e["id"])>after]
-TOOLS=("Book Session","Cancel Booking","List Events","Search Events for Deletion","Clients",
+TOOLS=("Book Session","Cancel Booking","Room Availability","List Events","Search Events for Deletion","Clients",
        "Session Types","Bookers","Rooms and Studios","Localization Projects")
 seen=0
 for i in sorted(ids, key=int):
