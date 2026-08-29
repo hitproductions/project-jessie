@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""Parse every $fromAI( ... ) call and report ones that do not close cleanly.
+
+An unescaped apostrophe inside a single-quoted argument - "the staff member's
+name" - breaks n8n's parser with "Unbalanced parentheses while parsing $fromAI
+call" and the agent then errors on every message. Run this before shipping.
+"""
+import json, sys, re
+
+def calls(text):
+    out=[]
+    for m in re.finditer(r"\$fromAI\(", text):
+        i=m.end(); depth=1; quote=None; start=i
+        while i < len(text) and depth:
+            c=text[i]
+            if quote:
+                if c=="\\": i+=2; continue
+                if c==quote: quote=None
+            else:
+                if c in "'\"`": quote=c
+                elif c=="(": depth+=1
+                elif c==")": depth-=1
+            i+=1
+        out.append((depth==0, quote, text[start:min(i,start+160)]))
+    return out
+
+bad=0
+for path in sys.argv[1:]:
+    d=json.load(open(path))
+    nodes=d.get("nodes",[])
+    for n in nodes:
+        if n.get("disabled"): continue
+        blob=json.dumps(n.get("parameters",{}), ensure_ascii=False).encode().decode("unicode_escape")
+        for ok,quote,snippet in calls(blob):
+            if not ok:
+                bad+=1
+                print(f"  BROKEN  {path.split('/')[-1]} / {n['name']}")
+                print(f"          unterminated {quote or 'paren'}: {snippet[:120]}")
+print("OK - every $fromAI call closes cleanly" if not bad else f"\n{bad} broken call(s)")
+sys.exit(1 if bad else 0)
