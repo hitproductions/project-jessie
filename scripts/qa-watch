@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Waits for Jessie's reply to the message just sent, then prints what happened
+# inside the run. Usage: ./scripts/qa-watch <last-known-execution-id>
+set -euo pipefail
+here="$(cd "$(dirname "$0")/.." && pwd)"; set -a; . "$here/.env"; set +a
+after="${1:?last execution id}"
+for _ in $(seq 1 25); do
+  latest=$(curl -sS -H "X-N8N-API-KEY: $N8N_API_KEY" \
+    "$N8N_BASE_URL/api/v1/executions?workflowId=uVVYVB2M7kxpLleI&limit=1" \
+    | python3 -c "import json,sys;d=json.load(sys.stdin)['data'];print(d[0]['id'] if d else 0)")
+  [ "$latest" -gt "$after" ] && break
+  read -t 2 -r _ </dev/null 2>/dev/null || true
+done
+curl -sS -H "X-N8N-API-KEY: $N8N_API_KEY" \
+  "$N8N_BASE_URL/api/v1/executions?workflowId=uVVYVB2M7kxpLleI&limit=6" > /tmp/qa_list.json
+python3 - "$after" <<'PY'
+import json, subprocess, os, sys
+base=os.environ["N8N_BASE_URL"]; key=os.environ["N8N_API_KEY"]
+after=int(sys.argv[1])
+def api(p):
+    o=subprocess.run(["curl","-sS","-H",f"X-N8N-API-KEY: {key}",f"{base}{p}"],capture_output=True,text=True).stdout
+    try: return json.loads(o)
+    except Exception: return {}
+ids=[e["id"] for e in json.load(open("/tmp/qa_list.json"))["data"] if int(e["id"])>after]
+TOOLS=("Book Session","Cancel Booking","List Events","Search Events for Deletion","Clients",
+       "Session Types","Bookers","Rooms and Studios","Localization Projects")
+seen=0
+for i in sorted(ids, key=int):
+    e=api(f"/api/v1/executions/{i}?includeData=true")
+    rd=((e.get("data") or {}).get("resultData") or {}).get("runData") or {}
+    trig=((rd.get("Slack Trigger") or [{}])[0].get("data",{}).get("main",[[{}]])[0] or [{}])[0].get("json",{})
+    if trig.get("user")=="U0BNQL8KFKR" or not str(trig.get("text","")).strip(): continue
+    seen=int(i)
+    tools=[n for n in rd if n in TOOLS]
+    gc={}
+    for r in rd.get("Gate Context") or []:
+        br=((r.get("data") or {}).get("main") or [[]])
+        if br and br[0]: gc=(br[0][0] or {}).get("json",{})
+    reply=""
+    for node in ("Guard Probe","Error message"):
+        for r in rd.get(node) or []:
+            for br in ((r.get("data") or {}).get("main") or []):
+                for it in br or []:
+                    reply=str((it.get("json") or {}).get("output") or (it.get("json") or {}).get("text") or reply)
+    agent_err=any(len(((r.get("data") or {}).get("main") or [[],[]]))>1 and (((r.get("data") or {}).get("main") or [[],[]])[1] or [])
+                  for r in rd.get("Jessie AI Agent") or [])
+    print(f"exec {i}  | USER: {str(trig.get('text',''))[:70]}")
+    print(f"   tools: {tools or '-'}")
+    print(f"   gate : confirmed={gc.get('confirmed')} cancel={gc.get('confirmedCancel')} epoch={str(gc.get('epoch'))[:14]}")
+    if agent_err: print("   AGENT ERROR BRANCH")
+    for r in rd.get("Book Session") or []:
+        q=(r.get("inputOverride") or {}).get("ai_tool",[[{}]])[0][0].get("json",{}).get("query",{})
+        print("   Book Session <-", json.dumps({k:q.get(k) for k in ("rooms","session_type","client","start","end")})[:170])
+    for r in rd.get("Cancel Booking") or []:
+        print("   Cancel Booking <-", json.dumps((r.get("inputOverride") or {}).get("ai_tool",[[{}]])[0][0].get("json",{}))[:150])
+    print(f"   JESSIE: {reply[:400]}")
+    print()
+print("LAST_EXEC", seen or after)
+PY
