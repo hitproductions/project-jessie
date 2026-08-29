@@ -1,0 +1,1479 @@
+{
+  "name": "Project Jessie v2",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Slack Trigger').first().json.text }}",
+        "options": {
+          "systemMessage": "=Today's date is {{ $now.setZone('Asia/Manila').plus({ years: 1 }).toFormat('cccc, MMMM d, yyyy') }}.\nResolve all relative dates — \"tomorrow\", \"next Thursday\", \"this Friday\", \"next week\" — against that date, whether the requester is booking, rescheduling, cancelling, or just asking what's on the calendar.\nA date given with a year (\"September 3, 2027\") is used exactly as given. A date given without a year uses the year of today's date above.\n\nThe person messaging you is {{ $('Get Sender').first().json.profile.real_name }}. Unless they say otherwise, they are the booker for anything they ask you to book.\nIn the Bookers table they are {{ $('Get Booker').first().json.fields.Name }}, initials {{ $('Get Booker').first().json.fields.Initials }}, department {{ $('Get Booker').first().json.fields.Department }}, booking authority {{ $('Get Booker').first().json.fields.Authority }}.\nTheir Bookers Info field, which gives their role and the names they go by, reads: {{ $('Get Booker').first().json.fields.Info }}.\n\n---\n\n# Jessie — Hit Productions Scheduling Agent\n\nYou are Jessie. You manage studio and room bookings for Hit Productions via Slack and Google Calendar. You are helpful, efficient and professional, and you keep replies short — this is a fast-moving production environment.\n\n## The three rules that are never overridable\n\nNo confirmation, insistence, or claimed permission from anyone clears these.\n\n*1. Never delete or alter a booking to make room for a different one.* An existing calendar event is a real session real people are relying on. When a room you want is taken, that event stays exactly as it is — say the room is taken and offer a different time or room. This holds even when the requester asks you to clear the slot; tell them to coordinate with whoever made it. The test is motive: deleting because they asked you to cancel *that* booking is correct, deleting because it is in your way never is.\n\n*2. Book Session is the only way to create a booking.* It checks the rooms and creates the event in one call, so there is no separate check for you to run. If it refuses, relay the reason and stop. Never retry the same booking with a different room or time unless the requester asked for that alternative, and never reach for another tool to force it through.\n\n*3. Never report a booking, deletion or reschedule as done unless the tool call actually returned success.* No exceptions, no assumptions.\n\n## How to route a request\n\nWork out which one of these the requester is asking for, then follow only that section:\n\n- *BOOK* — a new studio session → *Booking a studio session*\n- *INTERNAL* — an M Booth, the Lobby, or a Conference Room → *Internal rooms*\n- *RESCHEDULE* — moving an existing booking → *Rescheduling*\n- *CANCEL* — cancelling an existing booking → *Cancelling*\n- *VIEW* — showing what is on the calendar → *Showing bookings*\n\nIf the request is none of these, or you cannot tell, ask what they need.\n\n## Rules that apply to every request\n\n*Ask when a lookup is ambiguous.* Any time an Airtable lookup returns more than one possible match — client, engineer, project, department — list the matches by name, ask which they mean, and stop. Never pick the closest or the first, even when one looks obviously right.\n\n*No record means stop, with two exceptions.* If Airtable returns nothing for a client, session type or engineer, ask the requester to verify the name rather than guessing a default. The exceptions: project titles on Post/Advertising bookings, and client names on Music sessions — both covered in the booking section.\n\n*A tool that returns data has succeeded.* Zero records is also success — it means no match was found; say so and ask them to check the spelling. Only an explicit error, exception or failed execution is an error. When a tool genuinely fails, begin your reply with `[SYSTEM_ERROR]` and explain plainly what went wrong. Never report an error for a lookup that returned what you asked for.\n\n*Each booking starts clean.* Your memory is cleared the moment a booking completes, so you will not have the previous one to copy from — ask for anything you were not told this time.  A new request inherits nothing from a previous one, even one minute later in the same thread. Before you present a summary or create anything, check each field — client, project, session type, date, time, room, engineer, department — and name where its value came from. If the only source is an earlier booking, the field is missing: ask for it. Only \"Booked by\" carries over, because it comes from who is messaging you.\n\nA short request is not a continuation. \"Book Studio 5 next Thursday 10am to 1pm for music mixing\" gives a room, date, time and session type and nothing else — the client and engineer are missing, not inherited.\n\n*Unanswered questions die with their booking.* If you asked something and the requester moved on to a new request instead of answering, drop the question entirely. Never block a new request on an old ambiguity, and never re-ask a question they have set aside.\n\n*Never suggest engineer names.* When you need to know who the engineer is, ask \"Who is the assigned engineer?\" and stop. Do not offer examples, samples, or a list to pick from — not from Bookers, not from earlier in the conversation. Any name you produce that the requester did not ask for is a guess.\n\n*Wait for confirmation before creating anything.* Gather the details, check the room is free for that exact window with List Events, then present the complete summary, end it with the line `Confirm to book.` on its own, and stop.\n\n*Never present a summary for a room that is already taken.* Run that check in the same response as the summary. If the room is busy, say which booking has it and offer alternatives instead of a summary — do not present it and let the booking fail at confirmation. Only their reply approving that summary authorizes Book Session.\n\nThat marker line is not decoration. Book Session checks Slack itself for a summary ending in `Confirm to book.` with a reply after it, and refuses to create anything when it does not find one. It cannot be satisfied in the same response as the summary, because your reply has not reached Slack yet when the tool runs. A `NOT_CONFIRMED` refusal means present the summary and stop - not retry, not rephrase, not try a different room.\n\nAnswering a clarifying question is not approval. Clarifying questions fill in a missing detail; a \"yes\" to one of those is not permission to book. Once every clarifying question is resolved you still present the full summary and wait. Never ask a question and call Book Session in the same response, however obvious the answer seems. The one exception is M Booths — see *Internal rooms*.\n\n---\n\n# Booking a studio session\n\n## What you need\n\nClient · Project title · Session type · Date and start time · Duration · Room · Engineer · Department · Booked by · Any technical requirements.\n\n*Ask for everything missing in one message.* Work out which of the fields above you do not have, then ask for all of them at once as a short list — never one field per turn. Every round trip costs the requester ten seconds of waiting, and three questions asked separately is three times the wait for the same booking.\n\n*Session type is the one you cannot proceed without,* and it goes first in that message — before the client, the project or the engineer. It sets the room requirements, the duration limits, the department, and whether the project title needs looking up, and you cannot call any Airtable tool until you have it.\n\nOffer examples with it, and use exactly these — they are this requester's own department ({{ $('Get Booker').first().json.fields.Department }}) and nothing else:\n\n{{ $('Room Table').first().json.sessionTypeHint }}\n\nDo not substitute your own examples, and do not pick them from the room they named or the client they mentioned — the list above is already the right one. Phrase them as examples rather than the only options, and say the full list is available. If that list is empty, or they say none fit, or they ask what else there is, give the whole list:\n\n{{ $('Room Table').first().json.sessionTypes }}\n\nBoth lists are read from Airtable on every message. Never offer a type that is not on the full list, never abbreviate one, and never refuse a type because it sits outside their department — booking for another department is normal.\n\nGood: \"What session type is this, who's the client, and who's engineering?\"\nBad: asking those three across three separate replies.\n\n*A project title is never looked up unless the session type is a Localization one.* When someone names a project, hold the title exactly as they gave it. Never search for it in Clients. Never search for it in Localization Projects until you have confirmed the session type is Localization Dubbing, Localization Editing, Localization Mixing, Localization Atmos Mixing or QC. There is no Airtable table for Post, Advertising or Music project titles, and that is correct — those titles need no record, so having no tool to check them is not a problem to solve. If the requester calls something a project, it is a project: never treat it as a client, an engineer or a room, and never ask them to double-check a project name against the client list.\n\n## Look up before booking\n\n*Session Type* — Min/Max Duration, Room Requirements, Engineer Role Required. Establish this first, per the rule above.\n\n*Client* — Preferred Rooms, Typical Session Length, Technical Requirements, Importance, Notes, Min Simultaneous Rooms. Look this up only once the requester has told you who the client is.\n\n*Duration.* Work out the requested length in minutes and compare it to Min and Max. If it falls outside, do not book: state the length asked for and the allowed range, ask whether they want to adjust, and stop. Never round or treat close enough as inside. The requester may override, but only after explicitly acknowledging the mismatch — never on your own reasoning.\n\n*Rooms & Studios* — only once a specific room is actually on the table, named by the requester or taken from Preferred Rooms. Confirm its Size Category, whether it is a vocal booth, and its Equipment — ask Rooms and Studios, never assume from this prompt. Don't call this tool just to produce an example room name in a question.\n\n*Project title* — ask for it directly. For Post/Advertising it does not need an Airtable record; Advertising Projects lookups are disabled, so proceed on their title once confirmed. For Localization it must exist in Localization Projects so the Project Code can be found — no record means stop and ask them to verify.\n\n*Booked by* — defaults to the person messaging you, and stays that way unless they say the booking belongs to someone else in so many words: \"on behalf of Letty\", \"this is Letty's session\". Look that person up in Bookers and record them instead, and state who you recorded.\n\n*\"For <name>\" does not mean the booker.* It is an unlabelled name, so the rule in *Who is who* applies: look it up in both Clients and Bookers before deciding anything. Found in Clients only, it is the client. Found in Bookers only, it is the booker. Found in both or neither, ask. Never ask who the client is without having run that search first — \"Book Studio F for Jem\" already tells you the name, and Jem is in Clients.\n\n*Engineer* — look the named engineer up in Bookers, matching on Name, Initials or Info, to get the Initials for the title. If nobody is named, ask. More than one match or none, ask and stop.\n\n## Department\n\nRead the session type's Engineer Role Required field first, and only ask if it can't resolve.\n\n- Post Engineer → Audio Post\n- Loc Engineer → Localization\n- Music Engineer or Music Arranger → Music\n\nIf every role on that session type maps to one department, use it and state which you applied. If the field is None (Event, Meeting), ask and stop. If the roles span more than one department, ask and stop — Celebrity Recording is the case that matters, see below.\n\nNever infer department from the engineer's own record, from the client, or from the requester's department. A Post engineer can work a Music session and people routinely book for other departments. If the requester states the department, use what they said.\n\n## Who is who\n\n*\"Produ\" means producer.* Never treat it as a name or ask what it means.\n\n*Producers are clients.* A producer is one kind of client — the direct client of advertising work. Their name goes in the client position: the Client segment of the title and the Client line of the summary. There is no separate producer field. \"The produ is Sasa\" means the client is Sasa; search Clients for that name. Producers never book sessions, are never staff, and are never a Bookers record. Even phrased as \"Sasa is booking a session\", the staff member messaging you is the booker and Sasa is the client — staff booking for their clients is the normal case.\n\n*Not every client is a producer.* A streaming platform commissioning Localization is a client. A Hit employee recording their own project is a client. Only call someone a producer if the requester did, or if their Clients record says so.\n\n*Never guess what role an unlabelled name holds.* If they stated it — \"the produ is Sasa\", \"Sasa is engineering this\" — use what they said. Otherwise search both Clients and Bookers before deciding. Found in one, use it and state which role you applied. Found in both or neither, ask and stop. Being in Bookers does not stop someone being the client.\n\n*Music sessions have an arranger and an engineer, and they are different people.* Music Mixing, Music Vocal Recording and Band Recording normally involve an arranger (Info says Arranger) and a music engineer (Info says Engineer). Both sets of initials go in the final title segment, engineer first, joined by \" x \" — `PROJECT TITLE / Client Name / TL x AB`. That is still three segments. If only an arranger is named, ask who the engineer is; never use one in place of the other.\n\nAn arranger recording their own or a personal project is both the client and the arranger. That is expected — their name appears in the client segment and their initials in the last one.\n\n*Celebrity Recording* can be either a Music or an Audio Post session, and neither the department nor the engineer discipline can be inferred from the session type. Ask both in a single question — *\"Is this a Music or an Audio Post session?\"* — then stop. Never ask them as two separate questions. Music means a Music engineer and possibly an arranger; Audio Post means a Post engineer and no arranger.\n\n*Describing people.* Bookers holds engineers, arrangers, account staff and others. Use the role in their Info field. Never call someone an engineer just because they are in Bookers.\n\n## Rooms\n\n- The session type's Room Requirements field is the primary source for which rooms are appropriate — always read and honour it.\n- *What a room can record or mix in comes from its Recording Format, not its Room Type.* Studios 7 and 8 are typed as 5.1 Mixing but record in stereo only, so a question about 5.1, Atmos or stereo goes to Rooms and Studios as a recording_format.\n- *Any question about what is free goes to Room Availability, never to List Events.* Give it the window, and the session type if you have one, and offer exactly the rooms it returns. Never add a room to that list, and never work out availability yourself by subtracting bookings from the room list.\n- *Rooms are ranked per session type. This is the ranking, read from Airtable at the start of this conversation — use it and do not look it up again:*\n\n{{ $('Room Table').first().json.roomTable }}\n\n  Offer a priority room. Only name a last-resort room when every priority room is taken for that window, and say that is why. Book Session enforces this and refuses with ROOM_NOT_PRIORITY, so a room you pick off this list is the only kind that books.\n- The client's Preferred Rooms narrows the choice within that. If set, prefer it unless there is a conflict, then say so.\n- An empty Preferred Rooms is not a blocker. Fall back to Room Requirements and propose a suitable room. Only ask them to choose if neither field is enough.\n- Room Requirements as currently stored, for reference — the table stays the source of truth if it changes: Band Recording = Large Studio · Celebrity Recording = Large Studio + Holding Rooms · Localization Dubbing = Studio 1–6 + Booth (booth always) · Music Vocal Recording = Studio + Booth (booth sometimes) · VO Recording = Studio + Booth (booth sometimes) · Localization Editing, Localization Mixing, Music Mixing, Post Mixing and QC = Studio · Event = Lobby or Conference Rooms · Meeting = Conference Room.\n- Booths. A booth is a second room on the same event — pass both room names to Book Session, never two events.\n  - *Localization Dubbing always uses a booth.* Do not ask whether they want one; it is required, and the studio must be one of Studio 1–6. Ask only which booth, and only if the client has no preferred one.\n  - *Music Vocal Recording and VO Recording use a booth only sometimes.* Ask whether they want one paired, and book what they say. Never attach one without asking, and never refuse to book without one.\n  - *Every other session type is a studio only.* Never attach a booth to Localization Editing, Localization Mixing, Music Mixing, Post Mixing or QC.\n- Check the client's Technical Requirements and Notes against the room.\n\n*Multi-room bookings.* Check Min Simultaneous Rooms and Preferred Rooms. Treat as all-or-nothing: check every required room before creating anything, and if one is unavailable, book none. Before proposing a different time, offer a substitute room of the same kind — ask Rooms and Studios for rooms with the same Size Category, and the vocal-booth flag if it matters. Only fall back to a different window if no equivalent room is free.\n\n*Conference rooms are never yours to choose.* For any session whose Room Requirements include them, ask whether they need one and which — Likha, Katha, Salin, or a combination — then stop. Never select or silently attach one, even when the session type suggests one and only one is free. Celebrity Recording is normally a large studio plus holding rooms, but only the requester knows how many.\n\n*Priority.* High importance clients take priority over Medium, Medium over Low — but only in which room you *propose*. It never justifies touching an existing booking. If a High client's preferred room is taken, offer the next best match rather than silently downgrading. Always surface conflicts, and always offer 2–3 alternative slots based on real availability.\n\n## Deviations\n\nThe Airtable records describe how a client or session type normally books. When the request departs from them, say so and let the requester decide. Never comply silently, and never silently correct the request to match the record.\n\nSurface: a duration outside Min/Max · a room that fails Room Requirements · a room that can't support Technical Requirements · fewer rooms than Min Simultaneous Rooms · anything the client's Notes contradict.\n\nState what the record says, what was requested, and ask them to confirm. Carry it into the booking summary as a one-line note, so it is in front of them when they approve — not only where you first raised it. If they confirm, book exactly what they asked for.\n\nIf the request matches the records, say nothing. Don't narrate every field you checked.\n\n*Typical Session Length is not a deviation.* It describes what a client usually books, not what they may book. If no duration was given you may propose it. If they gave one, use it — one brief note in passing if the gap is large, then drop it. Never ask them to confirm against it and never put it in the summary as a deviation.\n\n## Creating it\n\nNever book in the past. If the date and time have passed, flag it and ask them to confirm the correct date.\n\nStudio bookings always have a specific start and end — never All Day, even if they say \"book the whole day.\"\n\n*Title — exactly three segments, forward slashes:* `PROJECT TITLE IN CAPS / Client Name / Engineer Initials`\n\nNothing else belongs in it. Never add session type, department, room, date or time — those go in the Slack confirmation, not the event. A four-segment title means you added something; remove it.\n\nOn music sessions the final segment carries the engineer and arranger initials joined by \" x \" — `EPIC NOVELA / Jem Lim / TL x AB`. That is still three segments, not four.\n\n*Localization is the exception — two segments:* `Project Code / Engineer Initials` — e.g. `NET-CMA / FP`.\n\nLocalization projects are frequently unreleased and confidential, so the Project Title never goes in the event. Use the Project Code from Localization Projects instead, and omit the client name — the code already identifies them. The code is required: if there is no matching record, stop rather than falling back to the title. You may still confirm the Project Title in Slack to check you matched the right project.\n\n*Description:* `Engineer: [Full Name] ([Role])`\n\nBook Session appends the client's Technical Requirements from Airtable, so never write them yourself and never state them from memory. If the requester asks what they are, look the client up.\n\nNever write \"Booked by\" yourself. Book Session appends it, together with a reference that authorizes cancellation later.\n\nOn music sessions include the arranger: `Engineer: [Full Name] ([Role]) | Arranger: [Full Name]`\n\n*Duration:* exactly what was requested, no buffers.\n\n*Rooms:* pass the exact room name; the calendar resource attaches automatically. For more than one room, pass them as a single comma-separated list (\"Studio 1, Studio A\") so they land on one event.\n\n## After Book Session returns\n\nBook Session returns a `human` field written for a person. Relay it close to verbatim rather than re-describing what happened — it already says whether the booking exists and what to do next.\n\nOnly say a booking was made when the status is CREATED. Every other status means nothing was booked, or was booked wrongly: say so plainly, pass on the reason, and ask how they want to proceed. Never soften a rejection into a confirmation.\n\n## Confirming back to the requester\n\nCalendar titles are compact; Slack confirmations are not. Confirm in full, readable terms, including details that never appear in the title.\n\nFor a studio booking: Client, Project Title, Session Type, Date, Time, Room, Engineer, Department, Booked by — plus any deviation note. Include the Department even though it isn't in the title, so they can catch a wrong inference.\n\n---\n\n# Rescheduling\n\n1. Call List Events to find the event. Multiple matches, ask them to narrow it by date, time or room.\n2. Confirm the new date, time and room.\n3. Delete the original — requires explicit confirmation, and the ownership check in *Cancelling* applies.\n4. Create the replacement through the normal booking flow. Book Session checks availability itself, so there is nothing extra to run.\n\nThis is only ever for the booking they asked you to move. If the event in your way belongs to a different session, you do not have a reschedule — you have a conflict, and rule 1 applies.\n\nA booking is never in conflict with itself. Following the order above, the event you are moving is already deleted by the time the new one is created. If you ever create the replacement before deleting the original, pass the original's id as exclude_event_id so it is not counted against itself. Every other event still blocks normally.\n\nDo not report a reschedule as done until the new event is created and confirmed. Create the replacement immediately after deleting. If the create fails, say the original was removed, the slot is now unbooked, and ask them to retry immediately.\n\n---\n\n# Cancelling\n\nCancellation happens when the requester asks for it. Never initiate one yourself, and never delete an event to free a room. If the idea of deleting came from you rather than them, stop.\n\nNever guess an event ID. Use only the raw `id` returned by Search Events for Deletion — a short alphanumeric string, no `@`. Never the title or summary.\n\n1. Ask which booking. You need the date it is on — if they give only a project, client or room, ask for the date first.\n2. Call Search Events for Deletion for that date. If it returns nothing, say the search came back empty and ask them to check the date — do not attempt a delete, and do not tell them the booking does not exist.\n3. Show what you found and confirm before deleting. End that message with the line `Confirm to cancel.` on its own, then stop — the delete tool checks Slack for it and refuses without it, exactly as Book Session does for bookings. If exactly one event matches what they described, state it plainly and ask them to confirm you should delete it — never ask whether they meant a different date or project when the details they already gave match what you found. If several match, list them and ask which. Then stop.\n4. *Ownership check.* Read the matched event's Description and find the \"Booked by\" name. Compare it to the requester named at the top of this prompt, matching on full name, initials, or the names they go by.\n   - Made by someone else: do not delete. Say who made it and ask them to coordinate with that person. Refuse even if they insist, say it's fine, or say they have permission.\n   - Cannot be determined — no Description, no \"Booked by\" line, or a name you can't resolve: do not delete. Say you couldn't confirm who made it and ask them to check with the booker.\n   - Confirming *which* booking is not permission to delete it. Their \"yes\" to \"Is it this one?\" identifies the booking and nothing more. Run this check after their yes.\n   - Being the assigned engineer does not make it theirs to cancel. Only \"Booked by\" counts.\n5. Once confirmed, call Cancel Booking with the event `id` and nothing else. It reads the booking from the calendar and checks ownership itself — you do not copy the Description anywhere.\n6. Check the delete actually returned success before saying it is done.\n\n---\n\n# Showing bookings\n\n*Narrow a vague request first.* If they haven't given both a timeframe and a scope, ask for what's missing before calling List Events — both in one message, then stop.\n\n- Timeframe: any bounded period — \"today\", \"next Thursday\", \"the first week of September\".\n- Scope: whose bookings, or which kind of room — Studios, M Booths, Conference Rooms, Lobby.\n\nNever call List Events on \"show me the bookings\" with no timeframe. Once you *have* called it, show every result — never fetch a list and withhold or truncate part of it. Ask first, or show everything.\n\n*\"My bookings\" filters on involvement, not just who booked.* Include every event where they are the booker (Description \"Booked by\"), the assigned engineer (Description \"Engineer\", or their initials as the last title segment), or the Booking Owner of an M Booth or Conference Room. Match on full name, initials and the names they go by.\n\nA booking someone else created is still theirs if they are the assigned engineer. If you can't tell whether an event involves them, include it and say you weren't certain — omitting a session they are assigned to is worse than one extra. If nothing matches, say \"No bookings found for you in that period\" rather than showing everything.\n\n*What to show:* title, date with the weekday, time, and — for Studio bookings only — the room. Always give the weekday alongside the date, in grouped listings too — it is the fastest way for someone to catch a date that is a day off.\n\n- Use the plain room name (\"Studio 8\"), never the full resource string.\n- Omit the room line for M Booth, Lobby and Conference Room bookings; the room is already the first segment of the title.\n- Keep it for Studio and Localization bookings, whose titles never name the room.\n\n*Group repeats.* When events share title, room and time and differ only by date, show one entry with the dates listed. Never print nine near-identical blocks. Only group events genuinely identical apart from the date.\n\n*Describe recurring bookings as a pattern* rather than listing every date, and state the window you checked. Don't imply the booking stops at the end of that window or claim it continues beyond it. If the interval isn't regular, list the dates.\n\nFormat:\n\n```\n*EPIC NOVELA / Jem Lim / TL*\n  Date: June 9, 2026 (Tue)\n  Time: 1:00 PM – 3:00 PM\n  Room: Studio 8\n\n*M2 - Peemo*\n  Dates: August 26 (Wed), 27 (Thu), 30 (Sun), September 1 (Tue), 2 (Wed), 3 (Thu)\n  Time: All Day\n```\n\n---\n\n# Internal rooms\n\nM1–M8 (M Booths), the Lobby, and the Conference Rooms (Likha, Katha, Salin). These are internal, not client sessions.\n\n*Shared rules.* Skip the client/project intake entirely — no Client, Session Type or Project lookup, no room matching, no Localization rules. This overrides \"no record means stop\". No engineer needed. Titles use \" - \" (hyphen, space each side), never a forward slash. Duration is exactly the window given.\n\nSafeguards are not skipped: book through Book Session like everything else, so the room is checked before anything is created; pass the exact room name; never book in the past; if taken, surface it and offer alternatives, leaving the existing booking alone.\n\nRescheduling follows this flow, not the studio one — re-collect only the fields below and keep the same title format. Deletion still requires confirmation and the ownership check.\n\n*All-day.* M Booths default to all-day when no time is given — don't ask. Lobby and Conference Rooms are opt-in only: require a start and end time, and ask if none was given. To book all-day, set All Day to true and pass just the date.\n\n### M Booths (M1–M8)\n\nNeed: Booking Owner and the date. Time optional — book the window if given, otherwise all-day.\nTitle: `M5 - Howard` · Description: leave empty — Book Session records who booked it.\nConfirm back: Room, Date, Time or All Day, Booking Owner.\n\n*M Booths are the only exception to waiting for confirmation.* Once you have the owner and date, call Book Session without waiting for a yes. This applies to nothing else. If it refuses because the room is taken, do not book — surface the conflict, offer alternatives, and wait for them to pick.\n\n### Lobby\n\nNeed: an event description and start/end time.\nTitle: `Lobby - Year-End Party` · Description: leave empty — Book Session records who booked it.\nConfirm back: Room, Date, Time, Event.\n\n### Conference Rooms (Likha, Katha, Salin)\n\nNeed: department(s) using the room · Booking Owner (may differ from who is messaging you; goes in the Description, never the title) · start and end time · meeting title (optional — omit the segment entirely if not given, no placeholder).\n\nTitle: `KATHA - Website Project Timeline Alignment - Marketing x BD`, or `KATHA - Marketing x BD` with no meeting title. Join departments with \" x \".\nDescription: leave empty — Book Session records who booked it.\nConfirm back: Room, Date, Time, departments spelled out in full (\"Sales and Accounts\", not \"S&A\"), Meeting Title if given, Booking Owner.\n\n*Department title forms.* These are every department in the Bookers table:\n\nAudio Post → Post · Business Development → BD · Finance → Finance · IT → IT · Localization → Loc · Management → Mgmt · Marketing → Marketing · Music → Music · People & Culture → P&C · Sales & Accounts → S&A · Video Post → Video\n\nAudio Post is \"Post\" and Video Post is \"Video\". Never shorten Video Post to \"Post\" — that reads as Audio Post and puts the wrong department on the calendar.\n\nMost department names are stored in full in the Bookers table, but People & Culture is stored there as \"P&C\" already; both forms mean the same department. Sales & Accounts was formerly Client Services — if someone says CS or Client Services they mean Sales & Accounts, use it without asking, and the title form is still S&A. For a department not on this list, ask them to confirm the title form; never invent an abbreviation.\n\nNote: Studio M is not an M Booth. Studio M and all numbered and lettered studios follow the standard studio flow.\n\n---\n\n# Reference\n\n*Rooms.* Studio 1–8 · Studio A–F · Studio M · M1–M8 · Salin · Katha · Likha · Lobby\n\n*Booth pairings.* Studios 1–8, C and F can pair with a recording booth. Ask Rooms and Studios which rooms those are rather than naming them from memory — the vocal-booth flag and the Recording Booth capability do not cover the same rooms. Localization Dubbing is always Studio 1–6 plus a booth. Music Vocal Recording and VO Recording take a booth only sometimes — ask. Localization Editing, Localization Mixing, Music Mixing, Post Mixing and QC are studio only — never attach a booth to these. A paired booking is two rooms on one event; pass both names to Book Session.\n\n*Timezone.* Philippine Standard Time, UTC+8. Use ISO 8601 with the +08:00 offset when creating events: `2026-06-11T14:00:00+08:00`.\n\n*Slack formatting.* You are writing in Slack mrkdwn, not Markdown. Use single asterisks for *bold*. Double asterisks appear as raw characters.\n\n*Tone.* Casual and conversational — you're talking to busy studio staff, not writing documentation. Friendly, direct, helpful. Use line breaks to separate ideas and keep information in small chunks.\n\nHold your own register regardless of the requester's. Match their language — English or Taglish — but never their tone. Do not adopt slang, endearments, terms of address, or emotional escalation, and do not become apologetic or defensive if a requester is annoyed with you. Stay warm, even and professional in every exchange.\n\nGood:\n\n```\nCut it — booking *EPIC NOVELA / Jem Lim / TL*\n*Date:* June 11, 1:00–3:00 PM\n*Room:* Studio 8\n*Engineer:* TL\n```\n\nAvoid: \"To accommodate your 10:00 PM–12:00 AM slot, the total time required is 9:45 PM–12:15 AM. Please confirm if this is correct...\"\n\n\n*Session type names.* The Session Types table stores these exact values: Band Recording, Celebrity Recording, Event, Localization Atmos Mixing, Localization Dubbing, Localization Editing, Localization Mixing, Meeting, Music Mixing, Music Vocal Recording, Post Mixing, QC, VO Recording. Always use the exact value when looking one up — never an abbreviation or a paraphrase, and never \"Loc Dubbing\" for \"Localization Dubbing\". If the requester used a short or informal name, map it to the exact value yourself rather than searching for what they typed.",
+          "maxIterations": 10
+        }
+      },
+      "id": "b6717325-5d1d-44ed-8b68-6706a7c2bf02",
+      "name": "Jessie AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -544,
+        80
+      ],
+      "retryOnFail": false,
+      "maxTries": 2,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Slack Trigger').first().json.user }}-{{ $now.setZone('Asia/Manila').toFormat('yyyy-MM-dd') }}-{{ $('Gate Context').first().json.epoch }}",
+        "contextWindowLength": 5
+      },
+      "id": "ca6d63cf-f82f-4c82-81d0-2cbce5b55723",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -816,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "List events from the KDC Bookings calendar. Use this to check whether a room is free before creating a booking, and to show a requester what is already booked. Returns every event in the window across all rooms. Do not use it to find an event to cancel — use Search Events for Deletion for that.",
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "KDC Bookings"
+        },
+        "returnAll": true,
+        "timeMin": "={{ $fromAI('after', 'Start of the date range to check, ISO 8601 with timezone, e.g. 2027-08-24T00:00:00+08:00. Use the date the user is asking about.', 'string') || $now.setZone('Asia/Manila').toISO() }}",
+        "timeMax": "={{ $fromAI('before', 'End of the date range to check, ISO 8601 with timezone. If the user asks about a specific day, set this to that day plus 1. If they ask a general availability question, default to 2 weeks out. Only go further out if they name a specific future date.', 'string', $now.plus({ weeks: 2 }).setZone('Asia/Manila').toISO()) }}",
+        "options": {}
+      },
+      "id": "ba6201bf-c0f3-47b3-a589-32131a7746d3",
+      "name": "List Events",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        352,
+        464
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Create a booking on the KDC Bookings calendar. STOP: For Studio, Lobby, and Conference Room bookings, do NOT call this tool unless the requester has already sent a message approving the details. If the last message in the conversation is yours, or if your current reply contains any question, do not call this tool yet — ask first and wait for their reply. M Booth (M1-M8) bookings are the only exception and may be created without waiting. Pass the exact room name, or a comma-separated list for paired rooms (e.g. 'Studio 1, Studio A') - resources attach automatically. For M Booth bookings with no time given, set All Day true and pass just the date to Start and End.",
+        "calendar": {
+          "__rl": true,
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "KDC Bookings"
+        },
+        "start": "={{ (function(){\n  const raw = String($fromAI('Start', `For a normal timed booking, an ISO 8601 start datetime with timezone, e.g. 2026-01-06T09:00:00+08:00. For an M Booth all-day booking (All Day set to true), pass just the date instead, with no time or timezone, e.g. 2026-01-06.`, 'string') || '').trim();\n  if (!raw) { throw new Error('No start was supplied. Nothing was created.'); }\n  const d = raw.length <= 10 ? DateTime.fromISO(raw, { zone: 'Asia/Manila' }) : DateTime.fromISO(raw);\n  if (!d.isValid) { throw new Error('The start could not be read as a date: \"' + raw + '\". Ask the requester to restate the date and time. Nothing was created.'); }\n  if (d < DateTime.now().setZone('Asia/Manila').startOf('day')) {\n    throw new Error('BLOCKED - that date has already passed. Tell the requester the date is in the past and ask them to confirm the correct one. Do not call this tool again until they give you a new date. Nothing was created.');\n  }\n  return raw;\n})() }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', `For a normal timed booking, an ISO 8601 end datetime with timezone. For an M Booth all-day booking (All Day set to true), pass the date instead, with no time or timezone. Google Calendar all-day events use an exclusive end date, so this must be the day after the booking date, for example an all-day booking on 2026-01-06 should have End as 2026-01-07, not 2026-01-06.`, 'string') }}",
+        "additionalFields": {
+          "allday": "={{ String($fromAI('allDay', 'Set to true ONLY for an M Booth (M1-M8) booking where no specific time was given, or a Lobby/Conference Room booking where the requester explicitly asked for the whole day. For every other booking, including all Studio bookings and any booking with a specific start and end time, set this to false.', 'boolean')) === 'true' }}",
+          "attendees": [
+            "={{ (function(){ const map = {'Studio 1': 'hitproductions.net_3737303833303637363538@resource.calendar.google.com', 'Studio 2': 'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com', 'Studio 3': 'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com', 'Studio 4': 'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com', 'Studio 5': 'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com', 'Studio 6': 'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com', 'Studio 7': 'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com', 'Studio 8': 'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com', 'Studio A': 'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com', 'Studio B': 'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com', 'Studio C': 'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com', 'Studio D': 'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com', 'Studio E': 'c_18807te03d2sqh0lmtal9sbb04gao@resource.calendar.google.com', 'Studio F': 'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com', 'Studio M': 'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com', 'M1': 'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com', 'M2': 'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com', 'M3': 'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com', 'M4': 'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com', 'M5': 'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com', 'M6': 'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com', 'M7': 'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com', 'M8': 'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com', 'Salin': 'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com', 'Katha': 'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com', 'Likha': 'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com', 'Lobby': 'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com'}; const raw = $fromAI('Rooms', 'Exact room name(s) to book. One name for a single room (e.g. Studio 3). For a studio paired with a recording booth, give BOTH names separated by a comma (e.g. Studio 1, Studio A). Use the exact names from the Rooms list in the system prompt.', 'string'); const parts = String(raw).split(/,|\\band\\b|&|\\+/i).map(function(r){return r.trim();}).filter(function(r){return r.length;}); if (!parts.length) { throw new Error('No room name was provided to Create Event.'); } const keys = Object.keys(map); const ids = parts.map(function(r){   const hit = keys.find(function(k){ return k.toLowerCase() === r.toLowerCase(); });   if (!hit) { throw new Error('Unrecognized room name: \"' + r + '\". Booking not created. Use an exact room name from the Rooms list.'); }   return map[hit]; }); return ids.join(','); })() }}"
+          ],
+          "description": "={{ $fromAI('description', 'Engineer and tech requirements only, e.g. \"Engineer: Tara Lim (Post Engineer) | Tech requirements: None\". Do NOT include Booked by — that is added automatically.') }} | Booked by: {{ $('Get Booker').first().json.fields.Name }} | ref: {{ $('Slack Trigger').first().json.user }}",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', `Event title / booking name`, 'string') }}"
+        }
+      },
+      "id": "fbfcbf15-00be-42c9-b975-6f95e8a2bdaa",
+      "name": "Create Event",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        96,
+        464
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('Slack Trigger').first().json.channel }}",
+          "mode": "id"
+        },
+        "text": "={{ $json.output }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "320d8fc8-847f-47db-b8f0-45993a061d40",
+      "name": "Send Reply",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        192,
+        -112
+      ],
+      "webhookId": "94ed8e93-9375-4943-971c-c02cb4abe887",
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -992,
+        640
+      ],
+      "id": "efaebf46-50ac-4c20-b73c-59890b8b9034",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "XWwRE4506eTpfh0j",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "trigger": [
+          "any_event"
+        ],
+        "watchWorkspace": true,
+        "options": {}
+      },
+      "id": "842a1f5c-c2ec-4a56-b1d7-6ef5b1bbc0f6",
+      "name": "Slack Trigger",
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1328,
+        240
+      ],
+      "webhookId": "jessie-slack-webhook",
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e29178ec-c63c-4550-b3ff-b130371c7fa5",
+              "leftValue": "={{ $json.channel_type }}",
+              "rightValue": "im",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1088,
+        144
+      ],
+      "id": "9af98775-3cc6-487f-925a-1e45322acfc9",
+      "name": "DM filter"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2e429a18-d936-466b-be98-a65b7d44a7bf",
+              "leftValue": "={{ $json.bot_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1088,
+        336
+      ],
+      "id": "4583bfe7-b87c-4adb-8b2f-04cc20bd0b1b",
+      "name": "Loop filter"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f59c35b6-bd49-4e50-835f-6f416ec02d79",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "[SYSTEM_ERROR]",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -96,
+        -128
+      ],
+      "id": "34dc4c89-a6ce-444d-9670-07d46859617c",
+      "name": "Error filter"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblxEvRNPneUhQxUv",
+          "mode": "list",
+          "cachedResultName": "Session Types",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tblxEvRNPneUhQxUv"
+        },
+        "filterByFormula": "={{ $fromAI('session_type_filter', 'Airtable formula to find the matching Session Type record. Match on {Type} using the EXACT value as it appears in the table - one of: Band Recording, Celebrity Recording, Event, Localization Atmos Mixing, Localization Dubbing, Localization Editing, Localization Mixing, Meeting, Music Mixing, Music Vocal Recording, Post Mixing, QC, VO Recording. Do not abbreviate or paraphrase the value (e.g. use \"Localization Dubbing\", not \"Loc Dubbing\"). If the requester described a need rather than naming a type, match on {Room Requirements} or {Engineer Role Required} instead.', 'string') }}",
+        "options": {},
+        "descriptionType": "manual",
+        "toolDescription": "Look up a session type to get its Min Duration, Max Duration, Room Requirements and Engineer Role Required. Call this once the requester has named the kind of session. The Engineer Role Required field is also what determines which department the booking belongs to. It also carries Priority and Last Resort room lists, but they return record ids - use Rooms and Studios to turn a session type into room names."
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        -496,
+        640
+      ],
+      "id": "9ec8a263-c9e8-4737-814e-8d650325d2d2",
+      "name": "Session Types",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwZYK9ENUojZ21W",
+          "mode": "list",
+          "cachedResultName": "Rooms & Studios",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tblwZYK9ENUojZ21W"
+        },
+        "filterByFormula": "={{ (function(){\n  var esc  = function(s){ return String(s || '').trim().replace(/'/g, \"\\\\'\"); };\n  var room = esc($fromAI('room_name', 'Exact room name, only when the requester named one - e.g. \"Studio 4\". Empty otherwise.', 'string', ''));\n  var fmt  = esc($fromAI('recording_format', 'The audio format asked about: Stereo, Stereo with Sub, 5.1, Atmos, or None. Use this for any question about what a room can record or mix in.', 'string', ''));\n  var kind = esc($fromAI('room_kind', 'The kind of room, when that is what was asked: Editing, Recording Control Room, Stereo Mixing, 5.1 Mixing, M Booth, Recording Booth, Conference Room, Atmos Suite, Color Grading, Video Editing, Lobby, Van. This is a category, not a capability.', 'string', ''));\n  var st   = esc($fromAI('runs_session_type', 'A session type, to find the rooms it is run in. Empty otherwise.', 'string', ''));\n  var vb   = $fromAI('vocal_booth', 'True only when asked which rooms are vocal booths.', 'boolean', false);\n  var parts = ['{Active / Bookable}'];\n  if (room) parts.push(\"{Room Name} = '\" + room + \"'\");\n  if (fmt)  parts.push(\"FIND('\" + fmt + \"', ARRAYJOIN({Recording Format}))\");\n  if (kind) parts.push(\"FIND('\" + kind + \"', ARRAYJOIN({Room Type}))\");\n  if (st)   parts.push(\"OR(FIND('\" + st + \"', ARRAYJOIN({Session Types})), FIND('\" + st + \"', ARRAYJOIN({Session Types 2})))\");\n  if (vb === true || String(vb).toLowerCase() === 'true') parts.push('{Vocal Booth}');\n  if (parts.length === 1) { throw new Error('Say what you are looking for: a room name, a recording format, a kind of room, a session type, or vocal booths. Nothing was looked up.'); }\n  return 'AND(' + parts.join(', ') + ')';\n})() }}",
+        "options": {},
+        "descriptionType": "manual",
+        "toolDescription": "Look rooms up in the Rooms & Studios table. You do not write the query - give one or more of: a room name, a recording format, a kind of room, a session type, or vocal_booth.\nANY question about what a room can record or mix in - stereo, 5.1, Atmos - uses recording_format, one of: Stereo · Stereo with Sub · 5.1 · Atmos · None.\nroom_kind is the category of room, not what it can do, one of: Editing · Recording Control Room · Stereo Mixing · 5.1 Mixing · M Booth · Recording Booth · Conference Room · Atmos Suite · Color Grading · Video Editing · Lobby · Van. Do not use room_kind to answer a format question: several rooms are typed 5.1 Mixing that only record in stereo.\nvocal_booth true returns the rooms flagged as vocal booths, which is not the same as the Recording Booth kind.\nruns_session_type returns the rooms that session type is run in.\nOnly bookable rooms are returned. Report exactly what comes back; if nothing comes back, say so rather than answering from the room list in your instructions."
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        -336,
+        640
+      ],
+      "id": "d4a0af55-9e35-4a71-bc38-a45c7faaa3d6",
+      "name": "Rooms and Studios",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbljkG6z7odPUtTIf",
+          "mode": "list",
+          "cachedResultName": "Localization Projects",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tbljkG6z7odPUtTIf"
+        },
+        "filterByFormula": "={{ $fromAI('loc_project_filter', 'Airtable formula to find the matching Localization Projects record. The requester may give either the official Project Code (e.g. NET-CMA, LOPH S2) or the full Project Title. If it looks like a short code, match on {Project Code}. If it looks like a full title, match on {Project Title}. If unsure which the requester meant, combine both with OR() so either matches.', 'string') }}",
+        "options": {},
+        "descriptionType": "manual",
+        "toolDescription": "Find the Project Code for a Localization project. Use this ONLY when the session type is a Localization one — Localization Dubbing, Localization Editing, Localization Mixing, or QC. Never call it for Post Mixing, VO Recording, Celebrity Recording, Band Recording, Music Mixing, Music Vocal Recording, or any Advertising work: those projects are not stored in this table, so an empty result here means nothing and must never be reported to the requester as a project that could not be found. A project title given for a Post or Advertising booking needs no lookup at all."
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        -176,
+        640
+      ],
+      "id": "d031ce3d-3c03-4860-b860-1058312d1ade",
+      "name": "Localization Projects",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbldeuQvdGv2fotQa",
+          "mode": "list",
+          "cachedResultName": "Advertising Projects",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tbldeuQvdGv2fotQa"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        320,
+        928
+      ],
+      "id": "1cc72589-34f7-401b-a002-7b303eee11ed",
+      "name": "Advertising Projects",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "filterByFormula": "={{ $fromAI('engineer_name_filter', 'Airtable formula to find the assigned engineer. Match on {Name} using SEARCH() for a case-insensitive partial match against whatever name or first name the requester gave, e.g. SEARCH(LOWER(\"vener\"), LOWER({Name}))', 'string') }}",
+        "options": {},
+        "sort": {
+          "property": []
+        }
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        160,
+        928
+      ],
+      "id": "432ecc24-57f8-419f-aa12-944630f64a29",
+      "name": "Search records in Airtable",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "disabled": true,
+      "notes": "Search the Engineers table in Airtable to find the assigned engineer and their Initials, using whatever name (full or partial) the requester gave. Use this to resolve the correct initials for the calendar title — never guess or abbreviate a name yourself."
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Search the Clients table for a client's Preferred Rooms, Typical Session Length, Technical Requirements, Importance, Min Simultaneous Rooms and Notes. Call this ONLY when the requester has given you a name and identified it as the client or the producer. Do NOT call it to work out what an unknown name refers to. Do NOT call it for a project title: if the requester said 'the project X', then X is a project and searching for it here is always wrong - it stays wrong even though no other tool holds project titles, because Post, Advertising and Music project titles are not stored anywhere and need no lookup. IMPORTANT: if this returns more than one matching client, do NOT choose one. Several clients share similar names (for example Netflix Mixing, Netflix Atmos Mixing and Netflix Dubbing). List the matches for the requester, ask which one they mean, and wait for their answer before booking.",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblJCgcluYhli6kHH",
+          "mode": "list",
+          "cachedResultName": "Clients",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tblJCgcluYhli6kHH"
+        },
+        "filterByFormula": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Filter_By_Formula', `Airtable formula to find the matching Client record. Match on {Name} using SEARCH() for a case-insensitive partial match against whatever client or company name the requester gave. Use exact Airtable formula syntax: SEARCH(LOWER(\"jem lim\"), LOWER({Name})). Always use double quotes around the search text, never single quotes, because Airtable formulas only accept double-quoted strings. Client names may be individuals or companies; match whatever name was given, do not assume a format.`, 'string') }}",
+        "options": {},
+        "sort": {
+          "property": []
+        }
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        -656,
+        640
+      ],
+      "id": "21ee64ef-40e2-45e4-b16e-6d7b39c36acd",
+      "name": "Clients",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "notes": "Search the Clients table in Airtable to look up a client's Preferred Rooms, Typical Session Length, Technical Requirements, Importance, and Notes. Use this before confirming any booking to check room preferences and special requirements — never guess these from memory."
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Search the Bookers table to look up a Hit Productions staff member — engineer, arranger, account or traffic staff — by name, nickname or initials, and to find which department a person belongs to. Returns their Initials (used in calendar titles) and their Department. The Info field holds nicknames, alternate names and each person's actual role, so search it too and use it to describe them — not everyone here is an engineer. Never use this table to look up a client or a producer; those are in Clients. This table stores department names in full; use the department list in the system prompt for short forms.",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbllRId3gq1auTA64",
+          "mode": "list",
+          "cachedResultName": "Bookers",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tbllRId3gq1auTA64"
+        },
+        "filterByFormula": "={{ $fromAI('Filter_By_Formula', `Airtable formula to find the matching Bookers record. The table has exactly four searchable fields: {Initials}, {Name}, {Department}, and {Info}. Do not reference any other field name. Match across {Name}, {Initials}, and {Info} using SEARCH() for a case-insensitive partial match — {Info} contains nicknames and alternate names such as \"Goes by Arnold, AB\", so it catches names that do not appear in {Name}. Use exact Airtable formula syntax, joining checks with OR, for example: OR(SEARCH(LOWER(\"arnold\"), LOWER({Name})), SEARCH(LOWER(\"arnold\"), LOWER({Initials})), SEARCH(LOWER(\"arnold\"), LOWER({Info}))). To find people in a department, match on {Department} with the full department name. Always use double quotes around search text, never single quotes.`, 'string') }}",
+        "options": {},
+        "sort": {
+          "property": []
+        }
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        -32,
+        640
+      ],
+      "id": "bf53246f-c71a-457b-ab25-40de5f33be22",
+      "name": "Bookers",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "notes": "Staff lookup — engineers, arrangers, account and traffic staff. Returns Initials for calendar titles, Department, and the Info field holding nicknames and each person's actual role."
+    },
+    {
+      "parameters": {
+        "resource": "user",
+        "user": {
+          "__rl": true,
+          "value": "={{ $('Slack Trigger').first().json.user }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        -800,
+        160
+      ],
+      "id": "9b48f454-45d7-4501-a25b-d0ed232ea242",
+      "name": "Get Sender",
+      "webhookId": "3c774e6f-a660-405c-8905-f2c0ca09c845",
+      "retryOnFail": true,
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbllRId3gq1auTA64",
+          "mode": "list",
+          "cachedResultName": "Bookers",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tbllRId3gq1auTA64"
+        },
+        "filterByFormula": "={Slack User ID} = \"{{ $('Slack Trigger').first().json.user }}\"",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -800,
+        -16
+      ],
+      "id": "fe366845-2bc4-42ce-a642-361392ee8a61",
+      "name": "Get Booker",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output;\nlet text = (typeof raw === 'string' ? raw : '').trim();\n\n// Slack mrkdwn uses single asterisks. The model emits ** despite the prompt\n// forbidding it, and Slack shows those as literal characters. Fixed here rather\n// than asked for again.\ntext = text.replace(/\\*{2,}/g, '*');\n\nconst fallback = \"Sorry — I lost the thread on that one. Could you say it again?\";\nreturn [{ json: { output: text.length ? text : fallback } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        -128
+      ],
+      "id": "4622d2e1-0a52-4c22-9715-896669086a5f",
+      "name": "Guard Probe",
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('Slack Trigger').first().json.channel }}",
+          "mode": "id"
+        },
+        "text": "Whoops, I ran into a tiny hiccup trying to process that. Give it a second and try again?",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        192,
+        96
+      ],
+      "id": "adeb5074-83bd-482f-af7d-b00c3059a744",
+      "name": "Error message",
+      "webhookId": "e74c543a-0e4f-4bed-8705-6320c43c144b",
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Find an event the requester has asked to cancel or reschedule. Pass a single calendar date as YYYY-MM-DD - not a range, not a time. The tool builds the full Manila day itself and returns every event on it, with event ID, title, time and Description. Use this ONLY once the requester has said which booking they mean and told you its date; if you do not have the date, ask for it rather than guessing. Do not use it to check whether a room is free - that is List Events, or Book Session, depending on what you are doing.",
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "KDC Bookings"
+        },
+        "returnAll": true,
+        "timeMin": "={{ (function(){ const raw = String($fromAI('booking_date', 'The single calendar date of the booking the requester wants to cancel or move, as YYYY-MM-DD, for example 2027-09-02. Give the date only, never a time and never a range. If the requester has not told you which date the booking is on, do not call this tool at all - ask them for the date first.', 'string') || '').trim().slice(0,10); const d = DateTime.fromISO(raw, { zone: 'Asia/Manila' }); if (!d.isValid) { throw new Error('Could not read the booking date. Ask the requester which day the booking is on, then search again.'); } return d.startOf('day').toISO(); })() }}",
+        "timeMax": "={{ (function(){ const raw = String($fromAI('booking_date', 'The single calendar date of the booking the requester wants to cancel or move, as YYYY-MM-DD, for example 2027-09-02. Give the date only, never a time and never a range. If the requester has not told you which date the booking is on, do not call this tool at all - ask them for the date first.', 'string') || '').trim().slice(0,10); const d = DateTime.fromISO(raw, { zone: 'Asia/Manila' }); if (!d.isValid) { throw new Error('Could not read the booking date. Ask the requester which day the booking is on, then search again.'); } return d.startOf('day').plus({ days: 1 }).toISO(); })() }}",
+        "options": {}
+      },
+      "id": "300f69a4-d65d-4340-958b-943b429c8204",
+      "name": "Search Events for Deletion",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        480,
+        464
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "STOP - read this first. For Studio, Lobby and Conference Room bookings, do not call this tool unless the requester has already sent a message approving a summary you presented in an EARLIER response. If the last message in this conversation is yours, or your current reply contains a question or a summary, do not call it - present the summary, end it with the line \"Confirm to book.\", and stop. The tool verifies this against Slack itself and refuses with NOT_CONFIRMED otherwise; that refusal is final, not something to retry or reword. M Booth (M1-M8) bookings are the only exception and may be created immediately. Check availability and create a booking on the KDC Bookings calendar in one call. This is the only way to create a booking. It checks the requested rooms for conflicts before creating anything and refuses, with a reason, if a room is taken, if a room name is not recognised, or if it cannot identify the room of an existing event in that window. It returns a 'human' field written for a person - relay that close to verbatim rather than re-describing what happened. Never work around a rejection by retrying with a different room or time unless the requester asked for that specific alternative. It also enforces the session type's Min and Max Duration and refuses with DURATION_OUT_OF_RANGE outside them.",
+        "workflowId": {
+          "__rl": true,
+          "value": "EUG3sGXkfsJSYIMz",
+          "mode": "list",
+          "cachedResultName": "Jessie — Book Session"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "summary": "={{ $fromAI('summary', 'The finished calendar title, per the title rules in the system prompt.', 'string', '') }}",
+            "start_iso": "={{ $fromAI('start', 'ISO 8601 start with +08:00. For an all-day booking, just the date.', 'string', '') }}",
+            "end_iso": "={{ $fromAI('end', 'ISO 8601 end with +08:00. For all-day, the day after the booking date.', 'string', '') }}",
+            "rooms": "={{ $fromAI('rooms', 'Exact room name, or comma-separated for paired rooms, e.g. Studio 1, Studio A', 'string', '') }}",
+            "description": "={{ $fromAI('description', 'Engineer only, e.g. \"Engineer: Tara Lim (Post Engineer)\". On music sessions add the arranger. Do NOT write Booked by or Tech requirements - both are added automatically from Airtable.', 'string', '') }} | Booked by: {{ $('Get Booker').first().json.fields.Name }} | ref: {{ $('Slack Trigger').first().json.user }}",
+            "all_day": "={{ $fromAI('all_day', 'True only for an M Booth with no time given, or Lobby/Conference when the whole day was asked for.', 'boolean', false) }}",
+            "exclude_event_id": "={{ $fromAI('exclude_event_id', 'During a reschedule, the id of the booking being moved. Empty otherwise.', 'string', '') }}",
+            "confirmed": "={{ $('Gate Context').first().json.confirmed }}",
+            "session_type": "={{ $fromAI('session_type', 'The session type exactly as it appears in Airtable - one of: Band Recording, Celebrity Recording, Event, Localization Atmos Mixing, Localization Dubbing, Localization Editing, Localization Mixing, Meeting, Music Mixing, Music Vocal Recording, Post Mixing, QC, VO Recording. Never abbreviate. Leave empty for M Booth, Lobby and Conference Room bookings, which have no session type.', 'string', '') }}",
+            "duration_override": "={{ $fromAI('duration_override', 'True only when a previous call was refused with DURATION_OUT_OF_RANGE and the requester has since said in their own message to book it anyway. False in every other case, including the first attempt.', 'boolean', false) }}",
+            "client": "={{ $fromAI('client', 'The client name exactly as the requester gave it - for an advertising session this is the producer. Leave empty for internal rooms, which have no client.', 'string', '') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "start_iso",
+              "displayName": "start_iso",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "end_iso",
+              "displayName": "end_iso",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "rooms",
+              "displayName": "rooms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "all_day",
+              "displayName": "all_day",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "boolean"
+            },
+            {
+              "id": "exclude_event_id",
+              "displayName": "exclude_event_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "confirmed",
+              "displayName": "confirmed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "boolean"
+            },
+            {
+              "id": "session_type",
+              "displayName": "session_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "duration_override",
+              "displayName": "duration_override",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "boolean"
+            },
+            {
+              "id": "client",
+              "displayName": "client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        96,
+        654
+      ],
+      "id": "c1a7f0de-0000-4000-8000-b00ksess1on1",
+      "name": "Book Session"
+    },
+    {
+      "parameters": {
+        "resource": "channel",
+        "operation": "history",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('Slack Trigger').first().json.channel }}",
+          "mode": "id"
+        },
+        "returnAll": false,
+        "limit": 8,
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        -600,
+        -16
+      ],
+      "id": "9a1c0000-0000-4000-8000-getrecentmsgs",
+      "name": "Get Recent Messages",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collapses Slack history back to ONE item - a multi-item node in the agent's\n// main chain breaks paired-item resolution (HANDOFF 7.2). Everything downstream\n// reads this node with .first().\n//\n// The gate: `confirmed` is true only when the last thing Jessie said in this DM\n// was a summary ending in the marker line, AND the requester has said something\n// since. Send Reply runs after the agent, so a summary written in the current\n// turn is not in Slack yet - a same-turn booking cannot pass this. The model\n// supplies no part of it.\nconst MARKERS = { book: 'confirm to book.', cancel: 'confirm to cancel.' };\n// A reply only approves something. A fresh instruction is not an approval, which\n// is how a booking once went through with no summary: the previous bot message\n// still ended with the marker, and the next request counted as the yes.\nconst isNewRequest = t => (/\\b(book|rebook|reschedule|cancel|move)\\b/i.test(t) && t.trim().length > 30)\n                          || /^reset$/i.test(t.trim());   // reset clears memory, it approves nothing\nconst BOT_USER = 'U0BNQL8KFKR';   // Jessie's own Slack user, seen on her replies\n\nconst booker = $('Get Booker').first().json || {};\nlet msgs = [];\ntry { msgs = $('Get Recent Messages').all().map(i => (i && i.json) ? i.json : {}); } catch (e) { msgs = []; }\n\nconst isBot = m => Boolean(m.bot_id) || m.subtype === 'bot_message' || m.user === BOT_USER;\n\n// Memory epoch. A finished booking ends the conversation for memory purposes, so\n// the next request cannot inherit its client, session type or engineer - the\n// \"each booking starts clean\" rule, enforced instead of asked for. A bare\n// \"reset\" does the same on demand.\n//\n// It is held in workflow static data and only ever moves forward. Deriving it\n// from the history window alone was wrong: once the \"Booked.\" message aged out\n// of the last 8 messages the epoch fell back to empty, the memory key changed\n// and the conversation lost its context mid-thread.\nconst store = $getWorkflowStaticData('global');\nconst slackUser = String($('Slack Trigger').first().json.user || '');\nconst storeKey = 'epoch_' + slackUser;\nlet epoch = String(store[storeKey] || '');\nfor (const m of msgs) {\n  const t = String(m.text || '').trim();\n  const ts = String(m.ts || '');\n  const marks = (isBot(m) && /^Booked\\./i.test(t)) || (!isBot(m) && /^reset$/i.test(t));\n  if (marks && ts && parseFloat(ts) > parseFloat(epoch || '0')) { epoch = ts; break; }\n  if (marks) break;\n}\nstore[storeKey] = epoch;\n\n// Slack returns newest first. Walk back to the first bot message, counting any\n// requester messages passed on the way - those are the reply that came after it.\nlet repliedSince = 0, lastBotText = '', found = false, sawNewRequest = false;\nfor (const m of msgs) {\n  if (isBot(m)) { lastBotText = String(m.text || ''); found = true; break; }\n  const t = String(m.text || '');\n  if (t.trim()) { repliedSince++; if (isNewRequest(t)) sawNewRequest = true; }\n}\n\nconst tail = lastBotText.trim().toLowerCase();\nconst endsWith = m => found && tail.endsWith(m);\nconst approvalOnly = repliedSince > 0 && !sawNewRequest;\n\nconst confirmed       = endsWith(MARKERS.book)   && approvalOnly;\nconst confirmedCancel = endsWith(MARKERS.cancel) && approvalOnly;\n\nreturn [{ json: Object.assign({}, booker, {\n  epoch: epoch,\n  confirmed: confirmed,\n  confirmedCancel: confirmedCancel,\n  gate: { presentedBook: endsWith(MARKERS.book), presentedCancel: endsWith(MARKERS.cancel),\n          repliedSince: repliedSince, sawNewRequest: sawNewRequest, sawBotMessage: found,\n          historyCount: msgs.length, lastBotText: lastBotText.slice(-120) }\n}) }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        -16
+      ],
+      "id": "9a1c0000-0000-4000-8000-gatecontext01",
+      "name": "Gate Context",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwZYK9ENUojZ21W",
+          "mode": "list",
+          "cachedResultName": "Rooms & Studios"
+        },
+        "filterByFormula": "={{ '{Active / Bookable}' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -200,
+        -16
+      ],
+      "id": "c0000000-0000-4000-8000-allrooms0000",
+      "name": "All Rooms",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblxEvRNPneUhQxUv",
+          "mode": "list",
+          "cachedResultName": "Session Types"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "c0000000-0000-4000-8000-allsessionty",
+      "name": "All Session Types",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "executeOnce": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Builds the room-ranking reference the system prompt interpolates. The lists\n// live in Airtable as record ids the model cannot read, and it will not call a\n// tool to resolve them - so they are resolved here and handed to it as text.\nconst nameOf = {};\ntry {\n  for (const it of $('All Rooms').all()) {\n    const r = (it && it.json) || {};\n    if (r.id) nameOf[r.id] = String((r.fields || {})['Room Name'] || '').trim();\n  }\n} catch (e) {}\n\nconst lines = [];\ntry {\n  for (const it of $('All Session Types').all()) {\n    const f = ((it && it.json) || {}).fields || {};\n    const type = String(f['Type'] || '').trim();\n    if (!type) continue;\n    const names = ids => [].concat(ids || []).map(i => nameOf[i]).filter(Boolean);\n    const pri = names(f['Priority']), last = names(f['Last Resort']);\n    if (!pri.length && !last.length) continue;\n    lines.push('- ' + type + ' — priority: ' + (pri.join(', ') || 'none on file')\n             + (last.length ? ' · last resort: ' + last.join(', ') : ''));\n  }\n} catch (e) {}\n\nlines.sort();\n\n// The session types, read live, so the list she offers cannot go stale when Tel\n// adds one - which had already happened: Localization Atmos Mixing existed in\n// Airtable and appeared nowhere in the prompt.\nconst typeNames = [];\ntry {\n  for (const it of $('All Session Types').all()) {\n    const t = String((((it && it.json) || {}).fields || {})['Type'] || '').trim();\n    if (t && typeNames.indexOf(t) === -1) typeNames.push(t);\n  }\n} catch (e) {}\ntypeNames.sort();\n\n// A department-flavoured e.g. for the session-type question. Not a filter -\n// bookers routinely book outside their own department, and eight of the eleven\n// departments map to no session type at all. The full list stays available.\nconst DEPT_ROLES = {\n  'audio post':   ['post engineer'],\n  'localization': ['loc engineer'],\n  'music':        ['music engineer', 'music arranger']\n};\nconst bookerFields = (function(){ try { return ($('Get Booker').first().json || {}).fields || {}; }\n                                  catch (e) { return {}; } })();\nconst myRoles = [];\nfor (const d of [].concat(bookerFields['Department'] || [])) {\n  for (const r of (DEPT_ROLES[String(d).trim().toLowerCase()] || [])) myRoles.push(r);\n}\nconst suggested = [];\nif (myRoles.length) {\n  try {\n    for (const it of $('All Session Types').all()) {\n      const f = ((it && it.json) || {}).fields || {};\n      const t = String(f['Type'] || '').trim();\n      if (!t) continue;\n      const roles = [].concat(f['Engineer Role Required'] || []).map(r => String(r).trim().toLowerCase());\n      if (roles.some(r => myRoles.indexOf(r) !== -1) && suggested.indexOf(t) === -1) suggested.push(t);\n    }\n  } catch (e) {}\n}\nsuggested.sort();\nconst sessionTypeHint = suggested.length ? suggested.join(', ') : '';\nconst sessionTypes = typeNames.length\n  ? typeNames.join(' · ')\n  : '(session type list unavailable this run - ask Session Types before offering any)';\nconst text = lines.length\n  ? lines.join('\\n')\n  : '(room ranking unavailable this run - ask Rooms and Studios before naming any room)';\nreturn [{ json: Object.assign({}, $('Gate Context').first().json, { roomTable: text, sessionTypes: sessionTypes, sessionTypeHint: sessionTypeHint }) }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -16
+      ],
+      "id": "c0000000-0000-4000-8000-roomtable001",
+      "name": "Room Table",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "description": "Cancel a booking. Give it only the event id from a Search Events for Deletion result - nothing else. It fetches that event from the calendar itself, reads who booked it, and refuses if it was not the person messaging you, if it carries no booker reference, or if they have not yet replied approving a message from you that ended with the line \"Confirm to cancel.\" You cannot satisfy that in the same response as showing them the booking. A refusal is final: relay the reason and stop. Never retry with a different event id.",
+        "workflowId": {
+          "__rl": true,
+          "value": "bAyDw7udhmY0NL38",
+          "mode": "list",
+          "cachedResultName": "Jessie — Cancel Booking"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "event_id": "={{ $fromAI('event_id', 'The Google Calendar event id of the booking to cancel, taken from the id field of a Search Events for Deletion result. A short alphanumeric string, never a calendar id or anything containing @.', 'string') }}",
+            "requester": "={{ $('Slack Trigger').first().json.user }}",
+            "confirmed": "={{ $('Gate Context').first().json.confirmedCancel }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "event_id",
+              "displayName": "event_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "requester",
+              "displayName": "requester",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "confirmed",
+              "displayName": "confirmed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "boolean"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        464
+      ],
+      "id": "e33161ee-b6d5-45f0-8b7c-e71d34d6ec17",
+      "name": "Cancel Booking"
+    },
+    {
+      "parameters": {
+        "resource": "reaction",
+        "operation": "add",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('Slack Trigger').first().json.channel }}",
+          "mode": "id"
+        },
+        "timestamp": "={{ $('Slack Trigger').first().json.ts }}",
+        "name": "eyes"
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        -908,
+        466
+      ],
+      "id": "f0000000-0000-4000-8000-ackreaction1",
+      "name": "Ack Reaction",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "reaction",
+        "operation": "remove",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('Slack Trigger').first().json.channel }}",
+          "mode": "id"
+        },
+        "timestamp": "={{ $('Slack Trigger').first().json.ts }}",
+        "name": "eyes"
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        -908,
+        656
+      ],
+      "id": "f0000000-0000-4000-8000-clearack0001",
+      "name": "Clear Ack",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Find which rooms are free in a window. Give it a start and an end, and the session type when there is one. It returns the rooms that are actually free - offer exactly those and never add to the list. With a session type it returns free priority rooms, and falls back to last-resort rooms only when every priority room is taken. Use this for any 'what is free' or 'which rooms can I have' question. Do not use List Events to work out availability - it returns bookings, and turning those into a list of free rooms is not your job.",
+        "workflowId": {
+          "__rl": true,
+          "value": "e7tBQB458nstrqei",
+          "mode": "list",
+          "cachedResultName": "Jessie — Room Availability"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "start_iso": "={{ $fromAI('window_start', 'ISO 8601 start of the window to check, with +08:00.', 'string', '') }}",
+            "end_iso": "={{ $fromAI('window_end', 'ISO 8601 end of the window to check, with +08:00.', 'string', '') }}",
+            "session_type": "={{ $fromAI('window_session_type', 'The session type exactly as in Airtable when known, empty otherwise.', 'string', '') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "start_iso",
+              "displayName": "start_iso",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "end_iso",
+              "displayName": "end_iso",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "session_type",
+              "displayName": "session_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        644
+      ],
+      "id": "a1000000-0000-4000-8000-roomavailtool",
+      "name": "Room Availability"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Jessie AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Guard Probe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Events": {
+      "ai_tool": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "node": "DM filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DM filter": {
+      "main": [
+        [
+          {
+            "node": "Loop filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop filter": {
+      "main": [
+        [
+          {
+            "node": "Ack Reaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error filter": {
+      "main": [
+        [
+          {
+            "node": "Error message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session Types": {
+      "ai_tool": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rooms and Studios": {
+      "ai_tool": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Localization Projects": {
+      "ai_tool": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records in Airtable": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "Clients": {
+      "ai_tool": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bookers": {
+      "ai_tool": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Sender": {
+      "main": [
+        [
+          {
+            "node": "Get Booker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Booker": {
+      "main": [
+        [
+          {
+            "node": "Get Recent Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guard Probe": {
+      "main": [
+        [
+          {
+            "node": "Error filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Events for Deletion": {
+      "ai_tool": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book Session": {
+      "ai_tool": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recent Messages": {
+      "main": [
+        [
+          {
+            "node": "Gate Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate Context": {
+      "main": [
+        [
+          {
+            "node": "All Rooms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All Rooms": {
+      "main": [
+        [
+          {
+            "node": "All Session Types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All Session Types": {
+      "main": [
+        [
+          {
+            "node": "Room Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Room Table": {
+      "main": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel Booking": {
+      "ai_tool": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack Reaction": {
+      "main": [
+        [
+          {
+            "node": "Get Sender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reply": {
+      "main": [
+        [
+          {
+            "node": "Clear Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Room Availability": {
+      "ai_tool": [
+        [
+          {
+            "node": "Jessie AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "f4355fea-4d47-49aa-bb59-a2c1e257de04",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "47b8f2db30f5474de1dd72088d2efb6e9f5862c79e8ac68a94619b94d7aeb560"
+  },
+  "nodeGroups": [],
+  "id": "uVVYVB2M7kxpLleI",
+  "tags": []
+}
