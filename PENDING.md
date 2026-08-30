@@ -1,12 +1,14 @@
-# Pending — owned by someone else
+# Pending
 
-Things found while working on Jessie that can't be fixed in the workflow.
+Things found while working on Jessie that can't be fixed inside the workflow —
+they need a change in Airtable, in the Slack app, or on the n8n server.
+
 Raised 2026-08-30, all checked against the build that is live now. Each one says
 how it was found and what it breaks.
 
 ---
 
-## Tel — Airtable
+## Airtable
 
 **1. `Room Type` marks nine rooms as `5.1 Mixing`. Two of them record in stereo only.**
 
@@ -62,7 +64,7 @@ Until then, always-ask is correct and is what she does.
 
 ---
 
-## Howard — Slack app
+## Slack app
 
 **6. Does the bot have `reactions:write`?**
 
@@ -81,9 +83,9 @@ tested that way.
 
 ---
 
-## Howard — n8n
+## n8n server
 
-**8. Worth exploring an n8n update — we don't know what the current version can do.**
+**8. Worth exploring an update — we don't know what the current version can do.**
 
 Two things we wanted turned out not to be reachable from the installed version:
 
@@ -109,6 +111,6 @@ It is paid on every message, including ones that do nothing — a bare "hi" cost
 it. With the conflict query now fixed, it is the single largest remaining piece
 of latency, worth more than everything else left combined.
 
-The question for Howard: can the task runner be kept warm or started ahead of
-time, so the first Code node doesn't pay for it? If it can, every turn gets
-about 3.5 seconds shorter.
+The open question: can the task runner be kept warm or started ahead of time, so
+the first Code node doesn't pay for it? If it can, every turn gets about 3.5
+seconds shorter.
