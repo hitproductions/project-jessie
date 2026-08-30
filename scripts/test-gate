@@ -41,8 +41,8 @@ const run = (text, history) => {
 };
 const bot = t => ({ text: t, bot_id: 'B1', ts: '1788077400.1' });
 const usr = t => ({ text: t, user: ME, ts: '1788077450.1' });
-const bookSummary = bot('*Room:* Studio F\n\nConfirm to book. (y/n)');
-const cancelSummary = bot('MERMAID / X / KSC\n\nConfirm to cancel. (y/n)');
+const bookSummary = bot('*Room:* Studio F\n\nConfirm to book. (yes/no)');
+const cancelSummary = bot('MERMAID / X / KSC\n\nConfirm to cancel. (yes/no)');
 
 // label, message, history, expectations
 const cases = [
@@ -60,9 +60,13 @@ const cases = [
    { confirmed: false, declineNotice: /SAID NO/ }],
   ['y approves a cancel',    'y', [usr('y'), cancelSummary],
    { confirmedCancel: true, cancelNotice: /ALREADY APPROVED/ }],
-  ['y approves a move',      'y', [usr('y'), bot('ALPHA / X / TL\n\nConfirm to move. (y/n)')],
+  // the old suffix still sits in Slack history after the change, so it has to
+  // keep working or the first confirmation after the import fails
+  ['legacy (y/n) marker',    'yes', [usr('yes'), bot('*Room:* Studio F\n\nConfirm to book. (y/n)')],
+   { confirmed: true }],
+  ['y approves a move',      'y', [usr('y'), bot('ALPHA / X / TL\n\nConfirm to move. (yes/no)')],
    { confirmedMove: true, confirmed: false, confirmedCancel: false, moveNotice: /MOVE IS ALREADY APPROVED/ }],
-  ['n refuses a move',       'n', [usr('n'), bot('ALPHA / X / TL\n\nConfirm to move. (y/n)')],
+  ['n refuses a move',       'n', [usr('n'), bot('ALPHA / X / TL\n\nConfirm to move. (yes/no)')],
    { confirmedMove: false, declineNotice: /SAID NO/ }],
   ['a change is not a yes',  'yes but move it to 3pm', [usr('x'), bookSummary],
    { confirmed: false }],
