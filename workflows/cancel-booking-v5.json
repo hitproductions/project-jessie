@@ -1,0 +1,527 @@
+{
+  "updatedAt": "2026-08-30T12:04:57.222Z",
+  "createdAt": "2026-08-29T20:47:21.643Z",
+  "id": "bAyDw7udhmY0NL38",
+  "name": "Jessie — Cancel Booking",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "event_id"
+            },
+            {
+              "name": "requester"
+            },
+            {
+              "name": "confirmed",
+              "type": "boolean"
+            },
+            {
+              "name": "booking_date"
+            },
+            {
+              "name": "title"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1296,
+        -192
+      ],
+      "id": "1982b4f7-a110-496f-b817-bed010ff3524",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent(DateTime.fromISO($json.booking_date + 'T00:00:00', { zone: 'Asia/Manila' }).toISO()) }}&timeMax={{ encodeURIComponent(DateTime.fromISO($json.booking_date + 'T00:00:00', { zone: 'Asia/Manila' }).plus({ days: 1 }).toISO()) }}&singleEvents=true&maxResults=250",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1088,
+        -192
+      ],
+      "id": "d525b77a-39c2-4c94-b64c-1781837c769c",
+      "name": "List Day Events",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ownership is decided from the event Google actually holds, never from text the\n// model supplied. The old guard compared ref: inside a description the agent\n// retyped, so passing your own booking's description with someone else's event\n// id would have passed it.\n//\n// The booking is resolved here rather than trusted. Two live failures drove this:\n// the model invented an event id in the shape of the recurring-instance ids it\n// had just seen, and - given a notice saying it could search to recover an id -\n// it searched, got the id, and then stopped, re-presenting the same summary\n// instead of cancelling. So the title it showed the requester resolves the\n// booking too, and no search is needed on the turn they approve.\n// Model output occasionally carries invisible characters. On 2026-08-30 a\n// variation selector (U+FE0F) glued to the end of an ISO timestamp made Room\n// Availability answer BAD_WINDOW, and the model then presented a booking\n// summary as though the room were free. Every string the model hands this\n// workflow is scrubbed once, here, rather than at each place one is read.\n// Tabs and newlines survive - a description is allowed to contain them.\nconst clean = s => String(s == null ? '' : s)\n  .replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F\\u200B-\\u200F\\u2028\\u2029\\u202A-\\u202E\\u2060-\\u2064\\uFE00-\\uFE0F\\uFEFF]/g, '')\n  .trim();\nconst REQ = (function (o) {\n  const out = {};\n  for (const k in o) out[k] = (typeof o[k] === 'string') ? clean(o[k]) : o[k];\n  return out;\n})($('When Executed by Another Workflow').first().json || {});\nconst raw = $input.first().json || {};\nconst me  = String(REQ.requester || '').trim();\nconst confirmed = REQ.confirmed === true || String(REQ.confirmed).toLowerCase() === 'true';\nconst wantedId = String(REQ.event_id || '').trim();\nconst wantedTitle = String(REQ.title || '').trim();\nconst norm = s => String(s || '').toLowerCase().replace(/\\s+/g, ' ').trim();\n// Levenshtein distance, used only to recognise a title the model mistyped.\nconst dist = (a, b) => {\n  if (a === b) return 0;\n  if (!a.length || !b.length) return Math.max(a.length, b.length);\n  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);\n  for (let i = 1; i <= a.length; i++) {\n    const cur = [i];\n    for (let j = 1; j <= b.length; j++) {\n      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));\n    }\n    prev = cur;\n  }\n  return prev[b.length];\n};\n// Two bookings can share a title on one day, so a list of them has to carry the\n// time or there is nothing to choose between.\nconst when = e => {\n  const s = (e.start && e.start.dateTime) || '';\n  if (!s) return '(all day)';\n  const d = new Date(s);\n  return '(' + d.toLocaleTimeString('en-US', { timeZone:'Asia/Manila', hour:'numeric', minute:'2-digit' }) + ')';\n};\n\nif (!confirmed) {\n  return [{ json: { verdict:'REJECTED', reason:'NOT_CONFIRMED',\n    human:'Nothing was cancelled. Show the requester the booking you found, end that message with the line \"Confirm to cancel. (yes/no)\", and stop. Cancel it only after they reply yes.' } }];\n}\nif (!String(REQ.booking_date || '').trim()) {\n  return [{ json: { verdict:'REJECTED', reason:'MISSING_DATE',\n    human:'Nothing was cancelled - no booking date was given. Call Cancel Booking again with the date you showed the requester.' } }];\n}\nif (!wantedId && !wantedTitle) {\n  return [{ json: { verdict:'REJECTED', reason:'MISSING_DETAILS',\n    human:'Nothing was cancelled - no booking title or event id was given. Call Cancel Booking again with the title exactly as you showed it to the requester.' } }];\n}\n\nconst items = Array.isArray(raw.items) ? raw.items.filter(e => e.status !== 'cancelled') : null;\nif (!items) {\n  return [{ json: { verdict:'REJECTED', reason:'LOOKUP_FAILED',\n    human:'Nothing was cancelled - the calendar could not be read for that date. Tell the requester it did not go through and offer to try again.' } }];\n}\n\n// The id if it is real, otherwise the title. An invented id no longer dead-ends\n// a cancellation that named the booking correctly.\nlet ev = wantedId ? items.find(e => String(e.id) === wantedId) : null;\nlet how = ev ? 'id' : '';\nif (!ev && wantedTitle) {\n  const want = norm(wantedTitle);\n  let hits = items.filter(e => norm(e.summary) === want);\n  if (!hits.length) hits = items.filter(e => norm(e.summary).includes(want) || want.includes(norm(e.summary)));\n  // The model corrupts strings it is copying back. During QA on 2026-08-30 it\n  // rendered \"REASON1 / Bea Jose / TL\" as \"REazon1 / Bea Jose / TL\", re-sent\n  // that on the confirming turn, and the move failed as NOT_ON_CALENDAR. A near\n  // match is taken only when one booking that day is strictly closest, and the\n  // ownership check below still runs on whatever it resolves to - so this\n  // loosens how a booking may be named, never who is allowed to touch it.\n  if (!hits.length) {\n    const tol = Math.max(1, Math.floor(want.length * 0.15));\n    const near = items.map(e => ({ e, d: dist(norm(e.summary), want) }))\n                      .filter(x => x.d <= tol).sort((a, b) => a.d - b.d);\n    if (near.length === 1 || (near.length > 1 && near[0].d < near[1].d)) { ev = near[0].e; how = 'near'; }\n    else if (near.length > 1) hits = near.map(x => x.e);\n  }\n  if (!ev && hits.length === 1) { ev = hits[0]; how = 'title'; }\n  else if (hits.length > 1) {\n    return [{ json: { verdict:'REJECTED', reason:'AMBIGUOUS_TITLE',\n      human:'Nothing was cancelled - more than one booking on that date matches \"' + wantedTitle + '\":\\n'\n        + hits.map(e => '- ' + (e.summary || '(no title)') + ' ' + when(e)).join('\\n')\n        + '\\nAsk the requester which one they mean, then call Cancel Booking again with that exact title.' } }];\n  }\n}\nif (!ev) {\n  return [{ json: { verdict:'REJECTED', reason:'NOT_ON_CALENDAR',\n    human: 'Nothing was cancelled - no booking on that date matches what you gave. These are the only bookings on '\n      + 'that date:\\n' + (items.map(e => '- ' + (e.summary || '(no title)') + ' ' + when(e)).join('\\n') || '(none)')\n      + '\\nIf one of them is the booking, call Cancel Booking again with that title exactly. If none of them is, '\n      + 'tell the requester it was not found and ask them to check the date.' } }];\n}\n\nconst desc = String(ev.description || '');\nconst ref  = desc.match(/ref:\\s*([A-Za-z0-9]+)/);\nconst by   = desc.match(/Booked by:\\s*([^|]+)/);\nconst who  = by ? by[1].trim() : '';\nconst title = ev.summary || '(no title)';\n\nif (!ref) {\n  return [{ json: { verdict:'REJECTED', reason:'NO_REFERENCE', title,\n    human:'BLOCKED - \"' + title + '\" carries no booker reference, so there is no way to tell whose it is. It has to be cancelled by hand.' } }];\n}\nif (ref[1] !== me) {\n  return [{ json: { verdict:'REJECTED', reason:'NOT_YOURS', title,\n    human:'BLOCKED - \"' + title + '\" was booked by ' + (who || 'someone else') + ', so it is not yours to cancel. Say exactly that to the requester and stop. Do not search again and do not show the booking again.' } }];\n}\nreturn [{ json: { verdict:'CLEAR', event_id: ev.id, title, matched_on: how,\n  start: (ev.start && (ev.start.dateTime || ev.start.date)) || '' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -864,
+        -192
+      ],
+      "id": "6db66094-c9c8-4fb7-a9b9-f80e15b810be",
+      "name": "Check Ownership"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a1",
+              "leftValue": "={{ $json.verdict }}",
+              "rightValue": "CLEAR",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -640,
+        -192
+      ],
+      "id": "083f65cc-28c3-4a7a-aabd-8c0740ef2833",
+      "name": "Allowed?"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "KDC Bookings"
+        },
+        "eventId": "={{ $('Check Ownership').first().json.event_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -400,
+        -304
+      ],
+      "id": "724e4848-80dd-4a32-9d04-4ab96f30bd8f",
+      "name": "Delete Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $('Check Ownership').first().json;\nreturn [{ json: { status:'CANCELLED', event_id: c.event_id, title: c.title,\n  human:'Cancelled \"' + c.title + '\".' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        -304
+      ],
+      "id": "1f6ba60c-3377-4fb9-9465-e005a36cf77b",
+      "name": "Return Cancelled"
+    },
+    {
+      "parameters": {
+        "jsCode": "const v = $input.first().json || {};\nreturn [{ json: { status:'REJECTED', reason: v.reason || 'FAILED',\n  human: v.human || 'Nothing was cancelled and the reason is unclear. Tell the requester it did not go through.' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        -80
+      ],
+      "id": "8cf4db5c-7b3b-43b0-ad91-c9ab089d7ff2",
+      "name": "Return Rejection"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "List Day Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Ownership": {
+      "main": [
+        [
+          {
+            "node": "Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Delete Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Event": {
+      "main": [
+        [
+          {
+            "node": "Return Cancelled",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Day Events": {
+      "main": [
+        [
+          {
+            "node": "Check Ownership",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "3daedf6f-5133-4bfa-a56c-40b678014a0a",
+  "activeVersionId": "3daedf6f-5133-4bfa-a56c-40b678014a0a",
+  "versionCounter": 8,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-08-29T20:47:21.652Z",
+      "createdAt": "2026-08-29T20:47:21.652Z",
+      "role": "workflow:owner",
+      "workflowId": "bAyDw7udhmY0NL38",
+      "projectId": "518sXYqvqTl1cuns",
+      "project": {
+        "updatedAt": "2026-07-30T08:01:27.418Z",
+        "createdAt": "2026-06-16T08:07:47.559Z",
+        "id": "518sXYqvqTl1cuns",
+        "name": "Howard Luistro <howard@hitproductions.net>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "146478c9-471a-4651-8e62-0216984196e9"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-08-30T12:04:59.000Z",
+    "createdAt": "2026-08-30T12:04:57.228Z",
+    "versionId": "3daedf6f-5133-4bfa-a56c-40b678014a0a",
+    "workflowId": "bAyDw7udhmY0NL38",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "event_id"
+              },
+              {
+                "name": "requester"
+              },
+              {
+                "name": "confirmed",
+                "type": "boolean"
+              },
+              {
+                "name": "booking_date"
+              },
+              {
+                "name": "title"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          -1296,
+          -192
+        ],
+        "id": "1982b4f7-a110-496f-b817-bed010ff3524",
+        "name": "When Executed by Another Workflow"
+      },
+      {
+        "parameters": {
+          "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent(DateTime.fromISO($json.booking_date + 'T00:00:00', { zone: 'Asia/Manila' }).toISO()) }}&timeMax={{ encodeURIComponent(DateTime.fromISO($json.booking_date + 'T00:00:00', { zone: 'Asia/Manila' }).plus({ days: 1 }).toISO()) }}&singleEvents=true&maxResults=250",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleCalendarOAuth2Api",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -1088,
+          -192
+        ],
+        "id": "d525b77a-39c2-4c94-b64c-1781837c769c",
+        "name": "List Day Events",
+        "alwaysOutputData": true,
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "6D1r3kaq6KaFdL0a",
+            "name": "Google Calendar account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Ownership is decided from the event Google actually holds, never from text the\n// model supplied. The old guard compared ref: inside a description the agent\n// retyped, so passing your own booking's description with someone else's event\n// id would have passed it.\n//\n// The booking is resolved here rather than trusted. Two live failures drove this:\n// the model invented an event id in the shape of the recurring-instance ids it\n// had just seen, and - given a notice saying it could search to recover an id -\n// it searched, got the id, and then stopped, re-presenting the same summary\n// instead of cancelling. So the title it showed the requester resolves the\n// booking too, and no search is needed on the turn they approve.\nconst REQ = $('When Executed by Another Workflow').first().json;\nconst raw = $input.first().json || {};\nconst me  = String(REQ.requester || '').trim();\nconst confirmed = REQ.confirmed === true || String(REQ.confirmed).toLowerCase() === 'true';\nconst wantedId = String(REQ.event_id || '').trim();\nconst wantedTitle = String(REQ.title || '').trim();\nconst norm = s => String(s || '').toLowerCase().replace(/\\s+/g, ' ').trim();\n// Two bookings can share a title on one day, so a list of them has to carry the\n// time or there is nothing to choose between.\nconst when = e => {\n  const s = (e.start && e.start.dateTime) || '';\n  if (!s) return '(all day)';\n  const d = new Date(s);\n  return '(' + d.toLocaleTimeString('en-US', { timeZone:'Asia/Manila', hour:'numeric', minute:'2-digit' }) + ')';\n};\n\nif (!confirmed) {\n  return [{ json: { verdict:'REJECTED', reason:'NOT_CONFIRMED',\n    human:'Nothing was cancelled. Show the requester the booking you found, end that message with the line \"Confirm to cancel. (yes/no)\", and stop. Cancel it only after they reply yes.' } }];\n}\nif (!String(REQ.booking_date || '').trim()) {\n  return [{ json: { verdict:'REJECTED', reason:'MISSING_DATE',\n    human:'Nothing was cancelled - no booking date was given. Call Cancel Booking again with the date you showed the requester.' } }];\n}\nif (!wantedId && !wantedTitle) {\n  return [{ json: { verdict:'REJECTED', reason:'MISSING_DETAILS',\n    human:'Nothing was cancelled - no booking title or event id was given. Call Cancel Booking again with the title exactly as you showed it to the requester.' } }];\n}\n\nconst items = Array.isArray(raw.items) ? raw.items.filter(e => e.status !== 'cancelled') : null;\nif (!items) {\n  return [{ json: { verdict:'REJECTED', reason:'LOOKUP_FAILED',\n    human:'Nothing was cancelled - the calendar could not be read for that date. Tell the requester it did not go through and offer to try again.' } }];\n}\n\n// The id if it is real, otherwise the title. An invented id no longer dead-ends\n// a cancellation that named the booking correctly.\nlet ev = wantedId ? items.find(e => String(e.id) === wantedId) : null;\nlet how = ev ? 'id' : '';\nif (!ev && wantedTitle) {\n  let hits = items.filter(e => norm(e.summary) === norm(wantedTitle));\n  if (!hits.length) hits = items.filter(e => norm(e.summary).includes(norm(wantedTitle)) || norm(wantedTitle).includes(norm(e.summary)));\n  if (hits.length === 1) { ev = hits[0]; how = 'title'; }\n  else if (hits.length > 1) {\n    return [{ json: { verdict:'REJECTED', reason:'AMBIGUOUS_TITLE',\n      human:'Nothing was cancelled - more than one booking on that date matches \"' + wantedTitle + '\":\\n'\n        + hits.map(e => '- ' + (e.summary || '(no title)') + ' ' + when(e)).join('\\n')\n        + '\\nAsk the requester which one they mean, then call Cancel Booking again with that exact title.' } }];\n  }\n}\nif (!ev) {\n  return [{ json: { verdict:'REJECTED', reason:'NOT_ON_CALENDAR',\n    human: 'Nothing was cancelled - no booking on that date matches what you gave. These are the only bookings on '\n      + 'that date:\\n' + (items.map(e => '- ' + (e.summary || '(no title)') + ' ' + when(e)).join('\\n') || '(none)')\n      + '\\nIf one of them is the booking, call Cancel Booking again with that title exactly. If none of them is, '\n      + 'tell the requester it was not found and ask them to check the date.' } }];\n}\n\nconst desc = String(ev.description || '');\nconst ref  = desc.match(/ref:\\s*([A-Za-z0-9]+)/);\nconst by   = desc.match(/Booked by:\\s*([^|]+)/);\nconst who  = by ? by[1].trim() : '';\nconst title = ev.summary || '(no title)';\n\nif (!ref) {\n  return [{ json: { verdict:'REJECTED', reason:'NO_REFERENCE', title,\n    human:'BLOCKED - \"' + title + '\" carries no booker reference, so there is no way to tell whose it is. It has to be cancelled by hand.' } }];\n}\nif (ref[1] !== me) {\n  return [{ json: { verdict:'REJECTED', reason:'NOT_YOURS', title,\n    human:'BLOCKED - \"' + title + '\" was booked by ' + (who || 'someone else') + ', so it is not yours to cancel. Say exactly that to the requester and stop. Do not search again and do not show the booking again.' } }];\n}\nreturn [{ json: { verdict:'CLEAR', event_id: ev.id, title, matched_on: how,\n  start: (ev.start && (ev.start.dateTime || ev.start.date)) || '' } }];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -864,
+          -192
+        ],
+        "id": "6db66094-c9c8-4fb7-a9b9-f80e15b810be",
+        "name": "Check Ownership"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "a1",
+                "leftValue": "={{ $json.verdict }}",
+                "rightValue": "CLEAR",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          -640,
+          -192
+        ],
+        "id": "083f65cc-28c3-4a7a-aabd-8c0740ef2833",
+        "name": "Allowed?"
+      },
+      {
+        "parameters": {
+          "operation": "delete",
+          "calendar": {
+            "__rl": true,
+            "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com",
+            "mode": "list",
+            "cachedResultName": "KDC Bookings"
+          },
+          "eventId": "={{ $('Check Ownership').first().json.event_id }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleCalendar",
+        "typeVersion": 1.3,
+        "position": [
+          -400,
+          -304
+        ],
+        "id": "724e4848-80dd-4a32-9d04-4ab96f30bd8f",
+        "name": "Delete Event",
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "6D1r3kaq6KaFdL0a",
+            "name": "Google Calendar account"
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "const c = $('Check Ownership').first().json;\nreturn [{ json: { status:'CANCELLED', event_id: c.event_id, title: c.title,\n  human:'Cancelled \"' + c.title + '\".' } }];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -176,
+          -304
+        ],
+        "id": "1f6ba60c-3377-4fb9-9465-e005a36cf77b",
+        "name": "Return Cancelled"
+      },
+      {
+        "parameters": {
+          "jsCode": "const v = $input.first().json || {};\nreturn [{ json: { status:'REJECTED', reason: v.reason || 'FAILED',\n  human: v.human || 'Nothing was cancelled and the reason is unclear. Tell the requester it did not go through.' } }];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -400,
+          -80
+        ],
+        "id": "8cf4db5c-7b3b-43b0-ad91-c9ab089d7ff2",
+        "name": "Return Rejection"
+      }
+    ],
+    "connections": {
+      "When Executed by Another Workflow": {
+        "main": [
+          [
+            {
+              "node": "List Day Events",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Ownership": {
+        "main": [
+          [
+            {
+              "node": "Allowed?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Allowed?": {
+        "main": [
+          [
+            {
+              "node": "Delete Event",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Return Rejection",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Delete Event": {
+        "main": [
+          [
+            {
+              "node": "Return Cancelled",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Return Rejection",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "List Day Events": {
+        "main": [
+          [
+            {
+              "node": "Check Ownership",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Howard Luistro",
+    "name": "Version 3daedf6f",
+    "description": "",
+    "autosaved": true,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-08-30T12:04:59.183Z",
+        "id": 436,
+        "workflowId": "bAyDw7udhmY0NL38",
+        "versionId": "3daedf6f-5133-4bfa-a56c-40b678014a0a",
+        "event": "activated",
+        "userId": "146478c9-471a-4651-8e62-0216984196e9"
+      }
+    ]
+  }
+}
