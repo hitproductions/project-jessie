@@ -1,7 +1,8 @@
 # Pending
 
 Things found while working on Jessie that can't be fixed inside the workflow —
-they need a change in Airtable, in the Slack app, or on the n8n server.
+they need a change in Airtable, in the Slack app, in Google Calendar, or on the
+n8n server.
 
 Raised 2026-08-30, all checked against the build that is live now. Each one says
 how it was found and what it breaks.
@@ -43,9 +44,9 @@ is what Jessie answers from, so E is excluded.
 
 The field is a link to Rooms & Studios, so the API returns record ids —
 `reced8Jk7wG24KpdE` — not names. Jessie cannot read those. When she tried, she
-reported Sasa Abella's preferred rooms as "Studio 1, Studio 2, Studio 3"; they
-are Studio 8, Studio F and one other. She is no longer sent the field at all,
-which is why she asks which room instead of proposing one.
+reported one client's preferred rooms as three studios that were not the right
+ones. She is no longer sent the field at all, which is why she asks which room
+instead of proposing one.
 
 *What to add:* a new **Lookup** field on the Clients table, `Preferred Room Names`:
 
@@ -73,19 +74,44 @@ can see it landed during the 7–12 seconds a turn takes. Without the scope the
 reaction silently never appears — replies still work, so it fails invisibly.
 Needs the scope added in the Slack app config and a reinstall.
 
-**7. The Claude Slack connector appends a suffix to messages.**
+**7. The Claude Slack connector appends a suffix to messages. Half fixed.**
 
-Messages sent through it arrive as `reset *Sent using* <@U0AVDBNH1K4>`. That
-breaks the exact match on `reset`, and can turn a short approval into something
-the confirmation gate reads as a new request. It only affects QA driven through
-the connector, not people typing in Slack — but it means approval steps can't be
-tested that way.
+Messages sent through it arrive as `reset *Sent using* <@U0AVDBNH1K4>`.
+
+Fixed as of v81: the confirmation gate strips that suffix before deciding
+whether a reply was a yes or a no, so approval and refusal steps *can* now be
+driven through the connector.
+
+Still broken: the memory `reset` command matches the whole message exactly, and
+that match does not strip the suffix, so `reset` sent through the connector does
+not clear memory. It is a one-line change in `Gate Context` and should be folded
+into the next workflow import rather than done on its own.
+
+---
+
+## Google Calendar
+
+**8. Bookings Jessie did not create can never be cancelled through her.**
+
+`Cancel Booking` reads a `ref:` marker out of the event description to decide
+whose booking it is. Events created before this build, or added directly in
+Google Calendar since, carry no marker, so the guard refuses them with
+`NO_REFERENCE` and tells the requester it has to be done by hand.
+
+Confirmed live on 2026-08-30 against a pre-existing booking, and the refusal was
+correct — with no marker there is no way to tell whose booking it is, and
+guessing is worse than refusing.
+
+The decision needed before launch: is "booked by hand, cancel it by hand" an
+acceptable answer for the existing calendar? If not, the descriptions of
+existing events need a `ref:` added, which is a bulk edit against the calendar
+and needs someone to map each booking to a Slack user id first.
 
 ---
 
 ## n8n server
 
-**8. Worth exploring an update — we don't know what the current version can do.**
+**9. Worth exploring an update — we don't know what the current version can do.**
 
 Two things we wanted turned out not to be reachable from the installed version:
 
@@ -100,17 +126,25 @@ the limits are on the n8n side. Whether a newer version lifts any of them is an
 open question, not a promise: worth checking the changelogs for those two nodes
 against what's installed before deciding whether an update is worth the restart.
 
-**9. The first Code node in every run costs about 3.5 seconds.**
+**10. `PUT /api/v1/workflows/:id` reports success and changes nothing.**
 
-n8n runs Code nodes in a separate task-runner process. The first one in an
-execution waits for that process to be ready; later ones in the same execution
-take about 0.05s. Measured across runs, that first-node wait is consistently
-3.4–3.6 seconds.
+Seen on 2026-08-30 pushing the main workflow: the request returned without an
+error, the response carried no `name` or `updatedAt`, and pulling the workflow
+back showed every node unchanged. The same JSON imported through the browser UI
+applied correctly.
 
-It is paid on every message, including ones that do nothing — a bare "hi" costs
-it. With the conflict query now fixed, it is the single largest remaining piece
-of latency, worth more than everything else left combined.
+Until this is understood, `./scripts/n8n push` cannot be trusted and every
+workflow change has to be imported by hand — which is slow and is itself a
+source of mistakes, since it depends on importing the right file in the right
+order. Reading via the API is unaffected and remains reliable.
 
-The open question: can the task runner be kept warm or started ahead of time, so
-the first Code node doesn't pay for it? If it can, every turn gets about 3.5
-seconds shorter.
+---
+
+## Withdrawn
+
+**Task-runner warm-up was measured wrong.** An earlier version of this file
+claimed the first Code node in every execution costs about 3.5 seconds and
+called it the largest remaining source of latency. Re-measuring across
+executions put the first Code node at about 0.05s, the same as later ones. The
+original figure came from reading a whole-execution duration as if it were one
+node's. There is nothing here to fix — noted so it does not get raised again.
