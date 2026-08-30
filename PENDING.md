@@ -29,6 +29,11 @@ Jessie answers format questions from `Recording Format` now, so she says Studios
 Either correct it for 7 and 8, or rename it so it reads as a category rather
 than a capability.
 
+Confirmed working live on 2026-08-30: asked "which rooms are 5.1?" the tool
+queried `recording_format` and returned exactly those five. Asked to book Studio
+7 for a 5.1 mix, she refused — "Studio 7 can only record in stereo". So the
+workaround holds; the underlying data is still wrong for a human reader.
+
 **2. Studio 1 contradicts itself.** `Equipment` says "5.1 capable",
 `Recording Format` says `Stereo`. Jessie reports it as stereo. If that is wrong,
 it is an Airtable edit — nothing in the workflow needs to change.
@@ -173,6 +178,28 @@ Until this is understood, `./scripts/n8n push` cannot be trusted and every
 workflow change has to be imported by hand — which is slow and is itself a
 source of mistakes, since it depends on importing the right file in the right
 order. Reading via the API is unaffected and remains reliable.
+
+**14. A Code node cannot reference a tool node — it hangs the task runner.**
+
+`$('Book Session')` inside `Guard Probe` blocks until the task runner's 60-second
+timeout, then fails the node with `Unknown error`. Measured repeatedly on
+2026-08-30: 60,007 / 60,008 / 60,015 / 60,026 ms across four runs, against ~70 ms
+for the same node without it.
+
+It is specific to nodes wired to the agent's `ai_tool` port, which produce no
+`main` output — `$('Gate Context')` and `$('Room Table')` are both fine. Isolated
+by shipping the lookup on its own as a diagnostic that rewrote no text.
+
+What it costs: there is no way for a Code node to ask whether a tool ran this
+turn. That is the natural guard against Jessie claiming a booking she never made
+(seen once in 120 runs), and it is unavailable. The workaround does not need
+anything from the server — pass `$execution.id` into each sub-workflow, have it
+echo the id back inside its success message, and let `Guard Probe` compare
+against `$execution.id`, which is a plain variable and needs no node lookup.
+
+Worth raising with whoever maintains the n8n instance only as a question: whether
+this is expected for `ai_tool` nodes or a bug in the installed version. Nothing
+is blocked on the answer.
 
 ---
 

@@ -30,6 +30,30 @@ ask again rather than book the time you just corrected.
 *v81, changed from (y/n) to (yes/no) in v99. Before v81, any reply at all counted as
 approval — including "no".*
 
+## She says when she is guessing a length
+
+Give her a start time and no end — "book a VO session next Thursday at 2pm" — and
+the summary now opens with what she assumed:
+
+> Assuming 3 hours — tell me if that is wrong.
+
+She used to pick a length silently, so a three-hour room booking could come from
+a message that never mentioned three hours. If the length is wrong, say so before
+you confirm; if she asks how long instead of guessing, that is the same fix.
+
+*v105, made to survive follow-up turns in v106.*
+
+## Asking what rooms exist gives you all of them
+
+"List all the rooms" or "which rooms can do Atmos?" answers from the room list
+itself. Previously, if you had just asked what was free at a particular time, she
+carried that time over and answered with only the rooms free *then* — so Salin,
+Katha and a few M booths simply vanished from a list that looked complete.
+
+Anything that asks what is *free* still uses the time under discussion, as before.
+
+*v102.*
+
 ## 👀 while she works
 
 She reacts to your message with 👀 as soon as it lands, and removes it when she

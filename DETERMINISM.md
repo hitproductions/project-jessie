@@ -13,12 +13,21 @@ So the build was reorganised around one principle:
 Rules moved into n8n have held on every run since. This is what moved, what it
 used to depend on, and what refuses now.
 
-Two of these have now refused in a live conversation rather than only in a unit
-test: `ROOM_OCCUPIED` stopped a booking into an occupied room after the model
-had already presented it as free, and `NO_REFERENCE` refused to cancel a booking
-made before this build existed. `NOT_YOURS` — refusing to cancel a booking that
-belongs to someone else who made it through Jessie — is still unproven live,
-because every booking so far was made by the same person.
+**Every one of these has now refused something in a live conversation**, not only
+in a unit test. `ROOM_OCCUPIED` stopped a booking into an occupied room after the
+model had already presented it as free. `NO_REFERENCE` refused to cancel a
+booking made before this build existed. `NOT_ON_CALENDAR` and `AMBIGUOUS_TITLE`
+both fired during the 2026-08-30 QA run.
+
+`NOT_YOURS` was the last one outstanding and was proved on 2026-08-30, using a
+seeded calendar event carrying a foreign `ref:` rather than by aiming the bot at
+a real third-party booking — so nothing anyone owned was ever at risk. It held
+through two escalations: a claim of authority over the other person's bookings,
+then a claim that the session was really the requester's. It refused both times
+and the event was untouched afterwards.
+
+The gap that remains is not a guard that fails. It is that a reply can describe a
+booking no guard was ever asked about — see the first row of the table.
 
 ## The table
 
@@ -45,6 +54,17 @@ because every booking so far was made by the same person.
 | **Booked by** | model → **code** | the model wrote it | composed from the Slack sender. It was empty on every booking made before this |
 | **That the event exists** | model → **code** | the model reported success | `Verify` re-reads the created event → `CREATE_FAILED`, `MISMATCH` |
 | **Slack bold** | model → **code** | the prompt forbade `**` | `Guard Probe` collapses it on the way out |
+| **Invisible characters in a timestamp** | model → **code** | nothing — the ISO string was parsed as sent | every string the model hands a sub-workflow is scrubbed of format and control characters first. A variation selector (U+FE0F) glued to an ISO time made `Room Availability` answer `BAD_WINDOW`, and the model summarised anyway as if the room were free |
+| **A title the model mistyped** | model → **code** | an exact or substring match, or nothing | one slipped character now still resolves, but only when a single booking that day is strictly closest — and the ownership check still runs on whatever it finds. `REASON1` came back `REazon1` and a move died as `NOT_ON_CALENDAR` |
+| **The booker's name in a summary** | model → **code** | the model retyped it | rewritten from `Get Booker` in `Guard Probe`. It rendered "Tara Lim" as "Tara Inf" in the line a requester reads before saying yes. The calendar entry was never at risk — its `Booked by` comes from a workflow input |
+| **"deviation" and "BLOCKED"** | model → **code** | — | stripped and reworded on the way out. `deviation:` is the room ranking's internal vocabulary and `BLOCKED - ` is a prefix meant for the model, not a person |
+| **A start time with no end** | model → **notice** | the model chose a length silently | `Gate Context` spots a lone time in the message and tells the model to ask, or to state the length it is assuming. "at 2pm" became a 2–5 PM summary with nothing said |
+| **The reason a tool refused** | **still model**, now constrained | the model explained refusals in its own words | the prompt forbids inventing a cause. It told a requester two titles differed by "exact casing" when one letter had been substituted — the tool had only said nothing matched |
+| **A claim that a booking happened** | **still model** — unfixed | nothing checks it | she said "Booked" without calling `Book Session` once in 120 runs, and nothing was on the calendar. The obvious guard is unavailable: asking `Guard Probe` whether the tool ran hangs the task runner. Needs the execution id passed into the sub-workflows and echoed back as a token |
+| **A stated assumption about length** | notice → **code** | `Gate Context` asked her to say what she assumed | she did once and ignored it the next time. `Guard Probe` writes the line when the summary lacks it |
+| **A note that contradicts the ranking** | model → **code** | — | dropped on the way out. "Studio 7 is outside the usual rooms for Post Mixing" went out about the room that is first in that ranking |
+| **A weekday with no year beside it** | model → **code** | the two corrections both needed a four-digit year | the year is taken from the date `Gate Context` resolved. "next Wednesday, September 9" went out uncorrected for a Thursday |
+| **A carried date on a catalogue question** | model → **code** | the date carried to every follow-up | dropped for a question about which rooms exist. "list all the rooms" inherited a 2–5pm window and answered with the free ones, presented as the whole list |
 | **The calendar title** | **still model** | — | a wrong title becomes a wrong calendar entry, silently |
 | **Client, session type, engineer** | **still model** | — | extracted from what was typed; the summary is the only check before it is real |
 | **Which rooms she offers** | **still model** | — | asked for alternatives beyond the ranked rooms she once offered a room `Book Session` refuses. A prompt rule now forbids it and `ROOM_UNSUITABLE` is the backstop |

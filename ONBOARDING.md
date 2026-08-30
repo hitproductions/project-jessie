@@ -41,11 +41,17 @@ long on purpose — most explain a bug that took hours to find.
 ## Check the build is what you think it is
 
 ```bash
-./scripts/test-nodes --live      # 58 checks against what is actually deployed
+./scripts/test-nodes --live      # 101 checks against what is actually deployed
 ```
 
 If that passes, the deployed workflows behave as documented. If it fails, trust
 the test and not the docs.
+
+It reads what n8n has *stored*, though, which is not always what n8n is *running*.
+After any import, also look at one real execution and check the per-node
+`executionStatus` and `executionTime` — see gotchas 11 and 12 in `CLAUDE.md`. On
+2026-08-30 `Guard Probe` failed on every message for five turns while every
+stored-definition check passed.
 
 ## The one thing to understand before changing anything
 
@@ -80,18 +86,31 @@ the moment to ask whether it can be enforced in code instead.
 
 ## Where things stand
 
-Live: main workflow **v99**, Book Session v24, Cancel Booking v4, Move Booking v2,
-Find Booking v2, Room Availability v4.
+Live: main workflow **v109**, Book Session v25, Cancel Booking v5, Move Booking v3,
+Find Booking v3, Room Availability v5.
 
-QA groups B, C, D, F, M, N and X have been run against the live build. The rest
-have not.
+QA groups A, B, C, D, E, F, M, N and X have all been run against the live build
+(2026-08-30). Eleven findings came out of it and ten are fixed.
 
-Known and unfixed, all in `CLAUDE.md` under *Not done*: she sometimes presents a
-summary without checking availability that turn (a guard catches it); she
-sometimes asks for a date already given; and `NOT_YOURS` — refusing to cancel a
-booking someone else made — has never fired in a live conversation, because every
-booking so far was made by one person. **That last one needs two people to test,
-and is worth doing before launch.**
+`NOT_YOURS` is now **proven live**. It was tested with a seeded calendar event
+carrying a foreign `ref:`, rather than by aiming the bot at a real third-party
+booking, and it refused through two escalations — a claim of authority, then a
+claim of ownership. That removes the "needs two people" blocker.
+
+Known and unfixed, all in `CLAUDE.md` under *Not done*:
+
+- **She can claim a booking she never made.** Once in 120 runs she answered an
+  approved booking with "Booked." without calling `Book Session` at all, and
+  nothing reached the calendar. This is the one serious open item. The obvious
+  guard is unavailable — asking `Guard Probe` whether a tool ran hangs the task
+  runner (gotcha 11) — so it needs the execution id passed into the sub-workflows
+  and echoed back as a token. Written up in `DETERMINISM.md`.
+- She sometimes presents a summary without checking availability that turn; a
+  guard catches it.
+- She sometimes asks for a date already given.
+- The model occasionally corrupts a string it is copying — "Tara Lim" became
+  "Tara Inf", "REASON1" became "REazon1". The summary line and title resolution
+  are defended now, but nothing stops it appearing somewhere new.
 
 ## Before launch
 

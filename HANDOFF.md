@@ -1,7 +1,20 @@
 # Project Jessie — handoff to Claude Code
 
-Written 2026-08-30, ~2am, at the end of a long Saturday session. Drop this in the repo root so a fresh
-Claude Code session reads it as context.
+> **Historical. Do not act on this file without checking it first.**
+>
+> Written 2026-08-30 at ~2am, before that day's work. It is kept for its design
+> intent — *why* things were built the way they were — and several of its facts
+> have since been proven wrong, including some that were wrong when written.
+> Known examples: it says the `.item` → `.first()` conversion is done (it was
+> not), and it describes a build many versions behind what is running.
+>
+> **Start with [ONBOARDING.md](ONBOARDING.md) instead.** That is the current
+> entry point and is checked against the live build. For how the system is meant
+> to think, read [CLAUDE.md](CLAUDE.md) and [DETERMINISM.md](DETERMINISM.md).
+> Read this file only when you want the reasoning behind an early decision, and
+> verify anything it asserts against the live workflow before relying on it.
+
+Drop this in the repo root so a fresh Claude Code session reads it as context.
 
 ---
 

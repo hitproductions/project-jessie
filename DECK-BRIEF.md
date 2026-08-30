@@ -106,12 +106,39 @@ or shorten the existing rows. Do not just add two `.trow`s and hope.
 ### 5. Two softenings — slide 5 footer and slide 6
 
 - Slide 5 footer currently reads "ROOM_OCCUPIED and NO_REFERENCE have now refused
-  in a live conversation, not only in tests". Still true. Worth adding that
-  **`NOT_YOURS` has not** — refusing to cancel a booking someone else made needs
-  a second person to have booked something, which is a concrete ask for the room.
+  in a live conversation, not only in tests". Still true, and it can now be
+  strengthened rather than qualified: **every guard has refused something live**,
+  `NOT_YOURS` included, as of 2026-08-30. It was proved with a seeded calendar
+  event carrying a foreign `ref:` — no second person needed, and no real booking
+  put at risk — and it held through two escalations: a claim of authority over
+  the other person's bookings, then a claim that the session was really the
+  requester's. That is a better line for the room than the old caveat: the guard
+  was argued with and did not move.
+
+  Drop the "needs a second person" ask entirely — it is no longer true.
 - Slide 6 flags "Which rooms get offered" in red. Half of that — offering a
   conference room unprompted — is now handled in the data. The general case still
   belongs on the slide; consider narrowing the wording rather than removing it.
+
+### 6. Optional, if there is room: what testing actually caught
+
+The 2026-08-30 QA run went through every group (A–X). Two findings are worth a
+slide between them, because both are about *how you know* rather than about
+booking:
+
+- **She can claim a booking she never made.** Once in 120 runs she answered an
+  approved booking with "Booked." without calling the tool at all — copying the
+  phrasing from an almost identical exchange two turns earlier. Nothing reached
+  the calendar. Every guard built so far stops a *wrong* booking being made; none
+  of them stops one being *claimed*. Still open, with a fix designed.
+- **A broken safety net fails silently.** When `Guard Probe` — the node that
+  rewrites replies on the way out — started timing out, replies still went to
+  Slack, just with none of its corrections applied. Nothing looked wrong from the
+  outside for five turns. What caught it was reading per-node execution status,
+  not reading the replies.
+
+If the deck has a "what we learned" beat, that second one is the honest version:
+the interesting failures are the ones that leave no trace in the output.
 
 ## What is still correct — do not touch
 

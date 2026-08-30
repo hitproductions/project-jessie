@@ -16,11 +16,12 @@ without export/import cycles.
 - **Run `./scripts/check-fromai` on every build.** An unescaped apostrophe in a `$fromAI`
   description takes the whole agent down, and it fails at runtime, not on save.
 - **Run `./scripts/test-nodes` before shipping anything.** It runs every Code node that
-  decides something — `Guard Probe`, `Check Conflicts`, `Check Ownership`, `Shape Results` —
-  against a table of scenarios offline, then delegates to `./scripts/test-gate` for
-  `Gate Context`. 58 checks. `--live` tests what is actually deployed; four explicit paths
-  test a candidate before importing it. Every one of those nodes shipped a bug this weekend
-  that was caught by reading output by hand.
+  decides something — `Guard Probe`, `Check Conflicts`, `Check Ownership`, `Shape Results`,
+  `Resolve Booking` — against a table of scenarios offline, then delegates to
+  `./scripts/test-gate` for `Gate Context`. 101 checks. `--live` tests what is actually
+  deployed; five explicit paths (main, book, cancel, find, move) test a candidate before
+  importing it. Every one of those nodes shipped a bug this weekend that was caught by
+  reading output by hand.
 - `Gate Context` is the one node every message passes through, so a scope or syntax error
   there takes Jessie down completely rather than degrading one feature. That has happened
   twice.
@@ -65,8 +66,18 @@ n8n has held on every run since.
 A third place now does real work: **`Guard Probe`**, which rewrites the reply on the way out.
 Use it for anything that must be true of the *text* rather than the action. It already
 collapses `**` to `*`, corrects the weekday printed beside a date, removes the words
-"priority room" and "last resort", and normalises the confirmation marker. Each of those was
-a prompt rule first, and each failed as a prompt rule.
+"priority room", "last resort", "deviation" and the `BLOCKED - ` prefix, normalises the
+confirmation marker, relabels "Booking Owner" to "Booked by", and rewrites the booker's
+name from Airtable when the model mistypes it. Each of those was a prompt rule first, and
+each failed as a prompt rule.
+
+It also now refuses to let a claim through that nothing backs. If the reply says "Booked",
+"Cancelled" or "Moved" and the matching tool did not run in that execution, the text is
+replaced with an honest failure. On 2026-08-30 she answered an approved booking with
+"Booked. That is a bit shorter than VO Recording sessions usually run" without calling
+`Book Session` at all — copied from an almost identical exchange two turns earlier. Nothing
+was created and the requester was told it had been. Every other guard stops a wrong booking
+being *made*; only this one stops one being *claimed*.
 
 ## What is enforced, and where
 
@@ -87,6 +98,12 @@ NOT_ON_CALENDAR · AMBIGUOUS_TITLE · NO_REFERENCE · NOT_YOURS
 `Move Booking` refuses with the same ownership and confirmation checks plus
 `MISSING_TIMES`, `DURATION_INVALID`, `ROOM_OCCUPIED`, and returns `PARTIAL` if the
 replacement was created but the original could not be removed.
+
+**Every guard above has now refused something in a live conversation.** `NOT_YOURS` was the
+last one outstanding and was proven on 2026-08-30, using a seeded calendar event carrying a
+foreign `ref:` rather than by aiming the bot at a real third-party booking. It held through
+two escalations — a claim of authority over the other person's bookings, then a claim that
+the session was really the requester's.
 
 **The confirmation gate.** `Gate Context` reads Slack history and computes `confirmed`,
 `confirmedCancel`, `confirmedMove` and the memory `epoch`. The model supplies no part of
@@ -161,18 +178,34 @@ n8n server. Each says how it was found and what it breaks.
    the sticky notes. Search for the old name everywhere before shipping.
 10. `./scripts/n8n push` has reported success and changed nothing. Import by hand and verify
     with a pull.
+11. **Never reference a tool node from a Code node.** `$('Book Session')` inside `Guard Probe`
+    hangs the task runner until it times out — 60,007 ms, then `Unknown error`. `$('Gate
+    Context')` and `$('Room Table')` are fine at ~70 ms; it is specifically nodes wired to the
+    agent's `ai_tool` port, which produce no `main` output. This cost an evening on 2026-08-30:
+    v102 shipped it and Guard Probe failed on *every* message for five turns.
+12. **A failing Code node fails open.** When `Guard Probe` errored, replies still reached Slack
+    — just unprocessed, with none of its corrections applied. Nothing looked broken from the
+    outside. Read `executionStatus` and `executionTime` per node after any change; a pull only
+    proves what is *stored*, never what is *running*.
 
 ## Not done
 
-- `NOT_YOURS` — refusing to cancel a booking someone else made through Jessie — is still
-  unproven in a live conversation, because every booking so far was made by one person.
-  `ROOM_OCCUPIED` and `NO_REFERENCE` have both now fired for real.
 - Titles are composed by the model; a wrong project title becomes a wrong calendar title.
 - She still sometimes presents a summary without checking availability that turn. The guard
   catches it; the prompt rule does not.
 - She sometimes asks for a date already given, and has invented a justification for a room
   choice. Both are free-text failures with nothing binding them to a source.
-- QA groups: B, C, D, F, M, N, X done. The rest have not been run.
+- The claim check depends on `$('Node').isExecuted`. If this n8n does not support it the
+  check cannot tell, and by design it leaves the text alone rather than guessing. Guard
+  Probe returns `claimProbe` alongside `output` saying which happened — read it in the
+  execution data, not in Slack. Confirm it says `isExecuted=true` on a real booking.
+- **The model corrupts strings it is copying.** Three times in ~60 turns on 2026-08-30:
+  "Tara Lim" → "Tara Inf", "REASON1" → "REazon1" twice. The summary line and the title
+  resolution are now defended, but nothing stops it happening somewhere new.
+- QA groups: A, B, C, D, E, F, M, N, X all run 2026-08-30. Six findings from the first pass
+  are fixed in v100/v101 and the sub-workflows; five more from the A/B/M groups are fixed in
+  v102. `M2` is still open as a judgement call: "vocal recording" was read as Music Vocal
+  Recording without asking, where "a mix" got a clarifying question.
 
 ## Related
 
