@@ -1,0 +1,343 @@
+{
+  "name": "Jessie \u2014 Book Session",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "summary"
+            },
+            {
+              "name": "start_iso"
+            },
+            {
+              "name": "end_iso"
+            },
+            {
+              "name": "rooms"
+            },
+            {
+              "name": "description"
+            },
+            {
+              "name": "all_day",
+              "type": "boolean"
+            },
+            {
+              "name": "exclude_event_id"
+            },
+            {
+              "name": "confirmed",
+              "type": "boolean"
+            },
+            {
+              "name": "session_type"
+            },
+            {
+              "name": "client"
+            },
+            {
+              "name": "room_override",
+              "type": "boolean"
+            },
+            {
+              "name": "reference_data"
+            },
+            {
+              "name": "engineer"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2448,
+        144
+      ],
+      "id": "0860bac0-1c75-44cc-a63e-02fe13e99f72",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "const REQ = $('When Executed by Another Workflow').first().json;\n\n// Get Events In Window is an HTTP Request against the Calendar API and returns\n// one item holding an `items` array. Older shape - one n8n item per event - is\n// still accepted so this node works either way.\nconst EVENTS = (function(){\n  // Get Events In Window is an HTTP Request. If it ever runs more than once it\n  // emits one copy of the whole response per input item, so flatten every\n  // `items` array found and de-duplicate by event id. A bare event object per\n  // item is accepted too, so the old calendar node still works here.\n  const out = [], seen = {};\n  for (const it of $input.all()) {\n    const j = (it && it.json) || {};\n    const list = Array.isArray(j.items) ? j.items : (j && j.id ? [j] : []);\n    for (const ev of list) { if (ev && ev.id && !seen[ev.id]) { seen[ev.id] = 1; out.push(ev); } }\n  }\n  return out;\n})();\n\n\nconst ROOMS = {\n  'Studio 1': 'hitproductions.net_3737303833303637363538@resource.calendar.google.com',\n  'Studio 2': 'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com',\n  'Studio 3': 'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com',\n  'Studio 4': 'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com',\n  'Studio 5': 'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com',\n  'Studio 6': 'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com',\n  'Studio 7': 'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com',\n  'Studio 8': 'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com',\n  'Studio A': 'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com',\n  'Studio B': 'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com',\n  'Studio C': 'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com',\n  'Studio D': 'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com',\n  'Studio E': 'c_18807te03d2sqh0lmtal9sbb04gao@resource.calendar.google.com',\n  'Studio F': 'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com',\n  'Studio M': 'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com',\n  'M1': 'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com',\n  'M2': 'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com',\n  'M3': 'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com',\n  'M4': 'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com',\n  'M5': 'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com',\n  'M6': 'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com',\n  'M7': 'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com',\n  'M8': 'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com',\n  'Salin': 'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com',\n  'Katha': 'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com',\n  'Likha': 'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com',\n  'Lobby': 'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com'\n};\n\n// --- required fields ----------------------------------------------------\n// $fromAI inputs carry defaults so a partial tool call reaches this node instead\n// of failing n8n's schema validation, which killed the whole turn and dropped the\n// conversation into the error branch. Missing pieces are answered, not crashed.\nconst missing = [];\nif (!String(REQ.summary || '').trim())   missing.push('a title');\nif (!String(REQ.start_iso || '').trim()) missing.push('a start time');\nif (!String(REQ.end_iso || '').trim())   missing.push('an end time');\nif (!String(REQ.rooms || '').trim())     missing.push('a room');\nif (missing.length) {\n  return [{ json: { verdict:'REJECTED', reason:'MISSING_DETAILS', missing,\n    human:'Nothing was booked - the booking is still missing ' + missing.join(', ')\n        + '. Ask the requester for what is missing, then present the summary again.' } }];\n}\n\n// Rooms and session types are passed in by Room Table, which already read them\n// this turn. Re-reading Airtable here fetched the same two tables a second time\n// and cost about 2.2 seconds a booking.\n//\n// If a session type was supplied and the data did not arrive, refuse. The\n// duration and ranking guards are written to stay silent when they cannot find\n// a session type, so proceeding would quietly book with two guards disabled.\nconst REF = (function(){\n  try { return JSON.parse(String(REQ.reference_data || '') || '{}'); } catch (e) { return {}; }\n})();\nconst refRooms = REF.rooms || [];\nconst refTypes = REF.types || [];\nif (String(REQ.session_type || '').trim() && !(refRooms.length && refTypes.length)) {\n  return [{ json: { verdict:'REJECTED', reason:'NO_REFERENCE_DATA',\n    human:'Nothing was booked - the room and session-type data did not reach the booking step, so the '\n        + 'duration and room checks could not run. Tell the requester it failed and to try again.' } }];\n}\nconst nameById = {};\nfor (const r of refRooms) nameById[r.id] = r.name;\nconst stRec = refTypes.filter(function(t){\n  return String(t.type || '').trim().toLowerCase() === String(REQ.session_type || '').trim().toLowerCase();\n})[0] || null;\n\n// --- the date has passed ------------------------------------------------\n// v39's Create Event threw on this and the guard did not survive the move into\n// this sub-workflow, so nothing has stopped a booking in the past since v37.\n// Same rule as v39: anything before midnight today in Manila is refused, so a\n// session earlier today is still bookable.\n(function(){\n  const raw = String(REQ.start_iso || '').trim();\n  if (!raw) return;                                   // MISSING_DETAILS covers this\n  const t = new Date(raw).getTime();\n  if (!t) return;                                     // unparseable - let the calendar reject it\n  const nowShifted = new Date(Date.now() + 8 * 3600 * 1000);\n  const manilaMidnight = Date.UTC(nowShifted.getUTCFullYear(), nowShifted.getUTCMonth(),\n                                  nowShifted.getUTCDate()) - 8 * 3600 * 1000;\n  if (t < manilaMidnight) { REQ.__past = true; }\n})();\nif (REQ.__past) {\n  return [{ json: { verdict:'REJECTED', reason:'PAST_DATE', requested: REQ.start_iso,\n    human:'Nothing was booked - ' + String(REQ.start_iso).slice(0, 10) + ' has already passed. '\n        + 'Tell the requester the date is in the past and ask for the correct one. Do not book '\n        + 'anything until they give you a new date.' } }];\n}\n\n// --- confirmation gate -------------------------------------------------\n// `confirmed` is computed by Gate Context in the calling workflow from real\n// Slack history: the last thing Jessie said must be a summary ending in the\n// marker line, and the requester must have replied after it. Send Reply runs\n// after the agent, so a summary written in THIS turn is not in Slack yet and\n// cannot satisfy this. The model never supplies this value.\nconst confirmed = REQ.confirmed === true || String(REQ.confirmed).toLowerCase() === 'true';\nconst roomList = String(REQ.rooms || '').split(',').map(r => r.trim()).filter(r => r.length);\nconst mBoothOnly = roomList.length > 0 && roomList.every(r => /^M[1-8]$/i.test(r));\nif (!confirmed && !mBoothOnly) {\n  return [{ json: { verdict:'REJECTED', reason:'NOT_CONFIRMED',\n    human:'Nothing was booked, because the requester has not approved this booking yet. '\n        + 'Present the complete booking summary now, end it with the line \"Confirm to book.\", '\n        + 'and stop. Book it only after they reply approving it. Do not call this tool again '\n        + 'in this response.' } }];\n}\n\n// --- duration limits ---------------------------------------------------\n// Session Types holds Min/Max Duration (mins). Enforced here because this is\n// the only path that creates a booking. Silent when the session type was not\n// supplied or not found - an internal room has no session type, and a lookup\n// failure must not block a booking that is otherwise fine.\nconst ST = stRec ? { 'Type': stRec.type, 'Min Duration (mins)': stRec.min,\n                     'Max Duration (mins)': stRec.max } : {};\nconst minD = Number(ST['Min Duration (mins)']);\nconst maxD = Number(ST['Max Duration (mins)']);\nconst allDay = REQ.all_day === true || String(REQ.all_day).toLowerCase() === 'true';\n\n// Min/Max Duration is what a session of that kind usually runs. It is not a\n// limit - Tara, 2026-08-30: \"duration is just suggestion, or average. its not\n// MAXIMUM ALLOWED. it could go on for 8 hours.\" This used to refuse the booking\n// and demand an override, and the model repeated the refusal back as \"the\n// maximum allowed duration\", which is not true of any session here.\n//\n// So it is only ever an observation now, attached to a booking that goes ahead.\n// It holds ONLY the sentence the requester should see. It used to carry the\n// model's instructions too - \"mention it once in passing, do not call it a\n// limit\" - and because `human` is relayed close to verbatim, that reached the\n// requester word for word on 2026-08-30. How to phrase it belongs in the\n// prompt, which already says it; this field is the fact, nothing else.\n// A length exactly on the boundary is normal, not a deviation: 180 minutes of\n// Post Mixing against a 60-180 range was being flagged as though it were over.\nlet durationNote = '';\nconst mins = Math.round((new Date(REQ.end_iso).getTime() - new Date(REQ.start_iso).getTime()) / 60000);\nif (!allDay && mins <= 0) {\n  return [{ json: { verdict:'REJECTED', reason:'DURATION_INVALID', requested_mins: mins,\n    human: 'Nothing was booked - the end time is not after the start time. Check the times with the '\n         + 'requester and try again.' } }];\n}\nif (!allDay && mins > 0 && (Number.isFinite(minD) || Number.isFinite(maxD))) {\n  const typical = (Number.isFinite(minD) ? minD : '?') + '-' + (Number.isFinite(maxD) ? maxD : '?');\n  const kind = ST['Type'] || 'session';\n  if (Number.isFinite(maxD) && mins > maxD)\n    durationNote = 'That is a bit longer than ' + kind + ' sessions usually run ('\n                 + typical + ' minutes is typical).';\n  else if (Number.isFinite(minD) && mins < minD)\n    durationNote = 'That is a bit shorter than ' + kind + ' sessions usually run ('\n                 + typical + ' minutes is typical).';\n}\n\n// --- what actually goes on the calendar entry ----------------------------\n// The engineer used to ride inside a free-text description the model composed,\n// and on 2026-08-30 it arrived empty: the event read \"| Booked by: Tara Lim |\n// ref: ...\" with no engineer at all, and a leading pipe. Older bookings have\n// \"Engineer: Tara Lim (Post Engineer) | Booked by: ...\", so this was a\n// regression, not a gap. A named input gets filled where a paragraph does not,\n// and the line is assembled here rather than by the model.\nconst segs = String(REQ.description || '').split('|').map(s => s.trim()).filter(Boolean);\nconst eng = String(REQ.engineer || '').trim();\nif (eng && !segs.some(s => /^engineer\\s*:/i.test(s))) segs.unshift('Engineer: ' + eng);\n// Only read the client record when a client was actually given. An empty client\n// used to make the Airtable formula SEARCH('') - which matches every row - so\n// Get Client returned all 105 clients and .first() was whoever came back first.\n// A booking for one client was assembled from another client's record.\n// Same fallback the Get Client formula uses, so the two cannot disagree about\n// whether a client was identified.\nlet clientGiven = String(REQ.client || '').trim();\nif (!clientGiven) {\n  const tparts = String(REQ.summary || '').split('/');\n  if (tparts.length >= 3) { clientGiven = tparts[1].trim(); }\n}\nlet techReq = '';\nif (clientGiven) {\n  try { techReq = String(((($('Get Client').first().json || {}).fields) || {})['Technical Requirements'] || '').trim(); }\n  catch (e) { techReq = ''; }\n}\nsegs.push('Tech requirements: ' + (techReq || 'None'));\nconst finalDescription = segs.join(' | ');\n\n// The client's name in the title comes from what the requester typed, so\n// \"EDGE / jem lim / TL\" happened. Only the spelling is corrected, and only when\n// it is the same name - a different name is left alone rather than overwritten.\nlet finalSummary = String(REQ.summary || '');\ntry {\n  const canon = clientGiven\n    ? String(((($('Get Client').first().json || {}).fields) || {})['Name'] || '').trim() : '';\n  const parts = finalSummary.split('/').map(s => s.trim());\n  if (canon && parts.length >= 3 && parts[1].toLowerCase() === canon.toLowerCase() && parts[1] !== canon) {\n    parts[1] = canon;\n    finalSummary = parts.join(' / ');\n  }\n} catch (e) {}\n\n// --- room ranking ------------------------------------------------------\n// Session Types ranks rooms per type: Priority first, Last Resort only when\n// every Priority room is taken. Both lists are record ids, so Get Rooms\n// returns every bookable room and the ids are resolved here. The model is not\n// consulted and cannot skip this.\nconst priorityIds = stRec ? [].concat(stRec.priority || []) : [];\nconst lastIds     = stRec ? [].concat(stRec.last || [])     : [];\n\nconst roomOverride = REQ.room_override === true || String(REQ.room_override).toLowerCase() === 'true';\n// The ranking is a recommendation, not a rule: the studio does run sessions in\n// non-standard rooms when it has to. Refuse once so the requester is told, then\n// book it if they say to go ahead - the same shape as the duration limits.\nif ((priorityIds.length || lastIds.length) && !allDay && !roomOverride) {\n  const nameOf = nameById;\n  const priorityNames = priorityIds.map(id => nameOf[id]).filter(Boolean);\n  const lastNames     = lastIds.map(id => nameOf[id]).filter(Boolean);\n  const asked = String(REQ.rooms || '').split(',').map(r => r.trim()).filter(r => r.length);\n  const lower = a => a.map(x => x.toLowerCase());\n\n  // a room in neither list is not run for this session type at all\n  if (priorityNames.length || lastNames.length) {\n    const known = lower(priorityNames.concat(lastNames));\n    const notRun = asked.filter(r => known.indexOf(r.toLowerCase()) === -1);\n    if (notRun.length) {\n      return [{ json: { verdict:'REJECTED', reason:'ROOM_UNSUITABLE', unsuitable: notRun,\n        priority: priorityNames, last_resort: lastNames,\n        human: ((stRec ? stRec.type : '') || 'That session type') + ' is not run in ' + notRun.join(', ')\n             + '. Nothing was booked. Offer these instead: ' + priorityNames.join(', ') + '.' } }];\n    }\n  }\n\n  // a Last Resort room is only allowed when every Priority room is busy\n  const askedLastResort = asked.filter(r => lower(lastNames).indexOf(r.toLowerCase()) !== -1\n                                         && lower(priorityNames).indexOf(r.toLowerCase()) === -1);\n  if (askedLastResort.length && priorityNames.length) {\n    // occupancy computed inline: roomsOf() is declared below and closes over\n    // `keys`, which is not initialised yet at this point in the script.\n    const roomKeys = Object.keys(ROOMS);\n    const exclude = String(REQ.exclude_event_id || '').trim();\n    const busy = {};\n    for (const ev of EVENTS) {\n      if (!ev || !ev.id) continue;\n      if (exclude && ev.id === exclude) continue;\n      const s0 = new Date(ev.start && (ev.start.dateTime || ev.start.date)).getTime();\n      const e0 = new Date(ev.end   && (ev.end.dateTime   || ev.end.date)).getTime();\n      if (!(s0 < new Date(REQ.end_iso).getTime() && e0 > new Date(REQ.start_iso).getTime())) continue;\n      const emails = (ev.attendees || []).map(a => String(a.email || '').toLowerCase());\n      const loc = String(ev.location || '').toLowerCase();\n      const firstSeg = String(ev.summary || '').split(' - ')[0].trim().toLowerCase();\n      for (const k of roomKeys) {\n        const lk = k.toLowerCase();\n        if (emails.indexOf(ROOMS[k].toLowerCase()) !== -1 || (loc && loc.indexOf(lk) !== -1) || firstSeg === lk) {\n          busy[lk] = true;\n        }\n      }\n    }\n    const freePriority = priorityNames.filter(r => !busy[r.toLowerCase()]);\n    if (freePriority.length) {\n      return [{ json: { verdict:'REJECTED', reason:'ROOM_NOT_PRIORITY',\n        requested: askedLastResort, free_priority: freePriority, last_resort: lastNames,\n        // Tara, 2026-08-30: never say \"priority\" or \"last resort\" to a requester -\n        // it is internal vocabulary and it reads as a rule when it is a preference.\n        human: 'Nothing was booked. ' + freePriority.join(', ') + ' would normally be used for '\n             + ((stRec ? stRec.type : '') || 'this session type') + ' and ' + (freePriority.length > 1 ? 'are' : 'is')\n             + ' free at that time. Suggest one of those instead of ' + askedLastResort.join(', ')\n             + '. If they say to go ahead with what they asked for, book it.' } }];\n    }\n  }\n}\n\nconst wantedNames = String(REQ.rooms || '').split(',').map(r => r.trim()).filter(r => r.length);\nif (!wantedNames.length) {\n  return [{ json: { verdict:'REJECTED', reason:'NO_ROOM', human:'No room was given, so nothing was booked.' } }];\n}\nconst keys = Object.keys(ROOMS);\nconst wanted = [];\nfor (const name of wantedNames) {\n  const hit = keys.find(k => k.toLowerCase() === name.toLowerCase());\n  if (!hit) {\n    return [{ json: { verdict:'REJECTED', reason:'UNKNOWN_ROOM',\n      human:'I do not recognise the room \"' + name + '\", so nothing was booked.' } }];\n  }\n  wanted.push({ name: hit, id: ROOMS[hit].toLowerCase() });\n}\n\n// Work out which room an event occupies, from strongest signal to weakest.\n// 1. resource attendee  2. location string  3. title's first segment, because\n// internal-room bookings are titled \"M2 - Peemo\", \"Lobby - Party\", \"KATHA - ...\".\nfunction roomsOf(ev) {\n  const found = [];\n  const emails = (ev.attendees || []).map(a => String(a.email || '').toLowerCase());\n  const loc = String(ev.location || '').toLowerCase();\n  const firstSeg = String(ev.summary || '').split(' - ')[0].trim().toLowerCase();\n  for (const k of keys) {\n    const lk = k.toLowerCase();\n    if (emails.indexOf(ROOMS[k].toLowerCase()) !== -1) { found.push(k); continue; }\n    if (loc && loc.indexOf(lk) !== -1) { found.push(k); continue; }\n    if (firstSeg && firstSeg === lk) { found.push(k); }\n  }\n  return found;\n}\n\nconst ms = v => new Date(v).getTime();\nconst reqStart = ms(REQ.start_iso), reqEnd = ms(REQ.end_iso);\nconst exclude = String(REQ.exclude_event_id || '').trim();\nconst conflicts = [], unverifiable = [];\n\nfor (const ev of EVENTS) {\n  if (!ev || !ev.id) continue;\n  if (exclude && ev.id === exclude) continue;\n\n  const evStart = ms(ev.start && (ev.start.dateTime || ev.start.date));\n  const evEnd   = ms(ev.end   && (ev.end.dateTime   || ev.end.date));\n  if (!(evStart < reqEnd && evEnd > reqStart)) continue;\n\n  const evRooms = roomsOf(ev);\n  if (!evRooms.length) {\n    unverifiable.push({ summary: ev.summary || '(no title)',\n      start: ev.start && (ev.start.dateTime || ev.start.date) });\n    continue;\n  }\n  for (const w of wanted) {\n    if (evRooms.indexOf(w.name) !== -1) {\n      conflicts.push({ room: w.name, summary: ev.summary || '(no title)',\n        start: ev.start && (ev.start.dateTime || ev.start.date),\n        end: ev.end && (ev.end.dateTime || ev.end.date) });\n      break;\n    }\n  }\n}\n\nif (conflicts.length) {\n  const lines = conflicts.map(c => c.room + ' is taken by \"' + c.summary + '\"').join('; ');\n  return [{ json: { verdict:'REJECTED', reason:'ROOM_OCCUPIED', conflicts,\n    human: lines + '. Nothing was booked - tell the requester and offer 2-3 alternative slots.' } }];\n}\nif (unverifiable.length) {\n  const names = unverifiable.map(u => '\"' + u.summary + '\"').join(', ');\n  return [{ json: { verdict:'REJECTED', reason:'UNVERIFIABLE', unverifiable,\n    human:'There is an event in that window I cannot identify a room for (' + names + '), so I could not '\n        + 'confirm the room is free. Nothing was booked - ask the requester to check Google Calendar.' } }];\n}\nreturn [{ json: { verdict:'CLEAR', duration_note: durationNote,\n  final_description: finalDescription, final_summary: finalSummary } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2016,
+        144
+      ],
+      "id": "2646d1ad-cd72-4dc7-b3dc-82fe8808a779",
+      "name": "Check Conflicts"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a89d8e25-11cf-4c71-af97-382dc9b00edd",
+              "leftValue": "={{ $json.verdict }}",
+              "rightValue": "CLEAR",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1792,
+        144
+      ],
+      "id": "2dcb8fb9-50a6-4bb9-80a3-c20f47343623",
+      "name": "Conflict?"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "KDC Bookings"
+        },
+        "start": "={{ $('When Executed by Another Workflow').first().json.start_iso }}",
+        "end": "={{ $('When Executed by Another Workflow').first().json.end_iso }}",
+        "additionalFields": {
+          "allday": "={{ $('When Executed by Another Workflow').first().json.all_day }}",
+          "attendees": [
+            "={{ (function(){ const map = {'Studio 1':'hitproductions.net_3737303833303637363538@resource.calendar.google.com','Studio 2':'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com','Studio 3':'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com','Studio 4':'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com','Studio 5':'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com','Studio 6':'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com','Studio 7':'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com','Studio 8':'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com','Studio A':'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com','Studio B':'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com','Studio C':'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com','Studio D':'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com','Studio E':'c_18807te03d2sqh0lmtal9sbb04gao@resource.calendar.google.com','Studio F':'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com','Studio M':'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com','M1':'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com','M2':'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com','M3':'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com','M4':'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com','M5':'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com','M6':'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com','M7':'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com','M8':'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com','Salin':'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com','Katha':'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com','Likha':'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com','Lobby':'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com'}; const raw = $('When Executed by Another Workflow').first().json.rooms; const parts = String(raw).split(/,|\\band\\b|&|\\+/i).map(function(r){return r.trim();}).filter(function(r){return r.length;}); if (!parts.length) { throw new Error('No room name was provided to Create Event.'); } const keys = Object.keys(map); const ids = parts.map(function(r){ const hit = keys.find(function(k){ return k.toLowerCase() === r.toLowerCase(); }); if (!hit) { throw new Error('Unrecognized room name: \"' + r + '\". Booking not created.'); } return map[hit]; }); return ids.join(','); })() }}"
+          ],
+          "description": "={{ $('Check Conflicts').first().json.final_description }}",
+          "summary": "={{ $('Check Conflicts').first().json.final_summary }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -1552,
+        32
+      ],
+      "id": "f7e2e888-bdbf-4eb4-8702-51fc364d9b7e",
+      "name": "Create Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ev = $input.first().json || {};\nconst REQ = $('When Executed by Another Workflow').first().json;\nif (!ev.id) {\n  return [{ json: { status:'FAILED',\n    human:'The booking was not created - the calendar returned no event. Tell the requester it failed and ask how they want to proceed. Do not say it is booked.' } }];\n}\nconst got = {\n  start: (ev.start && (ev.start.dateTime || ev.start.date)) || '',\n  end:   (ev.end   && (ev.end.dateTime   || ev.end.date))   || ''\n};\nconst same = t => new Date(got[t]).getTime() === new Date(REQ[t + '_iso']).getTime();\nif (!REQ.all_day && (!same('start') || !same('end'))) {\n  return [{ json: { status:'MISMATCH', event_id: ev.id, created: got,\n    human:'The event was created but the times do not match what was agreed. It is now ' + got.start + ' to ' + got.end + '. Tell the requester exactly that - do not confirm it as correct.' } }];\n}\nconst declined = (ev.attendees || []).filter(a => a.responseStatus === 'declined').map(a => a.displayName || a.email);\nif (declined.length) {\n  return [{ json: { status:'ROOM_DECLINED', event_id: ev.id, declined,\n    human:'The room declined the booking because it is already taken, so this booking is NOT valid. Tell the requester and offer 2-3 alternatives. Do not delete whatever holds the room.' } }];\n}\n// Room resources answer the invitation a few seconds after the event is created,\n// so responseStatus is always 'needsAction' in this response. Reporting it as pending\n// is noise on every booking. A genuine refusal shows up as 'declined', handled above.\n// A duration outside the typical range rides along with the confirmation\n// rather than blocking it - it is an observation, not a rule.\nconst note = (function(){ try { return String($('Check Conflicts').first().json.duration_note || ''); }\n                          catch (e) { return ''; } })();\nreturn [{ json: { status:'CREATED', event_id: ev.id, title: ev.summary,\n  duration_note: note, human: note ? 'Booked. ' + note : 'Booked.' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1312,
+        32
+      ],
+      "id": "8941317b-83e7-4603-bbb6-d3f27969eaba",
+      "name": "Verify"
+    },
+    {
+      "parameters": {
+        "jsCode": "const v = $input.first().json || {};\nreturn [{ json: {\n  status: v.verdict || 'FAILED',\n  reason: v.reason || 'CREATE_FAILED',\n  conflicts: v.conflicts || null,\n  unverifiable: v.unverifiable || null,\n  human: v.human || 'The booking failed and nothing was created. Tell the requester it did not go through.'\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1552,
+        304
+      ],
+      "id": "f14af0bd-df74-42b2-974e-4db958d45005",
+      "name": "Return Rejection"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "timeMin",
+              "value": "={{ $('When Executed by Another Workflow').first().json.start_iso }}"
+            },
+            {
+              "name": "timeMax",
+              "value": "={{ $('When Executed by Another Workflow').first().json.end_iso }}"
+            },
+            {
+              "name": "singleEvents",
+              "value": "true"
+            },
+            {
+              "name": "orderBy",
+              "value": "startTime"
+            },
+            {
+              "name": "maxResults",
+              "value": "250"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2240,
+        144
+      ],
+      "id": "1220504c-67bd-405e-ba33-368a6e96f99d",
+      "name": "Get Events In Window",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblJCgcluYhli6kHH",
+          "mode": "list",
+          "cachedResultName": "Clients"
+        },
+        "filterByFormula": "={{ (function(){\n  var REQ = $('When Executed by Another Workflow').first().json;\n  // The client is in the title whether or not the model remembered to pass it:\n  // titles are PROJECT / Client / INITIALS. On 2026-08-30 a booking that named\n  // the client in the message still arrived with client='' because the summary\n  // happened to omit its Client line, and the session lost the client's\n  // technical requirements - which is what the room gets set up from.\n  var v = String(REQ.client || '').trim();\n  if (!v) {\n    var parts = String(REQ.summary || '').split('/');\n    if (parts.length >= 3) { v = parts[1].trim(); }\n  }\n  if (!v) { return 'FALSE()'; }\n  return \"SEARCH(LOWER('\" + v.replace(/'/g, \"\\\\'\").toLowerCase() + \"'), LOWER({Name}))\";\n})() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -2336,
+        464
+      ],
+      "id": "577ef059-ee36-4f41-a1eb-846dcef03bb8",
+      "name": "Get Client",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Events In Window": {
+      "main": [
+        [
+          {
+            "node": "Check Conflicts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Conflicts": {
+      "main": [
+        [
+          {
+            "node": "Conflict?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conflict?": {
+      "main": [
+        [
+          {
+            "node": "Create Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event": {
+      "main": [
+        [
+          {
+            "node": "Verify",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Client": {
+      "main": [
+        [
+          {
+            "node": "Get Events In Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  }
+}
