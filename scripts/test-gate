@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# Run the Gate Context node offline against a set of scenarios.
+#
+#   ./scripts/test-gate workflows/project-jessie-v86.json
+#
+# Gate Context is one big Code node that every message passes through, so a
+# syntax or scope error there takes Jessie down completely rather than
+# degrading one feature. That has happened twice: the v74 apostrophe, and a
+# v86 draft that redeclared `found` and threw on every single message.
+#
+# This extracts the node's jsCode, stubs the n8n globals it reads, and runs it
+# against the cases below. It checks the node executes and reports what it
+# decided - it does not check the model does anything sensible with that.
+set -euo pipefail
+src="${1:?usage: test-gate <workflow.json>}"
+here="$(cd "$(dirname "$0")/.." && pwd)"
+tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+
+python3 - "$src" "$tmp/gate.js" <<'PY'
+import json, sys
+w = json.load(open(sys.argv[1]))
+n = [x for x in w["nodes"] if x["name"] == "Gate Context"]
+if not n:
+    sys.exit("no Gate Context node in " + sys.argv[1])
+open(sys.argv[2], "w").write(n[0]["parameters"]["jsCode"])
+PY
+
+cat > "$tmp/run.js" <<'JS'
+const src = require('fs').readFileSync(process.argv[2], 'utf8');
+Date.now = () => Date.UTC(2026, 7, 30, 8, 20, 0);   // Sun 30 Aug 2026, 16:20 Manila
+const ME = 'U026N6E1R';
+const store = {};
+const run = (text, history) => {
+  const $ = name => ({
+    first: () => ({ json:
+      name === 'Slack Trigger' ? { text, user: ME, ts: '1788077500.1', channel: 'D0BNZQ6M9PV' } :
+      name === 'Get Booker'    ? { fields: { Name: 'Tara Lim', Department: ['Audio Post'] } } : {} }),
+    all: () => history.map(h => ({ json: h }))
+  });
+  return new Function('$', '$getWorkflowStaticData', src)($, () => store)[0].json;
+};
+const bot = t => ({ text: t, bot_id: 'B1', ts: '1788077400.1' });
+const usr = t => ({ text: t, user: ME, ts: '1788077450.1' });
+const bookSummary = bot('*Room:* Studio F\n\nConfirm to book. (y/n)');
+const cancelSummary = bot('MERMAID / X / KSC\n\nConfirm to cancel. (y/n)');
+
+// label, message, history, expectations
+const cases = [
+  ['fresh booking request',  'Book Studio F for Howard next Thursday from 1pm to 4pm', [],
+   { confirmed: false, dateNotice: /Thursday, 9 September 2027/ }],
+  ['this vs next',           'book studio 3 this Thursday 10am', [],
+   { dateNotice: /Thursday, 2 September 2027/ }],
+  ['bare weekday',           'book studio 3 Thursday 10am', [],
+   { dateNotice: /the next one/ }],
+  ['tomorrow',               'book the M booth tomorrow', [],
+   { dateNotice: /Tuesday, 31 August 2027/ }],
+  ['y approves a booking',   'y', [usr('y'), bookSummary],
+   { confirmed: true, confirmedCancel: false }],
+  ['n refuses a booking',    'n', [usr('n'), bookSummary],
+   { confirmed: false, declineNotice: /SAID NO/ }],
+  ['y approves a cancel',    'y', [usr('y'), cancelSummary],
+   { confirmedCancel: true, cancelNotice: /ALREADY APPROVED/ }],
+  ['a change is not a yes',  'yes but move it to 3pm', [usr('x'), bookSummary],
+   { confirmed: false }],
+  ['connector suffix',       'y *Sent using* <@U0AVDBNH1K4>', [usr('y'), bookSummary],
+   { confirmed: true }],
+  ['past date',              'book studio 3 on 2027-07-01 2-5pm', [],
+   { pastDateNotice: /ALREADY PASSED/ }],
+  ['future date',            'book studio 3 on 2027-12-01 2-5pm', [],
+   { pastDateNotice: '' }],
+  ['plain question',         'what rooms can do 5.1?', [],
+   { confirmed: false, dateNotice: '' }],
+];
+
+let failed = 0;
+for (const [label, text, hist, want] of cases) {
+  let r;
+  try { r = run(text, hist); }
+  catch (e) { console.log('THREW  ' + label + ' :: ' + e.message); failed++; continue; }
+  const bad = [];
+  for (const k of Object.keys(want)) {
+    const got = r[k], exp = want[k];
+    const ok = exp instanceof RegExp ? exp.test(String(got || '')) : got === exp;
+    if (!ok) bad.push(k + '=' + JSON.stringify(String(got || '').slice(0, 60)));
+  }
+  if (bad.length) { console.log('FAIL   ' + label + ' :: ' + bad.join('  ')); failed++; }
+  else console.log('ok     ' + label);
+}
+console.log(failed ? '\n' + failed + ' failing' : '\nall ' + cases.length + ' scenarios pass');
+process.exit(failed ? 1 : 0);
+JS
+
+node "$tmp/run.js" "$tmp/gate.js"
