@@ -23,7 +23,7 @@ used to depend on, and what refuses now.
 | **Cancelling someone else's** | model → **code** | compared a `ref:` inside a description the model had retyped | the event is fetched from Google and the marker read off the real record → `NOT_YOURS`, `NO_REFERENCE` |
 | **Which booking gets cancelled** | model → **code** | the model supplied an event id | resolved from title + date against that day's calendar → `NOT_ON_CALENDAR`, `AMBIGUOUS_TITLE` |
 | **Room suitability and ranking** | model → **code** | the prompt listed which rooms run which sessions | the Airtable ranking is injected per session type → `ROOM_UNSUITABLE`, `ROOM_NOT_PRIORITY`, `UNKNOWN_ROOM`, `NO_ROOM` |
-| **Session duration** | model → **code** | the prompt stated min/max | read from Session Types → `DURATION_OUT_OF_RANGE` |
+| **Session duration** | **still model**, deliberately | the prompt called Min/Max an allowed range and the booking was refused outside it | Min/Max is what a session *usually* runs, not a limit. Book Session books the length asked for and returns a note when it is outside typical. Only an end time at or before the start is refused → `DURATION_INVALID` |
 | **What is free** | model → **code** | the model reasoned over raw event lists | `Room Availability` computes it — also 2.74s → 0.55s |
 | **Dates in the past** | model → **code** | the model was expected to notice | parsed out of the message at intake → `PAST_DATE` |
 | **Room and session-type facts** | prompt text → **injected data** | written into the prompt, and several were wrong | read from Airtable on every message → `NO_REFERENCE_DATA` if missing |
