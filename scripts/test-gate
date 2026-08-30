@@ -70,6 +70,10 @@ const cases = [
    { pastDateNotice: '' }],
   ['plain question',         'what rooms can do 5.1?', [],
    { confirmed: false, dateNotice: '' }],
+  ['reset clears and says so','reset', [],
+   { resetNotice: /ALREADY BEEN CLEARED|JUST BEEN CLEARED/, epoch: '1788077500.1' }],
+  ['reset through connector', 'reset *Sent using* <@U0AVDBNH1K4>', [],
+   { resetNotice: /JUST BEEN CLEARED/, epoch: '1788077500.1' }],
 ];
 
 let failed = 0;
