@@ -63,6 +63,28 @@ if (missing.length) {
         + '. Ask the requester for what is missing, then present the summary again.' } }];
 }
 
+// --- the date has passed ------------------------------------------------
+// v39's Create Event threw on this and the guard did not survive the move into
+// this sub-workflow, so nothing has stopped a booking in the past since v37.
+// Same rule as v39: anything before midnight today in Manila is refused, so a
+// session earlier today is still bookable.
+(function(){
+  const raw = String(REQ.start_iso || '').trim();
+  if (!raw) return;                                   // MISSING_DETAILS covers this
+  const t = new Date(raw).getTime();
+  if (!t) return;                                     // unparseable - let the calendar reject it
+  const nowShifted = new Date(Date.now() + 8 * 3600 * 1000);
+  const manilaMidnight = Date.UTC(nowShifted.getUTCFullYear(), nowShifted.getUTCMonth(),
+                                  nowShifted.getUTCDate()) - 8 * 3600 * 1000;
+  if (t < manilaMidnight) { REQ.__past = true; }
+})();
+if (REQ.__past) {
+  return [{ json: { verdict:'REJECTED', reason:'PAST_DATE', requested: REQ.start_iso,
+    human:'Nothing was booked - ' + String(REQ.start_iso).slice(0, 10) + ' has already passed. '
+        + 'Tell the requester the date is in the past and ask for the correct one. Do not book '
+        + 'anything until they give you a new date.' } }];
+}
+
 // --- confirmation gate -------------------------------------------------
 // `confirmed` is computed by Gate Context in the calling workflow from real
 // Slack history: the last thing Jessie said must be a summary ending in the
