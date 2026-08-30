@@ -13,21 +13,22 @@ it clears on its own at midnight Manila time.
 
 *v55, reversed in v79, and made to work through the Claude Slack connector in v84.*
 
-## y / n confirmations
+## yes / no confirmations
 
-Every summary now ends `Confirm to book. (y/n)` or `Confirm to cancel. (y/n)`.
-Answer **y** or **n**.
+Every summary now ends `Confirm to book. (yes/no)`, `Confirm to cancel. (yes/no)` or
+`Confirm to move. (yes/no)`. Answer **yes** or **no**.
 
-Accepted as yes: y · yes · yeah · yep · ok · sure · sige · oo · opo · confirm ·
+Accepted as yes: yes · y · yeah · yep · ok · sure · sige · oo · opo · confirm ·
 correct · go · go ahead · do it · proceed · 👍 · ✅
-Accepted as no: n · no · nope · nah · hindi · wait · stop · hold on · not yet ·
+Accepted as no: no · n · nope · nah · hindi · wait · stop · hold on · not yet ·
 never mind
 
 Anything else counts as neither, and nothing is booked or cancelled. A reply
 like "yes but move it to 3pm" is a change request, not an approval — she will
 ask again rather than book the time you just corrected.
 
-*v81. Before this, any reply at all counted as approval, including "no".*
+*v81, changed from (y/n) to (yes/no) in v99. Before v81, any reply at all counted as
+approval — including "no".*
 
 ## 👀 while she works
 

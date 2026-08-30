@@ -26,9 +26,14 @@ because every booking so far was made by the same person.
 |---|---|---|---|
 | **Double-booking** | model → **code** | "check the room is free before you book" | `Check Conflicts` in `Book Session`; check and create are one call that cannot be skipped or reordered → `ROOM_OCCUPIED` |
 | **Approval before booking** | model → **code** | "wait for confirmation" | `Gate Context` computes `confirmed` from Slack history; the model supplies no part of it → `NOT_CONFIRMED` |
-| **What counts as approval** | model → **code** | the model judged the reply | literal y/n match on the whole message. "no" used to pass |
+| **What counts as approval** | model → **code** | the model judged the reply | a literal match on the whole message against a fixed yes/no set. "no" used to pass |
 | **Cancelling someone else's** | model → **code** | compared a `ref:` inside a description the model had retyped | the event is fetched from Google and the marker read off the real record → `NOT_YOURS`, `NO_REFERENCE` |
 | **Which booking gets cancelled** | model → **code** | the model supplied an event id | resolved from title + date against that day's calendar → `NOT_ON_CALENDAR`, `AMBIGUOUS_TITLE` |
+| **Who booked a session** | model → **code** | the raw Google event went to the model, and it read `creator` — always the n8n service account | `Find Booking` shapes the day's events to id, title, time, room, booked-by and engineer. `creator` never reaches her. She told a requester their own booking "was made by Howard, not you" |
+| **The confirmation marker** | model → **code** | the model wrote the marker line and the gate matched it exactly | `Guard Probe` normalises it on the way out. "Confirm to cancel both." broke the gate and refused a cancellation |
+| **The weekday beside a date** | model → **code** | written by the model from the date | recomputed from the date in `Guard Probe`. It printed the wrong day three times, twice in a booking summary |
+| **Internal vocabulary** | model → **code** | a prompt rule forbade "priority room" and "last resort" | rewritten on the way out. The prompt rule was ignored in five replies |
+| **Conference rooms** | prompt text → **injected data** | a rule paragraphs away from the room list said never to choose one | the list itself now marks them: "conference rooms, ask which before booking" |
 | **Rescheduling** | model → **code** | the prompt walked it through delete-then-recreate — and the gate could only approve one of those per turn, so a move deleted the booking and then asked for a second yes | `Move Booking` does the whole move in one call and one confirmation. It creates the replacement **first** and removes the original only once that succeeded, so a failure leaves the booking where it was → `ROOM_OCCUPIED`, `NOT_YOURS`, `PARTIAL` |
 | **Relative dates and weekdays** | model → **code** | the model worked out "next Thursday" itself | `Gate Context` resolves next/this weekday, bare weekdays, tomorrow and today, states the weekday, and carries the date across follow-up turns that name no date |
 | **The client's technical requirements** | model → **code** | read from whatever `Get Client` returned, with no check that a client had been asked for | an empty client returns nothing instead of every client, and a missing client is recovered from the title. This is what the room gets set up from |
@@ -96,8 +101,15 @@ in code, rather than the message describing it.
 | `Jessie — Cancel Booking` | `bAyDw7udhmY0NL38` | ownership, booking resolution, and the only path that deletes one |
 | `Jessie — Room Availability` | `e7tBQB458nstrqei` | availability, computed rather than reasoned |
 | `Jessie — Move Booking` | `t7lwR2km4tfN8DbM` | the only path that reschedules; creates before it deletes |
+| `Jessie — Find Booking` | `yzirq12O227VTFp8` | shapes a day's events; the model never sees the raw payload |
 
 Guard names are greppable: `grep -o "reason:'[A-Z_]*'" workflows/*.json`.
+
+There is now a third place where rules live. **`Guard Probe`** rewrites the reply
+on the way out, and is where anything that must be true of the *text* belongs —
+the weekday, the vocabulary, the marker, the `**` collapse. Every one of those was
+a prompt rule first, and every one failed as a prompt rule. Two of them were caught
+correcting a real reply during testing rather than in a staged case.
 
 `Gate Context` is the one node every message passes through, so a mistake there
 takes Jessie down completely rather than degrading one feature — it has happened

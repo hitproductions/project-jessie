@@ -63,18 +63,55 @@ go.
 *What it unlocks:* Jessie can propose a room again instead of always asking.
 Until then, always-ask is correct and is what she does.
 
+**6. A client's Technical Requirements points at a field Jessie cannot read.**
+
+Jem Lim's `Technical Requirements` reads:
+
+    Long sessions. Prefers no separate vocal booth — room preference already
+    noted in Preferred Room.
+
+`Preferred Rooms` is withheld from Jessie because it returns record ids (item 5),
+so that last clause dangles. Asked why she had picked a room, she completed it:
+*"Jem Lim's client notes specifically mention a preference for rooms noted in
+their profile"* — which reads as though the room was chosen to suit the client.
+She cannot know that. The prompt tells her never to claim a room is a client's
+preferred one, and the data invites her to anyway.
+
+Fix either end: add the `Preferred Room Names` lookup from item 5 so the
+reference resolves, or remove the clause from the Technical Requirements text.
+Until then expect the claim to reappear — it is the data prompting it, not the
+model inventing freely.
+
+**7. Four session types list the same rooms as both Priority and Last Resort.**
+
+```
+Event         both lists: Lobby, Katha, Likha, Salin   (identical)
+VO Recording  both lists: Studio 7, 8, F, C            (identical)
+Meeting       both lists: Salin, Katha
+QC            both lists: Studio 5
+```
+
+Where the two lists are identical, "last resort" means nothing, and Jessie could
+truthfully describe a room as both the usual choice and the fallback — she called
+Studio 7 "a last-resort choice for VO Recording" when VO can be recorded
+anywhere. The wording no longer reaches requesters, but the ranking still drives
+which room she offers first and which the guards allow.
+
+Decide per session type whether the second list should be empty, or a genuinely
+different set of rooms.
+
 ---
 
 ## Slack app
 
-**6. Does the bot have `reactions:write`?**
+**8. Does the bot have `reactions:write`?**
 
 Jessie puts 👀 on an incoming message and removes it when she replies, so people
 can see it landed during the 7–12 seconds a turn takes. Without the scope the
 reaction silently never appears — replies still work, so it fails invisibly.
 Needs the scope added in the Slack app config and a reinstall.
 
-**7. The Claude Slack connector appends a suffix to messages. Half fixed.**
+**9. The Claude Slack connector appends a suffix to messages. Fixed.**
 
 Messages sent through it arrive as `reset *Sent using* <@U0AVDBNH1K4>`.
 
@@ -82,16 +119,15 @@ Fixed as of v81: the confirmation gate strips that suffix before deciding
 whether a reply was a yes or a no, so approval and refusal steps *can* now be
 driven through the connector.
 
-Still broken: the memory `reset` command matches the whole message exactly, and
-that match does not strip the suffix, so `reset` sent through the connector does
-not clear memory. It is a one-line change in `Gate Context` and should be folded
-into the next workflow import rather than done on its own.
+Also fixed in v84: the memory `reset` command strips the suffix too, so `reset`
+sent through the connector clears memory. Nothing outstanding here — kept as a
+record of why the gate strips that suffix at all.
 
 ---
 
 ## Google Calendar
 
-**8. Bookings Jessie did not create can never be cancelled through her.**
+**10. Bookings Jessie did not create can never be cancelled through her.**
 
 `Cancel Booking` reads a `ref:` marker out of the event description to decide
 whose booking it is. Events created before this build, or added directly in
@@ -111,7 +147,7 @@ and needs someone to map each booking to a Slack user id first.
 
 ## n8n server
 
-**9. Worth exploring an update — we don't know what the current version can do.**
+**11. Worth exploring an update — we don't know what the current version can do.**
 
 Two things we wanted turned out not to be reachable from the installed version:
 
@@ -126,7 +162,7 @@ the limits are on the n8n side. Whether a newer version lifts any of them is an
 open question, not a promise: worth checking the changelogs for those two nodes
 against what's installed before deciding whether an update is worth the restart.
 
-**10. `PUT /api/v1/workflows/:id` reports success and changes nothing.**
+**12. `PUT /api/v1/workflows/:id` reports success and changes nothing.**
 
 Seen on 2026-08-30 pushing the main workflow: the request returned without an
 error, the response carried no `name` or `updatedAt`, and pulling the workflow
