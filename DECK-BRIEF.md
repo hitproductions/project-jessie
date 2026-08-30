@@ -134,3 +134,78 @@ Verified against the live build on 2026-08-30:
 3. Open the deck, arrow through every slide at a small window, and confirm no
    slide clips. The Airtable slide is the one at risk.
 4. Confirm the section footers still count correctly (`1 / 4`, `2 / 4`, …).
+
+---
+
+## Addendum — add one slide on where the turn time goes
+
+Added 2026-08-30 after measuring the live build. This is new material, not a
+correction, and it is the strongest number in the deck.
+
+**Where it goes:** immediately after the existing timing slide
+(`<!-- TIMING -->`, the one titled "How Long A Booking Takes"). That slide gives
+totals; this one explains them. Its footer is a bare `02`, so adding a slide
+there does **not** break any `1 / 4`-style counter.
+
+**Use the classes already on the timing slide** — `.ttable`, `.tnote`, `.tag`,
+`.brand`, `.foot`. Do not invent a new visual pattern for this.
+
+### The finding
+
+A turn takes a median of 12.5 seconds. The single largest piece of that is not
+the model — it is a process starting up.
+
+```
+Jessie AI Agent      3.52s     wraps the model and every tool call
+Gate Context         3.45s     ← the first Code node in the execution
+Google Gemini        2.36s
+Airtable lookups   ~1.10s      each
+Slack round trips  ~0.40s      each
+Room Table           0.07s     ← a later Code node
+```
+
+n8n runs Code nodes in a separate task-runner process. The first Code node in an
+execution waits for that process to start; every later one costs ~0.07s. It is
+bimodal — either ~3.5s or ~0.07s — and across 14 consecutive turns, ten paid it.
+
+`Gate Context` is the first Code node and always will be, because something has
+to be first. It cannot be reordered away. It is paid on every message, including
+ones that do nothing — a bare "hi" costs it.
+
+**That is about 28% of every turn, and more than everything outside the model put
+together.**
+
+### Why the obvious fix does not work
+
+Measured across 29 executions, the runner shuts down after **12–13 seconds idle**
+— the longest gap that stayed warm was 12s, the shortest that went cold was 13s.
+Keeping it warm with a scheduled workflow would mean firing a Code node every ten
+seconds forever: roughly 8,600 executions a day, filling the execution log and
+the database, to save 3.5s a turn. Not worth it.
+
+### The ask — this belongs with the other owner items
+
+It is a server configuration change, not a workflow change. Two questions for
+whoever runs the n8n server, neither of which requires changing anything to
+answer:
+
+1. What n8n version is this instance running? (Visible in the n8n UI, bottom-left.)
+2. Are any `N8N_RUNNERS_*` environment variables set?
+
+If the runner's idle-shutdown timeout can be raised, or Code can run in the main
+process as older n8n versions did, the turn drops from ~12.5s to about **9s**.
+It is one environment variable and it is reversible.
+
+### Accuracy rules for this slide
+
+- Say **"about 28% of a turn"** and **"ten of fourteen turns paid it"**. Do not
+  say every turn — roughly 70% do, and the deck's credibility rests on that kind
+  of precision.
+- Do not name a specific environment variable. The variable of that shape exists,
+  but the exact name depends on the installed version and nobody has read the
+  config yet. "Check the task-runner settings" is the honest phrasing.
+- Do not promise the 9s. Say it is what the measurement implies if the setting
+  can be changed.
+- This finding was briefly withdrawn as a mismeasurement earlier the same day and
+  then reinstated when measured properly. If anyone in the room saw the earlier
+  version, the correction is worth stating plainly rather than glossed.
