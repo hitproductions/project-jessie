@@ -1,0 +1,227 @@
+{
+  "updatedAt": "2026-08-30T11:38:10.292Z",
+  "createdAt": "2026-08-30T11:38:10.292Z",
+  "id": "yzirq12O227VTFp8",
+  "name": "Jessie \u2014 Find Booking",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "booking_date"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4174f43e-4332-4bb6-b4a0-b8656a83d210",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent(DateTime.fromISO($json.booking_date + 'T00:00:00', { zone: 'Asia/Manila' }).toISO()) }}&timeMax={{ encodeURIComponent(DateTime.fromISO($json.booking_date + 'T00:00:00', { zone: 'Asia/Manila' }).plus({ days: 1 }).toISO()) }}&singleEvents=true&orderBy=startTime&maxResults=250",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "78ee4be4-2518-47ee-839e-e7ae89754940",
+      "name": "List Day Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Shape the day's events into the few fields Jessie should reason about, and\n// drop everything else.\n//\n// The raw Google payload was going straight to the model, and on 2026-08-30 it\n// read `creator` - which is always howard@hitproductions.net, the account n8n\n// authenticates with - and told Tara her own booking \"was made by Howard, not\n// you\". Who booked something lives in the description as \"Booked by: ...\", and\n// nothing else in a calendar event says it. A field she is not given is a field\n// she cannot misread.\nconst REQ = $('When Executed by Another Workflow').first().json;\nconst raw = $input.first().json || {};\nconst date = String(REQ.booking_date || '').trim();\n\nconst ROOMS = {\n  'hitproductions.net_3737303833303637363538@resource.calendar.google.com': 'Studio 1',\n  'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com': 'Studio 2',\n  'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com': 'Studio 3',\n  'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com': 'Studio 4',\n  'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com': 'Studio 5',\n  'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com': 'Studio 6',\n  'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com': 'Studio 7',\n  'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com': 'Studio 8',\n  'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com': 'Studio A',\n  'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com': 'Studio B',\n  'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com': 'Studio C',\n  'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com': 'Studio D',\n  'c_18807te03d2sqh0lmtal9sbb04gao@resource.calendar.google.com': 'Studio E',\n  'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com': 'Studio F',\n  'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com': 'Studio M',\n  'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com': 'M1',\n  'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com': 'M2',\n  'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com': 'M3',\n  'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com': 'M4',\n  'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com': 'M5',\n  'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com': 'M6',\n  'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com': 'M7',\n  'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com': 'M8',\n  'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com': 'Salin',\n  'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com': 'Katha',\n  'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com': 'Likha',\n  'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com': 'Lobby'\n};\nconst NAMES = {};\nfor (const k in ROOMS) NAMES[ROOMS[k].toLowerCase()] = ROOMS[k];\n\nif (!date) {\n  return [{ json: { status: 'MISSING_DATE', bookings: [],\n    human: 'No date was given, so nothing was looked up. Ask the requester which date the booking is on.' } }];\n}\nconst items = Array.isArray(raw.items) ? raw.items : null;\nif (!items) {\n  return [{ json: { status: 'LOOKUP_FAILED', bookings: [],\n    human: 'The calendar could not be read for that date. Tell the requester and offer to try again.' } }];\n}\n\nconst hhmm = iso => {\n  const d = new Date(iso);\n  return d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });\n};\n// Department bookings are whole days written as midnight-to-midnight timestamps\n// rather than as date-only events, so they came out \"12:00 AM - 12:00 AM\".\nconst isWholeDay = (s, e) => {\n  if (!s || !e) return false;\n  const m = iso => new Date(iso).toLocaleString('en-US',\n    { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: false });\n  return m(s) === '00:00' && m(e) === '00:00';\n};\nconst roomOf = ev => {\n  const found = [];\n  for (const a of (ev.attendees || [])) {\n    const nm = ROOMS[String(a.email || '').toLowerCase()];\n    if (nm && found.indexOf(nm) === -1) found.push(nm);\n  }\n  if (found.length) return found.join(' + ');\n  const loc = String(ev.location || '').toLowerCase();\n  for (const key in NAMES) if (loc.indexOf(key) !== -1) return NAMES[key];\n  const first = String(ev.summary || '').split(' - ')[0].trim();\n  return NAMES[first.toLowerCase()] || '';\n};\n\nconst bookings = [];\nfor (const ev of items) {\n  if (!ev || ev.status === 'cancelled') continue;\n  const desc = String(ev.description || '');\n  const by = desc.match(/Booked by:\\s*([^|]+)/);\n  const eng = desc.match(/Engineer:\\s*([^|]+)/);\n  const s = (ev.start || {}).dateTime, e = (ev.end || {}).dateTime;\n  bookings.push({\n    id: ev.id,\n    title: ev.summary || '(no title)',\n    time: (!s || !e || isWholeDay(s, e)) ? 'all day' : hhmm(s) + ' - ' + hhmm(e),\n    room: roomOf(ev) || 'not identifiable',\n    booked_by: by ? by[1].trim() : 'not recorded - made outside Jessie',\n    engineer: eng ? eng[1].trim() : ''\n  });\n}\n\nreturn [{ json: { status: 'OK', date: date, count: bookings.length, bookings: bookings,\n  human: bookings.length\n    ? 'These are the bookings on ' + date + '. \"booked_by\" is who made the booking; there is no other '\n      + 'source for that. Use the id exactly as given if you cancel or move one.'\n    : 'Nothing is booked on ' + date + '. Tell the requester and ask them to check the date.' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "a733b06a-a736-4525-a063-e7f0fdabd0c2",
+      "name": "Shape Results"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "List Day Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Day Events": {
+      "main": [
+        [
+          {
+            "node": "Shape Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "357ce7b3-7472-4661-b975-048425aea3ff",
+  "activeVersionId": "357ce7b3-7472-4661-b975-048425aea3ff",
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-08-30T11:38:10.301Z",
+      "createdAt": "2026-08-30T11:38:10.301Z",
+      "role": "workflow:owner",
+      "workflowId": "yzirq12O227VTFp8",
+      "projectId": "518sXYqvqTl1cuns",
+      "project": {
+        "updatedAt": "2026-07-30T08:01:27.418Z",
+        "createdAt": "2026-06-16T08:07:47.559Z",
+        "id": "518sXYqvqTl1cuns",
+        "name": "Howard Luistro <howard@hitproductions.net>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "146478c9-471a-4651-8e62-0216984196e9"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-08-30T11:38:13.000Z",
+    "createdAt": "2026-08-30T11:38:10.306Z",
+    "versionId": "357ce7b3-7472-4661-b975-048425aea3ff",
+    "workflowId": "yzirq12O227VTFp8",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "booking_date"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          0
+        ],
+        "id": "4174f43e-4332-4bb6-b4a0-b8656a83d210",
+        "name": "When Executed by Another Workflow"
+      },
+      {
+        "parameters": {
+          "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent(DateTime.fromISO($json.booking_date + 'T00:00:00', { zone: 'Asia/Manila' }).toISO()) }}&timeMax={{ encodeURIComponent(DateTime.fromISO($json.booking_date + 'T00:00:00', { zone: 'Asia/Manila' }).plus({ days: 1 }).toISO()) }}&singleEvents=true&orderBy=startTime&maxResults=250",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleCalendarOAuth2Api",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          224,
+          0
+        ],
+        "id": "78ee4be4-2518-47ee-839e-e7ae89754940",
+        "name": "List Day Events",
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "6D1r3kaq6KaFdL0a",
+            "name": "Google Calendar account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Shape the day's events into the few fields Jessie should reason about, and\n// drop everything else.\n//\n// The raw Google payload was going straight to the model, and on 2026-08-30 it\n// read `creator` - which is always howard@hitproductions.net, the account n8n\n// authenticates with - and told Tara her own booking \"was made by Howard, not\n// you\". Who booked something lives in the description as \"Booked by: ...\", and\n// nothing else in a calendar event says it. A field she is not given is a field\n// she cannot misread.\nconst REQ = $('When Executed by Another Workflow').first().json;\nconst raw = $input.first().json || {};\nconst date = String(REQ.booking_date || '').trim();\n\nconst ROOMS = {\n  'hitproductions.net_3737303833303637363538@resource.calendar.google.com': 'Studio 1',\n  'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com': 'Studio 2',\n  'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com': 'Studio 3',\n  'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com': 'Studio 4',\n  'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com': 'Studio 5',\n  'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com': 'Studio 6',\n  'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com': 'Studio 7',\n  'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com': 'Studio 8',\n  'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com': 'Studio A',\n  'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com': 'Studio B',\n  'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com': 'Studio C',\n  'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com': 'Studio D',\n  'c_18807te03d2sqh0lmtal9sbb04gao@resource.calendar.google.com': 'Studio E',\n  'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com': 'Studio F',\n  'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com': 'Studio M',\n  'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com': 'M1',\n  'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com': 'M2',\n  'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com': 'M3',\n  'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com': 'M4',\n  'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com': 'M5',\n  'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com': 'M6',\n  'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com': 'M7',\n  'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com': 'M8',\n  'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com': 'Salin',\n  'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com': 'Katha',\n  'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com': 'Likha',\n  'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com': 'Lobby'\n};\nconst NAMES = {};\nfor (const k in ROOMS) NAMES[ROOMS[k].toLowerCase()] = ROOMS[k];\n\nif (!date) {\n  return [{ json: { status: 'MISSING_DATE', bookings: [],\n    human: 'No date was given, so nothing was looked up. Ask the requester which date the booking is on.' } }];\n}\nconst items = Array.isArray(raw.items) ? raw.items : null;\nif (!items) {\n  return [{ json: { status: 'LOOKUP_FAILED', bookings: [],\n    human: 'The calendar could not be read for that date. Tell the requester and offer to try again.' } }];\n}\n\nconst hhmm = iso => {\n  const d = new Date(iso);\n  return d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });\n};\nconst roomOf = ev => {\n  const found = [];\n  for (const a of (ev.attendees || [])) {\n    const nm = ROOMS[String(a.email || '').toLowerCase()];\n    if (nm && found.indexOf(nm) === -1) found.push(nm);\n  }\n  if (found.length) return found.join(' + ');\n  const loc = String(ev.location || '').toLowerCase();\n  for (const key in NAMES) if (loc.indexOf(key) !== -1) return NAMES[key];\n  const first = String(ev.summary || '').split(' - ')[0].trim();\n  return NAMES[first.toLowerCase()] || '';\n};\n\nconst bookings = [];\nfor (const ev of items) {\n  if (!ev || ev.status === 'cancelled') continue;\n  const desc = String(ev.description || '');\n  const by = desc.match(/Booked by:\\s*([^|]+)/);\n  const eng = desc.match(/Engineer:\\s*([^|]+)/);\n  const s = (ev.start || {}).dateTime, e = (ev.end || {}).dateTime;\n  bookings.push({\n    id: ev.id,\n    title: ev.summary || '(no title)',\n    time: s && e ? hhmm(s) + ' - ' + hhmm(e) : 'all day',\n    room: roomOf(ev) || 'not identifiable',\n    booked_by: by ? by[1].trim() : 'not recorded - made outside Jessie',\n    engineer: eng ? eng[1].trim() : ''\n  });\n}\n\nreturn [{ json: { status: 'OK', date: date, count: bookings.length, bookings: bookings,\n  human: bookings.length\n    ? 'These are the bookings on ' + date + '. \"booked_by\" is who made the booking; there is no other '\n      + 'source for that. Use the id exactly as given if you cancel or move one.'\n    : 'Nothing is booked on ' + date + '. Tell the requester and ask them to check the date.' } }];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          448,
+          0
+        ],
+        "id": "a733b06a-a736-4525-a063-e7f0fdabd0c2",
+        "name": "Shape Results"
+      }
+    ],
+    "connections": {
+      "When Executed by Another Workflow": {
+        "main": [
+          [
+            {
+              "node": "List Day Events",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "List Day Events": {
+        "main": [
+          [
+            {
+              "node": "Shape Results",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Howard Luistro",
+    "name": "Version 357ce7b3",
+    "description": "",
+    "autosaved": true,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-08-30T11:38:13.189Z",
+        "id": 426,
+        "workflowId": "yzirq12O227VTFp8",
+        "versionId": "357ce7b3-7472-4661-b975-048425aea3ff",
+        "event": "activated",
+        "userId": "146478c9-471a-4651-8e62-0216984196e9"
+      }
+    ]
+  }
+}
