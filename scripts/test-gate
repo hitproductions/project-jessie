@@ -79,8 +79,12 @@ for (const [label, text, hist, want] of cases) {
   catch (e) { console.log('THREW  ' + label + ' :: ' + e.message); failed++; continue; }
   const bad = [];
   for (const k of Object.keys(want)) {
-    const got = r[k], exp = want[k];
-    const ok = exp instanceof RegExp ? exp.test(String(got || '')) : got === exp;
+    // A field that does not exist yet and a field that is empty are the same
+    // thing to a caller, so normalise - otherwise running this against an older
+    // workflow reports absent fields as wrong values.
+    const got = r[k] === undefined || r[k] === null ? '' : r[k];
+    const exp = want[k];
+    const ok = exp instanceof RegExp ? exp.test(String(got)) : got === exp;
     if (!ok) bad.push(k + '=' + JSON.stringify(String(got || '').slice(0, 60)));
   }
   if (bad.length) { console.log('FAIL   ' + label + ' :: ' + bad.join('  ')); failed++; }
