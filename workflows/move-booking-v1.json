@@ -1,0 +1,408 @@
+{
+  "name": "Jessie \u2014 Move Booking",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "title"
+            },
+            {
+              "name": "event_id"
+            },
+            {
+              "name": "booking_date"
+            },
+            {
+              "name": "new_start_iso"
+            },
+            {
+              "name": "new_end_iso"
+            },
+            {
+              "name": "requester"
+            },
+            {
+              "name": "confirmed",
+              "type": "boolean"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "trigger",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent(DateTime.fromISO($json.booking_date + 'T00:00:00', { zone: 'Asia/Manila' }).toISO()) }}&timeMax={{ encodeURIComponent(DateTime.fromISO($json.booking_date + 'T00:00:00', { zone: 'Asia/Manila' }).plus({ days: 1 }).toISO()) }}&singleEvents=true&maxResults=250",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "list-day-events",
+      "name": "List Day Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find the booking being moved, and decide whether this requester may move it.\n// Same shape as Cancel Booking: the calendar is read and the id is checked\n// against it, because the model has invented one before. The title it showed\n// the requester resolves the booking too, so no id is needed at all.\nconst REQ = $('When Executed by Another Workflow').first().json;\nconst raw = $input.first().json || {};\nconst me = String(REQ.requester || '').trim();\nconst confirmed = REQ.confirmed === true || String(REQ.confirmed).toLowerCase() === 'true';\nconst wantedId = String(REQ.event_id || '').trim();\nconst wantedTitle = String(REQ.title || '').trim();\nconst norm = s => String(s || '').toLowerCase().replace(/\\s+/g, ' ').trim();\nconst when = e => {\n  const s = (e.start && e.start.dateTime) || '';\n  if (!s) return '(all day)';\n  return '(' + new Date(s).toLocaleTimeString('en-US', { timeZone:'Asia/Manila', hour:'numeric', minute:'2-digit' }) + ')';\n};\nconst bad = (reason, human) => [{ json: { verdict:'REJECTED', reason, human } }];\n\nif (!confirmed) return bad('NOT_CONFIRMED',\n  'Nothing was moved. Show the requester the booking and the new time, end that message with the line '\n  + '\"Confirm to move. (y/n)\", and stop. Move it only after they reply y.');\nif (!String(REQ.booking_date || '').trim()) return bad('MISSING_DATE',\n  'Nothing was moved - no booking date was given. Call Move Booking again with the date the booking is on now.');\nif (!wantedId && !wantedTitle) return bad('MISSING_DETAILS',\n  'Nothing was moved - no booking title was given. Call Move Booking again with the title exactly as you showed it.');\nconst ns = new Date(String(REQ.new_start_iso || '')).getTime();\nconst ne = new Date(String(REQ.new_end_iso || '')).getTime();\nif (!ns || !ne) return bad('MISSING_TIMES',\n  'Nothing was moved - the new start and end times were missing or unreadable. Ask the requester for the new time and try again.');\nif (ne <= ns) return bad('DURATION_INVALID',\n  'Nothing was moved - the new end time is not after the new start time. Check the times with the requester.');\n\nconst items = Array.isArray(raw.items) ? raw.items.filter(e => e.status !== 'cancelled') : null;\nif (!items) return bad('LOOKUP_FAILED',\n  'Nothing was moved - the calendar could not be read for that date. Tell the requester it did not go through.');\n\nlet ev = wantedId ? items.find(e => String(e.id) === wantedId) : null;\nlet how = ev ? 'id' : '';\nif (!ev && wantedTitle) {\n  let hits = items.filter(e => norm(e.summary) === norm(wantedTitle));\n  if (!hits.length) hits = items.filter(e => norm(e.summary).includes(norm(wantedTitle)) || norm(wantedTitle).includes(norm(e.summary)));\n  if (hits.length === 1) { ev = hits[0]; how = 'title'; }\n  else if (hits.length > 1) return bad('AMBIGUOUS_TITLE',\n    'Nothing was moved - more than one booking that date matches \"' + wantedTitle + '\":\\n'\n    + hits.map(e => '- ' + (e.summary || '(no title)') + ' ' + when(e)).join('\\n')\n    + '\\nAsk which one they mean, then call Move Booking again with that exact title.');\n}\nif (!ev) return bad('NOT_ON_CALENDAR',\n  'Nothing was moved - no booking on that date matches what you gave. These are the only bookings on that date:\\n'\n  + (items.map(e => '- ' + (e.summary || '(no title)') + ' ' + when(e)).join('\\n') || '(none)'));\n\nconst desc = String(ev.description || '');\nconst ref = desc.match(/ref:\\s*([A-Za-z0-9]+)/);\nconst by = desc.match(/Booked by:\\s*([^|]+)/);\nconst title = ev.summary || '(no title)';\nif (!ref) return bad('NO_REFERENCE',\n  'BLOCKED - \"' + title + '\" carries no booker reference, so there is no way to tell whose it is. It has to be moved by hand.');\nif (ref[1] !== me) return bad('NOT_YOURS',\n  'BLOCKED - \"' + title + '\" was booked by ' + ((by && by[1].trim()) || 'someone else')\n  + ', so it is not yours to move. Say exactly that and stop.');\n\nreturn [{ json: { verdict:'CLEAR', matched_on: how, original_id: ev.id, title,\n  description: desc, location: ev.location || '',\n  attendees: (ev.attendees || []).filter(a => a.resource).map(a => ({ email: a.email })),\n  old_start: (ev.start && (ev.start.dateTime || ev.start.date)) || '',\n  new_start: REQ.new_start_iso, new_end: REQ.new_end_iso } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "resolve-booking",
+      "name": "Resolve Booking"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a1",
+              "leftValue": "={{ $json.verdict }}",
+              "rightValue": "CLEAR",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        660,
+        0
+      ],
+      "id": "allowed?",
+      "name": "Allowed?"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent($json.new_start) }}&timeMax={{ encodeURIComponent($json.new_end) }}&singleEvents=true&maxResults=250",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -110
+      ],
+      "id": "get-new-window",
+      "name": "Get New Window",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// The new window has to be free for the same rooms - excluding the booking\n// being moved, which would otherwise collide with itself.\nconst R = $('Resolve Booking').first().json;\nconst raw = $input.first().json || {};\nconst items = Array.isArray(raw.items) ? raw.items.filter(e => e.status !== 'cancelled') : [];\nconst mine = R.attendees.map(a => String(a.email).toLowerCase());\nconst loc = String(R.location || '').toLowerCase();\nconst ns = new Date(R.new_start).getTime(), ne = new Date(R.new_end).getTime();\n\nconst clashes = [];\nfor (const e of items) {\n  if (String(e.id) === String(R.original_id)) continue;\n  const s = new Date((e.start && (e.start.dateTime || e.start.date))).getTime();\n  const t = new Date((e.end && (e.end.dateTime || e.end.date))).getTime();\n  if (!(s < ne && t > ns)) continue;\n  const emails = (e.attendees || []).map(a => String(a.email || '').toLowerCase());\n  const sameRoom = mine.some(m => emails.indexOf(m) !== -1)\n    || (loc && String(e.location || '').toLowerCase() === loc);\n  if (sameRoom) clashes.push(e.summary || '(no title)');\n}\nif (clashes.length) {\n  return [{ json: { verdict:'REJECTED', reason:'ROOM_OCCUPIED',\n    human: 'Nothing was moved - that room is taken in the new window by \"' + clashes.join('\", \"')\n         + '\". The original booking is untouched. Tell the requester and offer another time.' } }];\n}\nreturn [{ json: Object.assign({}, R, { verdict:'CLEAR' }) }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -110
+      ],
+      "id": "check-new-window",
+      "name": "Check New Window"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a1",
+              "leftValue": "={{ $json.verdict }}",
+              "rightValue": "CLEAR",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1320,
+        -110
+      ],
+      "id": "free?",
+      "name": "Free?"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {},
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ summary: $json.title, description: $json.description, location: $json.location, attendees: $json.attendees, start: { dateTime: $json.new_start, timeZone: 'Asia/Manila' }, end: { dateTime: $json.new_end, timeZone: 'Asia/Manila' } }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        -220
+      ],
+      "id": "create-replacement",
+      "name": "Create Replacement",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent($('Resolve Booking').first().json.original_id) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {},
+        "method": "DELETE"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        -220
+      ],
+      "id": "delete-original",
+      "name": "Delete Original",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const R = $('Resolve Booking').first().json;\nconst created = $('Create Replacement').first().json || {};\nreturn [{ json: { status:'MOVED', event_id: created.id || '', title: R.title,\n  from: R.old_start, to: R.new_start,\n  human: 'Moved \"' + R.title + '\" to the new time. Tell the requester the new date and time.' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        -320
+      ],
+      "id": "return-moved",
+      "name": "Return Moved"
+    },
+    {
+      "parameters": {
+        "jsCode": "// The replacement exists but the original could not be removed, so the room is\n// now double-booked. Say so plainly - this is the one outcome nobody should\n// discover from the calendar a week later.\nconst R = $('Resolve Booking').first().json;\nconst created = $('Create Replacement').first().json || {};\nreturn [{ json: { status:'PARTIAL', reason:'ORIGINAL_NOT_REMOVED', event_id: created.id || '',\n  human: 'The booking was created at the new time, but the original at ' + R.old_start + ' could NOT be '\n       + 'removed, so \"' + R.title + '\" is now on the calendar twice. Tell the requester exactly that and '\n       + 'say the old one has to be deleted by hand.' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        -120
+      ],
+      "id": "return-delete-failed",
+      "name": "Return Delete Failed"
+    },
+    {
+      "parameters": {
+        "jsCode": "const v = $input.first().json || {};\nreturn [{ json: { status:'REJECTED', reason: v.reason || 'FAILED',\n  human: v.human || 'Nothing was moved and the reason is unclear. Tell the requester it did not go through.' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        140
+      ],
+      "id": "return-rejection",
+      "name": "Return Rejection"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "List Day Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Day Events": {
+      "main": [
+        [
+          {
+            "node": "Resolve Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Booking": {
+      "main": [
+        [
+          {
+            "node": "Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Get New Window",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get New Window": {
+      "main": [
+        [
+          {
+            "node": "Check New Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check New Window": {
+      "main": [
+        [
+          {
+            "node": "Free?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Free?": {
+      "main": [
+        [
+          {
+            "node": "Create Replacement",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Replacement": {
+      "main": [
+        [
+          {
+            "node": "Delete Original",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Original": {
+      "main": [
+        [
+          {
+            "node": "Return Moved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Delete Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  }
+}
