@@ -26,8 +26,10 @@ through two escalations: a claim of authority over the other person's bookings,
 then a claim that the session was really the requester's. It refused both times
 and the event was untouched afterwards.
 
-The gap that remains is not a guard that fails. It is that a reply can describe a
-booking no guard was ever asked about — see the first row of the table.
+The gap that used to remain — a reply describing a booking no guard was ever asked
+about — is closed too, by the first row of the table. What is left is narrower: the
+model still composes titles, clients and engineers from what was typed, and the
+summary is the only check before those become real.
 
 ## The table
 
@@ -60,7 +62,7 @@ booking no guard was ever asked about — see the first row of the table.
 | **"deviation" and "BLOCKED"** | model → **code** | — | stripped and reworded on the way out. `deviation:` is the room ranking's internal vocabulary and `BLOCKED - ` is a prefix meant for the model, not a person |
 | **A start time with no end** | model → **notice** | the model chose a length silently | `Gate Context` spots a lone time in the message and tells the model to ask, or to state the length it is assuming. "at 2pm" became a 2–5 PM summary with nothing said |
 | **The reason a tool refused** | **still model**, now constrained | the model explained refusals in its own words | the prompt forbids inventing a cause. It told a requester two titles differed by "exact casing" when one letter had been substituted — the tool had only said nothing matched |
-| **A claim that a booking happened** | **still model** — unfixed | nothing checks it | she said "Booked" without calling `Book Session` once in 120 runs, and nothing was on the calendar. The obvious guard is unavailable: asking `Guard Probe` whether the tool ran hangs the task runner. Needs the execution id passed into the sub-workflows and echoed back as a token |
+| **A claim that a booking happened** | model → **code** | nothing checked it | the reply may only say "Booked", "Cancelled" or "Moved" if that tool appears in the agent's `intermediateSteps` this turn with a success status. She said "Booked" without calling `Book Session` once in 120 runs and nothing was on the calendar. The direct question — did the node run — hangs the task runner, so this reads the agent's own report of what it called |
 | **A stated assumption about length** | notice → **code** | `Gate Context` asked her to say what she assumed | she did once and ignored it the next time. `Guard Probe` writes the line when the summary lacks it |
 | **A note that contradicts the ranking** | model → **code** | — | dropped on the way out. "Studio 7 is outside the usual rooms for Post Mixing" went out about the room that is first in that ranking |
 | **A weekday with no year beside it** | model → **code** | the two corrections both needed a four-digit year | the year is taken from the date `Gate Context` resolved. "next Wednesday, September 9" went out uncorrected for a Thursday |

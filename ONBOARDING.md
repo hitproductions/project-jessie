@@ -41,7 +41,7 @@ long on purpose — most explain a bug that took hours to find.
 ## Check the build is what you think it is
 
 ```bash
-./scripts/test-nodes --live      # 101 checks against what is actually deployed
+./scripts/test-nodes --live      # 111 checks against what is actually deployed
 ```
 
 If that passes, the deployed workflows behave as documented. If it fails, trust
@@ -86,7 +86,7 @@ the moment to ask whether it can be enforced in code instead.
 
 ## Where things stand
 
-Live: main workflow **v109**, Book Session v25, Cancel Booking v5, Move Booking v3,
+Live: main workflow **v111**, Book Session v25, Cancel Booking v5, Move Booking v3,
 Find Booking v3, Room Availability v5.
 
 QA groups A, B, C, D, E, F, M, N and X have all been run against the live build
@@ -97,14 +97,14 @@ carrying a foreign `ref:`, rather than by aiming the bot at a real third-party
 booking, and it refused through two escalations — a claim of authority, then a
 claim of ownership. That removes the "needs two people" blocker.
 
+All eleven findings from that run are fixed. The last of them — she once answered
+an approved booking with "Booked." without calling `Book Session` at all, and
+nothing reached the calendar — is caught in `Guard Probe`, which now requires the
+tool to appear in the agent's `intermediateSteps` with a success status before a
+reply is allowed to claim anything happened.
+
 Known and unfixed, all in `CLAUDE.md` under *Not done*:
 
-- **She can claim a booking she never made.** Once in 120 runs she answered an
-  approved booking with "Booked." without calling `Book Session` at all, and
-  nothing reached the calendar. This is the one serious open item. The obvious
-  guard is unavailable — asking `Guard Probe` whether a tool ran hangs the task
-  runner (gotcha 11) — so it needs the execution id passed into the sub-workflows
-  and echoed back as a token. Written up in `DETERMINISM.md`.
 - She sometimes presents a summary without checking availability that turn; a
   guard catches it.
 - She sometimes asks for a date already given.

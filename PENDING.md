@@ -190,16 +190,18 @@ It is specific to nodes wired to the agent's `ai_tool` port, which produce no
 `main` output — `$('Gate Context')` and `$('Room Table')` are both fine. Isolated
 by shipping the lookup on its own as a diagnostic that rewrote no text.
 
-What it costs: there is no way for a Code node to ask whether a tool ran this
-turn. That is the natural guard against Jessie claiming a booking she never made
-(seen once in 120 runs), and it is unavailable. The workaround does not need
-anything from the server — pass `$execution.id` into each sub-workflow, have it
-echo the id back inside its success message, and let `Guard Probe` compare
-against `$execution.id`, which is a plain variable and needs no node lookup.
+What it cost: the natural guard against Jessie claiming a booking she never made
+(seen once in 120 runs) had to be built another way. **Solved without needing
+anything from the server** — `returnIntermediateSteps` on the agent node makes it
+report its own tool calls, and those arrive on `Guard Probe`'s input, where no
+lookup is involved. That turned out to be a better check than the one that was
+blocked: it can require a *success status* on this turn, not merely that a node
+executed at some point.
 
 Worth raising with whoever maintains the n8n instance only as a question: whether
 this is expected for `ai_tool` nodes or a bug in the installed version. Nothing
-is blocked on the answer.
+is blocked on the answer — it is recorded so the next person does not spend an
+evening rediscovering it.
 
 ---
 

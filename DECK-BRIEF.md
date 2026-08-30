@@ -126,11 +126,12 @@ The 2026-08-30 QA run went through every group (A–X). Two findings are worth a
 slide between them, because both are about *how you know* rather than about
 booking:
 
-- **She can claim a booking she never made.** Once in 120 runs she answered an
+- **She could claim a booking she never made.** Once in 120 runs she answered an
   approved booking with "Booked." without calling the tool at all — copying the
   phrasing from an almost identical exchange two turns earlier. Nothing reached
-  the calendar. Every guard built so far stops a *wrong* booking being made; none
-  of them stops one being *claimed*. Still open, with a fix designed.
+  the calendar. Every guard built until then stopped a *wrong* booking being made;
+  none of them stopped one being *claimed*. Fixed: a reply may not say "Booked"
+  unless the booking tool reported success on that turn.
 - **A broken safety net fails silently.** When `Guard Probe` — the node that
   rewrites replies on the way out — started timing out, replies still went to
   Slack, just with none of its corrections applied. Nothing looked wrong from the

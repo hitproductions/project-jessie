@@ -97,7 +97,9 @@ suite('Guard Probe — what reaches Slack', ()=>{
       return {isExecuted:ctx.executed[name],first:()=>({json:{}})};
     return {first:()=>({json:{}})};
   };
-  const runCtx=(o,ctx)=>new Function('$input','$',s)({first:()=>({json:{output:o}})},mk(ctx))[0].json;
+  const runCtx=(o,ctx={})=>new Function('$input','$',s)(
+    {first:()=>({json: ctx.steps===undefined?{output:o}:{output:o,intermediateSteps:ctx.steps} })},
+    mk(ctx))[0].json;
   const run=o=>runCtx(o,{}).output;
   const t=[
     ['collapses ** to *','**Bold** text',x=>x==='*Bold* text'],
@@ -176,15 +178,30 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>(x.output.match(/Assuming/g)||[]).length===1],
     ['assumed duration','says nothing when a range was given',SUM,{},x=>!/Assuming/.test(x.output)],
     // a claim with nothing behind it
+    // The agent reports its own tool calls on this node's input, so the check
+    // needs no node lookup - $('Book Session') hangs the task runner.
     ['claim check','rewrites a booking that never happened','Booked. That is a bit shorter than usual.',
-      {executed:{'Book Session':false}},x=>/did not go through/.test(x.output)&&!/^Booked/.test(x.output)],
-    ['claim check','leaves a real booking alone','Booked.',{executed:{'Book Session':true}},x=>/^Booked\./.test(x.output)],
-    ['claim check','leaves a claim alone when it cannot tell','Booked.',{},x=>/^Booked\./.test(x.output)],
-    ['claim check','reports what the probe saw','Booked.',{executed:{'Book Session':true}},
-      x=>x.claimProbe==='booked: isExecuted=true'],
-    ['claim check','reports a blind probe','Booked.',{},x=>/unavailable/.test(x.claimProbe)],
+      {steps:[]},x=>/did not go through/.test(x.output)&&!/^Booked/.test(x.output)],
+    ['claim check','leaves a real booking alone','Booked.',
+      {steps:[{action:{tool:'Book_Session'},observation:'[{"status": "CREATED","event_id":"x"}]'}]},
+      x=>/^Booked\./.test(x.output)],
+    ['claim check','a rejected booking is not a booking','Booked.',
+      {steps:[{action:{tool:'Book_Session'},observation:'[{"status": "REJECTED","reason":"ROOM_OCCUPIED"}]'}]},
+      x=>/did not go through/.test(x.output)],
+    ['claim check','another tool does not count','Booked.',
+      {steps:[{action:{tool:'Room_Availability'},observation:'[{"status": "OK"}]'}]},
+      x=>/did not go through/.test(x.output)],
+    ['claim check','leaves a claim alone when there are no steps','Booked.',{},x=>/^Booked\./.test(x.output)],
+    ['claim check','says so when it cannot tell','Booked.',{},x=>/no intermediateSteps/.test(x.claimProbe)],
     ['claim check','catches a fabricated cancellation','Cancelled "X / Y / TL".',
-      {executed:{'Cancel Booking':false}},x=>/did not go through/.test(x.output)],
+      {steps:[{action:{tool:'Book_Session'},observation:'[{"status": "CREATED"}]'}]},
+      x=>/did not go through/.test(x.output)],
+    ['claim check','a real cancellation survives','Cancelled "X / Y / TL".',
+      {steps:[{action:{tool:'Cancel_Booking'},observation:'[{"status": "CANCELLED"}]'}]},
+      x=>/^Cancelled/.test(x.output)],
+    ['claim check','a partial move is not a failure','Moved it to 3pm.',
+      {steps:[{action:{tool:'Move_Booking'},observation:'[{"status": "PARTIAL"}]'}]},
+      x=>/^Moved/.test(x.output)],
     ['claim check','no claim, no probe','Studio 7 is free.',{},x=>x.claimProbe==='no claim'],
   ];
   // These cover the four Guard Probe fixes written for v102. That build made the

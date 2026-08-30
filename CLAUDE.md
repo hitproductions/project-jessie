@@ -18,7 +18,7 @@ without export/import cycles.
 - **Run `./scripts/test-nodes` before shipping anything.** It runs every Code node that
   decides something — `Guard Probe`, `Check Conflicts`, `Check Ownership`, `Shape Results`,
   `Resolve Booking` — against a table of scenarios offline, then delegates to
-  `./scripts/test-gate` for `Gate Context`. 101 checks. `--live` tests what is actually
+  `./scripts/test-gate` for `Gate Context`. 111 checks. `--live` tests what is actually
   deployed; five explicit paths (main, book, cancel, find, move) test a candidate before
   importing it. Every one of those nodes shipped a bug this weekend that was caught by
   reading output by hand.
@@ -72,8 +72,15 @@ name from Airtable when the model mistypes it. Each of those was a prompt rule f
 each failed as a prompt rule.
 
 It also now refuses to let a claim through that nothing backs. If the reply says "Booked",
-"Cancelled" or "Moved" and the matching tool did not run in that execution, the text is
-replaced with an honest failure. On 2026-08-30 she answered an approved booking with
+"Cancelled" or "Moved", the matching tool must appear in the agent's own `intermediateSteps`
+on this turn **with a success status** — otherwise the text is replaced with an honest
+failure. A `REJECTED` Book Session does not count as a booking.
+
+That reads the agent's output, which arrives on Guard Probe's input, because the direct
+question — asking whether the tool node ran — hangs the task runner (gotcha 11). It depends
+on `returnIntermediateSteps` being set on the agent node: clear that and the check goes quiet
+rather than failing loudly. `claimProbe`, returned alongside `output` and never sent to Slack,
+says on every turn which happened. On 2026-08-30 she answered an approved booking with
 "Booked. That is a bit shorter than VO Recording sessions usually run" without calling
 `Book Session` at all — copied from an almost identical exchange two turns earlier. Nothing
 was created and the requester was told it had been. Every other guard stops a wrong booking
@@ -195,10 +202,6 @@ n8n server. Each says how it was found and what it breaks.
   catches it; the prompt rule does not.
 - She sometimes asks for a date already given, and has invented a justification for a room
   choice. Both are free-text failures with nothing binding them to a source.
-- The claim check depends on `$('Node').isExecuted`. If this n8n does not support it the
-  check cannot tell, and by design it leaves the text alone rather than guessing. Guard
-  Probe returns `claimProbe` alongside `output` saying which happened — read it in the
-  execution data, not in Slack. Confirm it says `isExecuted=true` on a real booking.
 - **The model corrupts strings it is copying.** Three times in ~60 turns on 2026-08-30:
   "Tara Lim" → "Tara Inf", "REASON1" → "REazon1" twice. The summary line and the title
   resolution are now defended, but nothing stops it happening somewhere new.
