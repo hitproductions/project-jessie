@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+# Run every Code node that holds real logic against a table of scenarios,
+# offline, before anything is imported.
+#
+#   ./scripts/test-nodes                  # newest local file of each workflow
+#   ./scripts/test-nodes --live           # pull each workflow from n8n first
+#   ./scripts/test-nodes MAIN BOOK CANCEL FIND    # four explicit paths
+#
+# Covers:
+#   Gate Context    (main)          via ./scripts/test-gate
+#   Guard Probe     (main)          outgoing text: markers, weekday, vocabulary
+#   Check Conflicts (Book Session)  duration note, description and title assembly
+#   Check Ownership (Cancel Booking) ownership, title resolution
+#   Shape Results   (Find Booking)  shaping, and that `creator` never leaks
+#
+# Each of these has shipped a bug this weekend that only turned up by reading
+# output by hand. A node that decides something belongs in here.
+set -euo pipefail
+here="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$here"
+tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+
+newest() { ls workflows/$1-v*.json 2>/dev/null | sed 's/.*-v\([0-9]*\)\.json/\1 &/' | sort -n | tail -1 | cut -d' ' -f2; }
+
+if [ "${1:-}" = "--live" ]; then
+  set -a; . "$here/.env"; set +a
+  api() { curl -sS -H "X-N8N-API-KEY: $N8N_API_KEY" "$N8N_BASE_URL/api/v1/workflows/$1"; }
+  api uVVYVB2M7kxpLleI > "$tmp/main.json"
+  api EUG3sGXkfsJSYIMz > "$tmp/book.json"
+  api bAyDw7udhmY0NL38 > "$tmp/cancel.json"
+  api yzirq12O227VTFp8 > "$tmp/find.json"
+  echo "testing the live workflows"
+elif [ $# -eq 4 ]; then
+  cp "$1" "$tmp/main.json"; cp "$2" "$tmp/book.json"
+  cp "$3" "$tmp/cancel.json"; cp "$4" "$tmp/find.json"
+  MAIN="$1"
+  echo "testing $1, $2, $3, $4"
+else
+  MAIN="$(newest project-jessie)"
+  cp "$(newest project-jessie)" "$tmp/main.json"
+  cp "$(newest book-session)"   "$tmp/book.json"
+  cp "$(newest cancel-booking)" "$tmp/cancel.json"
+  cp "$(newest find-booking)"   "$tmp/find.json"
+  echo "testing $(newest project-jessie), $(newest book-session), $(newest cancel-booking), $(newest find-booking)"
+fi
+echo
+
+python3 - "$tmp" <<'PY'
+import json,sys,os
+t=sys.argv[1]
+want={"main.json":["Guard Probe"],"book.json":["Check Conflicts"],
+      "cancel.json":["Check Ownership"],"find.json":["Shape Results"]}
+for f,names in want.items():
+    w=json.load(open(os.path.join(t,f)))
+    for n in w["nodes"]:
+        if n["name"] in names:
+            open(os.path.join(t,n["name"].replace(" ","_")+".js"),"w").write(n["parameters"]["jsCode"])
+PY
+
+node - "$tmp" <<'JS'
+const fs=require('fs'), path=require('path'), T=process.argv[2];
+const src=n=>fs.readFileSync(path.join(T,n.replace(/ /g,'_')+'.js'),'utf8');
+let pass=0, fail=0;
+const check=(suite,label,cond,detail)=>{
+  if(cond){pass++; console.log('  ok    '+label);}
+  else {fail++; console.log('  FAIL  '+label+(detail?'  :: '+detail:''));}
+};
+// A suite that throws must not take the rest of the run with it. Testing an
+// older workflow whose node lacks a variable this suite reads is a legitimate
+// thing to do - it should report, not crash, or a regression hiding behind the
+// first failure is never seen.
+const suite=(name,fn)=>{
+  console.log(name);
+  try { fn(); }
+  catch(e){ fail++; console.log('  FAIL  suite could not run :: '+String(e.message).split('\n')[0]); }
+  console.log('');
+};
+
+// ── Guard Probe ────────────────────────────────────────────────────────────
+suite('Guard Probe — what reaches Slack', ()=>{
+  const s=src('Guard Probe');
+  const run=o=>new Function('$input',s)({first:()=>({json:{output:o}})})[0].json.output;
+  const t=[
+    ['collapses ** to *','**Bold** text',x=>x==='*Bold* text'],
+    ['fixes a wrong weekday','*Date:* September 9, 2027 (Wed)',x=>x.includes('(Thu)')],
+    ['fixes a named wrong weekday','on Wednesday, September 9, 2027',x=>x.includes('Thursday')],
+    ['leaves a right weekday alone','*Date:* September 9, 2027 (Thu)',x=>x.includes('(Thu)')],
+    ['removes "priority rooms"','The priority rooms are Studio 7 and Studio 8.',x=>!/priority/i.test(x)],
+    ['removes "last-resort room"','Studio F is a last-resort room for this.',x=>!/last.resort/i.test(x)],
+    ['removes "prioritized"','rooms prioritized for VO Recording',x=>!/prioriti/i.test(x)],
+    ['keeps the article readable','The priority rooms are free.',x=>/^The rooms/.test(x)],
+    ['normalises an embellished marker','a\n\nConfirm to cancel both. (y/n)',x=>x.endsWith('Confirm to cancel. (yes/no)')],
+    ['supplies a missing suffix','a\n\nConfirm to book',x=>x.endsWith('Confirm to book. (yes/no)')],
+    ['leaves a mid-sentence mention','I will ask you to confirm to book later. Which room?',x=>x.includes('confirm to book later')],
+    ['falls back on empty output','',x=>x.length>10],
+  ];
+  for(const [label,input,ok] of t){ let r; try{r=run(input);}catch(e){r='THREW '+e.message;} check('gp',label,ok(r),r.slice(0,70)); }
+});
+
+// ── Check Conflicts ────────────────────────────────────────────────────────
+suite('Check Conflicts — the booking guards', ()=>{
+  const whole=src('Check Conflicts');
+  const i=whole.indexOf('const segs ='), j=whole.indexOf('// --- room ranking');
+  const body=whole.slice(i,j);
+  const run=(client,summary,desc,eng,recName,recTech)=>{
+    const REQ={client,summary,description:desc,engineer:eng};
+    const $=()=>({first:()=>({json:{fields:{'Name':recName,'Technical Requirements':recTech}}})});
+    return new Function('REQ','$',body+'; return {d:finalDescription,s:finalSummary,c:clientGiven};')(REQ,$);
+  };
+  const D='| Booked by: Tara Lim | ref: U1', E='Tara Lim (Post Engineer)', T='Long sessions';
+  let r=run('Jem Lim','X / Jem Lim / TL',D,E,'Jem Lim',T);
+  check('cc','engineer is in the description',/^Engineer: Tara Lim/.test(r.d),r.d.slice(0,60));
+  check('cc','no leading pipe',!/^\s*\|/.test(r.d),r.d.slice(0,30));
+  check('cc','tech requirements come through',r.d.includes(T));
+  r=run('','X / Jem Lim / TL',D,E,'Jem Lim',T);
+  check('cc','client recovered from the title',r.c==='Jem Lim',JSON.stringify(r.c));
+  r=run('','M5 - Howard',D,E,'Leslie Tan','Atmos rig');
+  check('cc','internal room gets no client',r.c===''&&r.d.includes('None'),JSON.stringify(r.c));
+  r=run('Jem Lim','X / jem lim / TL',D,E,'Jem Lim',T);
+  check('cc','client name spelling corrected',r.s==='X / Jem Lim / TL',r.s);
+  r=run('Jem Lim','X / Someone Else / TL',D,E,'Jem Lim',T);
+  check('cc','a different name is left alone',r.s==='X / Someone Else / TL',r.s);
+  r=run('Dante Nora','BABY / dante nora / DR x PL',D,E,'Dante Nora',T);
+  check('cc','music initials survive',r.s==='BABY / Dante Nora / DR x PL',r.s);
+});
+
+// ── Check Ownership ────────────────────────────────────────────────────────
+suite('Check Ownership — who may cancel what', ()=>{
+  const s=src('Check Ownership');
+  const ME='U026N6E1R';
+  const ev=(id,summary,ref,t)=>({id,summary,status:'confirmed',
+    description:ref?('Booked by: Someone | ref: '+ref):'no marker',
+    start:{dateTime:'2027-09-09T'+t+':00:00+08:00'},end:{dateTime:'2027-09-09T18:00:00+08:00'}});
+  const day={items:[ev('a1','ALPHA / X / TL',ME,'14'),ev('a2','THEIRS / Y / KSC','U999','15'),
+                    ev('a3','OLD / Z / XX',null,'16'),
+                    ev('d1','DUP / Q / TL',ME,'09'),ev('d2','DUP / Q / TL',ME,'11')]};
+  const run=req=>new Function('$','$input',s)(()=>({first:()=>({json:req})}),{first:()=>({json:day})})[0].json;
+  const base={requester:ME,confirmed:true,booking_date:'2027-09-09',event_id:''};
+  const cases=[
+    ['own booking by title',{...base,title:'ALPHA / X / TL'},r=>r.verdict==='CLEAR'],
+    ["someone else's",{...base,title:'THEIRS / Y / KSC'},r=>r.reason==='NOT_YOURS'],
+    ['no ref marker',{...base,title:'OLD / Z / XX'},r=>r.reason==='NO_REFERENCE'],
+    ['not confirmed',{...base,confirmed:false,title:'ALPHA / X / TL'},r=>r.reason==='NOT_CONFIRMED'],
+    ['no date',{...base,booking_date:'',title:'ALPHA / X / TL'},r=>r.reason==='MISSING_DATE'],
+    ['nothing supplied',{...base,title:''},r=>r.reason==='MISSING_DETAILS'],
+    ['title matches nothing',{...base,title:'GHOST / N / ZZ'},r=>r.reason==='NOT_ON_CALENDAR'],
+    ['two share a title',{...base,title:'DUP / Q / TL'},r=>r.reason==='AMBIGUOUS_TITLE'],
+    ['invented id falls back to title',{...base,title:'ALPHA / X / TL',event_id:'made_up_id'},r=>r.verdict==='CLEAR'],
+  ];
+  for(const [label,req,ok] of cases){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};}
+    check('co',label,ok(r),r.verdict+' '+(r.reason||'')); }
+  const amb=run({...base,title:'DUP / Q / TL'});
+  check('co','ambiguous list carries times',/\d(:\d\d)?\s?[AP]M/i.test(amb.human||''),(amb.human||'').slice(0,60));
+});
+
+// ── Shape Results ──────────────────────────────────────────────────────────
+suite('Shape Results — what the model is allowed to see', ()=>{
+  const s=src('Shape Results');
+  const S8='c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com';
+  const day={items:[
+    {id:'a1',summary:'ALPHA / Jem Lim / TL',status:'confirmed',creator:{email:'howard@hitproductions.net'},
+     description:'Engineer: Tara Lim (Post Engineer) | Booked by: Tara Lim | ref: U026N6E1R',
+     attendees:[{email:S8,resource:true}],
+     start:{dateTime:'2027-09-09T14:00:00+08:00'},end:{dateTime:'2027-09-09T16:00:00+08:00'}},
+    {id:'a2',summary:'SALIN - MUSIC DEPT',status:'confirmed',
+     start:{dateTime:'2027-09-09T00:00:00+08:00'},end:{dateTime:'2027-09-10T00:00:00+08:00'}},
+    {id:'a3',summary:'M2 - Peemo',status:'confirmed',start:{date:'2027-09-09'},end:{date:'2027-09-10'}},
+    {id:'a4',summary:'GONE / X / TL',status:'cancelled',
+     start:{dateTime:'2027-09-09T09:00:00+08:00'},end:{dateTime:'2027-09-09T10:00:00+08:00'}}]};
+  const run=(date,input)=>new Function('$','$input',s)
+    (()=>({first:()=>({json:{booking_date:date}})}),{first:()=>({json:input})})[0].json;
+  const r=run('2027-09-09',day);
+  const blob=JSON.stringify(r).toLowerCase();
+  check('sr','creator never leaks',!blob.includes('howard'),blob.slice(0,60));
+  check('sr','organizer never leaks',!blob.includes('organizer'));
+  check('sr','cancelled events are dropped',!blob.includes('gone'));
+  check('sr','booked_by read from the description',r.bookings[0].booked_by==='Tara Lim',r.bookings[0].booked_by);
+  check('sr','room resolved from the attendee',r.bookings[0].room==='Studio 8',r.bookings[0].room);
+  check('sr','midnight-to-midnight reads all day',r.bookings[1].time==='all day',r.bookings[1].time);
+  check('sr','date-only reads all day',r.bookings[2].time==='all day',r.bookings[2].time);
+  check('sr','no marker says so',/outside Jessie/.test(r.bookings[1].booked_by),r.bookings[1].booked_by);
+  check('sr','missing date refuses',run('',day).status==='MISSING_DATE');
+  check('sr','unreadable calendar refuses',run('2027-09-09',{error:{}}).status==='LOOKUP_FAILED');
+  check('sr','empty day is not an error',run('2027-09-09',{items:[]}).count===0);
+});
+
+console.log('\n'+(fail? fail+' failing, '+pass+' passing' : 'all '+pass+' checks pass'));
+process.exit(fail?1:0);
+JS
+
+echo
+echo "Gate Context —"
+"$here/scripts/test-gate" "${MAIN:-$(newest project-jessie)}" | sed 's/^/  /'

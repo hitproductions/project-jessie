@@ -15,9 +15,15 @@ without export/import cycles.
   what n8n exports.
 - **Run `./scripts/check-fromai` on every build.** An unescaped apostrophe in a `$fromAI`
   description takes the whole agent down, and it fails at runtime, not on save.
-- **Run `./scripts/test-gate` on every change to `Gate Context`.** It is the one node every
-  message passes through, so a scope or syntax error there takes Jessie down completely
-  rather than degrading one feature. That has happened twice.
+- **Run `./scripts/test-nodes` before shipping anything.** It runs every Code node that
+  decides something — `Guard Probe`, `Check Conflicts`, `Check Ownership`, `Shape Results` —
+  against a table of scenarios offline, then delegates to `./scripts/test-gate` for
+  `Gate Context`. 58 checks. `--live` tests what is actually deployed; four explicit paths
+  test a candidate before importing it. Every one of those nodes shipped a bug this weekend
+  that was caught by reading output by hand.
+- `Gate Context` is the one node every message passes through, so a scope or syntax error
+  there takes Jessie down completely rather than degrading one feature. That has happened
+  twice.
 - **After changing any tool's inputs, or adding/removing a tool, toggle Active off and on.**
   Saving does not reload tool definitions — the agent keeps calling the old schema.
 - **The API key lives in `.env` only.** Never in a message, a commit, or a shared file.
