@@ -41,18 +41,36 @@ for "Studio 2" fails. It's currently only reachable by a partial match.
 
 ## Tel — Airtable, linked fields
 
-**5. `Clients.Preferred Rooms` comes back as record ids.** The model can't read
-them, and when it tried it invented room names — it reported Sasa Abella's
-preferred rooms as "Studio 1, Studio 2, Studio 3" when they are Studio 8,
-Studio F and one other. The field is no longer returned to Jessie at all, so she
-asks which room instead of proposing one.
+**5. `Clients.Preferred Rooms` needs a companion field. Do not delete anything.**
 
-A lookup or rollup field returning the room *names* would let her propose rooms
-again, which is the behaviour the prompt was originally written for.
+The field is a link to Rooms & Studios, so what Airtable's API returns is record
+ids — `reced8Jk7wG24KpdE` — not names. Jessie cannot read those. When she tried,
+she reported Sasa Abella's preferred rooms as "Studio 1, Studio 2, Studio 3";
+they are Studio 8, Studio F and one other. She is no longer sent the field at
+all, which is why she asks which room instead of proposing one.
 
-**6. Same for `Session Types.Priority` and `.Last Resort`.** Handled now — the
-workflow resolves the ids itself and injects the ranking into the prompt — but
-a lookup field would remove that machinery.
+*What to add:* a new **Lookup** field on the Clients table — call it
+`Preferred Room Names` — configured as:
+
+    Field type:        Lookup
+    Linked record:     Preferred Rooms
+    Field to look up:  Room Name
+
+That returns the same rooms as readable text. It is read-only and computed, so
+it cannot drift from the link.
+
+*What not to do:* do not delete or convert `Preferred Rooms`. The link is where
+the data actually lives, and the lookup reads through it — remove the link and
+both fields go. Nothing about the existing field changes.
+
+*What it unlocks:* Jessie can go back to proposing a room instead of always
+asking, which is the behaviour the prompt was originally written for. Until
+then, always-ask is correct and is what she does.
+
+**6. Same pattern for `Session Types.Priority` and `.Last Resort`.** Also links,
+also record ids. The workflow resolves these itself now — Room Table reads every
+room and maps the ids back to names on each message — so this one is optional.
+A pair of lookup fields would let that node get simpler, nothing more.
 
 **7. `Session Types.Room Requirements` holds a capability, not a room class.**
 Post Mixing's value is "Stereo Mixing". Section 6 of HANDOFF.md records it as
