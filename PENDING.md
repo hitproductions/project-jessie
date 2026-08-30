@@ -202,10 +202,32 @@ including ones that do nothing: a bare "hi" costs it.
 **It is about 28% of a 12.5-second turn — the largest single piece of latency
 left, and larger than everything else outside the model put together.**
 
-The open question is whether the task runner can be kept warm: an n8n setting,
-running Code in the main process as older versions did, or a scheduled workflow
-that fires often enough to keep it alive. Worth checking alongside item 11, since
-both are questions about the installed n8n version.
+**The runner shuts down after 12-13 seconds idle.** Measured across 29
+executions: the longest gap that still found a warm runner was 12s, the shortest
+that went cold was 13s. That is a sharp enough boundary to look like a
+configured idle-shutdown timeout rather than chance.
+
+That rules out the obvious workaround. Keeping it warm with a scheduled workflow
+would mean firing a Code node every ten seconds forever - roughly 8,600
+executions a day, filling the execution log and the database to save 3.5s a
+turn. Not worth it.
+
+*What to ask the server for, in order:*
+
+1. **Raise or disable the runner's idle-shutdown timeout.** n8n's task-runner
+   configuration has a setting of this shape, and the measured 12-13s window is
+   consistent with a small default. Raising it keeps the process alive between
+   messages. One environment variable, reversible, no workflow change. Check the
+   installed version's task-runner settings for the exact name.
+2. **Or run Code in the main process**, as n8n did before external task runners.
+   Also an environment variable. It gives up the runner's process isolation,
+   which matters less on an internal instance where we write all the code.
+3. If neither is available on the installed version, that is a concrete argument
+   for item 11.
+
+Whichever is tried, it is measurable afterwards: re-run the same comparison of
+`Gate Context` against `Room Table` in the execution data. First Code node ~3.5s
+means it is still happening; ~0.07s means it is fixed.
 
 *Measured 2026-08-30. An earlier note in this file withdrew this finding as a
 mismeasurement — that withdrawal was itself the mistake, taken from a sample that
