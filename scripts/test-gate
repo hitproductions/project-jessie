@@ -54,6 +54,27 @@ const cases = [
    { dateNotice: /the next one/ }],
   ['tomorrow',               'book the M booth tomorrow', [],
    { dateNotice: /Tuesday, 31 August 2027/ }],
+  // A start time and no end. The model invented a 3-hour session from "at 2pm"
+  // on 2026-08-30 and never said it had assumed anything.
+  ['start time with no end',  'book a voiceover session next thursday at 2pm', [],
+   { startOnlyNotice: /START TIME AND NO END/ }],
+  ['a full range says nothing', 'book studio 7 next thursday 2pm to 5pm', [],
+   { startOnlyNotice: '' }],
+  ['a dashed range says nothing', 'book studio 7 next thursday 2pm-5pm', [],
+   { startOnlyNotice: '' }],
+  ['no time at all says nothing', 'book studio 7 next thursday', [],
+   { startOnlyNotice: '' }],
+  // The flag has to survive the turns between "at 2pm" and the summary. It did
+  // not on 2026-08-30: she asked about a booth first, and the summary that
+  // followed assumed an hour without saying so. These run in order — the first
+  // raises it, the second is a reply carrying no time at all and must still
+  // have it, the third supplies a length and must clear it.
+  ['start-only is raised', 'book a VO session next thursday at 2pm', [],
+   { startOnlyNotice: /START TIME AND NO END/ }],
+  ['and survives a reply with no time', 'just studio 7, no booth', [],
+   { startOnlyNotice: /START TIME AND NO END/ }],
+  ['an explicit length clears it', 'make it 3 hours', [],
+   { startOnlyNotice: '' }],
   ['y approves a booking',   'y', [usr('y'), bookSummary],
    { confirmed: true, confirmedCancel: false }],
   ['n refuses a booking',    'n', [usr('n'), bookSummary],
@@ -78,8 +99,18 @@ const cases = [
    { pastDateNotice: '' }],
   // The date carries across turns within one conversation, so this runs after a
   // dated scenario and is expected to still know which day is being discussed.
-  ['plain question carries date','what rooms can do 5.1?', [],
+  ['plain question carries date','is that slot still open?', [],
    { confirmed: false, dateNotice: /THE DATE UNDER DISCUSSION IS/ }],
+  // ...but a question about which rooms exist is not a question about a day.
+  // "list all the rooms" inherited a 2-5pm window and answered with the free
+  // rooms only, presented as the whole list.
+  ['catalogue question drops the carry','list all the rooms', [],
+   { dateNotice: '' }],
+  ['capability question drops the carry','what rooms can do 5.1?', [],
+   { dateNotice: '' }],
+  // "which rooms are free" is still an availability question and keeps it.
+  ['an availability question keeps the carry','which rooms are free?', [],
+   { dateNotice: /THE DATE UNDER DISCUSSION IS/ }],
   ['reset clears and says so','reset', [],
    { resetNotice: /ALREADY BEEN CLEARED|JUST BEEN CLEARED/, epoch: '1788077500.1' }],
   ['reset through connector', 'reset *Sent using* <@U0AVDBNH1K4>', [],

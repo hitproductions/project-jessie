@@ -29,19 +29,21 @@ if [ "${1:-}" = "--live" ]; then
   api EUG3sGXkfsJSYIMz > "$tmp/book.json"
   api bAyDw7udhmY0NL38 > "$tmp/cancel.json"
   api yzirq12O227VTFp8 > "$tmp/find.json"
+  api t7lwR2km4tfN8DbM > "$tmp/move.json"
   echo "testing the live workflows"
-elif [ $# -eq 4 ]; then
+elif [ $# -eq 5 ]; then
   cp "$1" "$tmp/main.json"; cp "$2" "$tmp/book.json"
-  cp "$3" "$tmp/cancel.json"; cp "$4" "$tmp/find.json"
+  cp "$3" "$tmp/cancel.json"; cp "$4" "$tmp/find.json"; cp "$5" "$tmp/move.json"
   MAIN="$1"
-  echo "testing $1, $2, $3, $4"
+  echo "testing $1, $2, $3, $4, $5"
 else
   MAIN="$(newest project-jessie)"
   cp "$(newest project-jessie)" "$tmp/main.json"
   cp "$(newest book-session)"   "$tmp/book.json"
   cp "$(newest cancel-booking)" "$tmp/cancel.json"
   cp "$(newest find-booking)"   "$tmp/find.json"
-  echo "testing $(newest project-jessie), $(newest book-session), $(newest cancel-booking), $(newest find-booking)"
+  cp "$(newest move-booking)"   "$tmp/move.json"
+  echo "testing $(newest project-jessie), $(newest book-session), $(newest cancel-booking), $(newest find-booking), $(newest move-booking)"
 fi
 echo
 
@@ -49,7 +51,8 @@ python3 - "$tmp" <<'PY'
 import json,sys,os
 t=sys.argv[1]
 want={"main.json":["Guard Probe"],"book.json":["Check Conflicts"],
-      "cancel.json":["Check Ownership"],"find.json":["Shape Results"]}
+      "cancel.json":["Check Ownership"],"find.json":["Shape Results"],
+      "move.json":["Resolve Booking"]}
 for f,names in want.items():
     w=json.load(open(os.path.join(t,f)))
     for n in w["nodes"]:
@@ -79,7 +82,23 @@ const suite=(name,fn)=>{
 // ── Guard Probe ────────────────────────────────────────────────────────────
 suite('Guard Probe — what reaches Slack', ()=>{
   const s=src('Guard Probe');
-  const run=o=>new Function('$input',s)({first:()=>({json:{output:o}})})[0].json.output;
+  // Guard Probe now reads Get Booker (booker line), Gate Context (resolved year,
+  // start-only flag), Room Table (the ranking a note is checked against), and
+  // probes the tool nodes for isExecuted. ctx lets a case set all of those.
+  const ROOMS='- Post Mixing — normally: Studio 7, Studio 8, Studio F, Studio C · also possible: Studio 4, Studio 5, Studio 6\n'
+             +'- VO Recording — normally: Studio 7, Studio 8, Studio F, Studio C\n'
+             +'- Music Mixing — normally: Studio F · also possible: Studio C';
+  const mk=(ctx={})=>name=>{
+    if(name==='Get Booker')   return {first:()=>({json:{fields:{Name:'Tara Lim'}}})};
+    if(name==='Gate Context') return {first:()=>({json:{dateNotice:ctx.dateNotice||'',pastDateNotice:'',
+                                                        startOnlyNotice:ctx.startOnly?'THEY GAVE A START TIME AND NO END TIME.':''}})};
+    if(name==='Room Table')   return {first:()=>({json:{roomTable:ctx.roomTable===undefined?ROOMS:ctx.roomTable}})};
+    if(ctx.executed && Object.prototype.hasOwnProperty.call(ctx.executed,name))
+      return {isExecuted:ctx.executed[name],first:()=>({json:{}})};
+    return {first:()=>({json:{}})};
+  };
+  const runCtx=(o,ctx)=>new Function('$input','$',s)({first:()=>({json:{output:o}})},mk(ctx))[0].json;
+  const run=o=>runCtx(o,{}).output;
   const t=[
     ['collapses ** to *','**Bold** text',x=>x==='*Bold* text'],
     ['fixes a wrong weekday','*Date:* September 9, 2027 (Wed)',x=>x.includes('(Thu)')],
@@ -93,8 +112,93 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['supplies a missing suffix','a\n\nConfirm to book',x=>x.endsWith('Confirm to book. (yes/no)')],
     ['leaves a mid-sentence mention','I will ask you to confirm to book later. Which room?',x=>x.includes('confirm to book later')],
     ['falls back on empty output','',x=>x.length>10],
+    // Vocabulary and corruption found in the 2026-08-30 QA run.
+    ['strips the BLOCKED prefix','BLOCKED - "X / Y / TL" was booked by Howard Lim.',x=>!/BLOCKED/.test(x)],
+    ['removes "deviation:" in parentheses','*Room:* Studio 5 (deviation: another room for post mixing)',
+      x=>!/deviation/i.test(x)&&x.includes('(another room')],
+    ['rewrites "is a deviation from the usual rooms"','Studio 3 is a deviation from the usual rooms for VO Recording.',
+      x=>!/deviation/i.test(x)&&/is not one of the usual rooms/.test(x)],
+    // v100 shipped "Studio 3 is a exception for VO Recording" - the noun was
+    // swapped and the article left behind. Same trap the priority/last-resort
+    // list already documents: a replacement must swallow its article.
+    ['rewrites "is a deviation for"','*Note:* Studio 3 is a deviation for VO Recording (normally Studio 7).',
+      x=>!/deviation/i.test(x)&&/is not a usual room for VO Recording/.test(x)],
+    // "a exception" is the specific breakage v100 shipped. "a usual room" is
+    // correct English and must not be flagged.
+    ['never leaves a stranded article','Studio 3 is a deviation for VO Recording.',
+      x=>!/\ba\s+exception\b/i.test(x)],
+    ['a bare deviation still becomes an exception','That would be a deviation.',
+      x=>/\ban exception\b/i.test(x)],
+    ['relabels Booking Owner','*Booking Owner:* Tara Lim',x=>x.startsWith('*Booked by:* Tara Lim')],
+    // "*Bookedby:*" - no space - went out on 2026-08-30, and the booker repair
+    // below would not have matched it.
+    ['relabels Bookedby','*Bookedby:* Tara Inf',x=>x.trim()==='*Booked by:* Tara Lim'],
+    ['repairs a corrupted booker name','*Booked by:* Tara Inf',x=>x.trim()==='*Booked by:* Tara Lim'],
+    ['leaves the right booker alone','*Booked by:* Tara Lim',x=>x.trim()==='*Booked by:* Tara Lim'],
+    ['does not touch other lines','*Client:* Bea Jose\n*Booked by:* Tara Inf',
+      x=>x.includes('*Client:* Bea Jose')&&x.includes('*Booked by:* Tara Lim')],
   ];
   for(const [label,input,ok] of t){ let r; try{r=run(input);}catch(e){r='THREW '+e.message;} check('gp',label,ok(r),r.slice(0,70)); }
+
+  // ── the five findings from the A/B/M groups, 2026-08-30 ──────────────────
+  const SUM='*M13TEST / Jem Lim / TL*\n*Time:* 1:00 PM – 4:00 PM\n*Room:* Studio 8\n\nConfirm to book. (yes/no)';
+  const ctx2027={dateNotice:'THE DATE UNDER DISCUSSION IS Thursday, 9 September 2027.'};
+  // Each group is gated on a marker from its own fix, so the four Guard Probe
+  // fixes can go back one at a time (v102 shipped all four at once and hung the
+  // node) and every build reports honestly on what it actually contains.
+  const GROUPS=[
+    ['undated weekday','refYear'],
+    ['note vs ranking','roomTable'],
+    ['assumed duration','startOnlyNotice'],
+    ['claim check','claimProbe'],
+  ];
+  const t2=[
+    // a date with no year — both older patterns need one
+    ['undated weekday','fixes an undated weekday','Studio 7 is taken next Wednesday, September 9.',ctx2027,
+      x=>/next Thursday, September 9/.test(x.output)],
+    ['undated weekday','leaves a correct undated weekday','that is Thursday, September 9.',ctx2027,
+      x=>/Thursday, September 9/.test(x.output)],
+    ['undated weekday','undated weekday needs a resolved year','on Wednesday, September 9.',{},
+      x=>/Wednesday/.test(x.output)],
+    // a note the ranking contradicts
+    ['note vs ranking','drops a note the ranking contradicts',
+      '*Room:* Studio 7\n*Note:* Studio 7 is outside the usual rooms for Post Mixing (so it is one of them).\n\nConfirm to book. (yes/no)',{},
+      x=>!/\*Note:\*/.test(x.output)&&/\*Room:\* Studio 7/.test(x.output)],
+    ['note vs ranking','keeps a note the ranking supports',
+      '*Room:* Studio 3\n*Note:* Studio 3 is outside the usual rooms for Post Mixing.\n\nConfirm to book. (yes/no)',{},
+      x=>/\*Note:\*/.test(x.output)],
+    ['note vs ranking','keeps a note when the ranking is unreadable',
+      '*Note:* Studio 7 is outside the usual rooms for Post Mixing.\n\nConfirm to book. (yes/no)',{roomTable:''},
+      x=>/\*Note:\*/.test(x.output)],
+    // a duration nobody asked for
+    ['assumed duration','states an assumed duration',SUM,{startOnly:true},x=>/^Assuming 3 hours/.test(x.output)],
+    ['assumed duration','does not restate one already given',SUM.replace('*M13','Assuming 3 hours.\n\n*M13'),{startOnly:true},
+      x=>(x.output.match(/Assuming/g)||[]).length===1],
+    ['assumed duration','says nothing when a range was given',SUM,{},x=>!/Assuming/.test(x.output)],
+    // a claim with nothing behind it
+    ['claim check','rewrites a booking that never happened','Booked. That is a bit shorter than usual.',
+      {executed:{'Book Session':false}},x=>/did not go through/.test(x.output)&&!/^Booked/.test(x.output)],
+    ['claim check','leaves a real booking alone','Booked.',{executed:{'Book Session':true}},x=>/^Booked\./.test(x.output)],
+    ['claim check','leaves a claim alone when it cannot tell','Booked.',{},x=>/^Booked\./.test(x.output)],
+    ['claim check','reports what the probe saw','Booked.',{executed:{'Book Session':true}},
+      x=>x.claimProbe==='booked: isExecuted=true'],
+    ['claim check','reports a blind probe','Booked.',{},x=>/unavailable/.test(x.claimProbe)],
+    ['claim check','catches a fabricated cancellation','Cancelled "X / Y / TL".',
+      {executed:{'Cancel Booking':false}},x=>/did not go through/.test(x.output)],
+    ['claim check','no claim, no probe','Studio 7 is free.',{},x=>x.claimProbe==='no claim'],
+  ];
+  // These cover the four Guard Probe fixes written for v102. That build made the
+  // node time out at 60s on every message - it reached the task runner and
+  // hung, and Guard Probe had been erroring on every reply until it was rolled
+  // back to the v101 code in v103. The checks stay as the specification for
+  // putting them back one at a time; they are skipped while the code is absent
+  // so a rolled-back build still reports clean rather than permanently red.
+  for(const [gname,marker] of GROUPS){
+    const cases=t2.filter(c=>c[0]===gname);
+    if(!new RegExp(marker).test(s)){ console.log('  skip  '+cases.length+' checks — '+gname+' is not in this build'); continue; }
+    for(const [,label,input,ctx,ok] of cases){ let r; try{r=runCtx(input,ctx);}catch(e){r={output:'THREW '+e.message,claimProbe:'THREW'};}
+      check('gp',label,ok(r),String(r.output).slice(0,70)); }
+  }
 });
 
 // ── Check Conflicts ────────────────────────────────────────────────────────
@@ -146,6 +250,18 @@ suite('Check Ownership — who may cancel what', ()=>{
     ['title matches nothing',{...base,title:'GHOST / N / ZZ'},r=>r.reason==='NOT_ON_CALENDAR'],
     ['two share a title',{...base,title:'DUP / Q / TL'},r=>r.reason==='AMBIGUOUS_TITLE'],
     ['invented id falls back to title',{...base,title:'ALPHA / X / TL',event_id:'made_up_id'},r=>r.verdict==='CLEAR'],
+    // The model mistypes a title it is copying back - "REASON1" came back
+    // "REazon1" during the 2026-08-30 QA run and a move died as
+    // NOT_ON_CALENDAR. One slipped character must still resolve, and the
+    // ownership check must still be the thing that decides.
+    // A substituted letter, not just a case change - lowercasing already
+    // absorbed those, so a case-only test proves nothing about the near match.
+    ['one mistyped letter still resolves',{...base,title:'ALPHZ / X / TL'},r=>r.verdict==='CLEAR'],
+    ['a mistyped letter cannot cross ownership',{...base,title:'THEIRZ / Y / KSC'},r=>r.reason==='NOT_YOURS'],
+    // Mid-string, where the substring tier cannot quietly rescue it.
+    ['an invisible character is stripped',{...base,title:'ALP️HA / X / TL'},r=>r.verdict==='CLEAR'],
+    ['a genuinely unknown title still refuses',{...base,title:'ZEBRA / Q / MM'},r=>r.reason==='NOT_ON_CALENDAR'],
+    ['a near tie stays ambiguous',{...base,title:'DUP / Q / TX'},r=>r.reason==='AMBIGUOUS_TITLE'],
   ];
   for(const [label,req,ok] of cases){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};}
     check('co',label,ok(r),r.verdict+' '+(r.reason||'')); }
@@ -182,6 +298,39 @@ suite('Shape Results — what the model is allowed to see', ()=>{
   check('sr','missing date refuses',run('',day).status==='MISSING_DATE');
   check('sr','unreadable calendar refuses',run('2027-09-09',{error:{}}).status==='LOOKUP_FAILED');
   check('sr','empty day is not an error',run('2027-09-09',{items:[]}).count===0);
+});
+
+// ── Resolve Booking ────────────────────────────────────────────────────────
+// The node that actually failed in QA: the model re-sent a title it had itself
+// mistyped, and the move died as NOT_ON_CALENDAR. Same resolution logic as
+// Check Ownership, so it gets the same scrutiny.
+suite('Resolve Booking — which booking is being moved', ()=>{
+  const s=src('Resolve Booking');
+  const ME='U026N6E1R';
+  const ev=(id,summary,ref,t)=>({id,summary,status:'confirmed',
+    description:ref?('Booked by: Someone | ref: '+ref):'no marker',
+    start:{dateTime:'2027-09-10T'+t+':00:00+08:00'},end:{dateTime:'2027-09-10T18:00:00+08:00'}});
+  const day={items:[ev('a1','REASON1 / Bea Jose / TL',ME,'14'),
+                    ev('a2','THEIRS / Y / KSC','U999','15'),
+                    ev('a3','OLD / Z / XX',null,'16')]};
+  const run=req=>new Function('$','$input',s)(()=>({first:()=>({json:req})}),{first:()=>({json:day})})[0].json;
+  const base={requester:ME,confirmed:true,booking_date:'2027-09-10',event_id:'',
+              new_start_iso:'2027-09-10T15:00:00+08:00',new_end_iso:'2027-09-10T18:00:00+08:00'};
+  const cases=[
+    ['exact title resolves',{...base,title:'REASON1 / Bea Jose / TL'},r=>r.verdict==='CLEAR'],
+    ['the QA corruption resolves',{...base,title:'REazon1 / Bea Jose / TL'},r=>r.verdict==='CLEAR'],
+    ['an invisible character resolves',{...base,title:'REAS️ON1 / Bea Jose / TL'},r=>r.verdict==='CLEAR'],
+    ['a corrupted title cannot cross ownership',{...base,title:'THEIRZ / Y / KSC'},r=>r.reason==='NOT_YOURS'],
+    ['an unknown title still refuses',{...base,title:'ZEBRA / Q / MM'},r=>r.reason==='NOT_ON_CALENDAR'],
+    ['not confirmed',{...base,confirmed:false,title:'REASON1 / Bea Jose / TL'},r=>r.reason==='NOT_CONFIRMED'],
+    ['a corrupted new time refuses',{...base,title:'REASON1 / Bea Jose / TL',new_end_iso:'not a date'},
+      r=>r.reason==='MISSING_TIMES'],
+    ['an invisible character in the time survives',
+      {...base,title:'REASON1 / Bea Jose / TL',new_end_iso:'2027-09-10T18:00:00+08:00️'},
+      r=>r.verdict==='CLEAR'],
+  ];
+  for(const [label,req,ok] of cases){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};}
+    check('rb',label,ok(r),r.verdict+' '+(r.reason||'')); }
 });
 
 console.log('\n'+(fail? fail+' failing, '+pass+' passing' : 'all '+pass+' checks pass'));
