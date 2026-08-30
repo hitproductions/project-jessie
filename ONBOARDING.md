@@ -1,0 +1,110 @@
+# Project Jessie — start here
+
+Jessie is a Slack bot that books studio time. She runs in n8n, talks to Airtable
+and Google Calendar, and is driven by a Gemini agent. Launch is **25 September
+2026**. This folder is the source of truth for how she works.
+
+You are picking this up from Tara. Everything below has been verified against the
+live build; where something is unproven or uncertain it says so.
+
+## First, get your own API access
+
+**Do not reuse Tara's key.** n8n API keys are per user — your own key means the
+audit trail shows who did what, and either key can be revoked without breaking the
+other.
+
+1. In n8n → **Settings → n8n API → Create an API key**
+2. `cp .env.example .env` and paste it in
+
+```bash
+./scripts/n8n list        # should print the six Jessie workflows
+```
+
+`.env` is gitignored and must stay that way. The key has never been committed —
+please keep it that way. It should never appear in a chat message either.
+
+## Read in this order
+
+1. **`CLAUDE.md`** — how the build works, the ground rules, and the gotchas that
+   have already cost days. Read this one properly.
+2. **`DETERMINISM.md`** — which rules the workflow enforces and which are still
+   left to the model. This is the design argument of the whole project.
+3. **`PENDING.md`** — thirteen items needing a change in Airtable, the Slack app,
+   Google Calendar or the n8n server. Several are yours.
+4. `BIGCHANGES.md` — the four things a person using Jessie in Slack will notice.
+5. `HANDOFF.md` — the original August handoff. **Treat as unreliable**: it has been
+   wrong on several facts. Check anything in it against the live workflow.
+
+`git log` is the real record of why things are the way they are. The messages are
+long on purpose — most explain a bug that took hours to find.
+
+## Check the build is what you think it is
+
+```bash
+./scripts/test-nodes --live      # 58 checks against what is actually deployed
+```
+
+If that passes, the deployed workflows behave as documented. If it fails, trust
+the test and not the docs.
+
+## The one thing to understand before changing anything
+
+> Anything that must be true is enforced in a sub-workflow.
+> Anything the prompt merely asks for is unreliable.
+
+Every rule that was only stated in the prompt has failed at least once —
+the conflict check, waiting for confirmation, the room ranking, even the rule
+against `**`. Every rule moved into n8n has held.
+
+There is a third place: `Guard Probe` rewrites the reply on the way out, and is
+where anything that must be true of the *text* belongs — the weekday beside a
+date, the confirmation marker, the internal vocabulary.
+
+If you find yourself adding a sentence to the prompt to fix a behaviour, that is
+the moment to ask whether it can be enforced in code instead.
+
+## Working rules
+
+- **Pull before you change anything.** `./scripts/n8n pull <id> <file>`. The n8n UI
+  and this folder overwrite each other silently, and Tara edits the canvas.
+- **Build every file from a fresh pull**, and keep the full export shape — do not
+  strip it down.
+- **`./scripts/check-fromai` and `./scripts/test-nodes` before every import.** An
+  unescaped apostrophe in a `$fromAI` description takes the whole agent down, and
+  it fails at runtime, not on save.
+- **After changing a tool's inputs, or adding/removing a tool, toggle the workflow
+  Active off and on.** Saving does not reload tool definitions.
+- **Import by hand and verify with a pull.** `./scripts/n8n push` has reported
+  success and changed nothing (PENDING 12).
+- Bookings on the calendar are real. QA runs on 2027 dates on purpose.
+
+## Where things stand
+
+Live: main workflow **v99**, Book Session v24, Cancel Booking v4, Move Booking v2,
+Find Booking v2, Room Availability v4.
+
+QA groups B, C, D, F, M, N and X have been run against the live build. The rest
+have not.
+
+Known and unfixed, all in `CLAUDE.md` under *Not done*: she sometimes presents a
+summary without checking availability that turn (a guard catches it); she
+sometimes asks for a date already given; and `NOT_YOURS` — refusing to cancel a
+booking someone else made — has never fired in a live conversation, because every
+booking so far was made by one person. **That last one needs two people to test,
+and is worth doing before launch.**
+
+## Before launch
+
+`YEAR_SHIFT` at the top of `Gate Context`, and `plus({ years: 1 })` in the system
+prompt, are the QA year shift. **They must go to zero together.** Change one and
+the model and the guards will disagree about what day it is.
+
+## The two things most worth your attention
+
+1. **PENDING 13 — the task runner.** The first Code node in every execution costs
+   ~3.5s; later ones cost ~0.07s. That is about 28% of a 12.5-second turn, paid on
+   every message. The runner shuts down after 12–13 seconds idle. It is a server
+   configuration question, and it is the largest single win available.
+2. **PENDING 5, 6 and 7 — Airtable.** A client field returns record ids Jessie
+   cannot read, a Technical Requirements note points at that field and she fills
+   the gap by inventing, and four session types list the same rooms twice.
