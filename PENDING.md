@@ -176,11 +176,49 @@ order. Reading via the API is unaffected and remains reliable.
 
 ---
 
+**13. The first Code node in every execution costs about 3.5 seconds.**
+
+n8n runs Code nodes in a separate task-runner process. The first one in an
+execution waits for that process to be ready; later ones in the same execution
+take about 0.07s. Measured across 14 consecutive turns on the live build:
+
+```
+message                       Gate Context   Room Table   Guard Probe
+yes                                  3.50s        0.09s         0.05s
+no                                   3.42s        0.07s         0.05s
+book studio 8 next thursday          3.45s        0.07s         0.05s
+cancel both of my studio 8...        3.71s        0.08s         0.06s
+actually yes cancel it               0.08s        0.07s         0.04s
+y                                    0.09s        0.07s         0.04s
+```
+
+Bimodal: either ~3.5s or ~0.07s, depending on whether the runner is still warm
+from a recent execution. Ten of those fourteen turns paid it.
+
+`Gate Context` is the first Code node and always will be — something has to be
+first, so this cannot be fixed by reordering. It is paid on every message,
+including ones that do nothing: a bare "hi" costs it.
+
+**It is about 28% of a 12.5-second turn — the largest single piece of latency
+left, and larger than everything else outside the model put together.**
+
+The open question is whether the task runner can be kept warm: an n8n setting,
+running Code in the main process as older versions did, or a scheduled workflow
+that fires often enough to keep it alive. Worth checking alongside item 11, since
+both are questions about the installed n8n version.
+
+*Measured 2026-08-30. An earlier note in this file withdrew this finding as a
+mismeasurement — that withdrawal was itself the mistake, taken from a sample that
+happened to catch warm runs.*
+
+---
+
 ## Withdrawn
 
-**Task-runner warm-up was measured wrong.** An earlier version of this file
-claimed the first Code node in every execution costs about 3.5 seconds and
-called it the largest remaining source of latency. Re-measuring across
-executions put the first Code node at about 0.05s, the same as later ones. The
-original figure came from reading a whole-execution duration as if it were one
-node's. There is nothing here to fix — noted so it does not get raised again.
+*Nothing currently withdrawn.*
+
+**Task-runner warm-up, briefly withdrawn and reinstated.** This file once claimed
+the first Code node costs ~3.5s; that was withdrawn on 2026-08-30 as a
+mismeasurement, then reinstated the same day as item 13 when a proper sample
+showed it is real and bimodal. The withdrawal was based on runs that happened to
+catch a warm runner. Kept here as a note on how the mistake was made.
