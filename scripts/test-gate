@@ -68,8 +68,10 @@ const cases = [
    { pastDateNotice: /ALREADY PASSED/ }],
   ['future date',            'book studio 3 on 2027-12-01 2-5pm', [],
    { pastDateNotice: '' }],
-  ['plain question',         'what rooms can do 5.1?', [],
-   { confirmed: false, dateNotice: '' }],
+  // The date carries across turns within one conversation, so this runs after a
+  // dated scenario and is expected to still know which day is being discussed.
+  ['plain question carries date','what rooms can do 5.1?', [],
+   { confirmed: false, dateNotice: /THE DATE UNDER DISCUSSION IS/ }],
   ['reset clears and says so','reset', [],
    { resetNotice: /ALREADY BEEN CLEARED|JUST BEEN CLEARED/, epoch: '1788077500.1' }],
   ['reset through connector', 'reset *Sent using* <@U0AVDBNH1K4>', [],
