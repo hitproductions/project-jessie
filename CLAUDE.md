@@ -7,7 +7,7 @@ without export/import cycles.
 ## Ground rules
 
 - **Before editing any file or pushing to n8n:** show Tara the change and wait for an
-  explicit yes.
+  explicit yes. Nothing here is pushed automatically.
 - **Pull before you change anything.** The n8n UI and this folder overwrite each other
   silently. Tara rearranges the canvas; a file built from a stale pull reverts her layout.
 - **Build every file from a fresh pull and keep the full export shape.** Do not strip the
@@ -50,10 +50,11 @@ Slack DM → n8n → agent (Gemini 3.5 Flash Lite, temp 0.2) → Airtable + Goog
 | `Jessie — Find Booking` | `yzirq12O227VTFp8` | shapes a day's events before the model sees them |
 | `Jessie — Room Availability` | `e7tBQB458nstrqei` | what is free, computed not reasoned |
 
+People: Tara owns this build — decisions and sign-off are hers. Devs pick up the workflow
+work; a separate group does QA in Slack.
+
 Airtable base `app8GQxEInqJi1NRP` · calendar `c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com`
 · launch 2026-09-25.
-
-People: Tara — Strategic Lead. Howard — dev. Tel — knowledge base. Trish, Camy, Jess, bp — QA.
 
 Versions in `workflows/` are a local convention, not n8n's. The live build is whatever was
 last imported and confirmed — check with `./scripts/n8n pull` rather than assuming.
@@ -211,7 +212,7 @@ n8n server. Each says how it was found and what it breaks.
 - She sometimes asks for a date already given, and has invented a justification for a room
   choice. Both are free-text failures with nothing binding them to a source.
 - **The model corrupts strings it is copying.** Three times in ~60 turns on 2026-08-30:
-  "Tara Lim" → "Tara Inf", "REASON1" → "REazon1" twice. The summary line and the title
+  "Tara Lim" → "Tara Inf", and "REASON1" → "REazon1" twice. The summary line and the title
   resolution are now defended, but nothing stops it happening somewhere new.
 - QA groups: A, B, C, D, E, F, M, N, X all run 2026-08-30, and all eleven findings from that
   run are fixed — six in v100/v101 and the sub-workflows, five across v102–v112. `M2` is left

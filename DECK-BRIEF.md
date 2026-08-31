@@ -72,7 +72,7 @@ and the first is the strongest:
 
 - **Who booked a session** — the raw Google event used to go to the model, and it
   read `creator`, which is always the n8n service account. It told the requester
-  their own booking "was made by Howard, not you". A sub-workflow now shapes the
+  their own booking "was made by someone else, not you". A sub-workflow now shapes the
   day's events to id, title, time, room, booked-by and engineer; `creator` never
   reaches her.
 - **The weekday beside a date** — recomputed from the date on the way out. She

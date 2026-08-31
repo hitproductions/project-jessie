@@ -11,14 +11,14 @@ this file is just how to drive it.
 3. Check it works:
 
 ```bash
-cd /Users/tara/Documents/Claude/jessie && ./scripts/n8n list
+cd ~/Documents/Claude/jessie && ./scripts/n8n list
 ```
 
 ## The script
 
 | Command | What it does |
 |---|---|
-| `./scripts/n8n list` | every workflow with its id and active state |
+| `cd path/to/jessie && ./scripts/n8n list` | every workflow with its id and active state |
 | `./scripts/n8n pull <id> workflows/name.json` | download a workflow to a file |
 | `./scripts/n8n push <id> workflows/name.json` | upload a file over a workflow — asks for a typed `yes` first |
 | `./scripts/n8n execs` | last 20 runs of the main workflow |

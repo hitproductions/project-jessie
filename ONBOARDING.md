@@ -4,63 +4,79 @@ Jessie is a Slack bot that books studio time. She runs in n8n, talks to Airtable
 and Google Calendar, and is driven by a Gemini agent. Launch is **25 September
 2026**. This folder is the source of truth for how she works.
 
-You are picking this up from Tara. Everything below has been verified against the
-live build; where something is unproven or uncertain it says so.
+Everything below has been verified against the live build; where something is
+unproven or uncertain it says so.
 
-## First, get your own API access
+## Setting up
 
-**Do not reuse Tara's key.** n8n API keys are per user — your own key means the
-audit trail shows who did what, and either key can be revoked without breaking the
-other.
+**1. Unzip this folder** anywhere on your machine.
 
-1. In n8n → **Settings → n8n API → Create an API key**
-2. `cp .env.example .env` and paste it in
+**2. Open a Claude Code session inside it.** In a terminal, type:
 
 ```bash
-./scripts/n8n list        # should print the six Jessie workflows
+cd path/to/jessie
+claude
 ```
 
-`.env` is gitignored and must stay that way. The key has never been committed —
-please keep it that way. It should never appear in a chat message either.
+Claude reads `CLAUDE.md` on its own when it starts. That file is the working
+brief — how the system is built, and which mistakes have already cost days. You
+do not need to explain the project to it.
 
-## Read in this order
+**3. Get your own n8n API key.** In n8n, go to **Settings → n8n API → Create an
+API key**. Then, in the terminal:
 
-1. **`CLAUDE.md`** — how the build works, the ground rules, and the gotchas that
-   have already cost days. Read this one properly.
-2. **`DETERMINISM.md`** — which rules the workflow enforces and which are still
-   left to the model. This is the design argument of the whole project.
-3. **`PENDING.md`** — thirteen items needing a change in Airtable, the Slack app,
-   Google Calendar or the n8n server. Several are yours.
-4. `BIGCHANGES.md` — the four things a person using Jessie in Slack will notice.
-5. `HANDOFF.md` — the original August handoff. **Treat as unreliable**: it has been
-   wrong on several facts. Check anything in it against the live workflow.
+```bash
+cp .env.example .env
+```
 
-`git log` is the real record of why things are the way they are. The messages are
-long on purpose — most explain a bug that took hours to find.
+Open the new `.env` file and paste your key in where it says `N8N_API_KEY=`.
+
+Do not reuse someone else's key. Keys are per user, so your own means the audit
+trail shows who did what, and either key can be revoked without breaking the
+other. `.env` is gitignored and must stay that way — the key has never been
+committed, and should never appear in a chat message either.
+
+**4. Check it worked.** In the terminal:
+
+```bash
+./scripts/n8n list
+```
+
+That should print the six Jessie workflows. If it does, you are set up.
 
 ## Check the build is what you think it is
 
+Two commands, and they answer different questions. Both are typed in the
+terminal.
+
 ```bash
-./scripts/test-nodes --live      # 111 checks against what is actually deployed
+./scripts/test-nodes --live
 ```
 
-If that passes, the deployed workflows behave as documented. If it fails, trust
-the test and not the docs.
+117 checks against the deployed workflows. If a doc and a test disagree, the test
+is right.
 
-It reads what n8n has *stored*, though, which is not always what n8n is *running*.
-After any import, also look at one real execution and check the per-node
-`executionStatus` and `executionTime` — see gotchas 11 and 12 in `CLAUDE.md`. On
-2026-08-30 `Guard Probe` failed on every message for five turns while every
-stored-definition check passed.
+```bash
+./scripts/health
+```
+
+What the live workflow actually *did* on its last few turns — per-node status and
+timing. **Run this after every import.**
+
+The difference matters. `test-nodes --live` reads what n8n has *stored*;
+`health` reads what it *ran*. On 2026-08-30 those two disagreed: `Guard Probe`
+failed on every message for five turns while every stored-definition check
+passed. A failing node still lets replies reach Slack, just unprocessed, so
+nothing looks wrong from the outside.
 
 ## The one thing to understand before changing anything
 
 > Anything that must be true is enforced in a sub-workflow.
 > Anything the prompt merely asks for is unreliable.
 
-Every rule that was only stated in the prompt has failed at least once —
-the conflict check, waiting for confirmation, the room ranking, even the rule
-against `**`. Every rule moved into n8n has held.
+Every rule that was only stated in the prompt has failed at least once — the
+conflict check, waiting for confirmation, the room ranking, even the rule against
+`**`. Every rule moved into n8n has held.
 
 There is a third place: `Guard Probe` rewrites the reply on the way out, and is
 where anything that must be true of the *text* belongs — the weekday beside a
@@ -69,54 +85,63 @@ date, the confirmation marker, the internal vocabulary.
 If you find yourself adding a sentence to the prompt to fix a behaviour, that is
 the moment to ask whether it can be enforced in code instead.
 
-## Working rules
+## How changes get made
 
-- **Pull before you change anything.** `./scripts/n8n pull <id> <file>`. The n8n UI
-  and this folder overwrite each other silently, and Tara edits the canvas.
-- **Build every file from a fresh pull**, and keep the full export shape — do not
-  strip it down.
-- **`./scripts/check-fromai` and `./scripts/test-nodes` before every import.** An
-  unescaped apostrophe in a `$fromAI` description takes the whole agent down, and
-  it fails at runtime, not on save.
-- **After changing a tool's inputs, or adding/removing a tool, toggle the workflow
-  Active off and on.** Saving does not reload tool definitions.
-- **Import by hand and verify with a pull.** `./scripts/n8n push` has reported
-  success and changed nothing (PENDING 12).
-- Bookings on the calendar are real. QA runs on 2027 dates on purpose.
+Nothing here pushes itself, on purpose.
+
+- **Pull before you change anything**, and build every file from that fresh pull.
+  The n8n UI and this folder overwrite each other silently.
+
+  ```bash
+  ./scripts/n8n pull <workflow-id> <file>
+  ```
+
+- **Run the checks before every import.** An unescaped apostrophe in a `$fromAI`
+  description takes the whole agent down, and it fails at runtime rather than on
+  save.
+
+  ```bash
+  ./scripts/check-fromai <file>
+  ./scripts/test-nodes
+  ```
+
+- **Import by hand** through the n8n browser UI, then verify with a pull.
+  `./scripts/n8n push` has reported success and changed nothing (PENDING 12).
+- **After changing a tool's inputs, or adding or removing a tool, toggle the
+  workflow Active off and on.** Saving does not reload tool definitions.
+- **Bookings on the calendar are real.** QA runs on 2027 dates for that reason.
+
+`git log` is the real record of why things are the way they are. The messages are
+long on purpose — most explain a bug that took hours to find.
 
 ## Where things stand
 
-Live: main workflow **v111**, Book Session v25, Cancel Booking v5, Move Booking v3,
-Find Booking v3, Room Availability v5.
+Live: main workflow **v113**, Book Session v25, Cancel Booking v5, Move Booking
+v3, Find Booking v3, Room Availability v5.
 
 QA groups A, B, C, D, E, F, M, N and X have all been run against the live build
-(2026-08-30). Eleven findings came out of it and ten are fixed.
+(2026-08-30). Eleven findings came out of that run and all eleven are fixed.
 
-`NOT_YOURS` is now **proven live**. It was tested with a seeded calendar event
-carrying a foreign `ref:`, rather than by aiming the bot at a real third-party
-booking, and it refused through two escalations — a claim of authority, then a
-claim of ownership. That removes the "needs two people" blocker.
+The last of them is worth knowing about, because it is the one failure no other
+guard covered: she once answered an approved booking with "Booked." without
+calling `Book Session` at all, and nothing reached the calendar. `Guard Probe`
+now requires the tool to appear in the agent's own report of what it called, with
+a success status, before a reply is allowed to claim anything happened.
 
-All eleven findings from that run are fixed. The last of them — she once answered
-an approved booking with "Booked." without calling `Book Session` at all, and
-nothing reached the calendar — is caught in `Guard Probe`, which now requires the
-tool to appear in the agent's `intermediateSteps` with a success status before a
-reply is allowed to claim anything happened.
+`NOT_YOURS` — refusing to cancel someone else's booking — is proven live. It was
+tested with a seeded calendar event carrying a foreign booker reference, rather
+than by aiming the bot at a real third-party booking, and it held through two
+escalations: a claim of authority, then a claim of ownership.
 
 Known and unfixed, all in `CLAUDE.md` under *Not done*:
 
-- She sometimes presents a summary without checking availability that turn; a
-  guard catches it.
+- She sometimes presents a summary without checking availability that turn. A
+  guard catches it at confirmation, so it costs a wasted turn rather than a wrong
+  booking.
 - She sometimes asks for a date already given.
-- The model occasionally corrupts a string it is copying — "Tara Lim" became
-  "Tara Inf", "REASON1" became "REazon1". The summary line and title resolution
+- The model occasionally corrupts a string it is copying — a booking title came
+  back as "REazon1" instead of "REASON1". The summary line and title resolution
   are defended now, but nothing stops it appearing somewhere new.
-
-## Before launch
-
-`YEAR_SHIFT` at the top of `Gate Context`, and `plus({ years: 1 })` in the system
-prompt, are the QA year shift. **They must go to zero together.** Change one and
-the model and the guards will disagree about what day it is.
 
 ## The two things most worth your attention
 

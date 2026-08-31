@@ -35,7 +35,7 @@ Slack DM → n8n → AI agent (Gemini 3.5 Flash Lite) → Airtable reads + Googl
 - **Launch:** Sep 25 2026. QA runs now, on **year-shifted dates** — a Set-style expression in the system
   prompt adds one year, so QA books in 2027 to avoid colliding with live bookings.
 
-Owner: Tara (Strategic Lead). Dev: Howard. Knowledge base: Tel. QA: Trish, Camy, Jess, bp.
+Owner: Tara (Strategic Lead). Devs pick up the workflow work; a separate group does QA.
 
 ---
 
