@@ -4,12 +4,12 @@
 #   ./scripts/n8n list                     list workflows (id, name, active)
 #   ./scripts/n8n get <id>                 print one workflow as JSON
 #   ./scripts/n8n pull <id> <file>         save a workflow to a file
-#   ./scripts/n8n push <id> <file>         upload a file over a workflow (PUT)
 #   ./scripts/n8n execs [id] [limit]       recent executions, newest first
 #   ./scripts/n8n exec <execId>            one execution in full, with data
 #   ./scripts/n8n exec <execId> --errors   just the nodes that errored
 #
-# push sends only name/nodes/connections/settings — the API rejects the rest.
+# This wrapper reads. Workflows are imported by hand through the n8n browser UI:
+# the API write path reported success and changed nothing (PENDING 12).
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
@@ -38,19 +38,6 @@ for w in json.load(sys.stdin).get("data", []):
     id="${1:?workflow id}"; out="${2:?output file}"
     api "$N8N_BASE_URL/api/v1/workflows/$id" | python3 -m json.tool > "$out"
     echo "saved $out"
-    ;;
-  push)
-    id="${1:?workflow id}"; src="${2:?source file}"
-    body="$(python3 -c '
-import json,sys
-w = json.load(open(sys.argv[1]))
-json.dump({k: w[k] for k in ("name","nodes","connections","settings") if k in w}, sys.stdout)' "$src")"
-    printf "About to PUT %s over workflow %s. Type yes to continue: " "$src" "$id"
-    read -r ok; [ "$ok" = "yes" ] || { echo "aborted"; exit 1; }
-    api -X PUT -H 'Content-Type: application/json' -d "$body" \
-      "$N8N_BASE_URL/api/v1/workflows/$id" | python3 -c '
-import json,sys
-w=json.load(sys.stdin); print("updated:", w.get("name"), w.get("updatedAt", ""))'
     ;;
   execs)
     id="${1:-$MAIN_ID}"; limit="${2:-20}"
