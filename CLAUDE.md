@@ -6,13 +6,13 @@ without export/import cycles.
 
 ## Ground rules
 
-- **Before editing any file or pushing to n8n:** show Tara the change and wait for an
-  explicit yes. Nothing here is pushed automatically.
 - **Pull before you change anything.** The n8n UI and this folder overwrite each other
-  silently. Tara rearranges the canvas; a file built from a stale pull reverts her layout.
+  silently. Someone editing in the browser and someone importing a file will overwrite
+  each other without warning, and a file built from a stale pull throws away the canvas
+  layout along with anything else changed since.
 - **Build every file from a fresh pull and keep the full export shape.** Do not strip the
-  file down to `name/nodes/connections/settings` — Tara imports these by hand and wants
-  what n8n exports.
+  file down to `name/nodes/connections/settings`. These are imported by hand through the
+  n8n browser UI, which expects what n8n exports.
 - **Run `./scripts/check-fromai` on every build.** An unescaped apostrophe in a `$fromAI`
   description takes the whole agent down, and it fails at runtime, not on save.
 - **Run `./scripts/test-nodes` before shipping anything.** It runs every Code node that
@@ -49,9 +49,6 @@ Slack DM → n8n → agent (Gemini 3.5 Flash Lite, temp 0.2) → Airtable + Goog
 | `Jessie — Move Booking` | `t7lwR2km4tfN8DbM` | the only way one is rescheduled |
 | `Jessie — Find Booking` | `yzirq12O227VTFp8` | shapes a day's events before the model sees them |
 | `Jessie — Room Availability` | `e7tBQB458nstrqei` | what is free, computed not reasoned |
-
-People: Tara owns this build — decisions and sign-off are hers. Devs pick up the workflow
-work; a separate group does QA in Slack.
 
 Airtable base `app8GQxEInqJi1NRP` · calendar `c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com`
 · launch 2026-09-25.
@@ -189,8 +186,9 @@ n8n server. Each says how it was found and what it breaks.
    version. Grep will find stale names and values in it. Check the nodes, not the whole file.
 9. **Renaming a tool leaves dangling references** in the prompt, other tool descriptions and
    the sticky notes. Search for the old name everywhere before shipping.
-10. `./scripts/n8n push` has reported success and changed nothing. Import by hand and verify
-    with a pull.
+10. **Workflows are imported by hand** through the n8n browser UI, then verified with a
+    pull. The API write path reported success and changed nothing (PENDING 12), so it is
+    not used — reading through the API is unaffected and reliable.
 11. **Never reference a tool node from a Code node.** `$('Book Session')` inside `Guard Probe`
     hangs the task runner until it times out — 60,007 ms, then `Unknown error`. `$('Gate
     Context')` and `$('Room Table')` are fine at ~70 ms; it is specifically nodes wired to the

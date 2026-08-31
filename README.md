@@ -1,7 +1,8 @@
 # Project Jessie — n8n workspace
 
-Working repo for the Slack booking bot. The full background is in [HANDOFF.md](HANDOFF.md);
-this file is just how to drive it.
+Working repo for the Slack booking bot. `CLAUDE.md` is the working brief and
+`ONBOARDING.md` is the setup walkthrough — this file is just how to drive the
+scripts.
 
 ## Setup (once)
 
@@ -11,53 +12,39 @@ this file is just how to drive it.
 3. Check it works:
 
 ```bash
-cd ~/Documents/Claude/jessie && ./scripts/n8n list
+./scripts/n8n list
 ```
 
 ## The script
 
 | Command | What it does |
 |---|---|
-| `cd path/to/jessie && ./scripts/n8n list` | every workflow with its id and active state |
+| `./scripts/n8n list` | every workflow with its id and active state |
 | `./scripts/n8n pull <id> workflows/name.json` | download a workflow to a file |
-| `./scripts/n8n push <id> workflows/name.json` | upload a file over a workflow — asks for a typed `yes` first |
 | `./scripts/n8n execs` | last 20 runs of the main workflow |
 | `./scripts/n8n execs <id> 50` | last 50 runs of any workflow |
 | `./scripts/n8n exec <execId> --errors` | per-node item counts and errors for one run |
 | `./scripts/n8n exec <execId>` | that run in full, including data |
-| `./scripts/n8n ids` | the two workflow ids |
+| `./scripts/n8n ids` | the six workflow ids |
 
-`push` sends only `name`, `nodes`, `connections`, `settings` — the API rejects a
-payload carrying `id`, `active`, `tags` or `versionId`, which is what an n8n UI
-export gives you.
+Reading is what this script is for. **Changes go into n8n by hand**, through the
+browser UI: import the JSON file, then pull it back and check what you imported is
+what n8n kept.
 
-## Workflow ids
+## The other scripts
 
-| Workflow | id | State |
-|---|---|---|
-| Project Jessie (main) | `uVVYVB2M7kxpLleI` | live, active |
-| Jessie — Book Session (sub) | `EUG3sGXkfsJSYIMz` | built, tested, not wired |
+| Command | What it does |
+|---|---|
+| `./scripts/test-nodes` | 117 offline checks over every Code node that decides something |
+| `./scripts/test-nodes --live` | the same checks against what is deployed |
+| `./scripts/test-gate` | the confirmation gate and date resolver on their own |
+| `./scripts/check-fromai` | catches an unescaped apostrophe in a `$fromAI` description |
+| `./scripts/health` | what the live workflow actually did on its last few turns |
 
-## What's in here
-
-```
-workflows/project-jessie-v36.json   the live main workflow — source of truth
-workflows/book-session-v2.json      the tested sub-workflow
-prompts/system-prompt-v36.md        the agent's systemMessage, lifted out of v36 so it diffs
-code/check-conflicts.js             Book Session → Check Conflicts
-code/return-rejection.js            Book Session → Return Rejection
-code/guard-probe.js                 Project Jessie → Guard Probe (empty-output fallback)
-scripts/n8n                         the API wrapper above
-HANDOFF.md                          Aug 30 handoff, verbatim
-CLAUDE.md                           context for a fresh Claude Code session
-```
-
-The files under `prompts/` and `code/` are extracted copies for diffing and review.
-The JSON under `workflows/` is what actually gets pushed — edit there, or re-embed
-after editing an extract.
+Run `check-fromai` and `test-nodes` before importing anything, and `health` after.
 
 ## Working rule
 
 Pull before you change anything, so the file matches what n8n is really running.
-Someone editing in the browser and someone pushing a file will overwrite each other
-without warning.
+Someone editing in the browser and someone importing a file will overwrite each
+other without warning.

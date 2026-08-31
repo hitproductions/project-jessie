@@ -105,8 +105,9 @@ Nothing here pushes itself, on purpose.
   ./scripts/test-nodes
   ```
 
-- **Import by hand** through the n8n browser UI, then verify with a pull.
-  `./scripts/n8n push` has reported success and changed nothing (PENDING 12).
+- **Import by hand** through the n8n browser UI, then pull it back and check what you
+  imported is what n8n kept. There is no API write path in use — the one that exists
+  reported success and changed nothing (PENDING 12).
 - **After changing a tool's inputs, or adding or removing a tool, toggle the
   workflow Active off and on.** Saving does not reload tool definitions.
 - **Bookings on the calendar are real.** QA runs on 2027 dates for that reason.
