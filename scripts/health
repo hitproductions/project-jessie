@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# What the live workflow actually DID on its last few turns.
+#
+#   ./scripts/health          # last 10 turns
+#   ./scripts/health 30       # last 30
+#   ./scripts/health 30 --all # include the bot's own messages (loop-filtered runs)
+#
+# ./scripts/test-nodes --live reads what n8n has *stored*. This reads what n8n
+# *ran*: per-node executionStatus and executionTime for real executions.
+#
+# The distinction is not academic. On 2026-08-30 v102 hung `Guard Probe` on every
+# message - 60 seconds, then "Unknown error" - and because a failing Code node
+# fails open, replies still reached Slack, just unprocessed. Every stored-
+# definition check passed the whole time. Five messages went out before anyone
+# noticed, and only reading execution status found it.
+#
+# Run this after every import. If `Guard Probe` is not green and fast, nothing
+# else it does is happening either.
+set -euo pipefail
+here="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$here"
+set -a; . "$here/.env"; set +a
+
+LIMIT="${1:-10}"
+SHOW_ALL="${2:-}"
+
+python3 - "$LIMIT" "$SHOW_ALL" <<'PY'
+import json, os, subprocess, sys
+
+limit = int(sys.argv[1]); show_all = sys.argv[2] == "--all"
+base, key = os.environ["N8N_BASE_URL"], os.environ["N8N_API_KEY"]
+MAIN = "uVVYVB2M7kxpLleI"
+BOT = "U0BNQL8KFKR"          # Jessie's own user id - her replies re-trigger the workflow
+SLOW_MS = 1000               # anything above this is worth seeing
+
+def api(path):
+    out = subprocess.run(["curl", "-sS", "-H", f"X-N8N-API-KEY: {key}", base + path],
+                         capture_output=True, text=True).stdout
+    try:
+        return json.loads(out)
+    except Exception:
+        return {}
+
+rows = api(f"/api/v1/executions?workflowId={MAIN}&limit={limit}").get("data", [])
+if not rows:
+    print("no executions returned - check N8N_BASE_URL and the API key")
+    sys.exit(1)
+
+errors, slow, shown = [], [], 0
+print(f"last {len(rows)} executions of Project Jessie v2\n")
+
+for e in rows:
+    d = api(f"/api/v1/executions/{e['id']}?includeData=true")
+    res = (d.get("data") or {}).get("resultData") or {}
+    run = res.get("runData") or {}
+
+    text, user = "", ""
+    try:
+        trig = run["Slack Trigger"][0]["data"]["main"][0][0]["json"]
+        text = str(trig.get("text", "")).split("*Sent using*")[0].strip()
+        user = trig.get("user", "")
+    except Exception:
+        pass
+    if user == BOT and not show_all:
+        continue
+    shown += 1
+
+    total = sum(r.get("executionTime", 0) for runs in run.values() for r in runs)
+    stamp = (e.get("startedAt") or "")[11:19]
+    status = e.get("status", "?")
+    flag = "" if status == "success" else f"  <<< {status}"
+    print(f"  {e['id']}  {stamp}  {total/1000:5.1f}s  «{text[:44]}»{flag}")
+
+    for name, runs in run.items():
+        for r in runs:
+            st, ms = r.get("executionStatus"), r.get("executionTime", 0)
+            if st and st != "success":
+                msg = ""
+                try:
+                    msg = str((r.get("error") or {}).get("message", ""))[:60]
+                except Exception:
+                    pass
+                print(f"        {name}: {st}  {ms} ms  {msg}")
+                errors.append((e["id"], name, st, ms))
+            elif ms >= SLOW_MS:
+                print(f"        {name}: {ms} ms")
+                slow.append((name, ms))
+
+    # Guard Probe reports what it could tell about a claim; never sent to Slack.
+    try:
+        probe = run["Guard Probe"][0]["data"]["main"][0][0]["json"].get("claimProbe")
+        if probe and probe != "no claim":
+            print(f"        claimProbe: {probe}")
+    except Exception:
+        pass
+
+print()
+if errors:
+    print(f"!! {len(errors)} node failure(s):")
+    for eid, name, st, ms in errors:
+        note = "  (60s = the task-runner timeout, see gotcha 11)" if ms >= 59000 else ""
+        print(f"     exec {eid}  {name}  {st}  {ms} ms{note}")
+    print("\n   A failing Code node fails open: replies still reach Slack, unprocessed.")
+else:
+    print(f"every node succeeded across {shown} turn(s)")
+
+if slow:
+    worst = {}
+    for name, ms in slow:
+        worst[name] = max(worst.get(name, 0), ms)
+    print("\nslowest nodes: " + ", ".join(f"{n} {v} ms" for n, v in
+          sorted(worst.items(), key=lambda x: -x[1])[:5]))
+
+sys.exit(1 if errors else 0)
+PY

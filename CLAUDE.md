@@ -18,10 +18,15 @@ without export/import cycles.
 - **Run `./scripts/test-nodes` before shipping anything.** It runs every Code node that
   decides something — `Guard Probe`, `Check Conflicts`, `Check Ownership`, `Shape Results`,
   `Resolve Booking` — against a table of scenarios offline, then delegates to
-  `./scripts/test-gate` for `Gate Context`. 111 checks. `--live` tests what is actually
+  `./scripts/test-gate` for `Gate Context`. 117 checks. `--live` tests what is actually
   deployed; five explicit paths (main, book, cancel, find, move) test a candidate before
   importing it. Every one of those nodes shipped a bug this weekend that was caught by
   reading output by hand.
+- **Run `./scripts/health` after every import.** `test-nodes --live` reads what n8n has
+  *stored*; this reads what it *ran* — per-node `executionStatus` and `executionTime` from
+  real executions, flagging any failure and anything over a second. It exits non-zero if a
+  node failed. `Guard Probe` is the canary: if it is not green and fast, none of what it
+  does is happening, and nothing looks wrong from the outside. See gotchas 11 and 12.
 - `Gate Context` is the one node every message passes through, so a scope or syntax error
   there takes Jessie down completely rather than degrading one feature. That has happened
   twice.
@@ -198,17 +203,20 @@ n8n server. Each says how it was found and what it breaks.
 ## Not done
 
 - Titles are composed by the model; a wrong project title becomes a wrong calendar title.
-- She still sometimes presents a summary without checking availability that turn. The guard
-  catches it; the prompt rule does not.
+- She sometimes presents a summary without checking availability that turn. `Guard Probe`
+  now refuses the summary when *this turn's* check contradicts it — the check errored, or
+  named that room busy — but when no check ran at all the offer still stands until
+  `ROOM_OCCUPIED` refuses at confirmation. That costs a wasted turn, not a wrong booking.
+  Closing it properly means remembering availability across turns in static data.
 - She sometimes asks for a date already given, and has invented a justification for a room
   choice. Both are free-text failures with nothing binding them to a source.
 - **The model corrupts strings it is copying.** Three times in ~60 turns on 2026-08-30:
   "Tara Lim" → "Tara Inf", "REASON1" → "REazon1" twice. The summary line and the title
   resolution are now defended, but nothing stops it happening somewhere new.
-- QA groups: A, B, C, D, E, F, M, N, X all run 2026-08-30. Six findings from the first pass
-  are fixed in v100/v101 and the sub-workflows; five more from the A/B/M groups are fixed in
-  v102. `M2` is still open as a judgement call: "vocal recording" was read as Music Vocal
-  Recording without asking, where "a mix" got a clarifying question.
+- QA groups: A, B, C, D, E, F, M, N, X all run 2026-08-30, and all eleven findings from that
+  run are fixed — six in v100/v101 and the sub-workflows, five across v102–v112. `M2` is left
+  as a judgement call rather than a defect: "vocal recording" was read as Music Vocal
+  Recording without asking, where "a mix" got a clarifying question. Both are defensible.
 
 ## Related
 

@@ -153,6 +153,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['note vs ranking','roomTable'],
     ['assumed duration','startOnlyNotice'],
     ['claim check','claimProbe'],
+    ['offer vs check','contradicts ---'],
   ];
   const t2=[
     // a date with no year — both older patterns need one
@@ -203,6 +204,27 @@ suite('Guard Probe — what reaches Slack', ()=>{
       {steps:[{action:{tool:'Move_Booking'},observation:'[{"status": "PARTIAL"}]'}]},
       x=>/^Moved/.test(x.output)],
     ['claim check','no claim, no probe','Studio 7 is free.',{},x=>x.claimProbe==='no claim'],
+    // An offer this turn's own availability check contradicts. It must not
+    // require a check to exist — "is studio 3 free?" then "book it" establishes
+    // availability a turn earlier, and that flow has to keep working.
+    ['offer vs check','a failed check cannot support an offer',SUM,
+      {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"BAD_WINDOW"}]'}]},
+      x=>/did not run/.test(x.output)&&!/Confirm to book/.test(x.output)],
+    ['offer vs check','a busy room cannot be offered',SUM,
+      {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"BUSY"}}]'}]},
+      x=>/came back as busy/.test(x.output)],
+    ['offer vs check','a free room is offered normally',SUM,
+      {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"FREE"}}]'}]},
+      x=>/Confirm to book/.test(x.output)&&!/Hold on/.test(x.output)],
+    ['offer vs check','a different room being busy is irrelevant',SUM,
+      {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 7","status":"BUSY"}}]'}]},
+      x=>/Confirm to book/.test(x.output)],
+    ['offer vs check','no check this turn is not a contradiction',SUM,
+      {steps:[{action:{tool:'Clients'},observation:'[{"ok":1}]'}]},
+      x=>/Confirm to book/.test(x.output)&&!/Hold on/.test(x.output)],
+    ['offer vs check','only applies to a booking summary','Studio 8 is free in that window.',
+      {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"BAD_WINDOW"}]'}]},
+      x=>/^Studio 8 is free/.test(x.output)],
   ];
   // These cover the four Guard Probe fixes written for v102. That build made the
   // node time out at 60s on every message - it reached the task runner and
