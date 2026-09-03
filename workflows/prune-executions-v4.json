@@ -1,0 +1,447 @@
+{
+  "updatedAt": "2026-09-03T10:56:37.255Z",
+  "createdAt": "2026-09-03T10:43:43.556Z",
+  "id": "K2tPBykMwKcQGMub",
+  "name": "Jessie — Prune Executions",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Nightly execution prune\n\nn8n stores the full data of every execution - about 250 KB per Jessie turn.\nOn 2026-09-02 and again on 2026-09-03 the SQLite database reached roughly\n750 MB across 4,161 executions and **both Jessie and Posty stopped receiving\nSlack events**. Toggling the workflows active did nothing, many times over.\nDeleting 3,781 old executions brought both back.\n\nRuns 04:00 Asia/Manila, off-peak, because the deletes hit the same SQLite\nfile a booking would be writing to.\n\n### Reading the run\n`List Executions` returns **one item per page**, not one per execution - two\nitems means two pages of 250 were walked. Look inside `json.data` for the\nexecutions. `Older Than Cutoff` reporting 0 is correct when nothing is older\nthan KEEP_DAYS.\n\n### Pagination, if it ever needs rebuilding\nThe working parameter carries **only `name` and `value`** - no `type`,\nand the block has no `paginationMode`. n8n omits both when they are at\ntheir defaults (qs, update-a-parameter). Writing `\"type\": \"query\"` or\n`\"type\": \"qs\"` into the JSON by hand makes the node fail validation with\n\"Parameter type must be one of: body, headers, qs\" - selecting Query in\nthe UI *removes* the field. Copy this node rather than hand-writing it.\n\n### Credential\nHeader Auth - name `X-N8N-API-KEY`, value = an n8n API key, key only.",
+        "height": 760,
+        "width": 460
+      },
+      "id": "8743c524-c7e9-4e18-bea7-c32337ecf464",
+      "name": "Why this exists",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 4
+            }
+          ]
+        }
+      },
+      "id": "e55a32d6-c0e9-406c-aa06-485fdee97f2d",
+      "name": "Every day 04:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        1776,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://signal.hitpromanila.net/api/v1/executions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "250"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "cursor",
+                    "value": "={{ $response.body.nextCursor }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body.nextCursor }}",
+              "limitPagesFetched": true,
+              "maxRequests": 40
+            }
+          }
+        }
+      },
+      "id": "4575c92b-a930-475d-86a3-4e3681bb3c00",
+      "name": "List Executions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2016,
+        128
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gF4HSTDHadbO7A0K",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Keep the last KEEP_DAYS days; everything older goes.\n// Capped per run so a backlog drains over several nights instead of landing\n// thousands of writes on SQLite at once - the deletes contend with the same\n// file a booking writes to.\nconst KEEP_DAYS = 3;\nconst MAX_PER_RUN = 800;\n\nconst cutoff = Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000;\nconst seen = {};\nconst out = [];\n\n// The List node paginates, so input arrives either as one item per page (each\n// carrying a `data` array) or as one item per execution, depending on how n8n\n// splits the response. Handle both rather than assuming.\nfor (const item of $input.all()) {\n  const j = (item && item.json) || {};\n  const rows = Array.isArray(j.data) ? j.data : [j];\n  for (const e of rows) {\n    if (!e || !e.id || seen[e.id]) continue;\n    const started = Date.parse(e.startedAt || e.createdAt || '');\n    if (!started || started >= cutoff) continue;\n    seen[e.id] = 1;\n    out.push({ json: { id: e.id, startedAt: e.startedAt } });\n    if (out.length >= MAX_PER_RUN) return out;\n  }\n}\nreturn out;"
+      },
+      "id": "d98b04e8-d7af-4a18-bce2-ce4ad94721ec",
+      "name": "Older Than Cutoff",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2256,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://signal.hitpromanila.net/api/v1/executions/{{ $json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 250
+            }
+          }
+        }
+      },
+      "id": "bf2163c3-6906-4e90-abe6-b073da6c83f8",
+      "name": "Delete Execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2496,
+        128
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gF4HSTDHadbO7A0K",
+          "name": "Header Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst ok = items.filter(i => !(i.json && i.json.error)).length;\nreturn [{ json: { pruned: ok, attempted: items.length, at: new Date().toISOString() } }];"
+      },
+      "id": "ad12d4e0-23d6-4ffe-b4ab-7a5bdf64b47d",
+      "name": "Summarise",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2736,
+        128
+      ]
+    }
+  ],
+  "connections": {
+    "Every day 04:00": {
+      "main": [
+        [
+          {
+            "node": "List Executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Executions": {
+      "main": [
+        [
+          {
+            "node": "Older Than Cutoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Older Than Cutoff": {
+      "main": [
+        [
+          {
+            "node": "Delete Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Execution": {
+      "main": [
+        [
+          {
+            "node": "Summarise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:Every day 04:00": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "d9473429-9121-47bf-b771-4f1fb655243a",
+  "activeVersionId": "d9473429-9121-47bf-b771-4f1fb655243a",
+  "versionCounter": 18,
+  "triggerCount": 1,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-09-03T10:43:43.568Z",
+      "createdAt": "2026-09-03T10:43:43.568Z",
+      "role": "workflow:owner",
+      "workflowId": "K2tPBykMwKcQGMub",
+      "projectId": "518sXYqvqTl1cuns",
+      "project": {
+        "updatedAt": "2026-07-30T08:01:27.418Z",
+        "createdAt": "2026-06-16T08:07:47.559Z",
+        "id": "518sXYqvqTl1cuns",
+        "name": "Howard Luistro <howard@hitproductions.net>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "146478c9-471a-4651-8e62-0216984196e9"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-09-03T10:56:53.000Z",
+    "createdAt": "2026-09-03T10:55:23.938Z",
+    "versionId": "d9473429-9121-47bf-b771-4f1fb655243a",
+    "workflowId": "K2tPBykMwKcQGMub",
+    "nodes": [
+      {
+        "parameters": {
+          "content": "## Nightly execution prune\n\nn8n stores the full data of every execution - about 250 KB per Jessie turn.\nOn 2026-09-02 and again on 2026-09-03 the SQLite database reached roughly\n750 MB across 4,161 executions and **both Jessie and Posty stopped receiving\nSlack events**. Toggling the workflows active did nothing, many times over.\nDeleting 3,781 old executions brought both back.\n\nRuns 04:00 Asia/Manila, off-peak, because the deletes hit the same SQLite\nfile a booking would be writing to.\n\n### Needs one credential\nHeader Auth: name `X-N8N-API-KEY`, value = an n8n API key.\nSelect it on both HTTP nodes.\n\n### Pagination\n`type` must be `qs` (not `query`) - n8n accepts only\n`body`, `headers`, `qs`. v2 shipped `query` and the node refused to run.\n\n### Check after the first manual run\n`List Executions` must return **more than 250 items**. The API caps a page at\n250 and returns newest first, so without working pagination this prunes\nnothing and still reports success.",
+          "height": 600,
+          "width": 420
+        },
+        "id": "8743c524-c7e9-4e18-bea7-c32337ecf464",
+        "name": "Why this exists",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1264,
+          -80
+        ]
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "triggerAtHour": 4
+              }
+            ]
+          }
+        },
+        "id": "e55a32d6-c0e9-406c-aa06-485fdee97f2d",
+        "name": "Every day 04:00",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          1776,
+          128
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://signal.hitpromanila.net/api/v1/executions",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "limit",
+                "value": "250"
+              }
+            ]
+          },
+          "options": {
+            "pagination": {
+              "pagination": {
+                "parameters": {
+                  "parameters": [
+                    {
+                      "name": "cursor",
+                      "value": "={{ $response.body.nextCursor }}"
+                    }
+                  ]
+                },
+                "paginationCompleteWhen": "other",
+                "completeExpression": "={{ !$response.body.nextCursor }}",
+                "limitPagesFetched": true,
+                "maxRequests": 40
+              }
+            }
+          }
+        },
+        "id": "4575c92b-a930-475d-86a3-4e3681bb3c00",
+        "name": "List Executions",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2016,
+          128
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "gF4HSTDHadbO7A0K",
+            "name": "Header Auth account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Keep the last KEEP_DAYS days; everything older goes.\n// Capped per run so a backlog drains over several nights instead of landing\n// thousands of writes on SQLite at once - the deletes contend with the same\n// file a booking writes to.\nconst KEEP_DAYS = 3;\nconst MAX_PER_RUN = 800;\n\nconst cutoff = Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000;\nconst seen = {};\nconst out = [];\n\n// The List node paginates, so input arrives either as one item per page (each\n// carrying a `data` array) or as one item per execution, depending on how n8n\n// splits the response. Handle both rather than assuming.\nfor (const item of $input.all()) {\n  const j = (item && item.json) || {};\n  const rows = Array.isArray(j.data) ? j.data : [j];\n  for (const e of rows) {\n    if (!e || !e.id || seen[e.id]) continue;\n    const started = Date.parse(e.startedAt || e.createdAt || '');\n    if (!started || started >= cutoff) continue;\n    seen[e.id] = 1;\n    out.push({ json: { id: e.id, startedAt: e.startedAt } });\n    if (out.length >= MAX_PER_RUN) return out;\n  }\n}\nreturn out;"
+        },
+        "id": "d98b04e8-d7af-4a18-bce2-ce4ad94721ec",
+        "name": "Older Than Cutoff",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2256,
+          128
+        ]
+      },
+      {
+        "parameters": {
+          "method": "DELETE",
+          "url": "=https://signal.hitpromanila.net/api/v1/executions/{{ $json.id }}",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "options": {
+            "batching": {
+              "batch": {
+                "batchSize": 5,
+                "batchInterval": 250
+              }
+            }
+          }
+        },
+        "id": "bf2163c3-6906-4e90-abe6-b073da6c83f8",
+        "name": "Delete Execution",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2496,
+          128
+        ],
+        "retryOnFail": true,
+        "maxTries": 2,
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "gF4HSTDHadbO7A0K",
+            "name": "Header Auth account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "const items = $input.all();\nconst ok = items.filter(i => !(i.json && i.json.error)).length;\nreturn [{ json: { pruned: ok, attempted: items.length, at: new Date().toISOString() } }];"
+        },
+        "id": "ad12d4e0-23d6-4ffe-b4ab-7a5bdf64b47d",
+        "name": "Summarise",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2736,
+          128
+        ]
+      }
+    ],
+    "connections": {
+      "Every day 04:00": {
+        "main": [
+          [
+            {
+              "node": "List Executions",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "List Executions": {
+        "main": [
+          [
+            {
+              "node": "Older Than Cutoff",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Older Than Cutoff": {
+        "main": [
+          [
+            {
+              "node": "Delete Execution",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Delete Execution": {
+        "main": [
+          [
+            {
+              "node": "Summarise",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Howard Luistro",
+    "name": "Version d9473429",
+    "description": "",
+    "autosaved": true,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-03T10:56:53.880Z",
+        "id": 644,
+        "workflowId": "K2tPBykMwKcQGMub",
+        "versionId": "d9473429-9121-47bf-b771-4f1fb655243a",
+        "event": "activated",
+        "userId": "146478c9-471a-4651-8e62-0216984196e9"
+      }
+    ]
+  }
+}
