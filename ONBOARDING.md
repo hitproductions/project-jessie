@@ -112,8 +112,9 @@ Nothing here pushes itself, on purpose.
   workflow Active off and on.** Saving does not reload tool definitions.
 - **Bookings on the calendar are real.** QA runs on 2027 dates for that reason.
 
-`git log` is the real record of why things are the way they are. The messages are
-long on purpose — most explain a bug that took hours to find.
+Each file in `workflows/` is a numbered build kept as history. The comments inside
+the Code nodes are long on purpose — most of them explain a bug that took hours to
+find, and why the fix looks the way it does. Read them before rewriting one.
 
 ## Where things stand
 
