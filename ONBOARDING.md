@@ -53,7 +53,7 @@ terminal.
 ./scripts/test-nodes --live
 ```
 
-117 checks against the deployed workflows. If a doc and a test disagree, the test
+108 checks against the deployed workflows, plus 27 gate scenarios. If a doc and a test disagree, the test
 is right.
 
 ```bash
@@ -117,8 +117,10 @@ long on purpose — most explain a bug that took hours to find.
 
 ## Where things stand
 
-Live: main workflow **v113**, Book Session v25, Cancel Booking v5, Move Booking
-v3, Find Booking v3, Room Availability v5.
+Live: main workflow **v119**, Book Session v26, Cancel Booking v5, Move Booking
+v3, Find Booking v3, Room Availability v5. A scheduled `Jessie - Prune
+Executions` runs at 04:00; without it the execution table grows until the
+instance stops answering, which it did twice on 2026-09-02 and 2026-09-03.
 
 QA groups A, B, C, D, E, F, M, N and X have all been run against the live build
 (2026-08-30). Eleven findings came out of that run and all eleven are fixed.

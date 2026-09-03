@@ -131,6 +131,25 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>!/\ba\s+exception\b/i.test(x)],
     ['a bare deviation still becomes an exception','That would be a deviation.',
       x=>/\ban exception\b/i.test(x)],
+    // The rules are numbered for the model. A requester has no rule 1.
+    ['drops a cited rule number',
+      'Studio 7 is taken, and since rule 1 says we never move an existing booking, it is not available.',
+      x=>!/rule\s*\d/i.test(x)&&/since we never move an existing booking/.test(x)],
+    // v115 stripped the citation and left the sentence starting lowercase.
+    ['recapitalises after a sentence-initial citation',
+      'Studio 6 is taken.\n\nRule 1 says we never delete an existing booking to clear a room.',
+      x=>!/rule\s*\d/i.test(x)&&/\n\nWe never delete an existing booking/.test(x)],
+    ['recapitalises at the very start','Rule 3 states you cannot do that.',
+      x=>/^You cannot do that\./.test(x)],
+    // v116 turned "rule 1 is absolute" into "the booking rules is absolute".
+    ['keeps verb agreement on a bare citation','As much as you need it, rule 1 is absolute: we never delete a booking.',
+      x=>!/rule\s*\d/i.test(x)&&!/\brules\s+is\b/i.test(x)&&/rule is absolute/.test(x)],
+    ['plural form still agrees','The three unoverridable rules is what stops that.',
+      x=>!/\brules\s+is\b/i.test(x)],
+    ['drops a bare rule citation','Per rule 2, only you can cancel it.',
+      x=>!/rule\s*\d/i.test(x)&&/only you can cancel it/.test(x)],
+    ['rewrites "unoverridable rules"','That is one of the three unoverridable rules.',
+      x=>!/unoverridable/i.test(x)&&/the booking rules/.test(x)],
     ['relabels Booking Owner','*Booking Owner:* Tara Lim',x=>x.startsWith('*Booked by:* Tara Lim')],
     // "*Bookedby:*" - no space - went out on 2026-08-30, and the booker repair
     // below would not have matched it.
@@ -153,7 +172,10 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['note vs ranking','roomTable'],
     ['assumed duration','startOnlyNotice'],
     ['claim check','claimProbe'],
+    ['lookup titles','lookup did not return'],
     ['offer vs check','contradicts ---'],
+    ['dated weekday survives','\\(\\?!\\\\d\\)'],
+    ['booker is not always you','a near-miss of the real one'],
   ];
   const t2=[
     // a date with no year — both older patterns need one
@@ -204,6 +226,30 @@ suite('Guard Probe — what reaches Slack', ()=>{
       {steps:[{action:{tool:'Move_Booking'},observation:'[{"status": "PARTIAL"}]'}]},
       x=>/^Moved/.test(x.output)],
     ['claim check','no claim, no probe','Studio 7 is free.',{},x=>x.claimProbe==='no claim'],
+    // A booking named in a reply must have come back from that turn's lookup.
+    // She reported PRUNEOK as booked when Find Booking had returned five other
+    // bookings and not that one.
+    ['lookup titles','flags a booking the lookup did not return',
+      '*PRUNEOK / Bea Jose / TL*\n*Room:* Studio 4',
+      {steps:[{action:{tool:'Find_Booking',toolInput:{booking_date:'2027-09-09'}},
+               observation:'[{"status":"OK","bookings":[{"title":"MUJI / Jeng Gambol / Regie"}]}]'}]},
+      x=>/Let me check that again/.test(x.output)&&!/PRUNEOK/.test(x.output)],
+    ['lookup titles','passes a booking the lookup did return',
+      'I found *MUJI / Jeng Gambol / Regie* in Studio 7.',
+      {steps:[{action:{tool:'Find_Booking',toolInput:{booking_date:'2027-09-09'}},
+               observation:'[{"status":"OK","bookings":[{"title":"MUJI / Jeng Gambol / Regie"}]}]'}]},
+      x=>/^I found \*MUJI/.test(x.output)],
+    ['lookup titles','a title the model passed to the tool is allowed',
+      '*NEWJOB / Bea Jose / TL* — cancelled.',
+      {steps:[{action:{tool:'Find_Booking',toolInput:{title:'NEWJOB / Bea Jose / TL'}},
+               observation:'[{"status":"OK","bookings":[]}]'}]},
+      x=>/NEWJOB/.test(x.output)&&!/check that again/.test(x.output)],
+    ['lookup titles','a booking summary is untouched',
+      '*PRUNEOK / Bea Jose / TL*\n*Room:* Studio 4\n\nConfirm to book. (yes/no)',
+      {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK"}]'}]},
+      x=>/Confirm to book/.test(x.output)&&/PRUNEOK/.test(x.output)],
+    ['lookup titles','no steps means no judgement',
+      '*PRUNEOK / Bea Jose / TL*',{},x=>/PRUNEOK/.test(x.output)],
     // An offer this turn's own availability check contradicts. It must not
     // require a check to exist — "is studio 3 free?" then "book it" establishes
     // availability a turn earlier, and that flow has to keep working.
@@ -225,6 +271,34 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['offer vs check','only applies to a booking summary','Studio 8 is free in that window.',
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"BAD_WINDOW"}]'}]},
       x=>/^Studio 8 is free/.test(x.output)],
+
+    // v119. The undated corrector was undoing the dated one: `\d{1,2}` backtracked
+    // past its own year lookahead, matched the first digit of a two-digit day, and
+    // printed the weekday of the 1st instead. Two-digit days are the whole point of
+    // these cases - a single-digit day never reproduced it.
+    ['dated weekday survives','corrects a dated weekday with a two-digit day',
+      'I found this booking on next Wednesday, September 10, 2027:',ctx2027,
+      x=>/next Friday, September 10, 2027/.test(x.output)],
+    ['dated weekday survives','leaves a correct two-digit dated weekday alone',
+      'We go live on Friday, September 25, 2026.',ctx2027,
+      x=>/Friday, September 25, 2026/.test(x.output)],
+    ['dated weekday survives','still corrects an undated two-digit weekday',
+      'Your slot is Monday, September 22.',{dateNotice:'THE DATE UNDER DISCUSSION IS Thursday, 9 September 2027.'},
+      x=>/Wednesday, September 22/.test(x.output)],
+
+    // v119. "Booked by:" is not always the requester - a cancel or a lookup shows
+    // someone else's booking, and the rewrite was relabelling it as theirs.
+    ['booker is not always you','keeps a booker a tool reported',
+      'I found this booking:\n*Booked by:* Howard Luistro',
+      {steps:[{action:{tool:'Find_Booking',toolInput:{date:'2027-09-10'}},
+               observation:'[{"title":"GUARDCHK / Bea Jose / HL","booker":"Howard Luistro"}]'}]},
+      x=>/\*Booked by:\* Howard Luistro/.test(x.output)],
+    ['booker is not always you','keeps a stranger\'s name with no steps at all',
+      'I found this booking:\n*Booked by:* Howard Luistro',{},
+      x=>/\*Booked by:\* Howard Luistro/.test(x.output)],
+    ['booker is not always you','still repairs a corrupted booker name',
+      'Here is the summary:\n*Booked by:* Tara Inf',{},
+      x=>/\*Booked by:\* Tara Lim/.test(x.output)],
   ];
   // These cover the four Guard Probe fixes written for v102. That build made the
   // node time out at 60s on every message - it reached the task runner and

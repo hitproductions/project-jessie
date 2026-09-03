@@ -18,7 +18,7 @@ without export/import cycles.
 - **Run `./scripts/test-nodes` before shipping anything.** It runs every Code node that
   decides something — `Guard Probe`, `Check Conflicts`, `Check Ownership`, `Shape Results`,
   `Resolve Booking` — against a table of scenarios offline, then delegates to
-  `./scripts/test-gate` for `Gate Context`. 117 checks. `--live` tests what is actually
+  `./scripts/test-gate` for `Gate Context`. 108 checks, plus 27 gate scenarios. `--live` tests what is actually
   deployed; five explicit paths (main, book, cancel, find, move) test a candidate before
   importing it. Every one of those nodes shipped a bug this weekend that was caught by
   reading output by hand.
@@ -70,8 +70,15 @@ A third place now does real work: **`Guard Probe`**, which rewrites the reply on
 Use it for anything that must be true of the *text* rather than the action. It already
 collapses `**` to `*`, corrects the weekday printed beside a date, removes the words
 "priority room", "last resort", "deviation" and the `BLOCKED - ` prefix, normalises the
-confirmation marker, relabels "Booking Owner" to "Booked by", and rewrites the booker's
-name from Airtable when the model mistypes it. Each of those was a prompt rule first, and
+confirmation marker, relabels "Booking Owner" to "Booked by", and repairs a mistyped
+booker name against Airtable.
+
+That last one is narrower than it sounds, and the wide version was a bug. "Booked
+by:" is not always the requester - a cancel or a lookup shows someone else's
+booking - and until v119 the rewrite relabelled it as theirs. It now only
+overwrites a name that is both absent from what the tools returned this turn and
+a near-miss of the real one by edit distance: a corruption is neither reported
+nor plausible, a third party's name is reported and is nobody's typo. Each of those was a prompt rule first, and
 each failed as a prompt rule.
 
 It also now refuses to let a claim through that nothing backs. If the reply says "Booked",
