@@ -262,6 +262,32 @@ means it is still happening; ~0.07s means it is fixed.
 mismeasurement — that withdrawal was itself the mistake, taken from a sample that
 happened to catch warm runs.*
 
+**15. The instance has gone unreachable to Slack three times, mechanism unproven.**
+On 2026-09-02 and twice on 2026-09-03, Slack messages stopped producing executions
+while n8n kept running scheduled work and serving HTTP — so the container was
+healthy and the inbound path, not n8n, was failing. One recovery happened overnight
+with nobody touching it. The container logs from a failure window show nothing at
+the moment it stops; the only hints are outbound DNS errors (`EAI_AGAIN`, "DNS
+server returned an error") minutes before, which points at the Cloudflare tunnel or
+host DNS rather than n8n. Not confirmed. What would settle it: an external uptime
+check on the public URL (catches it live, needs no server access), and the
+`cloudflared`/tunnel container's own log from a failure window (needs shell). The
+nightly backup and the daily pruner are in place; a watchdog and an uptime check
+are not yet. Pruning correlated with recovery but was never cleanly isolated from
+toggling, so "the execution table filled up" remains a hypothesis, not the cause.
+
+**16. A seeded QA event is still on the calendar.** `GUARDCHK / Bea Jose / HL`,
+Studio 6, Friday 2027-09-10 10:00–11:00, carrying a fake booker ref (`UFAKE99999`).
+Created to prove `NOT_YOURS` — the refusal to cancel someone else's booking — and
+left in place. On a 2027 date so it cannot collide with anything real. Delete it
+through Jessie or Google Calendar once it is no longer needed for that test.
+
+**17. Engineer initials in booking titles are composed by the model.** A title like
+`SESSION / Client / KC` has the engineer's initials written by the agent with no
+lookup behind them, so a wrong guess becomes a wrong calendar title. Fixing it
+properly means an Airtable engineer lookup inside `Book Session` — a new node in
+that sub-workflow, and a design decision, not a repair.
+
 ---
 
 ## Withdrawn

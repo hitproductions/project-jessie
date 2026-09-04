@@ -4,35 +4,61 @@ Slack bot that books studio time for Hit Productions. Moved out of a chat sessio
 this folder on 2026-08-30 so the workflows have version history and n8n's API is reachable
 without export/import cycles.
 
-## Start here, every session
+## First time (once per machine)
 
-Do these before anything else, unprompted, and say what you found:
+```bash
+git clone https://github.com/hitproductions/project-jessie.git
+cd project-jessie
+```
 
-1. **Get the latest folder.** `git pull` — three or four people work on this and
-   someone may have changed it since the last session. Nobody types git commands
-   here; you run them.
-2. **Pull whatever you are about to change** from n8n, and build from that pull:
+Then get an n8n API key (n8n → Settings → n8n API → Create), and:
+
+```bash
+cp .env.example .env      # then paste the key after N8N_API_KEY= in .env
+./scripts/n8n list        # should print the Jessie and Posty workflows
+```
+
+`.env` is gitignored and must stay that way — the key never goes in a commit or a
+chat message. Then start Claude Code in the folder (`claude`); it reads this file
+on its own, so you do not have to explain the project to it.
+
+## Start here — brief the person who just opened this
+
+This file is the whole handover. The people working on Jessie use Claude Code far
+more than they read docs, so assume they will not open anything else: they cloned
+this, started you, and expect you to tell them where things stand. Before anything
+else, unprompted:
+
+1. `git pull` — three or four people work on this; someone may have changed it
+   since last time. Nobody types git commands here, you run them.
+2. Read `PENDING.md` — the open blockers, each waiting on Airtable, Slack, Google
+   or the server.
+3. Check what is live and what it actually did:
 
    ```
-   ./scripts/n8n pull <workflow-id> <file>
+   ./scripts/test-nodes --live     # 108 checks + 27 gate scenarios, what is stored
+   ./scripts/health                # per-node status and timing, what actually ran
    ```
 
-   The n8n UI and this folder overwrite each other silently, and people do edit
-   in the browser. The `(Thunesday)` fix in `Guard Probe` existed in no file at
-   all — building from a stale copy would have deleted it and nobody would have
-   known.
-3. **Check what is live and what it did:**
+   The first reads what n8n has *stored*, the second what it *ran*. They have
+   disagreed, and the gap was five turns of silently broken replies.
 
-   ```
-   ./scripts/test-nodes --live
-   ./scripts/health
-   ```
+Then tell them, in plain language:
 
-   The first reads what n8n has *stored*, the second what it actually *ran*.
-   They have disagreed, and the difference was five turns of broken replies.
+- what Jessie is, and that launch is **25 September 2026**
+- the live versions, and whether anything is failing
+- what changed since the last commit (`git log`)
+- the one or two most pressing items from `PENDING.md`
 
-Then report the live versions, anything failing, and anything that changed since
-the last commit. That is the handover — it should not have to come from a person.
+And whenever you are about to change a workflow, **pull it first and build from
+that pull** — the n8n UI and this folder overwrite each other silently, and people
+do edit in the browser. The `(Thunesday)` fix in `Guard Probe` existed in no file
+at all; building from a stale copy would have deleted it and nobody would have
+known.
+
+```
+./scripts/n8n pull <workflow-id> <file>
+```
 
 ## Before you finish
 
@@ -74,6 +100,10 @@ knowledge accumulates.
 - **After changing any tool's inputs, or adding/removing a tool, toggle Active off and on.**
   Saving does not reload tool definitions — the agent keeps calling the old schema.
 - **The API key lives in `.env` only.** Never in a message, a commit, or a shared file.
+- **The repo is the only record and the only rollback.** One shared n8n login and
+  no restorable history on the free plan. A GitHub Action backs up every live
+  workflow nightly into `workflows/live/` (`scripts/backup-live`); commit your own
+  changes so the folder never falls behind what n8n runs.
 - Bookings in the live calendar are real. QA runs on year-shifted dates (2027) on purpose.
 
 ## The stack
@@ -90,6 +120,7 @@ Slack DM → n8n → agent (Gemini 3.5 Flash Lite, temp 0.2) → Airtable + Goog
 | `Jessie — Move Booking` | `t7lwR2km4tfN8DbM` | the only way one is rescheduled |
 | `Jessie — Find Booking` | `yzirq12O227VTFp8` | shapes a day's events before the model sees them |
 | `Jessie — Room Availability` | `e7tBQB458nstrqei` | what is free, computed not reasoned |
+| `Jessie — Prune Executions` | `K2tPBykMwKcQGMub` | daily 04:00 cleanup so the DB does not fill |
 
 Airtable base `app8GQxEInqJi1NRP` · calendar `c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com`
 · launch 2026-09-25.
@@ -265,9 +296,10 @@ n8n server. Each says how it was found and what it breaks.
   as a judgement call rather than a defect: "vocal recording" was read as Music Vocal
   Recording without asking, where "a mix" got a clarifying question. Both are defensible.
 
-## Related
+## The record
 
-`DETERMINISM.md` explains what moved out of the prompt and into the workflow, and why.
-`HANDOFF-2026-09-03.md` is the most recent handoff — the pruner and the two Guard Probe
-fixes from that day. Older handoffs and every superseded build live in git history, not the
-working tree; `git log` is the record of why things are the way they are.
+This file, `PENDING.md`, and the seven current workflow files are the whole working
+tree. Every superseded build, every old handoff, and the reasoning behind each fix
+live in git history — `git log` is the record of why things are the way they are,
+and the commit messages are long on purpose. `workflows/live/` is the nightly
+backup of what n8n is actually running, written by the GitHub Action.
