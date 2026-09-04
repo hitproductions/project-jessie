@@ -4,6 +4,47 @@ Slack bot that books studio time for Hit Productions. Moved out of a chat sessio
 this folder on 2026-08-30 so the workflows have version history and n8n's API is reachable
 without export/import cycles.
 
+## Start here, every session
+
+Do these before anything else, unprompted, and say what you found:
+
+1. **Get the latest folder.** `git pull` — three or four people work on this and
+   someone may have changed it since the last session. Nobody types git commands
+   here; you run them.
+2. **Pull whatever you are about to change** from n8n, and build from that pull:
+
+   ```
+   ./scripts/n8n pull <workflow-id> <file>
+   ```
+
+   The n8n UI and this folder overwrite each other silently, and people do edit
+   in the browser. The `(Thunesday)` fix in `Guard Probe` existed in no file at
+   all — building from a stale copy would have deleted it and nobody would have
+   known.
+3. **Check what is live and what it did:**
+
+   ```
+   ./scripts/test-nodes --live
+   ./scripts/health
+   ```
+
+   The first reads what n8n has *stored*, the second what it actually *ran*.
+   They have disagreed, and the difference was five turns of broken replies.
+
+Then report the live versions, anything failing, and anything that changed since
+the last commit. That is the handover — it should not have to come from a person.
+
+## Before you finish
+
+Anything learned goes into a file, or the next session rediscovers it the hard way:
+
+- a new failure mode, or anything that cost real time → a numbered gotcha below
+- blocked on Airtable, Slack, Google or the server → `PENDING.md`
+- a build that was imported and confirmed → say so in the commit message
+
+Then commit and push. One shared n8n instance means the folder is the only place
+knowledge accumulates.
+
 ## Ground rules
 
 - **Pull before you change anything.** The n8n UI and this folder overwrite each other
