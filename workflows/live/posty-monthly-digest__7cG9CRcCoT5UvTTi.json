@@ -1,0 +1,735 @@
+{
+  "active": true,
+  "activeVersion": {
+    "authors": "Howard Luistro",
+    "autosaved": false,
+    "connections": {
+      "Build Digest": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Send Digest",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Build Reminders": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Send Reminder",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Is Scheduled Run": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Index (Reminders)",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Month End — 09:00": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Normalize Request",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Normalize Request": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Index",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Is Scheduled Run",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "On Request": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Normalize Request",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Index": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Build Digest",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Index (Reminders)": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Build Reminders",
+              "type": "main"
+            }
+          ]
+        ]
+      }
+    },
+    "createdAt": "2026-09-03T12:19:27.452Z",
+    "description": null,
+    "name": null,
+    "nodeGroups": [],
+    "nodes": [
+      {
+        "id": "w3-sticky",
+        "name": "Sticky — read me",
+        "parameters": {
+          "content": "## Workflow 3 — Monthly Digest\\n\\nHandoff §7 Workflow 3. Reads the index only —\\nzero Slack history calls.\\n\\n### Two ways in, one code path\\n* **Schedule** — 09:00 Manila on the LAST WEEKDAY\\n  of the month. Cron cannot express that, so\\n  the trigger fires daily from the 25th and\\n  `Normalize Request` stops every day but one.\\n* **Execute Workflow** — called by the Events\\n  Endpoint when someone DMs Posty \\\"digest\\\".\\n\\n`Normalize Request` tells them apart and decides\\nrecipients. Everything after it is shared, so the\\nscheduled and on-demand digests cannot drift.\\n\\n### ⚠️ Recipients: tara only for now\\n§14.11 — preview to tara before enabling regie.\\nAdd `U025597KZ` to SCHEDULED_RECIPIENTS in\\n`Normalize Request` once the first run reads well.\\n\\n### Buckets\\n`>= 90` escalated, `45..89` flagged, `< 45`\\nomitted (§7 step 3). DELETED and CANCELLED rows\\nare excluded everywhere.\\n\\n### Long sections split\\nSlack caps a text block at 5,000 chars. Sections\\nsplit across messages rather than dropping rows —\\nthe rows a silent truncation would drop are\\nexactly the ones nobody is looking at.",
+          "height": 664,
+          "width": 484
+        },
+        "position": [
+          -656,
+          -256
+        ],
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1
+      },
+      {
+        "id": "w3-cron",
+        "name": "Month End — 09:00",
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "expression": "0 9 25-31 * *",
+                "field": "cronExpression"
+              }
+            ]
+          }
+        },
+        "position": [
+          -128,
+          -80
+        ],
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2
+      },
+      {
+        "id": "w3-manual",
+        "name": "On Request",
+        "parameters": {},
+        "position": [
+          -128,
+          112
+        ],
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1
+      },
+      {
+        "id": "w3-normalize",
+        "name": "Normalize Request",
+        "parameters": {
+          "jsCode": "// One entry point for both triggers, so the scheduled digest and the on-demand one can\n// never drift apart.\n//\n// The Schedule Trigger emits a timestamp; the Execute Workflow Trigger emits whatever the\n// caller passed, which for a manual request is { user }. Presence of `user` is what\n// distinguishes them.\nconst inp = $input.first().json || {};\nconst manual = Boolean(inp.user);\n\n// Manila-local \"today\". The trigger fires at 09:00 Manila, but Date is UTC-based, so the\n// offset has to be applied before reading the calendar date.\nconst nowManila = new Date(Date.now() + 8 * 3600 * 1000);\nconst Y = nowManila.getUTCFullYear();\nconst M = nowManila.getUTCMonth();\nconst D = nowManila.getUTCDate();\n\n// The last weekday of the month. Cron cannot express this — there is no such expression —\n// so the trigger fires every day from the 25th and this gates it. Walking back from the\n// last calendar day handles months that end on a weekend: if the 31st is a Sunday, the\n// digest goes out on Friday the 29th.\nfunction lastWeekdayOfMonth(year, monthIndex) {\n  const d = new Date(Date.UTC(year, monthIndex + 1, 0));   // day 0 of next month = last day\n  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() - 1);\n  return d.getUTCDate();\n}\n\n// A manual request always runs. A scheduled one runs only on the day itself — returning\n// no items stops the branch, so the other six firings do nothing.\nif (!manual && D !== lastWeekdayOfMonth(Y, M)) return [];\n\n// Handoff §7: the monthly digest goes to regie and tara. §14.11 asked for a preview to\n// tara first; enabled for both on 2026-08-31 after reviewing the rendered output.\n//\n// Recipients receive it automatically — Posty opens the DM itself, so nobody needs to have\n// interacted with it first. Anyone can also request one at any time by DMing \"digest\",\n// which routes here through the Execute Workflow trigger.\nconst SCHEDULED_RECIPIENTS = [\n  'U025597KZ',   // regie\n  'U026N6E1R',   // tara\n];\n\nreturn [{ json: {\n  mode: manual ? 'manual' : 'scheduled',\n  recipients: manual ? [inp.user] : SCHEDULED_RECIPIENTS,\n  // Manila-local date. The digest is \"as of\" the day it runs, in the studio's own timezone.\n  as_of: new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10),\n} }];"
+        },
+        "position": [
+          144,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w3-read",
+        "name": "Read Index",
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          384,
+          0
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "w3-build",
+        "name": "Build Digest",
+        "parameters": {
+          "jsCode": "// Posty — digest builder. code/build-digest.js pasted verbatim, plus the engineer\n// allowlist from code/parse.js so the digest can group by who announced each project.\n// Tested by ./scripts/test-embedded-w3. Edit in code/, run the tests, paste back.\n\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'alec elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nfunction engineerName(user) {\n  const u = String(user || '').trim();\n  return POST_ENGINEERS[u] || 'unassigned';\n}\n\n// Posty — Workflow 3's digest builder.\n//\n// Handoff §7 Workflow 3. Reads the index only; makes zero Slack history calls. Pure, so\n// ./scripts/test-nodes can run it offline against real numbers.\n//\n// Used by BOTH the monthly scheduled run and the on-demand request, so the two can never\n// disagree about what \"open\" means.\n\n\n\nconst MAX_BLOCK = 3500;   // Slack caps a text block at 5,000 chars; leave headroom (§7)\n\nfunction escapeForSlack(t) {\n  return String(t == null ? '' : t)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\nfunction ageDays(postedDate, asOf) {\n  const a = Date.parse(String(postedDate) + 'T00:00:00Z');\n  const b = Date.parse(String(asOf) + 'T00:00:00Z');\n  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;\n  return Math.round((b - a) / 86400000);\n}\n\n// \"1 Sep 2026\" — the format §7's example uses.\nconst MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nfunction humanDate(iso) {\n  const m = String(iso).match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);\n  if (!m) return String(iso);\n  return String(Number(m[3])) + ' ' + MONTHS[Number(m[2]) - 1] + ' ' + m[1];\n}\n\n// One line per project: the original post text, then its age. §7's example format is the\n// source text itself — nearly every post already opens with its QU number, so prefixing\n// one produces \"QU-13639 / QU-13639 / Saatchi...\". Where a post does NOT lead with a code\n// (a pro bono job, or \"ay sori po eto pala QU-13864 / ...\"), the text still carries\n// whatever identification exists, which is the most honest thing to print.\n// Widest line that fits without horizontal scrolling in a Slack code block on a laptop.\n// Longer titles are truncated: the QU number leads every line so it is never the part\n// that gets cut, and the full text is always in the Sheet and in the original post.\nconst LINE_WIDTH = 80;\n\n// Lines inside a code block are NOT escaped.\n//\n// Slack renders code-block content literally, so an escaped \"&amp;\" would display as the\n// five characters &amp; rather than an ampersand. A bare & is safe either way — it is not\n// an entity, so it survives both literal rendering and entity decoding. Escaping is for\n// text Slack will interpret; this text it will not.\nfunction codeLine(row, age) {\n  const text = String(row.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim();\n  const room = LINE_WIDTH - 7;\n  const body = text.length > room ? text.slice(0, room - 1) + '…' : text;\n  return String(age).padStart(4) + 'd  ' + body;\n}\n\n// Split a section into as many messages as it needs. §7: if a bucket overflows, split\n// rather than dropping rows — a digest that silently truncates is worse than two messages,\n// because the rows it drops are the ones nobody is looking at.\n// Split a section into as many messages as it needs. §7: if a bucket overflows, split\n// rather than dropping rows — a digest that silently truncates is worse than two messages,\n// because the rows it drops are the ones nobody is looking at.\n//\n// Code fences must never straddle a split, or one message ends with an unclosed ``` and\n// the next starts with a stray one. When a split lands inside a fence, close it before the\n// break and reopen it after.\nfunction chunk(header, lines) {\n  if (!lines.length) return [];\n  const out = [];\n  let buf = header;\n  let inFence = false;\n  for (const l of lines) {\n    if (buf.length + l.length + 1 > MAX_BLOCK) {\n      out.push(inFence ? buf + '\\n```' : buf);\n      buf = header + ' (cont.)' + (inFence ? '\\n```' : '');\n    }\n    buf += '\\n' + l;\n    if (l === '```') inFence = !inFence;\n  }\n  out.push(inFence ? buf + '\\n```' : buf);\n  return out;\n}\n\n// Group a bucket by the engineer who announced each project.\n//\n// Engineers are ordered by their OLDEST project, not by count — a person with two 500-day\n// jobs needs chasing before someone with eight at 50 days. Within each engineer, oldest\n// first, same as everywhere else.\n//\n// A single-engineer bucket gets no headings: when someone requests their own digest, or\n// only one person has anything overdue, the names are noise.\nfunction groupByEngineer(entries, nameOf) {\n  const groups = new Map();\n  for (const e of entries) {\n    const who = nameOf(e.row.posted_by);\n    if (!groups.has(who)) groups.set(who, []);\n    groups.get(who).push(e);\n  }\n  const ordered = [...groups.entries()]\n    .map(([who, list]) => ({ who, list, oldest: Math.max(...list.map((x) => x.age)) }))\n    .sort((a, b) => b.oldest - a.oldest);\n  return ordered;\n}\n\n// One bucket, grouped by engineer unless there is only one of them.\n//\n// Projects sit in a monospace block so the ages form a scannable column and the long\n// slash-separated titles stop wrapping into each other. The engineer heading stays OUTSIDE\n// the block — Slack ignores *bold* inside code fences.\nfunction renderBucket(entries, nameOf) {\n  const groups = groupByEngineer(entries, nameOf);\n  if (groups.length <= 1) {\n    return ['```', ...entries.map((o) => codeLine(o.row, o.age)), '```'];\n  }\n  const out = [];\n  for (const g of groups) {\n    out.push('');\n    out.push('*' + g.who + '* (' + g.list.length + ')');\n    out.push('```');\n    for (const o of g.list) out.push(codeLine(o.row, o.age));\n    out.push('```');\n  }\n  return out;\n}\n\nfunction buildDigest(input) {\n  const { rows = [], asOf, mode = 'scheduled', nameOf = (u) => String(u || 'unassigned') } = input;\n\n  // DELETED rows are excluded here as well as everywhere else — a deleted intake post\n  // means the project is not being chased.\n  const open = [];\n  const untracked = [];\n  for (const r of rows) {\n    const status = String(r.status || '').trim();\n    if (status === 'UNTRACKED') { untracked.push(r); continue; }\n    if (status !== 'OPEN') continue;\n    const age = ageDays(r.posted_date, asOf);\n    if (age === null) continue;              // no usable date, cannot be aged or bucketed\n    open.push({ row: r, age });\n  }\n\n  open.sort((a, b) => b.age - a.age);        // oldest first, §7 step 4\n\n  // Age bands. Tara, 2026-09-03: 120 / 90 / 60 replaces the handoff's 90 / 45. Boundaries\n  // are inclusive at the lower end, so a project at exactly 60 days lands in 60–89.\n  // Anything under 60 is counted in the header but never listed (§7 step 3).\n  const over120 = open.filter((o) => o.age >= 120);\n  const band90 = open.filter((o) => o.age >= 90 && o.age < 120);\n  const band60 = open.filter((o) => o.age >= 60 && o.age < 90);\n  const fresh = open.filter((o) => o.age < 60);\n\n  const messages = [];\n  const title = mode === 'manual'\n    ? 'Posty — open projects as of ' + humanDate(asOf) + '  (requested)'\n    : 'Posty — open projects as of ' + humanDate(asOf);\n\n  let head = title;\n  if (!over120.length && !band90.length && !band60.length) {\n    head += '\\n\\nNothing over 60 days. ' + fresh.length + ' project' +\n            (fresh.length === 1 ? '' : 's') + ' open and under 60 days.';\n    messages.push(head);\n  } else {\n    messages.push(head);\n    // Empty bands are skipped rather than printed as \"(0)\". With three of them, a run of\n    // zero-count headers is noise that pushes the real work further down the DM.\n    const bands = [['🔴 120+ days', over120], ['🟠 90–119 days', band90],\n                   ['🟡 60–89 days', band60]];\n    for (const [label, bucket] of bands) {\n      if (bucket.length) {\n        messages.push(...chunk(label + ' (' + bucket.length + ')', renderBucket(bucket, nameOf)));\n      }\n    }\n  }\n\n  // §7 step 5. These carry no QU at all — not even a synthetic one — so no automation can\n  // resolve them. Listed so they are visible, not so they can be actioned.\n  //\n  // The index deliberately keeps every unmatched message (§9 note 5 calls that acceptable\n  // noise), which means UNTRACKED also collects plain channel chatter — \"salamuch\",\n  // \"Corgrats Eli!\", a bare @mention. Those are noise in the index and merely untidy; in a\n  // digest sent to two people they make the whole thing look unreliable.\n  //\n  // Every real project post in this channel uses \" / \" between fields. Requiring a slash\n  // separates \"QU-______ / SPOTIFY / Lea Lardizabal / H&M\" — a real job awaiting a code —\n  // from \"this is DENTSU pala\". The filter is presentation only: nothing is dropped from\n  // the index, and the omitted count is printed so the filter can never hide a surprise.\n  const realUntracked = untracked.filter((r) => String(r.source_text || '').includes('/'));\n  const noise = untracked.length - realUntracked.length;\n\n  if (realUntracked.length) {\n    let header = 'Not tracked (' + realUntracked.length + ') — no QU code, needs manual check';\n    if (noise) header += '\\n(' + noise + ' non-project message' + (noise === 1 ? '' : 's') + ' omitted)';\n    messages.push(...chunk(header,\n      realUntracked.map((r) => escapeForSlack(r.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim())));\n  }\n\n  return {\n    messages,\n    summary: {\n      over120: over120.length,\n      band90: band90.length,\n      band60: band60.length,\n      under60: fresh.length,\n      untracked: realUntracked.length,\n      untracked_noise: noise,\n      total_open: open.length,\n    },\n  };\n}\n\nconst cfg = $('Normalize Request').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nconst d = buildDigest({ rows, asOf: cfg.as_of, mode: cfg.mode, nameOf: engineerName });\n\n// Fan out to one item per recipient per message. The Slack node runs once per item and\n// preserves order, so each person receives the sections in sequence.\nconst out = [];\nfor (const user of cfg.recipients) {\n  for (const text of d.messages) out.push({ json: { user, text, summary: d.summary } });\n}\nreturn out;"
+        },
+        "position": [
+          624,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w3-send",
+        "name": "Send Digest",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $json.user }}"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "={{ $json.text }}"
+        },
+        "position": [
+          864,
+          0
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "f91de9a3-a288-4c44-9a9b-6ec59dbfef75"
+      },
+      {
+        "id": "w3-fsched",
+        "name": "Is Scheduled Run",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.mode }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "scheduled"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          384,
+          240
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w3-readrem",
+        "name": "Read Index (Reminders)",
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          624,
+          240
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "w3-buildrem",
+        "name": "Build Reminders",
+        "parameters": {
+          "jsCode": "// Month-end nudge, one DM per post engineer who has open work.\n//\n// Separate from the digest: the digest tells Tara and regie about EVERYONE's open projects,\n// this tells each engineer about their OWN. It is deliberately short — counts plus the\n// oldest one — because the point is to prompt a look, not to be the list. Asking for the\n// list is one reply away and that flow already exists.\n//\n// Anyone with nothing open gets no message. A monthly \"you have 0 open projects\" is the\n// kind of notification people learn to ignore, which costs the ones that matter.\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'alec elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nconst cfg = $('Normalize Request').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nfunction ageDays(posted, today) {\n  const a = Date.parse(String(posted) + 'T00:00:00Z');\n  const b = Date.parse(String(today) + 'T00:00:00Z');\n  return (Number.isFinite(a) && Number.isFinite(b)) ? Math.round((b - a) / 86400000) : null;\n}\nfunction escapeForSlack(t) {\n  return String(t == null ? '' : t)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\nconst byUser = new Map();\nfor (const r of rows) {\n  if (String(r.status || '').trim() !== 'OPEN') continue;\n  const who = String(r.posted_by || '').trim();\n  if (!Object.prototype.hasOwnProperty.call(POST_ENGINEERS, who)) continue;  // unknown author\n  const age = ageDays(r.posted_date, cfg.as_of);\n  if (age === null) continue;\n  if (!byUser.has(who)) byUser.set(who, []);\n  byUser.get(who).push({ row: r, age });\n}\n\nconst out = [];\nfor (const [user, list] of byUser) {\n  list.sort((a, b) => b.age - a.age);\n  // Bands match the digest (120 / 90 / 60). One clause only: this is a nudge, so it names\n  // the most severe band that applies rather than reciting all three.\n  const over120 = list.filter((x) => x.age >= 120).length;\n  const over60 = list.filter((x) => x.age >= 60).length;\n  const oldest = list[0];\n\n  let text = 'Month-end check 👋 You have *' + list.length + ' open project'\n           + (list.length === 1 ? '' : 's') + '*';\n  if (over120) text += ', *' + over120 + '* of them over 120 days';\n  else if (over60) text += ', *' + over60 + '* of them over 60 days';\n  text += '.\\n\\nOldest:\\n```\\n' + String(oldest.age).padStart(4) + 'd  '\n        + escapeForSlack(String(oldest.row.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim()).slice(0, 72)\n        + '\\n```\\n'\n        + 'Reply here and I\\'ll list them all, so you can 🚀 anything that has already shipped.';\n\n  out.push({ json: { user, text } });\n}\nreturn out;"
+        },
+        "position": [
+          864,
+          240
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w3-sendrem",
+        "name": "Send Reminder",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $json.user }}"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "={{ $json.text }}"
+        },
+        "position": [
+          1104,
+          240
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "1a1c0896-b5d7-40fa-be04-608d5c8b99dd"
+      }
+    ],
+    "updatedAt": "2026-09-03T12:19:27.452Z",
+    "versionId": "311c070e-23ed-4fe7-baa4-7ebf69dd1815",
+    "workflowId": "7cG9CRcCoT5UvTTi",
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-03T12:19:28.195Z",
+        "event": "activated",
+        "id": 662,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "311c070e-23ed-4fe7-baa4-7ebf69dd1815",
+        "workflowId": "7cG9CRcCoT5UvTTi"
+      }
+    ]
+  },
+  "activeVersionId": "311c070e-23ed-4fe7-baa4-7ebf69dd1815",
+  "connections": {
+    "Build Digest": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send Digest",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Build Reminders": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send Reminder",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Is Scheduled Run": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Index (Reminders)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Month End — 09:00": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Normalize Request",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Normalize Request": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Index",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Is Scheduled Run",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "On Request": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Normalize Request",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Index": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build Digest",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Index (Reminders)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build Reminders",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-08-31T10:37:51.382Z",
+  "description": null,
+  "id": "7cG9CRcCoT5UvTTi",
+  "isArchived": false,
+  "meta": null,
+  "name": "Posty — Monthly Digest",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "w3-sticky",
+      "name": "Sticky — read me",
+      "parameters": {
+        "content": "## Workflow 3 — Monthly Digest\\n\\nHandoff §7 Workflow 3. Reads the index only —\\nzero Slack history calls.\\n\\n### Two ways in, one code path\\n* **Schedule** — 09:00 Manila on the LAST WEEKDAY\\n  of the month. Cron cannot express that, so\\n  the trigger fires daily from the 25th and\\n  `Normalize Request` stops every day but one.\\n* **Execute Workflow** — called by the Events\\n  Endpoint when someone DMs Posty \\\"digest\\\".\\n\\n`Normalize Request` tells them apart and decides\\nrecipients. Everything after it is shared, so the\\nscheduled and on-demand digests cannot drift.\\n\\n### ⚠️ Recipients: tara only for now\\n§14.11 — preview to tara before enabling regie.\\nAdd `U025597KZ` to SCHEDULED_RECIPIENTS in\\n`Normalize Request` once the first run reads well.\\n\\n### Buckets\\n`>= 90` escalated, `45..89` flagged, `< 45`\\nomitted (§7 step 3). DELETED and CANCELLED rows\\nare excluded everywhere.\\n\\n### Long sections split\\nSlack caps a text block at 5,000 chars. Sections\\nsplit across messages rather than dropping rows —\\nthe rows a silent truncation would drop are\\nexactly the ones nobody is looking at.",
+        "height": 664,
+        "width": 484
+      },
+      "position": [
+        -656,
+        -256
+      ],
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1
+    },
+    {
+      "id": "w3-cron",
+      "name": "Month End — 09:00",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 9 25-31 * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        -128,
+        -80
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "w3-manual",
+      "name": "On Request",
+      "parameters": {},
+      "position": [
+        -128,
+        112
+      ],
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1
+    },
+    {
+      "id": "w3-normalize",
+      "name": "Normalize Request",
+      "parameters": {
+        "jsCode": "// One entry point for both triggers, so the scheduled digest and the on-demand one can\n// never drift apart.\n//\n// The Schedule Trigger emits a timestamp; the Execute Workflow Trigger emits whatever the\n// caller passed, which for a manual request is { user }. Presence of `user` is what\n// distinguishes them.\nconst inp = $input.first().json || {};\nconst manual = Boolean(inp.user);\n\n// Manila-local \"today\". The trigger fires at 09:00 Manila, but Date is UTC-based, so the\n// offset has to be applied before reading the calendar date.\nconst nowManila = new Date(Date.now() + 8 * 3600 * 1000);\nconst Y = nowManila.getUTCFullYear();\nconst M = nowManila.getUTCMonth();\nconst D = nowManila.getUTCDate();\n\n// The last weekday of the month. Cron cannot express this — there is no such expression —\n// so the trigger fires every day from the 25th and this gates it. Walking back from the\n// last calendar day handles months that end on a weekend: if the 31st is a Sunday, the\n// digest goes out on Friday the 29th.\nfunction lastWeekdayOfMonth(year, monthIndex) {\n  const d = new Date(Date.UTC(year, monthIndex + 1, 0));   // day 0 of next month = last day\n  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() - 1);\n  return d.getUTCDate();\n}\n\n// A manual request always runs. A scheduled one runs only on the day itself — returning\n// no items stops the branch, so the other six firings do nothing.\nif (!manual && D !== lastWeekdayOfMonth(Y, M)) return [];\n\n// Handoff §7: the monthly digest goes to regie and tara. §14.11 asked for a preview to\n// tara first; enabled for both on 2026-08-31 after reviewing the rendered output.\n//\n// Recipients receive it automatically — Posty opens the DM itself, so nobody needs to have\n// interacted with it first. Anyone can also request one at any time by DMing \"digest\",\n// which routes here through the Execute Workflow trigger.\nconst SCHEDULED_RECIPIENTS = [\n  'U025597KZ',   // regie\n  'U026N6E1R',   // tara\n];\n\nreturn [{ json: {\n  mode: manual ? 'manual' : 'scheduled',\n  recipients: manual ? [inp.user] : SCHEDULED_RECIPIENTS,\n  // Manila-local date. The digest is \"as of\" the day it runs, in the studio's own timezone.\n  as_of: new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10),\n} }];"
+      },
+      "position": [
+        144,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w3-read",
+      "name": "Read Index",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        384,
+        0
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "w3-build",
+      "name": "Build Digest",
+      "parameters": {
+        "jsCode": "// Posty — digest builder. code/build-digest.js pasted verbatim, plus the engineer\n// allowlist from code/parse.js so the digest can group by who announced each project.\n// Tested by ./scripts/test-embedded-w3. Edit in code/, run the tests, paste back.\n\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'alec elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nfunction engineerName(user) {\n  const u = String(user || '').trim();\n  return POST_ENGINEERS[u] || 'unassigned';\n}\n\n// Posty — Workflow 3's digest builder.\n//\n// Handoff §7 Workflow 3. Reads the index only; makes zero Slack history calls. Pure, so\n// ./scripts/test-nodes can run it offline against real numbers.\n//\n// Used by BOTH the monthly scheduled run and the on-demand request, so the two can never\n// disagree about what \"open\" means.\n\n\n\nconst MAX_BLOCK = 3500;   // Slack caps a text block at 5,000 chars; leave headroom (§7)\n\nfunction escapeForSlack(t) {\n  return String(t == null ? '' : t)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\nfunction ageDays(postedDate, asOf) {\n  const a = Date.parse(String(postedDate) + 'T00:00:00Z');\n  const b = Date.parse(String(asOf) + 'T00:00:00Z');\n  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;\n  return Math.round((b - a) / 86400000);\n}\n\n// \"1 Sep 2026\" — the format §7's example uses.\nconst MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nfunction humanDate(iso) {\n  const m = String(iso).match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);\n  if (!m) return String(iso);\n  return String(Number(m[3])) + ' ' + MONTHS[Number(m[2]) - 1] + ' ' + m[1];\n}\n\n// One line per project: the original post text, then its age. §7's example format is the\n// source text itself — nearly every post already opens with its QU number, so prefixing\n// one produces \"QU-13639 / QU-13639 / Saatchi...\". Where a post does NOT lead with a code\n// (a pro bono job, or \"ay sori po eto pala QU-13864 / ...\"), the text still carries\n// whatever identification exists, which is the most honest thing to print.\n// Widest line that fits without horizontal scrolling in a Slack code block on a laptop.\n// Longer titles are truncated: the QU number leads every line so it is never the part\n// that gets cut, and the full text is always in the Sheet and in the original post.\nconst LINE_WIDTH = 80;\n\n// Lines inside a code block are NOT escaped.\n//\n// Slack renders code-block content literally, so an escaped \"&amp;\" would display as the\n// five characters &amp; rather than an ampersand. A bare & is safe either way — it is not\n// an entity, so it survives both literal rendering and entity decoding. Escaping is for\n// text Slack will interpret; this text it will not.\nfunction codeLine(row, age) {\n  const text = String(row.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim();\n  const room = LINE_WIDTH - 7;\n  const body = text.length > room ? text.slice(0, room - 1) + '…' : text;\n  return String(age).padStart(4) + 'd  ' + body;\n}\n\n// Split a section into as many messages as it needs. §7: if a bucket overflows, split\n// rather than dropping rows — a digest that silently truncates is worse than two messages,\n// because the rows it drops are the ones nobody is looking at.\n// Split a section into as many messages as it needs. §7: if a bucket overflows, split\n// rather than dropping rows — a digest that silently truncates is worse than two messages,\n// because the rows it drops are the ones nobody is looking at.\n//\n// Code fences must never straddle a split, or one message ends with an unclosed ``` and\n// the next starts with a stray one. When a split lands inside a fence, close it before the\n// break and reopen it after.\nfunction chunk(header, lines) {\n  if (!lines.length) return [];\n  const out = [];\n  let buf = header;\n  let inFence = false;\n  for (const l of lines) {\n    if (buf.length + l.length + 1 > MAX_BLOCK) {\n      out.push(inFence ? buf + '\\n```' : buf);\n      buf = header + ' (cont.)' + (inFence ? '\\n```' : '');\n    }\n    buf += '\\n' + l;\n    if (l === '```') inFence = !inFence;\n  }\n  out.push(inFence ? buf + '\\n```' : buf);\n  return out;\n}\n\n// Group a bucket by the engineer who announced each project.\n//\n// Engineers are ordered by their OLDEST project, not by count — a person with two 500-day\n// jobs needs chasing before someone with eight at 50 days. Within each engineer, oldest\n// first, same as everywhere else.\n//\n// A single-engineer bucket gets no headings: when someone requests their own digest, or\n// only one person has anything overdue, the names are noise.\nfunction groupByEngineer(entries, nameOf) {\n  const groups = new Map();\n  for (const e of entries) {\n    const who = nameOf(e.row.posted_by);\n    if (!groups.has(who)) groups.set(who, []);\n    groups.get(who).push(e);\n  }\n  const ordered = [...groups.entries()]\n    .map(([who, list]) => ({ who, list, oldest: Math.max(...list.map((x) => x.age)) }))\n    .sort((a, b) => b.oldest - a.oldest);\n  return ordered;\n}\n\n// One bucket, grouped by engineer unless there is only one of them.\n//\n// Projects sit in a monospace block so the ages form a scannable column and the long\n// slash-separated titles stop wrapping into each other. The engineer heading stays OUTSIDE\n// the block — Slack ignores *bold* inside code fences.\nfunction renderBucket(entries, nameOf) {\n  const groups = groupByEngineer(entries, nameOf);\n  if (groups.length <= 1) {\n    return ['```', ...entries.map((o) => codeLine(o.row, o.age)), '```'];\n  }\n  const out = [];\n  for (const g of groups) {\n    out.push('');\n    out.push('*' + g.who + '* (' + g.list.length + ')');\n    out.push('```');\n    for (const o of g.list) out.push(codeLine(o.row, o.age));\n    out.push('```');\n  }\n  return out;\n}\n\nfunction buildDigest(input) {\n  const { rows = [], asOf, mode = 'scheduled', nameOf = (u) => String(u || 'unassigned') } = input;\n\n  // DELETED rows are excluded here as well as everywhere else — a deleted intake post\n  // means the project is not being chased.\n  const open = [];\n  const untracked = [];\n  for (const r of rows) {\n    const status = String(r.status || '').trim();\n    if (status === 'UNTRACKED') { untracked.push(r); continue; }\n    if (status !== 'OPEN') continue;\n    const age = ageDays(r.posted_date, asOf);\n    if (age === null) continue;              // no usable date, cannot be aged or bucketed\n    open.push({ row: r, age });\n  }\n\n  open.sort((a, b) => b.age - a.age);        // oldest first, §7 step 4\n\n  // Age bands. Tara, 2026-09-03: 120 / 90 / 60 replaces the handoff's 90 / 45. Boundaries\n  // are inclusive at the lower end, so a project at exactly 60 days lands in 60–89.\n  // Anything under 60 is counted in the header but never listed (§7 step 3).\n  const over120 = open.filter((o) => o.age >= 120);\n  const band90 = open.filter((o) => o.age >= 90 && o.age < 120);\n  const band60 = open.filter((o) => o.age >= 60 && o.age < 90);\n  const fresh = open.filter((o) => o.age < 60);\n\n  const messages = [];\n  const title = mode === 'manual'\n    ? 'Posty — open projects as of ' + humanDate(asOf) + '  (requested)'\n    : 'Posty — open projects as of ' + humanDate(asOf);\n\n  let head = title;\n  if (!over120.length && !band90.length && !band60.length) {\n    head += '\\n\\nNothing over 60 days. ' + fresh.length + ' project' +\n            (fresh.length === 1 ? '' : 's') + ' open and under 60 days.';\n    messages.push(head);\n  } else {\n    messages.push(head);\n    // Empty bands are skipped rather than printed as \"(0)\". With three of them, a run of\n    // zero-count headers is noise that pushes the real work further down the DM.\n    const bands = [['🔴 120+ days', over120], ['🟠 90–119 days', band90],\n                   ['🟡 60–89 days', band60]];\n    for (const [label, bucket] of bands) {\n      if (bucket.length) {\n        messages.push(...chunk(label + ' (' + bucket.length + ')', renderBucket(bucket, nameOf)));\n      }\n    }\n  }\n\n  // §7 step 5. These carry no QU at all — not even a synthetic one — so no automation can\n  // resolve them. Listed so they are visible, not so they can be actioned.\n  //\n  // The index deliberately keeps every unmatched message (§9 note 5 calls that acceptable\n  // noise), which means UNTRACKED also collects plain channel chatter — \"salamuch\",\n  // \"Corgrats Eli!\", a bare @mention. Those are noise in the index and merely untidy; in a\n  // digest sent to two people they make the whole thing look unreliable.\n  //\n  // Every real project post in this channel uses \" / \" between fields. Requiring a slash\n  // separates \"QU-______ / SPOTIFY / Lea Lardizabal / H&M\" — a real job awaiting a code —\n  // from \"this is DENTSU pala\". The filter is presentation only: nothing is dropped from\n  // the index, and the omitted count is printed so the filter can never hide a surprise.\n  const realUntracked = untracked.filter((r) => String(r.source_text || '').includes('/'));\n  const noise = untracked.length - realUntracked.length;\n\n  if (realUntracked.length) {\n    let header = 'Not tracked (' + realUntracked.length + ') — no QU code, needs manual check';\n    if (noise) header += '\\n(' + noise + ' non-project message' + (noise === 1 ? '' : 's') + ' omitted)';\n    messages.push(...chunk(header,\n      realUntracked.map((r) => escapeForSlack(r.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim())));\n  }\n\n  return {\n    messages,\n    summary: {\n      over120: over120.length,\n      band90: band90.length,\n      band60: band60.length,\n      under60: fresh.length,\n      untracked: realUntracked.length,\n      untracked_noise: noise,\n      total_open: open.length,\n    },\n  };\n}\n\nconst cfg = $('Normalize Request').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nconst d = buildDigest({ rows, asOf: cfg.as_of, mode: cfg.mode, nameOf: engineerName });\n\n// Fan out to one item per recipient per message. The Slack node runs once per item and\n// preserves order, so each person receives the sections in sequence.\nconst out = [];\nfor (const user of cfg.recipients) {\n  for (const text of d.messages) out.push({ json: { user, text, summary: d.summary } });\n}\nreturn out;"
+      },
+      "position": [
+        624,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w3-send",
+      "name": "Send Digest",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.user }}"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "={{ $json.text }}"
+      },
+      "position": [
+        864,
+        0
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "f91de9a3-a288-4c44-9a9b-6ec59dbfef75"
+    },
+    {
+      "id": "w3-fsched",
+      "name": "Is Scheduled Run",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.mode }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "scheduled"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        384,
+        240
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w3-readrem",
+      "name": "Read Index (Reminders)",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        624,
+        240
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "w3-buildrem",
+      "name": "Build Reminders",
+      "parameters": {
+        "jsCode": "// Month-end nudge, one DM per post engineer who has open work.\n//\n// Separate from the digest: the digest tells Tara and regie about EVERYONE's open projects,\n// this tells each engineer about their OWN. It is deliberately short — counts plus the\n// oldest one — because the point is to prompt a look, not to be the list. Asking for the\n// list is one reply away and that flow already exists.\n//\n// Anyone with nothing open gets no message. A monthly \"you have 0 open projects\" is the\n// kind of notification people learn to ignore, which costs the ones that matter.\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'alec elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nconst cfg = $('Normalize Request').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nfunction ageDays(posted, today) {\n  const a = Date.parse(String(posted) + 'T00:00:00Z');\n  const b = Date.parse(String(today) + 'T00:00:00Z');\n  return (Number.isFinite(a) && Number.isFinite(b)) ? Math.round((b - a) / 86400000) : null;\n}\nfunction escapeForSlack(t) {\n  return String(t == null ? '' : t)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\nconst byUser = new Map();\nfor (const r of rows) {\n  if (String(r.status || '').trim() !== 'OPEN') continue;\n  const who = String(r.posted_by || '').trim();\n  if (!Object.prototype.hasOwnProperty.call(POST_ENGINEERS, who)) continue;  // unknown author\n  const age = ageDays(r.posted_date, cfg.as_of);\n  if (age === null) continue;\n  if (!byUser.has(who)) byUser.set(who, []);\n  byUser.get(who).push({ row: r, age });\n}\n\nconst out = [];\nfor (const [user, list] of byUser) {\n  list.sort((a, b) => b.age - a.age);\n  // Bands match the digest (120 / 90 / 60). One clause only: this is a nudge, so it names\n  // the most severe band that applies rather than reciting all three.\n  const over120 = list.filter((x) => x.age >= 120).length;\n  const over60 = list.filter((x) => x.age >= 60).length;\n  const oldest = list[0];\n\n  let text = 'Month-end check 👋 You have *' + list.length + ' open project'\n           + (list.length === 1 ? '' : 's') + '*';\n  if (over120) text += ', *' + over120 + '* of them over 120 days';\n  else if (over60) text += ', *' + over60 + '* of them over 60 days';\n  text += '.\\n\\nOldest:\\n```\\n' + String(oldest.age).padStart(4) + 'd  '\n        + escapeForSlack(String(oldest.row.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim()).slice(0, 72)\n        + '\\n```\\n'\n        + 'Reply here and I\\'ll list them all, so you can 🚀 anything that has already shipped.';\n\n  out.push({ json: { user, text } });\n}\nreturn out;"
+      },
+      "position": [
+        864,
+        240
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w3-sendrem",
+      "name": "Send Reminder",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.user }}"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "={{ $json.text }}"
+      },
+      "position": [
+        1104,
+        240
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "1a1c0896-b5d7-40fa-be04-608d5c8b99dd"
+    }
+  ],
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "timezone": "Asia/Manila"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-04T07:30:51.505Z",
+      "project": {
+        "createdAt": "2026-09-04T06:28:22.466Z",
+        "creatorId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "zkz4JuokdGopHd2A",
+        "name": "Tara Lim <tara@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-04T07:14:04.840Z"
+      },
+      "projectId": "zkz4JuokdGopHd2A",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-04T07:30:51.505Z",
+      "workflowId": "7cG9CRcCoT5UvTTi"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": {
+    "node:Month End — 09:00": {
+      "recurrenceRules": []
+    },
+    "node:Monthly — 1st 09:00": {
+      "recurrenceRules": []
+    }
+  },
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-09-03T12:19:27.447Z",
+  "versionCounter": 9,
+  "versionId": "311c070e-23ed-4fe7-baa4-7ebf69dd1815"
+}

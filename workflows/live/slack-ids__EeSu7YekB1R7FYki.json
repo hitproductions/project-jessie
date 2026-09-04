@@ -1,0 +1,381 @@
+{
+  "active": false,
+  "activeVersion": null,
+  "activeVersionId": null,
+  "connections": {
+    "Filter": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Create or update a record",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Get many users": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Filter",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Get many users",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-08-20T08:23:02.623Z",
+  "description": null,
+  "id": "EeSu7YekB1R7FYki",
+  "isArchived": false,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "slack ids",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "e1101ed9-a7e5-4d61-8611-e91c747f3d6c",
+      "name": "When clicking ‘Execute workflow’",
+      "parameters": {},
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Slack account"
+        }
+      },
+      "id": "d8980d22-6532-4503-af30-3aef2a7c01a5",
+      "name": "Get many users",
+      "parameters": {
+        "operation": "getAll",
+        "resource": "user",
+        "returnAll": true
+      },
+      "position": [
+        208,
+        0
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "webhookId": "b6bd8a90-0c61-475c-8af4-e5d76bbbc453"
+    },
+    {
+      "id": "b234d157-9d21-41ee-9841-a4afbf34e66d",
+      "name": "Filter",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "fabaf1d4-ac7c-4ae3-9112-04693bc755e2",
+              "leftValue": "={{ $json.is_bot }}",
+              "operator": {
+                "operation": "false",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": "false"
+            },
+            {
+              "id": "150b7b57-8b9f-4789-928c-64353e89b107",
+              "leftValue": "={{ $json.deleted }}",
+              "operator": {
+                "operation": "false",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": "false"
+            },
+            {
+              "id": "0e239228-9c38-43b7-9787-f8c3aea5ed67",
+              "leftValue": "={{ $json.profile.email }}",
+              "operator": {
+                "operation": "notEmpty",
+                "singleValue": true,
+                "type": "string"
+              },
+              "rightValue": false
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        416,
+        0
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3
+    },
+    {
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "id": "d66d5e66-7812-4d48-8160-d634e17fec8a",
+      "name": "Create or update a record",
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP",
+          "mode": "list",
+          "value": "app8GQxEInqJi1NRP"
+        },
+        "columns": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "defaultMatch": true,
+              "display": true,
+              "displayName": "id",
+              "id": "id",
+              "readOnly": true,
+              "removed": true,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Initials",
+              "id": "Initials",
+              "readOnly": false,
+              "removed": true,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Name",
+              "id": "Name",
+              "readOnly": false,
+              "removed": true,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Email",
+              "id": "Email",
+              "readOnly": false,
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Department",
+              "id": "Department",
+              "options": [
+                {
+                  "name": "Management",
+                  "value": "Management"
+                },
+                {
+                  "name": "Audio Post",
+                  "value": "Audio Post"
+                },
+                {
+                  "name": "Video Post",
+                  "value": "Video Post"
+                },
+                {
+                  "name": "Music",
+                  "value": "Music"
+                },
+                {
+                  "name": "Localization",
+                  "value": "Localization"
+                },
+                {
+                  "name": "Marketing",
+                  "value": "Marketing"
+                },
+                {
+                  "name": "Finance",
+                  "value": "Finance"
+                },
+                {
+                  "name": "Sales & Accounts",
+                  "value": "Sales & Accounts"
+                },
+                {
+                  "name": "Business Development",
+                  "value": "Business Development"
+                },
+                {
+                  "name": "P&C",
+                  "value": "P&C"
+                },
+                {
+                  "name": "IT",
+                  "value": "IT"
+                },
+                {
+                  "name": "Admin",
+                  "value": "Admin"
+                }
+              ],
+              "readOnly": false,
+              "removed": true,
+              "required": false,
+              "type": "array"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Info",
+              "id": "Info",
+              "readOnly": false,
+              "removed": true,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Authority",
+              "id": "Authority",
+              "options": [
+                {
+                  "name": "Standard",
+                  "value": "Standard"
+                },
+                {
+                  "name": "Client Booking",
+                  "value": "Client Booking"
+                },
+                {
+                  "name": "Dept Head",
+                  "value": "Dept Head"
+                },
+                {
+                  "name": "Admin",
+                  "value": "Admin"
+                },
+                {
+                  "name": "Management",
+                  "value": "Management"
+                }
+              ],
+              "readOnly": false,
+              "removed": true,
+              "required": false,
+              "type": "array"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Slack User ID",
+              "id": "Slack User ID",
+              "readOnly": false,
+              "removed": false,
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "Email": "={{ $json.profile.email }}",
+            "Slack User ID": "={{ $json.id }}"
+          }
+        },
+        "operation": "upsert",
+        "options": {},
+        "table": {
+          "__rl": true,
+          "cachedResultName": "Bookers",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tbllRId3gq1auTA64",
+          "mode": "list",
+          "value": "tbllRId3gq1auTA64"
+        }
+      },
+      "position": [
+        624,
+        0
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2
+    }
+  ],
+  "pinData": {},
+  "settings": {
+    "availableInMCP": false,
+    "binaryMode": "separate",
+    "executionOrder": "v1"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-04T07:45:22.867Z",
+      "project": {
+        "createdAt": "2026-09-04T07:27:37.988Z",
+        "creatorId": "146478c9-471a-4651-8e62-0216984196e9",
+        "customTelemetryTags": [],
+        "description": "Hit's scheduling bot!",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "id": "QZYdo1FNvLjucQwT",
+        "name": "Jessie",
+        "type": "team",
+        "updatedAt": "2026-09-04T07:29:59.000Z"
+      },
+      "projectId": "QZYdo1FNvLjucQwT",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-04T07:45:22.867Z",
+      "workflowId": "EeSu7YekB1R7FYki"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-09-04T07:46:57.264Z",
+  "versionCounter": 33,
+  "versionId": "da76a581-87b0-4e88-84fb-1900b15dbbd2"
+}

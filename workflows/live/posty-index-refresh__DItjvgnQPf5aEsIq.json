@@ -1,0 +1,945 @@
+{
+  "active": true,
+  "activeVersion": {
+    "authors": "Howard Luistro",
+    "autosaved": false,
+    "connections": {
+      "Build Index": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Emit Rows",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Emit State",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Emit Rows": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Write Index",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Emit State": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Write State",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Fetch Newpost": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Fetch Releaseme",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Fetch Releaseme": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Build Index",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Nightly 02:00": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read State",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Index": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Fetch Newpost",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read State": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Index",
+              "type": "main"
+            }
+          ]
+        ]
+      }
+    },
+    "createdAt": "2026-08-31T12:26:02.759Z",
+    "description": null,
+    "name": null,
+    "nodeGroups": [],
+    "nodes": [
+      {
+        "id": "posty-w1-sticky",
+        "name": "Sticky — read me",
+        "parameters": {
+          "content": "## Workflow 1 — Index Refresh\\n\\nNightly 02:00 Manila. Handoff §7 Workflow 1.\\n\\nReads both channels for messages newer than the\\nstored watermarks, upserts into `posty_qu_index`,\\nadvances the watermarks.\\n\\n**Writes only CHANGED rows, never the whole index.**\\nA blind appendOrUpdate over every row would\\noverwrite `posted_date` with a re-announcement's\\nnewer date — exactly what §7 step 4 forbids, since\\naging must run from the FIRST announcement.\\n\\n**The logic lives in `code/build-index.js`** and is\\ntested by `./scripts/test-nodes` (35 checks).\\nEdit there, re-run the tests, then paste back.\\nNever edit only the node.\\n\\n### If Write Index fails\\nWrite State runs on its own branch, so a failed row\\nwrite can leave the watermark advanced past\\nmessages that were never indexed. Recovery is\\ncheap: set `last_newpost_ts` / `last_releaseme_ts`\\nin `posty_state` back to the previous values and\\nre-run. Every write is idempotent — re-reading a\\nrelease is a no-op, proven in test-nodes.",
+          "height": 560,
+          "width": 480
+        },
+        "position": [
+          -560,
+          -260
+        ],
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1
+      },
+      {
+        "id": "posty-w1-cron",
+        "name": "Nightly 02:00",
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "triggerAtHour": 2,
+                "triggerAtMinute": 0
+              }
+            ]
+          }
+        },
+        "position": [
+          -40,
+          0
+        ],
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "posty-w1-readstate",
+        "name": "Read State",
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_state"
+          }
+        },
+        "position": [
+          180,
+          0
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "executeOnce": true,
+        "id": "posty-w1-readindex",
+        "name": "Read Index",
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          400,
+          0
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "executeOnce": true,
+        "id": "posty-w1-fetch-newpost",
+        "name": "Fetch Newpost",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "options": {
+            "pagination": {
+              "pagination": {
+                "completeExpression": "={{ !$response.body.has_more }}",
+                "limitPagesFetched": true,
+                "maxRequests": 60,
+                "paginationCompleteWhen": "other",
+                "paginationMode": "updateAParameterInEachRequest",
+                "parameters": {
+                  "parameters": [
+                    {
+                      "name": "cursor",
+                      "type": "qs",
+                      "value": "={{ $response.body.response_metadata ? $response.body.response_metadata.next_cursor : '' }}"
+                    }
+                  ]
+                },
+                "requestInterval": 1200
+              }
+            }
+          },
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "channel",
+                "value": "C1SJE7404"
+              },
+              {
+                "name": "limit",
+                "value": "100"
+              },
+              {
+                "name": "oldest",
+                "value": "={{ $('Read State').first().json.last_newpost_ts }}"
+              }
+            ]
+          },
+          "sendQuery": true,
+          "url": "https://slack.com/api/conversations.history"
+        },
+        "position": [
+          620,
+          0
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "executeOnce": true,
+        "id": "posty-w1-fetch-releaseme",
+        "name": "Fetch Releaseme",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "options": {
+            "pagination": {
+              "pagination": {
+                "completeExpression": "={{ !$response.body.has_more }}",
+                "limitPagesFetched": true,
+                "maxRequests": 60,
+                "paginationCompleteWhen": "other",
+                "paginationMode": "updateAParameterInEachRequest",
+                "parameters": {
+                  "parameters": [
+                    {
+                      "name": "cursor",
+                      "type": "qs",
+                      "value": "={{ $response.body.response_metadata ? $response.body.response_metadata.next_cursor : '' }}"
+                    }
+                  ]
+                },
+                "requestInterval": 1200
+              }
+            }
+          },
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "channel",
+                "value": "CC9EG3K8C"
+              },
+              {
+                "name": "limit",
+                "value": "100"
+              },
+              {
+                "name": "oldest",
+                "value": "={{ $('Read State').first().json.last_releaseme_ts }}"
+              }
+            ]
+          },
+          "sendQuery": true,
+          "url": "https://slack.com/api/conversations.history"
+        },
+        "position": [
+          840,
+          0
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "posty-w1-build",
+        "name": "Build Index",
+        "parameters": {
+          "jsCode": "// Posty — Workflow 1 decision node. parse.js and build-index.js pasted verbatim.\n// Tested by ./scripts/test-nodes and ./scripts/test-parser.\n\n// Posty — QU parsing and status classification.\n//\n// This file is the single source of truth for how a Slack message becomes an index row.\n// It is pasted verbatim into the Code nodes of Workflow 1 (index refresh) and Workflow 3\n// (digest). Keep it dependency-free and side-effect-free so `./scripts/test-parser` can\n// run it offline, and so the same code that is tested is the code that ships.\n//\n// Rules come from the build handoff §9. Do not tighten them without re-reading it:\n// every shape below was taken from a real post in #newpostprojects or #releaseme.\n\n\n\n// Handoff §9: case-insensitive, first match wins. {4,6} is deliberate headroom — real\n// numbers are 5 digits but QU-50052 exists and the range is not contiguous. Do not\n// narrow to {5}. The separator is not reliably a slash: space, dash, double space and\n// underscore all occur, hence the character class. `QU_13577` is real and appears in both\n// channels — before the underscore was added, that project was invisible to Posty\n// entirely, on the intake side and the release side.\n// Separators seen in real posts: dash, underscore, space, double space, none at all, and\n// \" - \" with spaces on both sides. `QU - 17295 ref 17037` is real and appears in BOTH\n// channels — before the surrounding whitespace was allowed, that project was invisible on\n// the intake side and the release side alike.\n//\n// Widening this was diffed across all 1,658 backfilled messages: 2 newly matched, 0\n// extractions changed. Re-run that diff before widening it further.\nconst QU_RE = /QU[\\s]*[-_]?[\\s]*(\\d{4,6})/i;\n\n// A synthetic key for a keyless project. Derived from the post's own ts, so it is unique,\n// stable for the life of the row, and obviously not a real QU number at a glance.\n//\n// It deliberately cannot join an intake post to a separate release post — those are two\n// different messages with no shared identifier, and guessing a link between them would be\n// exactly the heuristic §9 warns against. It does not need to: releases now happen by\n// reacting to the intake post, which resolves through the row's own source_ts.\n// Handoff §9: (CANCELLED) anywhere in a #releaseme post means CANCELLED, not RELEASED.\n// A naive diff scores it as released, which is wrong. Currently affects QU-17590.\nconst CANCELLED_RE = /\\(\\s*CANCELLED\\s*\\)/i;\n\n// Only these people announce projects. Set by Tara 2026-08-31 to keep channel chatter out\n// of the index — a message from anyone else is not a project post, whatever it contains.\n//\n// This is a policy list, not a heuristic: it is maintained by a human who knows who the\n// post engineers are, which is the only thing that reliably distinguishes an announcement\n// from a conversation.\n//\n// **Add new post engineers here on their first day.** Until someone is on this list their\n// posts are invisible to Posty — which is the intended behaviour, and also the way this\n// list silently goes wrong. `isPostEngineer` is checked in the Workflow 2 classifier and in\n// build-index.js, and a skipped message that DID carry a QU is logged with its code so the\n// omission is discoverable in the execution list rather than silent.\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'alec elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nfunction isPostEngineer(user) {\n  return Object.prototype.hasOwnProperty.call(POST_ENGINEERS, String(user || '').trim());\n}\n\n// Names are for grouping the digest. A row whose author is not on the list — a historical\n// row from before the allowlist, or a blank posted_by — groups under \"unassigned\" rather\n// than being hidden, so nothing falls out of a total.\nfunction engineerName(user) {\n  const u = String(user || '').trim();\n  return POST_ENGINEERS[u] || 'unassigned';\n}\n\nconst NEWPOST_CHANNEL = 'C1SJE7404';\nconst RELEASEME_CHANNEL = 'CC9EG3K8C';\n\n// Returns the QU digits as a string with no QU- prefix, or null when the message\n// carries no code at all. String, not number: these are identifiers, and leading\n// zeros would be lost the moment anything coerces them.\nfunction extractQu(text) {\n  if (typeof text !== 'string') return null;\n  const m = text.match(QU_RE);\n  return m ? m[1] : null;\n}\n\n// Slack's conversations.history escapes &, < and > in message text, so PC&V arrives as\n// PC&amp;V. Stored raw, the Sheet fills with &amp; and is unpleasant to read, and so is\n// any digest line built from it.\n//\n// Decode on the way IN, escape again on the way OUT (escapeForSlack, in resolve-release).\n// The bytes Posty posts are therefore unchanged from the verified-working behaviour, while\n// the stored copy is what a human would have typed.\n//\n// Order matters: &amp; must be decoded LAST, or \"&amp;lt;\" would turn into \"<\" instead of\n// the literal \"&lt;\" it represents.\nfunction decodeEntities(text) {\n  if (typeof text !== 'string') return text;\n  return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');\n}\n\n// Every QU a #releaseme post closes.\n//\n// Usually one. But bulk release posts are common in the 2024 archive — several complete\n// project lines in a single message — and \"first match wins\" (§9) then closes the first\n// and leaves the rest open forever. That is 24 projects wrongly in the chase list.\n//\n// So on the RELEASE side, take every code. The one thing that must not be swept up is a\n// BACK-REFERENCE: \"(Addcost from QU-10317)\" mentions an older project without releasing\n// it, and closing it would tell Accounting to bill work that never shipped.\n//\n// Intake keeps first-match-wins: a post announcing several projects is a different\n// question, and getting it wrong there invents projects rather than closing them.\nconst BACKREF_RE = /\\b(?:from|ref|per|vs|supersedes|replaces|addcost\\s+(?:from|of))\\s*:?\\s*$/i;\n\nfunction extractReleasedQus(text) {\n  if (typeof text !== 'string') return [];\n  const re = new RegExp(QU_RE.source, 'gi');\n  const found = [];\n  let m;\n  while ((m = re.exec(text)) !== null) {\n    const before = text.slice(Math.max(0, m.index - 40), m.index);\n    if (found.length && BACKREF_RE.test(before)) continue;\n    if (found.indexOf(m[1]) === -1) found.push(m[1]);\n  }\n  return found;\n}\n\n// A QU- or QU_ prefix with no digits after it. This is the agreed posting convention:\n// when a project has no code yet — pro bono, awaiting assignment, placeholder — the poster\n// still writes \"QU-\" so the post is recognisably a project.\n//\n// A rule people are TOLD beats a rule inferred from punctuation. This replaced an earlier\n// attempt that guessed from slash counts.\nconst QU_MARKER_RE = /QU[\\s]*[-_]/i;\n\nfunction hasQuMarker(text) {\n  return typeof text === 'string' && QU_MARKER_RE.test(text);\n}\n\n// Synthetic key for a marked-but-uncoded project, derived from the post's own ts so it is\n// unique and stable. Returns null for an implausible ts: a shared key would silently\n// collapse every uncoded project onto one row.\nfunction syntheticKey(ts) {\n  const t = String(ts == null ? '' : ts).trim();\n  if (!/^\\d{6,}(\\.\\d+)?$/.test(t)) return null;\n  return 'NOQU-' + t;\n}\n\nfunction isCancelled(text) {\n  return typeof text === 'string' && CANCELLED_RE.test(text);\n}\n\n// Slack ts -> ISO date in Manila local time.\n//\n// The timezone is a judgment call the handoff does not make. Hit Productions is in\n// Manila and age_days is counted in working days people recognise, so a post made at\n// 07:00 Manila must date to that morning and not to the previous day in UTC. Asia/Manila\n// is UTC+8 with no DST, so the fixed offset is exact rather than an approximation.\nconst MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;\n\nfunction tsToDate(ts) {\n  if (ts === null || ts === undefined) return null;\n  const seconds = Number(String(ts).split('.')[0]);\n  if (!Number.isFinite(seconds)) return null;\n  return new Date(seconds * 1000 + MANILA_OFFSET_MS).toISOString().slice(0, 10);\n}\n\n// Whole-day difference between two ISO dates. Both are already Manila-local calendar\n// dates, so this is plain date arithmetic — no timezone maths, and no drift from the\n// clock time of day the digest happens to run at.\nfunction ageDays(postedDate, asOfDate) {\n  if (!postedDate || !asOfDate) return null;\n  const a = Date.parse(postedDate + 'T00:00:00Z');\n  const b = Date.parse(asOfDate + 'T00:00:00Z');\n  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;\n  return Math.round((b - a) / 86400000);\n}\n\n// Handoff §7 Workflow 3: >= 90 escalated, 45..89 flagged, < 45 omitted entirely.\n// The boundaries are inclusive at 45 and at 90 — a project at exactly 45 days appears.\nfunction bucketOf(age) {\n  if (!Number.isFinite(age)) return null;\n  if (age >= 90) return 'ESCALATED';\n  if (age >= 45) return 'FLAGGED';\n  return null;\n}\n\n// Turn one Slack message into an index row fragment. The caller supplies the channel so\n// the CANCELLED rule stays scoped to #releaseme, where the handoff puts it.\nfunction parseMessage(msg) {\n  const text = decodeEntities((msg && msg.text) || '');\n  const ts = msg && msg.ts;\n  const channel = (msg && msg.channel) || '';\n  let qu = extractQu(text);\n  let synthetic = false;\n\n  // Marked as a project but carrying no code -> track it under a synthetic key. It ages,\n  // buckets and can be rocketed like anything else; when the real code arrives the poster\n  // reposts with it.\n  if (!qu && hasQuMarker(text)) {\n    qu = syntheticKey(ts);\n    synthetic = qu !== null;\n  }\n\n  // No QU digits and no QU- marker -> UNTRACKED. Never counted as open or as released.\n  // Deliberately simple: a project is tracked when it carries a QU code, and not\n  // otherwise. Codeless posts — placeholder codes, \"QU-Not Available\", foreign numbering,\n  // \"(NO Q-CODE)\", pro bono — were briefly tracked under synthetic keys on 2026-08-31 and\n  // that was reverted the same day in favour of a posting convention: post engineers write\n  // a QU code, always.\n  //\n  // Nothing is lost by this. UNTRACKED rows still appear in the digest's \"needs manual\n  // check\" section, so codeless work stays visible to a human — it simply is not counted,\n  // aged or releasable, none of which can be done honestly without an identifier.\n  if (!qu) {\n    return {\n      qu_number: null,\n      synthetic: false,\n      source_channel: channel,\n      source_ts: String(ts),\n      source_text: text,\n      posted_date: tsToDate(ts),\n      status: 'UNTRACKED',\n    };\n  }\n\n  const cancelled = channel === RELEASEME_CHANNEL && isCancelled(text);\n\n  return {\n    qu_number: qu,\n    synthetic,\n    source_channel: channel,\n    source_ts: String(ts),\n    source_text: text,\n    posted_date: tsToDate(ts),\n    status: cancelled ? 'CANCELLED' : (channel === RELEASEME_CHANNEL ? 'RELEASED' : 'OPEN'),\n  };\n}\n\n// Posty — Workflow 1's decision node, as a testable module.\n//\n// Pasted into the `Build Index` Code node. Pure: takes what the workflow read, returns what\n// the workflow should write. No I/O, so `./scripts/test-nodes` can run it offline against\n// real fixtures. Handoff §7 Workflow 1.\n//\n// The important design choice: this returns ONLY changed rows, never the whole index.\n// A blind appendOrUpdate over every row would overwrite `posted_date` with the newer\n// duplicate's date, which is precisely what §7 step 4 forbids — aging has to be measured\n// from when a project was FIRST announced, not the last time someone re-posted it.\n\n\n\n\n\n// Joins, leaves, pins and the rest are not project posts. They are skipped for PARSING\n// but still counted for the watermark below — see the note on maxTs.\nfunction isNoise(m) {\n  return Boolean(m.subtype) && m.subtype !== 'thread_broadcast';\n}\n\n// Messages from anyone who is not a post engineer are not project announcements. Applied\n// to the INTAKE channel only: #releaseme posts come from Posty itself and from whoever\n// posted a release by hand before Posty existed, and filtering those would break the\n// historical diff.\nfunction fromStranger(m, parse) {\n  return typeof parse.isPostEngineer === 'function' && !parse.isPostEngineer(m.user);\n}\n\nfunction buildIndex(input) {\n  const {\n    existingRows = [],      // current posty_qu_index contents\n    newpostMessages = [],   // messages newer than last_newpost_ts\n    releasemeMessages = [], // messages newer than last_releaseme_ts\n    parse = P,\n    nowIso,\n  } = input;\n\n  const byQu = new Map();\n  for (const r of existingRows) {\n    if (r && r.qu_number) byQu.set(String(r.qu_number), r);\n  }\n\n  const changed = new Map();   // qu_number -> row to write\n  const untracked = [];\n  const skipped = [];          // QU-bearing posts from people not on the list\n\n  // --- intake -------------------------------------------------------------\n  // Oldest first so that \"keep the oldest posted_date\" needs no comparison: the first\n  // time we see a QU is the earliest announcement, and we simply never overwrite it.\n  const intake = [...newpostMessages].sort((a, b) => Number(a.ts) - Number(b.ts));\n\n  for (const m of intake) {\n    if (isNoise(m)) continue;\n    if (fromStranger(m, parse)) {\n      // Logged rather than dropped in silence: a QU here means a real project that will\n      // not be tracked because its author is not on the list.\n      const stray = parse.extractQu(m.text);\n      if (stray) skipped.push({ qu_number: stray, user: m.user || '', ts: String(m.ts) });\n      continue;\n    }\n    const row = parse.parseMessage({ text: m.text, ts: m.ts, channel: parse.NEWPOST_CHANNEL });\n\n    if (!row.qu_number) {\n      // §9 rule 2. UNTRACKED rows have no key, so they can only ever be appended.\n      untracked.push({ ...row, released: 'FALSE', release_ts: '', release_date: '',\n                       age_days: '', last_seen: nowIso });\n      continue;\n    }\n\n    // Already indexed — a re-announcement. §7 step 4 / §9 rule 4: keep the older record\n    // untouched. Touching last_seen alone would rewrite nothing meaningful and would cost\n    // a write per re-post, so we skip entirely.\n    if (byQu.has(row.qu_number) || changed.has(row.qu_number)) continue;\n\n    changed.set(row.qu_number, {\n      qu_number: row.qu_number,\n      source_channel: row.source_channel,\n      source_ts: row.source_ts,\n      source_text: row.source_text,\n      posted_date: row.posted_date,\n      released: 'FALSE',\n      release_ts: '',\n      release_date: '',\n      status: 'OPEN',\n      age_days: '',              // §6: derived at digest time, never stored stale\n      last_seen: nowIso,\n    });\n  }\n\n  // --- releases -----------------------------------------------------------\n  const releases = [...releasemeMessages].sort((a, b) => Number(a.ts) - Number(b.ts));\n  const seenThisRun = new Set();\n\n  for (const m of releases) {\n    if (isNoise(m)) continue;\n    const rel = parse.parseMessage({ text: m.text, ts: m.ts, channel: parse.RELEASEME_CHANNEL });\n\n    // A release post can close several projects at once — bulk posts list complete project\n    // lines in one message. Take every code it names, minus back-references.\n    const codes = typeof parse.extractReleasedQus === 'function'\n      ? parse.extractReleasedQus(m.text) : (rel.qu_number ? [rel.qu_number] : []);\n\n    for (const code of codes) {\n    if (seenThisRun.has(code)) continue;             // §9 rule 3: first occurrence wins\n    seenThisRun.add(code);\n\n    const existing = changed.get(code) || byQu.get(code);\n\n    // Released, but the intake post predates the index. Nothing to join to — do not invent\n    // a row, because a row with no intake has no posted_date and would corrupt the aging.\n    if (!existing) continue;\n\n    // Already closed. Do not reopen, do not rewrite. This is what makes the nightly run\n    // idempotent — re-reading the same release must be a no-op, not a churn of writes.\n    if (existing.status === 'RELEASED' || existing.status === 'CANCELLED') continue;\n\n    if (rel.status === 'CANCELLED') {\n      // §9 rule 1. Cancelled is NOT released — a naive diff scores it as shipped, which\n      // would tell Accounting to bill something that never went out.\n      changed.set(code, { ...existing, status: 'CANCELLED', released: 'FALSE',\n        release_ts: rel.source_ts, release_date: rel.posted_date, last_seen: nowIso });\n    } else {\n      changed.set(code, { ...existing, status: 'RELEASED', released: 'TRUE',\n        release_ts: rel.source_ts, release_date: rel.posted_date, last_seen: nowIso });\n    }\n    }\n  }\n\n  // --- watermarks ---------------------------------------------------------\n  // Highest ts of every message FETCHED, including the joins and leaves that isNoise()\n  // skipped. The watermark means \"read up to here\", not \"kept up to here\". Computing it\n  // from kept messages only would stall it behind a trailing join event and re-fetch that\n  // tail on every run, forever. Falls back to the previous value when a channel had no new\n  // messages — advancing past messages never read would skip them permanently.\n  const maxTs = (msgs, fallback) => msgs.reduce(\n    (hi, m) => (Number(m.ts) > Number(hi) ? String(m.ts) : hi), String(fallback || '0'));\n\n  return {\n    rows: [...changed.values(), ...untracked],\n    state: {\n      last_index_run: nowIso,\n      last_newpost_ts: maxTs(newpostMessages, input.lastNewpostTs),\n      last_releaseme_ts: maxTs(releasemeMessages, input.lastReleasemeTs),\n    },\n    skipped,\n    summary: {\n      skipped_strangers: skipped.length,\n      new_projects: [...changed.values()].filter((r) => r.status === 'OPEN').length,\n      released: [...changed.values()].filter((r) => r.status === 'RELEASED').length,\n      cancelled: [...changed.values()].filter((r) => r.status === 'CANCELLED').length,\n      untracked: untracked.length,\n    },\n  };\n}\n\n// --- wiring -----------------------------------------------------------------\nconst P = { NEWPOST_CHANNEL, RELEASEME_CHANNEL, parseMessage, extractQu,\n            tsToDate, ageDays, bucketOf, isPostEngineer,\n            extractReleasedQus };\n\n// Slack returns one item per page. Flatten to messages and keep EVERYTHING, subtypes\n// included — buildIndex skips joins and leaves when parsing but still needs them to\n// advance the watermark past a trailing join. Filtering here would stall it.\nfunction flatten(items) {\n  const out = [];\n  for (const it of items) {\n    for (const m of (it.json.messages || [])) {\n      out.push({ ts: m.ts, text: m.text || '', subtype: m.subtype, user: m.user });\n    }\n  }\n  return out;\n}\n\nconst state = $('Read State').first().json;\nconst existingRows = $('Read Index').all().map((i) => i.json);\n\nconst result = buildIndex({\n  existingRows,\n  newpostMessages: flatten($('Fetch Newpost').all()),\n  releasemeMessages: flatten($('Fetch Releaseme').all()),\n  parse: P,\n  nowIso: new Date().toISOString(),\n  lastNewpostTs: state.last_newpost_ts,\n  lastReleasemeTs: state.last_releaseme_ts,\n});\n\nreturn [{ json: result }];"
+        },
+        "position": [
+          1060,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "posty-w1-emitrows",
+        "name": "Emit Rows",
+        "parameters": {
+          "jsCode": "// Fan the changed rows out, one item per row, for appendOrUpdate.\n// Returns zero items on a quiet night — Write Index is then skipped, which is correct.\nconst r = $input.first().json;\nreturn (r.rows || []).map((row) => ({ json: row }));"
+        },
+        "position": [
+          1280,
+          -120
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "posty-w1-writeindex",
+        "name": "Write Index",
+        "parameters": {
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "matchingColumns": [
+              "qu_number"
+            ],
+            "schema": [],
+            "value": {}
+          },
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "operation": "appendOrUpdate",
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          1500,
+          -120
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "posty-w1-emitstate",
+        "name": "Emit State",
+        "parameters": {
+          "jsCode": "// Always emits exactly one item, so the watermark advances even on a night with no new\n// messages. row_number 2 targets the single data row of posty_state.\nconst r = $input.first().json;\nreturn [{ json: { row_number: 2, ...r.state } }];"
+        },
+        "position": [
+          1280,
+          120
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "posty-w1-writestate",
+        "name": "Write State",
+        "parameters": {
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "matchingColumns": [
+              "row_number"
+            ],
+            "schema": [],
+            "value": {}
+          },
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "operation": "update",
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_state"
+          }
+        },
+        "position": [
+          1500,
+          120
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      }
+    ],
+    "updatedAt": "2026-08-31T12:26:02.759Z",
+    "versionId": "6e22fdd9-546d-4b04-86c9-bd873fac685a",
+    "workflowId": "DItjvgnQPf5aEsIq",
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-08-31T12:26:02.905Z",
+        "event": "activated",
+        "id": 545,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "6e22fdd9-546d-4b04-86c9-bd873fac685a",
+        "workflowId": "DItjvgnQPf5aEsIq"
+      },
+      {
+        "createdAt": "2026-09-03T09:24:13.421Z",
+        "event": "activated",
+        "id": 615,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "6e22fdd9-546d-4b04-86c9-bd873fac685a",
+        "workflowId": "DItjvgnQPf5aEsIq"
+      },
+      {
+        "createdAt": "2026-08-31T12:26:02.862Z",
+        "event": "deactivated",
+        "id": 544,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "6e22fdd9-546d-4b04-86c9-bd873fac685a",
+        "workflowId": "DItjvgnQPf5aEsIq"
+      },
+      {
+        "createdAt": "2026-09-03T09:24:11.820Z",
+        "event": "deactivated",
+        "id": 614,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "6e22fdd9-546d-4b04-86c9-bd873fac685a",
+        "workflowId": "DItjvgnQPf5aEsIq"
+      }
+    ]
+  },
+  "activeVersionId": "6e22fdd9-546d-4b04-86c9-bd873fac685a",
+  "connections": {
+    "Build Index": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Emit Rows",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Emit State",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Emit Rows": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write Index",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Emit State": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write State",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Fetch Newpost": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Fetch Releaseme",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Fetch Releaseme": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build Index",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Nightly 02:00": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read State",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Index": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Fetch Newpost",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read State": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Index",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-08-31T08:56:35.441Z",
+  "description": null,
+  "id": "DItjvgnQPf5aEsIq",
+  "isArchived": false,
+  "meta": null,
+  "name": "Posty — Index Refresh",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "posty-w1-sticky",
+      "name": "Sticky — read me",
+      "parameters": {
+        "content": "## Workflow 1 — Index Refresh\\n\\nNightly 02:00 Manila. Handoff §7 Workflow 1.\\n\\nReads both channels for messages newer than the\\nstored watermarks, upserts into `posty_qu_index`,\\nadvances the watermarks.\\n\\n**Writes only CHANGED rows, never the whole index.**\\nA blind appendOrUpdate over every row would\\noverwrite `posted_date` with a re-announcement's\\nnewer date — exactly what §7 step 4 forbids, since\\naging must run from the FIRST announcement.\\n\\n**The logic lives in `code/build-index.js`** and is\\ntested by `./scripts/test-nodes` (35 checks).\\nEdit there, re-run the tests, then paste back.\\nNever edit only the node.\\n\\n### If Write Index fails\\nWrite State runs on its own branch, so a failed row\\nwrite can leave the watermark advanced past\\nmessages that were never indexed. Recovery is\\ncheap: set `last_newpost_ts` / `last_releaseme_ts`\\nin `posty_state` back to the previous values and\\nre-run. Every write is idempotent — re-reading a\\nrelease is a no-op, proven in test-nodes.",
+        "height": 560,
+        "width": 480
+      },
+      "position": [
+        -560,
+        -260
+      ],
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1
+    },
+    {
+      "id": "posty-w1-cron",
+      "name": "Nightly 02:00",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 2,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "position": [
+        -40,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "posty-w1-readstate",
+      "name": "Read State",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_state"
+        }
+      },
+      "position": [
+        180,
+        0
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "executeOnce": true,
+      "id": "posty-w1-readindex",
+      "name": "Read Index",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        400,
+        0
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "executeOnce": true,
+      "id": "posty-w1-fetch-newpost",
+      "name": "Fetch Newpost",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "options": {
+          "pagination": {
+            "pagination": {
+              "completeExpression": "={{ !$response.body.has_more }}",
+              "limitPagesFetched": true,
+              "maxRequests": 60,
+              "paginationCompleteWhen": "other",
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "cursor",
+                    "type": "qs",
+                    "value": "={{ $response.body.response_metadata ? $response.body.response_metadata.next_cursor : '' }}"
+                  }
+                ]
+              },
+              "requestInterval": 1200
+            }
+          }
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "C1SJE7404"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "oldest",
+              "value": "={{ $('Read State').first().json.last_newpost_ts }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://slack.com/api/conversations.history"
+      },
+      "position": [
+        620,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "executeOnce": true,
+      "id": "posty-w1-fetch-releaseme",
+      "name": "Fetch Releaseme",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "options": {
+          "pagination": {
+            "pagination": {
+              "completeExpression": "={{ !$response.body.has_more }}",
+              "limitPagesFetched": true,
+              "maxRequests": 60,
+              "paginationCompleteWhen": "other",
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "cursor",
+                    "type": "qs",
+                    "value": "={{ $response.body.response_metadata ? $response.body.response_metadata.next_cursor : '' }}"
+                  }
+                ]
+              },
+              "requestInterval": 1200
+            }
+          }
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "CC9EG3K8C"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "oldest",
+              "value": "={{ $('Read State').first().json.last_releaseme_ts }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://slack.com/api/conversations.history"
+      },
+      "position": [
+        840,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "posty-w1-build",
+      "name": "Build Index",
+      "parameters": {
+        "jsCode": "// Posty — Workflow 1 decision node. parse.js and build-index.js pasted verbatim.\n// Tested by ./scripts/test-nodes and ./scripts/test-parser.\n\n// Posty — QU parsing and status classification.\n//\n// This file is the single source of truth for how a Slack message becomes an index row.\n// It is pasted verbatim into the Code nodes of Workflow 1 (index refresh) and Workflow 3\n// (digest). Keep it dependency-free and side-effect-free so `./scripts/test-parser` can\n// run it offline, and so the same code that is tested is the code that ships.\n//\n// Rules come from the build handoff §9. Do not tighten them without re-reading it:\n// every shape below was taken from a real post in #newpostprojects or #releaseme.\n\n\n\n// Handoff §9: case-insensitive, first match wins. {4,6} is deliberate headroom — real\n// numbers are 5 digits but QU-50052 exists and the range is not contiguous. Do not\n// narrow to {5}. The separator is not reliably a slash: space, dash, double space and\n// underscore all occur, hence the character class. `QU_13577` is real and appears in both\n// channels — before the underscore was added, that project was invisible to Posty\n// entirely, on the intake side and the release side.\n// Separators seen in real posts: dash, underscore, space, double space, none at all, and\n// \" - \" with spaces on both sides. `QU - 17295 ref 17037` is real and appears in BOTH\n// channels — before the surrounding whitespace was allowed, that project was invisible on\n// the intake side and the release side alike.\n//\n// Widening this was diffed across all 1,658 backfilled messages: 2 newly matched, 0\n// extractions changed. Re-run that diff before widening it further.\nconst QU_RE = /QU[\\s]*[-_]?[\\s]*(\\d{4,6})/i;\n\n// A synthetic key for a keyless project. Derived from the post's own ts, so it is unique,\n// stable for the life of the row, and obviously not a real QU number at a glance.\n//\n// It deliberately cannot join an intake post to a separate release post — those are two\n// different messages with no shared identifier, and guessing a link between them would be\n// exactly the heuristic §9 warns against. It does not need to: releases now happen by\n// reacting to the intake post, which resolves through the row's own source_ts.\n// Handoff §9: (CANCELLED) anywhere in a #releaseme post means CANCELLED, not RELEASED.\n// A naive diff scores it as released, which is wrong. Currently affects QU-17590.\nconst CANCELLED_RE = /\\(\\s*CANCELLED\\s*\\)/i;\n\n// Only these people announce projects. Set by Tara 2026-08-31 to keep channel chatter out\n// of the index — a message from anyone else is not a project post, whatever it contains.\n//\n// This is a policy list, not a heuristic: it is maintained by a human who knows who the\n// post engineers are, which is the only thing that reliably distinguishes an announcement\n// from a conversation.\n//\n// **Add new post engineers here on their first day.** Until someone is on this list their\n// posts are invisible to Posty — which is the intended behaviour, and also the way this\n// list silently goes wrong. `isPostEngineer` is checked in the Workflow 2 classifier and in\n// build-index.js, and a skipped message that DID carry a QU is logged with its code so the\n// omission is discoverable in the execution list rather than silent.\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'alec elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nfunction isPostEngineer(user) {\n  return Object.prototype.hasOwnProperty.call(POST_ENGINEERS, String(user || '').trim());\n}\n\n// Names are for grouping the digest. A row whose author is not on the list — a historical\n// row from before the allowlist, or a blank posted_by — groups under \"unassigned\" rather\n// than being hidden, so nothing falls out of a total.\nfunction engineerName(user) {\n  const u = String(user || '').trim();\n  return POST_ENGINEERS[u] || 'unassigned';\n}\n\nconst NEWPOST_CHANNEL = 'C1SJE7404';\nconst RELEASEME_CHANNEL = 'CC9EG3K8C';\n\n// Returns the QU digits as a string with no QU- prefix, or null when the message\n// carries no code at all. String, not number: these are identifiers, and leading\n// zeros would be lost the moment anything coerces them.\nfunction extractQu(text) {\n  if (typeof text !== 'string') return null;\n  const m = text.match(QU_RE);\n  return m ? m[1] : null;\n}\n\n// Slack's conversations.history escapes &, < and > in message text, so PC&V arrives as\n// PC&amp;V. Stored raw, the Sheet fills with &amp; and is unpleasant to read, and so is\n// any digest line built from it.\n//\n// Decode on the way IN, escape again on the way OUT (escapeForSlack, in resolve-release).\n// The bytes Posty posts are therefore unchanged from the verified-working behaviour, while\n// the stored copy is what a human would have typed.\n//\n// Order matters: &amp; must be decoded LAST, or \"&amp;lt;\" would turn into \"<\" instead of\n// the literal \"&lt;\" it represents.\nfunction decodeEntities(text) {\n  if (typeof text !== 'string') return text;\n  return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');\n}\n\n// Every QU a #releaseme post closes.\n//\n// Usually one. But bulk release posts are common in the 2024 archive — several complete\n// project lines in a single message — and \"first match wins\" (§9) then closes the first\n// and leaves the rest open forever. That is 24 projects wrongly in the chase list.\n//\n// So on the RELEASE side, take every code. The one thing that must not be swept up is a\n// BACK-REFERENCE: \"(Addcost from QU-10317)\" mentions an older project without releasing\n// it, and closing it would tell Accounting to bill work that never shipped.\n//\n// Intake keeps first-match-wins: a post announcing several projects is a different\n// question, and getting it wrong there invents projects rather than closing them.\nconst BACKREF_RE = /\\b(?:from|ref|per|vs|supersedes|replaces|addcost\\s+(?:from|of))\\s*:?\\s*$/i;\n\nfunction extractReleasedQus(text) {\n  if (typeof text !== 'string') return [];\n  const re = new RegExp(QU_RE.source, 'gi');\n  const found = [];\n  let m;\n  while ((m = re.exec(text)) !== null) {\n    const before = text.slice(Math.max(0, m.index - 40), m.index);\n    if (found.length && BACKREF_RE.test(before)) continue;\n    if (found.indexOf(m[1]) === -1) found.push(m[1]);\n  }\n  return found;\n}\n\n// A QU- or QU_ prefix with no digits after it. This is the agreed posting convention:\n// when a project has no code yet — pro bono, awaiting assignment, placeholder — the poster\n// still writes \"QU-\" so the post is recognisably a project.\n//\n// A rule people are TOLD beats a rule inferred from punctuation. This replaced an earlier\n// attempt that guessed from slash counts.\nconst QU_MARKER_RE = /QU[\\s]*[-_]/i;\n\nfunction hasQuMarker(text) {\n  return typeof text === 'string' && QU_MARKER_RE.test(text);\n}\n\n// Synthetic key for a marked-but-uncoded project, derived from the post's own ts so it is\n// unique and stable. Returns null for an implausible ts: a shared key would silently\n// collapse every uncoded project onto one row.\nfunction syntheticKey(ts) {\n  const t = String(ts == null ? '' : ts).trim();\n  if (!/^\\d{6,}(\\.\\d+)?$/.test(t)) return null;\n  return 'NOQU-' + t;\n}\n\nfunction isCancelled(text) {\n  return typeof text === 'string' && CANCELLED_RE.test(text);\n}\n\n// Slack ts -> ISO date in Manila local time.\n//\n// The timezone is a judgment call the handoff does not make. Hit Productions is in\n// Manila and age_days is counted in working days people recognise, so a post made at\n// 07:00 Manila must date to that morning and not to the previous day in UTC. Asia/Manila\n// is UTC+8 with no DST, so the fixed offset is exact rather than an approximation.\nconst MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;\n\nfunction tsToDate(ts) {\n  if (ts === null || ts === undefined) return null;\n  const seconds = Number(String(ts).split('.')[0]);\n  if (!Number.isFinite(seconds)) return null;\n  return new Date(seconds * 1000 + MANILA_OFFSET_MS).toISOString().slice(0, 10);\n}\n\n// Whole-day difference between two ISO dates. Both are already Manila-local calendar\n// dates, so this is plain date arithmetic — no timezone maths, and no drift from the\n// clock time of day the digest happens to run at.\nfunction ageDays(postedDate, asOfDate) {\n  if (!postedDate || !asOfDate) return null;\n  const a = Date.parse(postedDate + 'T00:00:00Z');\n  const b = Date.parse(asOfDate + 'T00:00:00Z');\n  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;\n  return Math.round((b - a) / 86400000);\n}\n\n// Handoff §7 Workflow 3: >= 90 escalated, 45..89 flagged, < 45 omitted entirely.\n// The boundaries are inclusive at 45 and at 90 — a project at exactly 45 days appears.\nfunction bucketOf(age) {\n  if (!Number.isFinite(age)) return null;\n  if (age >= 90) return 'ESCALATED';\n  if (age >= 45) return 'FLAGGED';\n  return null;\n}\n\n// Turn one Slack message into an index row fragment. The caller supplies the channel so\n// the CANCELLED rule stays scoped to #releaseme, where the handoff puts it.\nfunction parseMessage(msg) {\n  const text = decodeEntities((msg && msg.text) || '');\n  const ts = msg && msg.ts;\n  const channel = (msg && msg.channel) || '';\n  let qu = extractQu(text);\n  let synthetic = false;\n\n  // Marked as a project but carrying no code -> track it under a synthetic key. It ages,\n  // buckets and can be rocketed like anything else; when the real code arrives the poster\n  // reposts with it.\n  if (!qu && hasQuMarker(text)) {\n    qu = syntheticKey(ts);\n    synthetic = qu !== null;\n  }\n\n  // No QU digits and no QU- marker -> UNTRACKED. Never counted as open or as released.\n  // Deliberately simple: a project is tracked when it carries a QU code, and not\n  // otherwise. Codeless posts — placeholder codes, \"QU-Not Available\", foreign numbering,\n  // \"(NO Q-CODE)\", pro bono — were briefly tracked under synthetic keys on 2026-08-31 and\n  // that was reverted the same day in favour of a posting convention: post engineers write\n  // a QU code, always.\n  //\n  // Nothing is lost by this. UNTRACKED rows still appear in the digest's \"needs manual\n  // check\" section, so codeless work stays visible to a human — it simply is not counted,\n  // aged or releasable, none of which can be done honestly without an identifier.\n  if (!qu) {\n    return {\n      qu_number: null,\n      synthetic: false,\n      source_channel: channel,\n      source_ts: String(ts),\n      source_text: text,\n      posted_date: tsToDate(ts),\n      status: 'UNTRACKED',\n    };\n  }\n\n  const cancelled = channel === RELEASEME_CHANNEL && isCancelled(text);\n\n  return {\n    qu_number: qu,\n    synthetic,\n    source_channel: channel,\n    source_ts: String(ts),\n    source_text: text,\n    posted_date: tsToDate(ts),\n    status: cancelled ? 'CANCELLED' : (channel === RELEASEME_CHANNEL ? 'RELEASED' : 'OPEN'),\n  };\n}\n\n// Posty — Workflow 1's decision node, as a testable module.\n//\n// Pasted into the `Build Index` Code node. Pure: takes what the workflow read, returns what\n// the workflow should write. No I/O, so `./scripts/test-nodes` can run it offline against\n// real fixtures. Handoff §7 Workflow 1.\n//\n// The important design choice: this returns ONLY changed rows, never the whole index.\n// A blind appendOrUpdate over every row would overwrite `posted_date` with the newer\n// duplicate's date, which is precisely what §7 step 4 forbids — aging has to be measured\n// from when a project was FIRST announced, not the last time someone re-posted it.\n\n\n\n\n\n// Joins, leaves, pins and the rest are not project posts. They are skipped for PARSING\n// but still counted for the watermark below — see the note on maxTs.\nfunction isNoise(m) {\n  return Boolean(m.subtype) && m.subtype !== 'thread_broadcast';\n}\n\n// Messages from anyone who is not a post engineer are not project announcements. Applied\n// to the INTAKE channel only: #releaseme posts come from Posty itself and from whoever\n// posted a release by hand before Posty existed, and filtering those would break the\n// historical diff.\nfunction fromStranger(m, parse) {\n  return typeof parse.isPostEngineer === 'function' && !parse.isPostEngineer(m.user);\n}\n\nfunction buildIndex(input) {\n  const {\n    existingRows = [],      // current posty_qu_index contents\n    newpostMessages = [],   // messages newer than last_newpost_ts\n    releasemeMessages = [], // messages newer than last_releaseme_ts\n    parse = P,\n    nowIso,\n  } = input;\n\n  const byQu = new Map();\n  for (const r of existingRows) {\n    if (r && r.qu_number) byQu.set(String(r.qu_number), r);\n  }\n\n  const changed = new Map();   // qu_number -> row to write\n  const untracked = [];\n  const skipped = [];          // QU-bearing posts from people not on the list\n\n  // --- intake -------------------------------------------------------------\n  // Oldest first so that \"keep the oldest posted_date\" needs no comparison: the first\n  // time we see a QU is the earliest announcement, and we simply never overwrite it.\n  const intake = [...newpostMessages].sort((a, b) => Number(a.ts) - Number(b.ts));\n\n  for (const m of intake) {\n    if (isNoise(m)) continue;\n    if (fromStranger(m, parse)) {\n      // Logged rather than dropped in silence: a QU here means a real project that will\n      // not be tracked because its author is not on the list.\n      const stray = parse.extractQu(m.text);\n      if (stray) skipped.push({ qu_number: stray, user: m.user || '', ts: String(m.ts) });\n      continue;\n    }\n    const row = parse.parseMessage({ text: m.text, ts: m.ts, channel: parse.NEWPOST_CHANNEL });\n\n    if (!row.qu_number) {\n      // §9 rule 2. UNTRACKED rows have no key, so they can only ever be appended.\n      untracked.push({ ...row, released: 'FALSE', release_ts: '', release_date: '',\n                       age_days: '', last_seen: nowIso });\n      continue;\n    }\n\n    // Already indexed — a re-announcement. §7 step 4 / §9 rule 4: keep the older record\n    // untouched. Touching last_seen alone would rewrite nothing meaningful and would cost\n    // a write per re-post, so we skip entirely.\n    if (byQu.has(row.qu_number) || changed.has(row.qu_number)) continue;\n\n    changed.set(row.qu_number, {\n      qu_number: row.qu_number,\n      source_channel: row.source_channel,\n      source_ts: row.source_ts,\n      source_text: row.source_text,\n      posted_date: row.posted_date,\n      released: 'FALSE',\n      release_ts: '',\n      release_date: '',\n      status: 'OPEN',\n      age_days: '',              // §6: derived at digest time, never stored stale\n      last_seen: nowIso,\n    });\n  }\n\n  // --- releases -----------------------------------------------------------\n  const releases = [...releasemeMessages].sort((a, b) => Number(a.ts) - Number(b.ts));\n  const seenThisRun = new Set();\n\n  for (const m of releases) {\n    if (isNoise(m)) continue;\n    const rel = parse.parseMessage({ text: m.text, ts: m.ts, channel: parse.RELEASEME_CHANNEL });\n\n    // A release post can close several projects at once — bulk posts list complete project\n    // lines in one message. Take every code it names, minus back-references.\n    const codes = typeof parse.extractReleasedQus === 'function'\n      ? parse.extractReleasedQus(m.text) : (rel.qu_number ? [rel.qu_number] : []);\n\n    for (const code of codes) {\n    if (seenThisRun.has(code)) continue;             // §9 rule 3: first occurrence wins\n    seenThisRun.add(code);\n\n    const existing = changed.get(code) || byQu.get(code);\n\n    // Released, but the intake post predates the index. Nothing to join to — do not invent\n    // a row, because a row with no intake has no posted_date and would corrupt the aging.\n    if (!existing) continue;\n\n    // Already closed. Do not reopen, do not rewrite. This is what makes the nightly run\n    // idempotent — re-reading the same release must be a no-op, not a churn of writes.\n    if (existing.status === 'RELEASED' || existing.status === 'CANCELLED') continue;\n\n    if (rel.status === 'CANCELLED') {\n      // §9 rule 1. Cancelled is NOT released — a naive diff scores it as shipped, which\n      // would tell Accounting to bill something that never went out.\n      changed.set(code, { ...existing, status: 'CANCELLED', released: 'FALSE',\n        release_ts: rel.source_ts, release_date: rel.posted_date, last_seen: nowIso });\n    } else {\n      changed.set(code, { ...existing, status: 'RELEASED', released: 'TRUE',\n        release_ts: rel.source_ts, release_date: rel.posted_date, last_seen: nowIso });\n    }\n    }\n  }\n\n  // --- watermarks ---------------------------------------------------------\n  // Highest ts of every message FETCHED, including the joins and leaves that isNoise()\n  // skipped. The watermark means \"read up to here\", not \"kept up to here\". Computing it\n  // from kept messages only would stall it behind a trailing join event and re-fetch that\n  // tail on every run, forever. Falls back to the previous value when a channel had no new\n  // messages — advancing past messages never read would skip them permanently.\n  const maxTs = (msgs, fallback) => msgs.reduce(\n    (hi, m) => (Number(m.ts) > Number(hi) ? String(m.ts) : hi), String(fallback || '0'));\n\n  return {\n    rows: [...changed.values(), ...untracked],\n    state: {\n      last_index_run: nowIso,\n      last_newpost_ts: maxTs(newpostMessages, input.lastNewpostTs),\n      last_releaseme_ts: maxTs(releasemeMessages, input.lastReleasemeTs),\n    },\n    skipped,\n    summary: {\n      skipped_strangers: skipped.length,\n      new_projects: [...changed.values()].filter((r) => r.status === 'OPEN').length,\n      released: [...changed.values()].filter((r) => r.status === 'RELEASED').length,\n      cancelled: [...changed.values()].filter((r) => r.status === 'CANCELLED').length,\n      untracked: untracked.length,\n    },\n  };\n}\n\n// --- wiring -----------------------------------------------------------------\nconst P = { NEWPOST_CHANNEL, RELEASEME_CHANNEL, parseMessage, extractQu,\n            tsToDate, ageDays, bucketOf, isPostEngineer,\n            extractReleasedQus };\n\n// Slack returns one item per page. Flatten to messages and keep EVERYTHING, subtypes\n// included — buildIndex skips joins and leaves when parsing but still needs them to\n// advance the watermark past a trailing join. Filtering here would stall it.\nfunction flatten(items) {\n  const out = [];\n  for (const it of items) {\n    for (const m of (it.json.messages || [])) {\n      out.push({ ts: m.ts, text: m.text || '', subtype: m.subtype, user: m.user });\n    }\n  }\n  return out;\n}\n\nconst state = $('Read State').first().json;\nconst existingRows = $('Read Index').all().map((i) => i.json);\n\nconst result = buildIndex({\n  existingRows,\n  newpostMessages: flatten($('Fetch Newpost').all()),\n  releasemeMessages: flatten($('Fetch Releaseme').all()),\n  parse: P,\n  nowIso: new Date().toISOString(),\n  lastNewpostTs: state.last_newpost_ts,\n  lastReleasemeTs: state.last_releaseme_ts,\n});\n\nreturn [{ json: result }];"
+      },
+      "position": [
+        1060,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "posty-w1-emitrows",
+      "name": "Emit Rows",
+      "parameters": {
+        "jsCode": "// Fan the changed rows out, one item per row, for appendOrUpdate.\n// Returns zero items on a quiet night — Write Index is then skipped, which is correct.\nconst r = $input.first().json;\nreturn (r.rows || []).map((row) => ({ json: row }));"
+      },
+      "position": [
+        1280,
+        -120
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "posty-w1-writeindex",
+      "name": "Write Index",
+      "parameters": {
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "qu_number"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "operation": "appendOrUpdate",
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        1500,
+        -120
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "posty-w1-emitstate",
+      "name": "Emit State",
+      "parameters": {
+        "jsCode": "// Always emits exactly one item, so the watermark advances even on a night with no new\n// messages. row_number 2 targets the single data row of posty_state.\nconst r = $input.first().json;\nreturn [{ json: { row_number: 2, ...r.state } }];"
+      },
+      "position": [
+        1280,
+        120
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "posty-w1-writestate",
+      "name": "Write State",
+      "parameters": {
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "operation": "update",
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_state"
+        }
+      },
+      "position": [
+        1500,
+        120
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    }
+  ],
+  "pinData": null,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "timezone": "Asia/Manila"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-04T07:30:51.499Z",
+      "project": {
+        "createdAt": "2026-09-04T06:28:22.466Z",
+        "creatorId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "zkz4JuokdGopHd2A",
+        "name": "Tara Lim <tara@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-04T07:14:04.840Z"
+      },
+      "projectId": "zkz4JuokdGopHd2A",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-04T07:30:51.499Z",
+      "workflowId": "DItjvgnQPf5aEsIq"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": {
+    "node:Nightly 02:00": {
+      "recurrenceRules": []
+    }
+  },
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-08-31T12:26:02.756Z",
+  "versionCounter": 8,
+  "versionId": "6e22fdd9-546d-4b04-86c9-bd873fac685a"
+}

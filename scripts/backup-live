@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Snapshot every live n8n workflow into workflows/live/.
+#
+#   ./scripts/backup-live         # uses .env for the key and base url
+#
+# Also run nightly on GitHub's servers by .github/workflows/nightly-backup.yml,
+# which sets N8N_API_KEY and N8N_BASE_URL from repo secrets instead of .env.
+#
+# This does not commit - the caller decides. Run by hand any time you want a
+# fresh copy of what n8n is actually running.
+set -euo pipefail
+here="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$here"
+if [ -z "${N8N_API_KEY:-}" ] && [ -f .env ]; then set -a; . ./.env; set +a; fi
+: "${N8N_API_KEY:?set N8N_API_KEY (in .env, or the environment)}"
+: "${N8N_BASE_URL:?set N8N_BASE_URL}"
+
+python3 - <<'PY'
+import json, os, re, subprocess
+base, key = os.environ["N8N_BASE_URL"], os.environ["N8N_API_KEY"]
+def api(path):
+    out = subprocess.run(["curl","-sS","-H","X-N8N-API-KEY: "+key, base+path],
+                         capture_output=True, text=True)
+    if out.returncode != 0 or not out.stdout.strip():
+        raise SystemExit("n8n request failed for %s: %s" % (path, out.stderr[:200]))
+    return json.loads(out.stdout)
+
+os.makedirs("workflows/live", exist_ok=True)
+slug = lambda s: re.sub(r'[^a-zA-Z0-9]+', '-', s).strip('-').lower()[:60]
+data = api("/api/v1/workflows?limit=200").get("data", [])
+index = []
+for w in data:
+    full = api("/api/v1/workflows/" + w["id"])
+    fn = "%s__%s.json" % (slug(w.get("name","untitled")), w["id"])
+    with open("workflows/live/"+fn, "w") as f:
+        json.dump(full, f, indent=2, ensure_ascii=False, sort_keys=True)
+    index.append("%-42s %-8s %s" % (w.get("name"),
+                 "active" if w.get("active") else "inactive", fn))
+with open("workflows/live/INDEX.txt", "w") as f:
+    f.write("Live n8n workflows, snapshot. Backed up nightly by GitHub Actions.\n\n")
+    f.write("\n".join(sorted(index)) + "\n")
+print("backed up %d workflows to workflows/live/" % len(data))
+PY

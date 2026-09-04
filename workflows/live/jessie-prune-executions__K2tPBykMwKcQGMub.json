@@ -1,0 +1,450 @@
+{
+  "active": true,
+  "activeVersion": {
+    "authors": "Howard Luistro",
+    "autosaved": false,
+    "connections": {
+      "Delete Execution": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Summarise",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Every day 04:00": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "List Executions",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "List Executions": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Older Than Cutoff",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Older Than Cutoff": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Delete Execution",
+              "type": "main"
+            }
+          ]
+        ]
+      }
+    },
+    "createdAt": "2026-09-03T11:05:14.013Z",
+    "description": "",
+    "name": "Version 8241a0f1",
+    "nodeGroups": [],
+    "nodes": [
+      {
+        "id": "a4c7bd20-8ea5-4aff-93d7-0dfa48867ed2",
+        "name": "Why this exists",
+        "parameters": {
+          "content": "## Nightly execution prune\n\nn8n stores the full data of every execution - about 250 KB per Jessie turn.\nOn 2026-09-02 and again on 2026-09-03 the SQLite database reached roughly\n750 MB across 4,161 executions and **both Jessie and Posty stopped receiving\nSlack events**. Toggling the workflows active did nothing, many times over.\nDeleting 3,781 old executions brought both back.\n\nRuns 04:00 Asia/Manila, off-peak, because the deletes hit the same SQLite\nfile a booking would be writing to.\n\n### Reading the run\n`List Executions` returns **one item per page**, not one per execution - two\nitems means two pages of 250 were walked. Look inside `json.data` for the\nexecutions. `Older Than Cutoff` reporting 0 is correct when nothing is older\nthan KEEP_DAYS.\n\n### Pagination, if it ever needs rebuilding\nThe working parameter carries **only `name` and `value`** - no `type`,\nand the block has no `paginationMode`. n8n omits both when they are at\ntheir defaults (qs, update-a-parameter). Writing `\"type\": \"query\"` or\n`\"type\": \"qs\"` into the JSON by hand makes the node fail validation with\n\"Parameter type must be one of: body, headers, qs\" - selecting Query in\nthe UI *removes* the field. Copy this node rather than hand-writing it.\n\n### Credential\nHeader Auth - name `X-N8N-API-KEY`, value = an n8n API key, key only.",
+          "height": 760,
+          "width": 460
+        },
+        "position": [
+          2192,
+          -208
+        ],
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1
+      },
+      {
+        "id": "53dd8f17-5a3e-4ab2-ba38-8c8fb1005b2a",
+        "name": "Every day 04:00",
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "triggerAtHour": 4
+              }
+            ]
+          }
+        },
+        "position": [
+          2704,
+          0
+        ],
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2
+      },
+      {
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "gF4HSTDHadbO7A0K",
+            "name": "Header Auth account"
+          }
+        },
+        "id": "999f222d-4620-4f97-a486-ab85fb471fc6",
+        "name": "List Executions",
+        "parameters": {
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "options": {
+            "pagination": {
+              "pagination": {
+                "completeExpression": "={{ !$response.body.nextCursor }}",
+                "limitPagesFetched": true,
+                "maxRequests": 40,
+                "paginationCompleteWhen": "other",
+                "parameters": {
+                  "parameters": [
+                    {
+                      "name": "cursor",
+                      "value": "={{ $response.body.nextCursor }}"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "limit",
+                "value": "250"
+              }
+            ]
+          },
+          "sendQuery": true,
+          "url": "https://signal.hitpromanila.net/api/v1/executions"
+        },
+        "position": [
+          2944,
+          0
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "440e8b79-6a0b-4377-b692-e668df8a844d",
+        "name": "Older Than Cutoff",
+        "parameters": {
+          "jsCode": "// Keep the last KEEP_DAYS days; everything older goes.\n// Capped per run so a backlog drains over several nights instead of landing\n// thousands of writes on SQLite at once - the deletes contend with the same\n// file a booking writes to.\nconst KEEP_DAYS = 3;\nconst MAX_PER_RUN = 800;\n\nconst cutoff = Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000;\nconst seen = {};\nconst out = [];\n\n// The List node paginates, so input arrives either as one item per page (each\n// carrying a `data` array) or as one item per execution, depending on how n8n\n// splits the response. Handle both rather than assuming.\nfor (const item of $input.all()) {\n  const j = (item && item.json) || {};\n  const rows = Array.isArray(j.data) ? j.data : [j];\n  for (const e of rows) {\n    if (!e || !e.id || seen[e.id]) continue;\n    const started = Date.parse(e.startedAt || e.createdAt || '');\n    if (!started || started >= cutoff) continue;\n    seen[e.id] = 1;\n    out.push({ json: { id: e.id, startedAt: e.startedAt } });\n    if (out.length >= MAX_PER_RUN) return out;\n  }\n}\nreturn out;"
+        },
+        "position": [
+          3184,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "gF4HSTDHadbO7A0K",
+            "name": "Header Auth account"
+          }
+        },
+        "id": "0c840025-9aca-4196-ab5b-eb04182dd354",
+        "maxTries": 2,
+        "name": "Delete Execution",
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "method": "DELETE",
+          "options": {
+            "batching": {
+              "batch": {
+                "batchInterval": 250,
+                "batchSize": 5
+              }
+            }
+          },
+          "url": "=https://signal.hitpromanila.net/api/v1/executions/{{ $json.id }}"
+        },
+        "position": [
+          3424,
+          0
+        ],
+        "retryOnFail": true,
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "70f57c8e-f0c1-460c-b954-c0b077f6f2d6",
+        "name": "Summarise",
+        "parameters": {
+          "jsCode": "const items = $input.all();\nconst ok = items.filter(i => !(i.json && i.json.error)).length;\nreturn [{ json: { pruned: ok, attempted: items.length, at: new Date().toISOString() } }];"
+        },
+        "position": [
+          3664,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      }
+    ],
+    "updatedAt": "2026-09-03T11:05:15.000Z",
+    "versionId": "8241a0f1-1d6d-481a-8d11-15323feaabc4",
+    "workflowId": "K2tPBykMwKcQGMub",
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-03T11:05:15.372Z",
+        "event": "activated",
+        "id": 650,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "8241a0f1-1d6d-481a-8d11-15323feaabc4",
+        "workflowId": "K2tPBykMwKcQGMub"
+      }
+    ]
+  },
+  "activeVersionId": "8241a0f1-1d6d-481a-8d11-15323feaabc4",
+  "connections": {
+    "Delete Execution": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Summarise",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Every day 04:00": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "List Executions",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "List Executions": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Older Than Cutoff",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Older Than Cutoff": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Delete Execution",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-09-03T10:43:43.556Z",
+  "description": null,
+  "id": "K2tPBykMwKcQGMub",
+  "isArchived": false,
+  "meta": null,
+  "name": "Jessie — Prune Executions",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "a4c7bd20-8ea5-4aff-93d7-0dfa48867ed2",
+      "name": "Why this exists",
+      "parameters": {
+        "content": "## Nightly execution prune\n\nn8n stores the full data of every execution - about 250 KB per Jessie turn.\nOn 2026-09-02 and again on 2026-09-03 the SQLite database reached roughly\n750 MB across 4,161 executions and **both Jessie and Posty stopped receiving\nSlack events**. Toggling the workflows active did nothing, many times over.\nDeleting 3,781 old executions brought both back.\n\nRuns 04:00 Asia/Manila, off-peak, because the deletes hit the same SQLite\nfile a booking would be writing to.\n\n### Reading the run\n`List Executions` returns **one item per page**, not one per execution - two\nitems means two pages of 250 were walked. Look inside `json.data` for the\nexecutions. `Older Than Cutoff` reporting 0 is correct when nothing is older\nthan KEEP_DAYS.\n\n### Pagination, if it ever needs rebuilding\nThe working parameter carries **only `name` and `value`** - no `type`,\nand the block has no `paginationMode`. n8n omits both when they are at\ntheir defaults (qs, update-a-parameter). Writing `\"type\": \"query\"` or\n`\"type\": \"qs\"` into the JSON by hand makes the node fail validation with\n\"Parameter type must be one of: body, headers, qs\" - selecting Query in\nthe UI *removes* the field. Copy this node rather than hand-writing it.\n\n### Credential\nHeader Auth - name `X-N8N-API-KEY`, value = an n8n API key, key only.",
+        "height": 760,
+        "width": 460
+      },
+      "position": [
+        2192,
+        -208
+      ],
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1
+    },
+    {
+      "id": "53dd8f17-5a3e-4ab2-ba38-8c8fb1005b2a",
+      "name": "Every day 04:00",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 4
+            }
+          ]
+        }
+      },
+      "position": [
+        2704,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gF4HSTDHadbO7A0K",
+          "name": "Header Auth account"
+        }
+      },
+      "id": "999f222d-4620-4f97-a486-ab85fb471fc6",
+      "name": "List Executions",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "pagination": {
+            "pagination": {
+              "completeExpression": "={{ !$response.body.nextCursor }}",
+              "limitPagesFetched": true,
+              "maxRequests": 40,
+              "paginationCompleteWhen": "other",
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "cursor",
+                    "value": "={{ $response.body.nextCursor }}"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "250"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://signal.hitpromanila.net/api/v1/executions"
+      },
+      "position": [
+        2944,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "440e8b79-6a0b-4377-b692-e668df8a844d",
+      "name": "Older Than Cutoff",
+      "parameters": {
+        "jsCode": "// Keep the last KEEP_DAYS days; everything older goes.\n// Capped per run so a backlog drains over several nights instead of landing\n// thousands of writes on SQLite at once - the deletes contend with the same\n// file a booking writes to.\nconst KEEP_DAYS = 3;\nconst MAX_PER_RUN = 800;\n\nconst cutoff = Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000;\nconst seen = {};\nconst out = [];\n\n// The List node paginates, so input arrives either as one item per page (each\n// carrying a `data` array) or as one item per execution, depending on how n8n\n// splits the response. Handle both rather than assuming.\nfor (const item of $input.all()) {\n  const j = (item && item.json) || {};\n  const rows = Array.isArray(j.data) ? j.data : [j];\n  for (const e of rows) {\n    if (!e || !e.id || seen[e.id]) continue;\n    const started = Date.parse(e.startedAt || e.createdAt || '');\n    if (!started || started >= cutoff) continue;\n    seen[e.id] = 1;\n    out.push({ json: { id: e.id, startedAt: e.startedAt } });\n    if (out.length >= MAX_PER_RUN) return out;\n  }\n}\nreturn out;"
+      },
+      "position": [
+        3184,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gF4HSTDHadbO7A0K",
+          "name": "Header Auth account"
+        }
+      },
+      "id": "0c840025-9aca-4196-ab5b-eb04182dd354",
+      "maxTries": 2,
+      "name": "Delete Execution",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "DELETE",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchInterval": 250,
+              "batchSize": 5
+            }
+          }
+        },
+        "url": "=https://signal.hitpromanila.net/api/v1/executions/{{ $json.id }}"
+      },
+      "position": [
+        3424,
+        0
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "70f57c8e-f0c1-460c-b954-c0b077f6f2d6",
+      "name": "Summarise",
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst ok = items.filter(i => !(i.json && i.json.error)).length;\nreturn [{ json: { pruned: ok, attempted: items.length, at: new Date().toISOString() } }];"
+      },
+      "position": [
+        3664,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    }
+  ],
+  "pinData": {},
+  "settings": {
+    "availableInMCP": false,
+    "binaryMode": "separate",
+    "executionOrder": "v1"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-04T07:28:42.757Z",
+      "project": {
+        "createdAt": "2026-09-04T07:27:37.988Z",
+        "creatorId": "146478c9-471a-4651-8e62-0216984196e9",
+        "customTelemetryTags": [],
+        "description": "Hit's scheduling bot!",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "id": "QZYdo1FNvLjucQwT",
+        "name": "Jessie",
+        "type": "team",
+        "updatedAt": "2026-09-04T07:29:59.000Z"
+      },
+      "projectId": "QZYdo1FNvLjucQwT",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-04T07:28:42.757Z",
+      "workflowId": "K2tPBykMwKcQGMub"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": {
+    "node:Every day 04:00": {
+      "recurrenceRules": []
+    }
+  },
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-09-03T11:05:14.010Z",
+  "versionCounter": 20,
+  "versionId": "8241a0f1-1d6d-481a-8d11-15323feaabc4"
+}

@@ -1,0 +1,4373 @@
+{
+  "active": true,
+  "activeVersion": {
+    "authors": "Howard Luistro",
+    "autosaved": false,
+    "connections": {
+      "Ack Early": {
+        "main": [
+          []
+        ]
+      },
+      "Build List": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Send List Item",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Build Notify Rows": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Write Notify Ts",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Build Project Row": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Write Project Row",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Build Release Row": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Mark Released",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Classify Event": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Is Release Reaction",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Is New Project",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Is List Request",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Is Deleted Post",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Is Release Undone",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Is Digest Request",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Is Clear Request",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Delete Message": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Report Cleared",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Emit Deletion": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Mark Row Deleted",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Emit Digest Request": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Run Digest",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Emit Pending": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Write Pending",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Emit Revert": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Revert Release",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Explain Drop": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Notify Drop",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Explain Pending": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Notify Pending",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Has Deletable": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Delete Message",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Is Clear Request": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read My DMs",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Is Deleted Post": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Index (Del)",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Is Digest Request": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Emit Digest Request",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Is Human DM": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Ack Early",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Is List Request": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Index (List)",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Is New Project": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Index (New)",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Is Release Reaction": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Index",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Is Release Undone": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Index (Undo)",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Log Drop": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Explain Drop",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Not From Posty": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Is Human DM",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Classify Event",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Notify Starter": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Build Project Row",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Pick Deletable": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Has Deletable",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Post Release": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Build Release Row",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Notify Releaser",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Index": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Resolve Release",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Index (Del)": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Resolve Deletion",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Index (List)": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Build List",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Index (New)": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Resolve New Project",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Index (Undo)": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Resolve Undo",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read My DMs": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Pick Deletable",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Report Cleared": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Send Clear Result",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Resolve Deletion": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Should Mark Deleted",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Resolve New Project": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Should Announce",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Resolve Release": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Should Post",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Should Park",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Should Drop",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Resolve Undo": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Should Revert",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Run Digest": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Clear List Ack",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Send Clear Result": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Clear List Ack",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Send List Item": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Build Notify Rows",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Clear List Ack",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Should Announce": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Notify Starter",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Should Drop": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Log Drop",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Should Mark Deleted": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Emit Deletion",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Should Park": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Emit Pending",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Should Post": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Post Release",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Should Revert": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Emit Revert",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Slack Trigger": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Not From Posty",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Write Notify Ts": {
+        "main": [
+          []
+        ]
+      },
+      "Write Pending": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Explain Pending",
+              "type": "main"
+            }
+          ]
+        ]
+      }
+    },
+    "createdAt": "2026-09-03T11:09:11.460Z",
+    "description": null,
+    "name": null,
+    "nodeGroups": [],
+    "nodes": [
+      {
+        "id": "w2-sticky",
+        "name": "Sticky — read me",
+        "parameters": {
+          "content": "## Posty — Events Endpoint\\n\\nOne Slack app = one Request URL, so every event lands\\nhere and `Classify Event` routes it.\\n\\n### Four flows\\n1. **NEW_PROJECT** — a QU post in #newpostprojects.\\n   Indexes it immediately, DMs the poster\\n   \\\"You started …\\\", records the DM as `notify_ts`.\\n2. **RELEASE** — 🚀 on the intake post OR on a DM\\n   Posty sent. Resolves via `source_ts` then\\n   `notify_ts`. Reposts verbatim, marks released,\\n   DMs the releaser.\\n3. **LIST_REQUEST** — any DM to Posty returns that\\n   person's open projects, oldest first, capped at\\n   25. One message each so they can be rocketed.\\n4. **IGNORE** — everything else, including Posty's\\n   own messages, joins, deletions and un-reactions.\\n\\n### ⚠️ TARGET CHANNEL IS STILL A TEST TARGET\\n`Post Release` posts to **U026N6E1R** (tara's DM),\\nnot #releaseme. §14.9 — a bug here puts junk in\\nfront of Accounting.\\n**To go live:** set Channel on `Post Release` to\\n`CC9EG3K8C`. One field.\\n\\n### Why indexing happens on post\\nThe nightly refresh used to be the only way a row\\nappeared, so a rocket minutes after posting always\\nlanded in PENDING. Indexing on the message event\\nmakes PENDING rare — it now means n8n was down\\nwhen the post happened.\\n\\n### Logic lives in code/\\nresolve-release.js, and the classifier mirrored in\\nscripts/test-classify. Edit there, run the tests,\\npaste back. Never edit only a node.\n\n### Attribution\n`Post Release` appends \"Released by @person\" on a\nsecond line. Every post in #releaseme now comes\nfrom Posty, so without it the channel loses the\nauthor information it used to carry. The verbatim\nfirst line is untouched.\\n\\n### Why `Not From Posty` sits first\\nEvery message Posty sends comes back as an\\nevent. That was ~90% of all executions, and each\\none paid the Code-node cold start — up to 3.6s.\\nSlack retries after 3s, so slow runs were\\nproducing DUPLICATE event deliveries.\\n\\nA Filter node runs in ~2ms and needs no task\\nrunner, so dropping bot messages before\\n`Classify Event` removes the cold start from the\\nvast majority of events.\\n\\n`Classify Event` still checks bot_id itself —\\nthis gate is an optimisation, not the guard.",
+          "height": 1004,
+          "width": 572
+        },
+        "position": [
+          -704,
+          -416
+        ],
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "b1a1f0c2-0002-4a10-9a01-posty000002",
+        "name": "Slack Trigger",
+        "parameters": {
+          "options": {},
+          "trigger": [
+            "any_event"
+          ],
+          "watchWorkspace": true
+        },
+        "position": [
+          -96,
+          0
+        ],
+        "type": "n8n-nodes-base.slackTrigger",
+        "typeVersion": 1,
+        "webhookId": "posty-slack-webhook"
+      },
+      {
+        "id": "w2-classify",
+        "name": "Classify Event",
+        "parameters": {
+          "jsCode": "// Posty — event router. The Slack Trigger is any_event, so everything the app subscribes\n// to lands here: reaction_added, message.channels, message.im. Route once, so downstream\n// filters test one plain string instead of poking at fields a given event may not have.\n\nconst e = $input.first().json;\nconst NEWPOST = 'C1SJE7404';\nconst RELEASEME = 'CC9EG3K8C';\nconst QU_RE = /QU[\\s]*[-_]?[\\s]*(\\d{4,6})/i;\n\n// A QU- or QU_ prefix with no digits: the agreed convention for a project whose code is\n// not assigned yet. Tracked under a synthetic key so it ages and can be rocketed.\nconst QU_MARKER_RE = /QU[\\s]*[-_]/i;\n\n// Only these people announce projects. Policy list set by Tara 2026-08-31; mirrored in\n// code/parse.js. ADD NEW POST ENGINEERS HERE ON THEIR FIRST DAY — until someone is on this\n// list their posts are invisible to Posty, which is intended, and also how this list goes\n// quietly wrong. A skipped post that carried a QU is reported with its code below, so the\n// omission shows up in the execution list instead of vanishing.\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'alec elijah',\n  'U08V3CKDGJF': 'howard',\n};\nconst isDm = (ch) => typeof ch === 'string' && ch.charAt(0) === 'D';\n\nfunction ignore(reason) {\n  return [{ json: { kind: 'IGNORE', reason, event_type: e.type || null } }];\n}\n\nif (e.type === 'reaction_added') {\n  if (e.reaction !== 'rocket') return ignore('reaction is not rocket');\n  if (!e.item || !e.item.channel) return ignore('reaction has no item');\n  // Two valid origins: the intake post itself, or a DM Posty sent about that project.\n  // resolve-release.js works out which by matching source_ts then notify_ts.\n  const ch = e.item.channel;\n  if (ch !== NEWPOST && !isDm(ch)) return ignore('rocket not in #newpostprojects or a DM');\n  return [{ json: { kind: 'RELEASE', user: e.user, item_ts: e.item.ts, from_dm: isDm(ch) } }];\n}\n\nif (e.type === 'message') {\n  // Posty writes to #releaseme and DMs people. Without this guard it would eventually\n  // see its own messages and act on them.\n  if (e.bot_id) return ignore('bot message');\n\n  // A deleted intake post leaves an index row pointing at a message that no longer\n  // exists. Left alone, a repost is treated as a re-announcement, no new row is written,\n  // and a rocket on the new post matches nothing — the project becomes permanently\n  // unreleasable. Catch the deletion so the row can be re-registered.\n  if (e.subtype === 'message_deleted') {\n    if (!e.deleted_ts) return ignore('deletion with no deleted_ts');\n    if (e.channel === NEWPOST) {\n      return [{ json: { kind: 'DELETED_POST', deleted_ts: String(e.deleted_ts) } }];\n    }\n    // Deleting Posty's post in #releaseme means the release did not actually happen —\n    // this is the undo for a mistaken rocket. Without it a wrong release is permanent:\n    // the row stays RELEASED and the dedupe (§7 step 5) blocks it from ever being\n    // released again.\n    if (e.channel === RELEASEME) {\n      return [{ json: { kind: 'RELEASE_UNDONE', deleted_ts: String(e.deleted_ts) } }];\n    }\n    return ignore('deletion in an unrelated channel');\n  }\n\n  if (e.subtype) return ignore('message subtype: ' + e.subtype);\n  if (!e.user) return ignore('no user on message');\n\n  // A DM to Posty is a request for that person's open projects. There is exactly one\n  // intent, so there is nothing to parse — any DM means \"list mine\".\n  if (isDm(e.channel) || e.channel_type === 'im') {\n    // Two intents, distinguished by one keyword. No language model: \"digest\" or not is a\n    // decision a regex makes correctly every time, and a wrong guess here would send the\n    // whole open-projects list to someone who asked for their own.\n    if (/\\bdigests?\\b/i.test(String(e.text || ''))) {\n      return [{ json: { kind: 'DIGEST_REQUEST', user: e.user, channel: e.channel } }];\n    }\n    // Tidy up the DM. Deletes only Posty's OWN messages, only in this conversation.\n    if (/\\bclear\\b/i.test(String(e.text || ''))) {\n      return [{ json: { kind: 'CLEAR_REQUEST', user: e.user, channel: e.channel } }];\n    }\n    return [{ json: { kind: 'LIST_REQUEST', user: e.user, channel: e.channel } }];\n  }\n\n  if (e.channel !== NEWPOST) return ignore('message not in #newpostprojects');\n\n  // Not a post engineer -> not a project announcement, whatever the message contains.\n  if (!Object.prototype.hasOwnProperty.call(POST_ENGINEERS, String(e.user).trim())) {\n    const stray = String(e.text || '').match(QU_RE);\n    return ignore(stray\n      ? 'not a post engineer, and the message carried QU-' + stray[1] + ' (not tracked)'\n      : 'not a post engineer');\n  }\n\n  // A project is a post with a QU code. Codeless posts are left alone — they still show\n  // in the digest's \"needs manual check\" section, but they are not tracked, because\n  // nothing can be counted, aged or released without an identifier. Post engineers write\n  // a QU code, always.\n  const text = e.text || '';\n  const m = text.match(QU_RE);\n\n  if (m) {\n    return [{ json: { kind: 'NEW_PROJECT', user: e.user, qu_number: m[1], text, ts: e.ts } }];\n  }\n\n  // Marked as a project but not coded yet. Synthetic key from the post's own ts; refuse\n  // an implausible ts, since a shared key would collapse every uncoded project into one.\n  if (QU_MARKER_RE.test(text) && /^\\d{6,}(\\.\\d+)?$/.test(String(e.ts || '').trim())) {\n    return [{ json: { kind: 'NEW_PROJECT', user: e.user,\n                      qu_number: 'NOQU-' + String(e.ts).trim(), text, ts: e.ts,\n                      synthetic: true } }];\n  }\n\n  return ignore('no QU code and no QU- marker');\n}\n\nreturn ignore('unhandled event type');"
+        },
+        "position": [
+          240,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "b1a1f0c2-0003-4a10-9a01-posty000003",
+        "name": "Is Release Reaction",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.kind }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "RELEASE"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          384,
+          -256
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w2-readindex",
+        "name": "Read Index",
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          608,
+          -256
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "w2-resolve",
+        "name": "Resolve Release",
+        "parameters": {
+          "jsCode": "// Posty — release decision. code/resolve-release.js pasted verbatim, tested by\n// ./scripts/test-nodes. Edit in code/, run the tests, paste back.\n\n// Posty — Workflow 2's decision node, as a testable module.\n//\n// Given a reaction_added event and the current index, decides what happens. Pure: no I/O,\n// no posting. The node that actually posts sits downstream of this one, so every path that\n// could put a message into #releaseme is decided here and can be tested offline.\n//\n// Handoff §7 Workflow 2. The order of the checks below is the order in §7 and matters:\n// a released row must be dropped BEFORE anything reaches the poster.\n\n\n\nconst DECISIONS = {\n  POST: 'POST',                       // repost source_text verbatim, then mark released\n  DROP_RELEASED: 'DROP_RELEASED',     // already shipped — this is the dedupe\n  DROP_CANCELLED: 'DROP_CANCELLED',   // cancelled projects are never reposted\n  PENDING: 'PENDING',                 // not indexed yet; retry after the nightly refresh\n};\n\n// Slack ts values are identifiers, not numbers. Compare as trimmed strings — a numeric\n// compare would make 1788163608.395249 and 1788163608.39525 look equal, which is exactly\n// the silent failure the text-formatted Sheet column exists to prevent.\n// The stored source_text is decoded for readability. Slack expects &, < and > escaped in\n// chat.postMessage, so re-escape on the way out. This makes the posted bytes identical to\n// what was verified live on 2026-08-31, when the round-trip was confirmed correct.\nfunction escapeForSlack(text) {\n  return String(text == null ? '' : text)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\nfunction sameTs(a, b) {\n  return String(a == null ? '' : a).trim() === String(b == null ? '' : b).trim();\n}\n\nfunction resolveRelease(input) {\n  const { event = {}, indexRows = [], nowIso } = input;\n\n  const itemTs = event.item ? event.item.ts : null;\n  const itemChannel = event.item ? event.item.channel : null;\n\n  // A rocket can arrive from two places, and both must resolve to the same project:\n  //   - on the intake post in #newpostprojects  -> matches source_ts\n  //   - on the DM Posty sent about that project -> matches notify_ts\n  // notify_ts is recorded when Posty DMs about a project, so neither route needs a\n  // conversations.history call to work out what was reacted to (§8, no history on the\n  // hot path). source_ts is checked first: it is the canonical identifier, and a DM is\n  // only ever a pointer back to it.\n  const row = indexRows.find((r) => sameTs(r.source_ts, itemTs))\n           || indexRows.find((r) => r.notify_ts && sameTs(r.notify_ts, itemTs));\n\n  // §7 step 4. The reaction arrived before the nightly refresh indexed the post. Park it;\n  // do NOT call conversations.history to resolve the text here — avoiding that call on the\n  // hot path is the entire reason this design is event-driven rather than polling (§8).\n  if (!row) {\n    return {\n      decision: DECISIONS.PENDING,\n      reason: 'no index row matches source_ts or notify_ts ' + itemTs,\n      pending: {\n        item_ts: String(itemTs == null ? '' : itemTs),\n        item_channel: itemChannel || '',\n        reacted_by: event.user || '',\n        event_ts: String(event.event_ts == null ? '' : event.event_ts),\n        first_seen: nowIso,\n        retry_count: 0,\n        resolved: 'FALSE',\n      },\n    };\n  }\n\n  // §7 step 5 — the dedupe. Keyed on the row's status, deliberately NOT on event_ts:\n  // a second rocket days later carries a completely different event_ts and must still be\n  // dropped. Verified live on 2026-08-31, when one message produced two reaction_added\n  // events 18 seconds apart.\n  if (row.status === 'RELEASED') {\n    return { decision: DECISIONS.DROP_RELEASED, row,\n             reason: 'QU-' + row.qu_number + ' is already RELEASED' };\n  }\n\n  // §7 step 6 / §9 rule 1. Reposting a cancelled project would tell Accounting to bill\n  // something that never went out.\n  if (row.status === 'CANCELLED') {\n    return { decision: DECISIONS.DROP_CANCELLED, row,\n             reason: 'QU-' + row.qu_number + ' is CANCELLED' };\n  }\n\n  // UNTRACKED rows carry no QU number, so there is nothing to mark released and nothing\n  // that would join back to Accounting. Park rather than post.\n  if (!row.qu_number) {\n    return { decision: DECISIONS.PENDING, row,\n             reason: 'row has no QU number (UNTRACKED)',\n             pending: {\n               item_ts: String(itemTs == null ? '' : itemTs),\n               item_channel: itemChannel || '',\n               reacted_by: event.user || '',\n               event_ts: String(event.event_ts == null ? '' : event.event_ts),\n               first_seen: nowIso,\n               retry_count: 0,\n               resolved: 'FALSE',\n             } };\n  }\n\n  // §7 step 7. Repost source_text VERBATIM. This is the whole point: it guarantees the QU\n  // number and title match the intake post exactly, which is what kills the format drift\n  // between posters — glenn writes `QU / Agency / Producer / Client / Title` while rico\n  // writes `QU / Client \"Title\" / Producer / Studio M Recording`.\n  return {\n    decision: DECISIONS.POST,\n    row,\n    text: escapeForSlack(row.source_text),\n    qu_number: row.qu_number,\n    reason: 'QU-' + row.qu_number + ' is ' + (row.status || 'OPEN') + ', reposting',\n  };\n}\n\nconst event = $('Slack Trigger').first().json;\nconst indexRows = $('Read Index').all().map((i) => i.json);\nconst out = resolveRelease({ event, indexRows, nowIso: new Date().toISOString() });\nreturn [{ json: out }];"
+        },
+        "position": [
+          832,
+          -256
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "w2-fpost",
+        "name": "Should Post",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.decision }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "POST"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          1040,
+          -416
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w2-post",
+        "name": "Post Release",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "CC9EG3K8C"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "={{ $json.text }}\nReleased by <@{{ $('Slack Trigger').first().json.user }}>"
+        },
+        "position": [
+          1264,
+          -416
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "996dbdc8-58da-4262-907a-5e86bb053c76"
+      },
+      {
+        "id": "w2-relrow",
+        "name": "Build Release Row",
+        "parameters": {
+          "jsCode": "// Write-back after a successful repost. release_ts is the ts of the message POSTY created\n// (§6), not the intake post's ts. The n8n Slack node returns message_timestamp and\n// message.ts — never `ts`. Guessing that field cost a live bug on 2026-08-31.\nconst resolved = $('Resolve Release').first().json;\nconst posted = $input.first().json;\n\n// Manila-local date, matching code/parse.js. UTC+8, no DST. The regex guard is\n// load-bearing: Number('') is 0, which passes Number.isFinite and silently yields\n// 1970-01-01. A blank date is honest; the epoch is a lie that looks like data.\nfunction tsToDate(t) {\n  t = String(t == null ? '' : t).trim();\n  if (!/^\\d{6,}(\\.\\d+)?$/.test(t)) return '';\n  return new Date(Number(t.split('.')[0]) * 1000 + 8 * 3600 * 1000).toISOString().slice(0, 10);\n}\nfunction slackTs(resp) {\n  return String(resp.message_timestamp || (resp.message && resp.message.ts) || '').trim();\n}\n\nconst ts = slackTs(posted);\nconst row = {\n  qu_number: resolved.qu_number,\n  released: 'TRUE',\n  release_ts: ts,\n  release_date: tsToDate(ts),\n  status: 'RELEASED',\n  last_seen: new Date().toISOString(),\n};\n\n// Still RELEASED even if the ts could not be read. The message is already posted and\n// cannot be unposted, so the dedupe (§7 step 5, keyed on status) must hold or the next\n// rocket duplicates it in front of Accounting. A data gap beats a visible mess.\nif (!ts) row.note = 'WARNING: could not read the posted message ts from the Slack response';\n\nreturn [{ json: row }];"
+        },
+        "position": [
+          1488,
+          -560
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w2-markrel",
+        "name": "Mark Released",
+        "parameters": {
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "matchingColumns": [
+              "qu_number"
+            ],
+            "schema": [],
+            "value": {}
+          },
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "operation": "appendOrUpdate",
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          1712,
+          -560
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w2-notifyreleaser",
+        "name": "Notify Releaser",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Slack Trigger').first().json.user }}"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "=You released {{ $('Resolve Release').first().json.text }}"
+        },
+        "position": [
+          1488,
+          -400
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "05362019-8ad9-4de0-a21d-99fb6a9ecf9a"
+      },
+      {
+        "id": "w2-fpark",
+        "name": "Should Park",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.decision }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "PENDING"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          1040,
+          -240
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "id": "w2-emitpending",
+        "name": "Emit Pending",
+        "parameters": {
+          "jsCode": "return [{ json: $input.first().json.pending }];"
+        },
+        "position": [
+          1264,
+          -240
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w2-writepending",
+        "name": "Write Pending",
+        "parameters": {
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "matchingColumns": [],
+            "schema": [],
+            "value": {}
+          },
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "operation": "append",
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_pending"
+          }
+        },
+        "position": [
+          1488,
+          -240
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "w2-fdrop",
+        "name": "Should Drop",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.decision }}",
+                "operator": {
+                  "operation": "startsWith",
+                  "type": "string"
+                },
+                "rightValue": "DROP"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          1040,
+          -80
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "id": "w2-logdrop",
+        "name": "Log Drop",
+        "parameters": {
+          "jsCode": "const r = $input.first().json;\nreturn [{ json: { dropped: true, decision: r.decision, reason: r.reason,\n                  qu_number: r.row ? r.row.qu_number : null } }];"
+        },
+        "position": [
+          1264,
+          -80
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "w2-fnew",
+        "name": "Is New Project",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.kind }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "NEW_PROJECT"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          384,
+          128
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w2-readnew",
+        "name": "Read Index (New)",
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          608,
+          128
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "w2-resolvenew",
+        "name": "Resolve New Project",
+        "parameters": {
+          "jsCode": "// A new project post. Decide whether it is genuinely new before announcing it.\n//\n//   no row              -> ANNOUNCE, brand new project\n//   row, status OPEN    -> SKIP. A re-announcement keeps the original row untouched\n//                          (§7 step 4); DMing \"You started\" for a repost would be wrong.\n//   row, status DELETED -> ANNOUNCE. The original post was deleted, so this repost is how\n//                          the project exists now. The row is refreshed entirely, dates\n//                          included: the channel's job is an accurate current list of\n//                          ongoing projects, not forensic aging. If a typo went unnoticed\n//                          for weeks, the clock restarting is a fair consequence.\nconst req = $('Classify Event').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nconst existing = rows.find((r) =>\n  String(r.qu_number || '').trim() === String(req.qu_number).trim());\n\nif (existing && String(existing.status || '').trim() !== 'DELETED') {\n  return [{ json: { kind: 'SKIP',\n    reason: 'QU-' + req.qu_number + ' is already indexed (' + existing.status + ')' } }];\n}\n\nreturn [{ json: { kind: 'ANNOUNCE', user: req.user, qu_number: req.qu_number,\n                  text: req.text, ts: req.ts, reregistered: Boolean(existing) } }];"
+        },
+        "position": [
+          832,
+          128
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "w2-fannounce",
+        "name": "Should Announce",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.kind }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "ANNOUNCE"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          1040,
+          128
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w2-notifystarter",
+        "name": "Notify Starter",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Resolve New Project').first().json.user }}"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "=You started {{ $('Resolve New Project').first().json.text }}"
+        },
+        "position": [
+          1264,
+          128
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "818699cf-296e-4e10-a7a8-6e1e66599851"
+      },
+      {
+        "id": "w2-projrow",
+        "name": "Build Project Row",
+        "parameters": {
+          "jsCode": "// Index the project immediately, rather than waiting for the nightly refresh. This is why\n// PENDING is now rare: the row exists the moment the post does, so a rocket seconds later\n// already has something to resolve against.\n//\n// notify_ts is the DM Posty just sent. Recording it lets a rocket on that DM resolve to\n// this same project without any conversations.history call (§8).\nconst p = $('Resolve New Project').first().json;\nconst dm = $input.first().json;\n\n// Slack escapes &, < and > in event text. Store decoded; escape again on the way out.\n// Keeps the Sheet readable without changing the bytes Posty posts. See code/parse.js.\nfunction decodeEntities(t) {\n  return String(t == null ? '' : t)\n    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');\n}\nfunction escapeForSlack(t) {\n  return String(t == null ? '' : t)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\n\n// Manila-local date, matching code/parse.js. UTC+8, no DST. The regex guard is\n// load-bearing: Number('') is 0, which passes Number.isFinite and silently yields\n// 1970-01-01. A blank date is honest; the epoch is a lie that looks like data.\nfunction tsToDate(t) {\n  t = String(t == null ? '' : t).trim();\n  if (!/^\\d{6,}(\\.\\d+)?$/.test(t)) return '';\n  return new Date(Number(t.split('.')[0]) * 1000 + 8 * 3600 * 1000).toISOString().slice(0, 10);\n}\nfunction slackTs(resp) {\n  return String(resp.message_timestamp || (resp.message && resp.message.ts) || '').trim();\n}\n\nreturn [{ json: {\n  qu_number: p.qu_number,\n  source_channel: 'C1SJE7404',\n  source_ts: String(p.ts),\n  source_text: decodeEntities(p.text),\n  posted_date: tsToDate(p.ts),\n  released: 'FALSE',\n  release_ts: '',\n  release_date: '',\n  status: 'OPEN',\n  age_days: '',\n  last_seen: new Date().toISOString(),\n  notify_ts: slackTs(dm),\n  posted_by: p.user,\n} }];"
+        },
+        "position": [
+          1488,
+          128
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w2-writeproj",
+        "name": "Write Project Row",
+        "parameters": {
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "matchingColumns": [
+              "qu_number"
+            ],
+            "schema": [],
+            "value": {}
+          },
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "operation": "appendOrUpdate",
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          1712,
+          128
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "w2-flist",
+        "name": "Is List Request",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.kind }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "LIST_REQUEST"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          384,
+          384
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w2-readlist",
+        "name": "Read Index (List)",
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          608,
+          384
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "w2-buildlist",
+        "name": "Build List",
+        "parameters": {
+          "jsCode": "// Build the requester's open-project list. One message per project, so each can be\n// rocketed individually — a single combined message would give no way to pick one.\nconst CAP = 25;\nconst req = $('Classify Event').first().json;\nconst rows = $input.all().map((i) => i.json);\n\n// Slack escapes &, < and > in event text. Store decoded; escape again on the way out.\n// Keeps the Sheet readable without changing the bytes Posty posts. See code/parse.js.\nfunction decodeEntities(t) {\n  return String(t == null ? '' : t)\n    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');\n}\nfunction escapeForSlack(t) {\n  return String(t == null ? '' : t)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\n\nfunction ageDays(posted, today) {\n  const a = Date.parse(posted + 'T00:00:00Z'), b = Date.parse(today + 'T00:00:00Z');\n  return (Number.isFinite(a) && Number.isFinite(b)) ? Math.round((b - a) / 86400000) : null;\n}\nconst today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);\n\nconst mine = rows.filter((r) =>\n  String(r.posted_by || '').trim() === String(req.user).trim() &&\n  String(r.status || '').trim() === 'OPEN' &&\n  String(r.qu_number || '').trim() !== '');\n\nmine.sort((a, b) => String(a.posted_date).localeCompare(String(b.posted_date)));\nconst shown = mine.slice(0, CAP);\nconst hidden = mine.length - shown.length;\n\nlet header;\nif (mine.length === 0) {\n  header = 'You have no open projects. Nothing of yours is waiting to be released.';\n} else {\n  header = 'You have ' + mine.length + ' open project' + (mine.length === 1 ? '' : 's') +\n    '. Rocket any message below to release it.';\n  if (hidden > 0) header += ' Showing the ' + shown.length + ' oldest — ' + hidden + ' more not shown.';\n}\n\n// The header carries no qu_number, so the write-back downstream skips it.\nconst out = [{ json: { is_header: true, qu_number: '', text: header } }];\nfor (const r of shown) {\n  const age = ageDays(r.posted_date, today);\n  out.push({ json: { is_header: false, qu_number: r.qu_number,\n                     text: escapeForSlack(r.source_text) + (age === null ? '' : '  —  ' + age + 'd') } });\n}\nreturn out;"
+        },
+        "position": [
+          832,
+          384
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w2-sendlist",
+        "name": "Send List Item",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Classify Event').first().json.user }}"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "={{ $json.text }}"
+        },
+        "position": [
+          1040,
+          384
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "fe9b4092-7e24-4442-8dae-1fbdb8d340e7"
+      },
+      {
+        "id": "w2-notifyrows",
+        "name": "Build Notify Rows",
+        "parameters": {
+          "jsCode": "// Record the ts of each list message as that project's notify_ts, so rocketing the DM\n// resolves back to the project. Pair responses to inputs by index — the Slack node runs\n// once per item and preserves order.\nconst inputs = $('Build List').all().map((i) => i.json);\nconst resps = $input.all().map((i) => i.json);\n\n// Manila-local date, matching code/parse.js. UTC+8, no DST. The regex guard is\n// load-bearing: Number('') is 0, which passes Number.isFinite and silently yields\n// 1970-01-01. A blank date is honest; the epoch is a lie that looks like data.\nfunction tsToDate(t) {\n  t = String(t == null ? '' : t).trim();\n  if (!/^\\d{6,}(\\.\\d+)?$/.test(t)) return '';\n  return new Date(Number(t.split('.')[0]) * 1000 + 8 * 3600 * 1000).toISOString().slice(0, 10);\n}\nfunction slackTs(resp) {\n  return String(resp.message_timestamp || (resp.message && resp.message.ts) || '').trim();\n}\n\nconst out = [];\nfor (let i = 0; i < resps.length; i++) {\n  const src = inputs[i];\n  if (!src || src.is_header || !src.qu_number) continue;   // header is not a project\n  const ts = slackTs(resps[i]);\n  if (!ts) continue;                                        // no ts, nothing to record\n  out.push({ json: { qu_number: src.qu_number, notify_ts: ts,\n                      last_seen: new Date().toISOString() } });\n}\nreturn out;"
+        },
+        "position": [
+          1264,
+          384
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w2-writenotify",
+        "name": "Write Notify Ts",
+        "parameters": {
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "matchingColumns": [
+              "qu_number"
+            ],
+            "schema": [],
+            "value": {}
+          },
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "operation": "appendOrUpdate",
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          1488,
+          384
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "w2-fdel",
+        "name": "Is Deleted Post",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.kind }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "DELETED_POST"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          384,
+          640
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w2-readdel",
+        "name": "Read Index (Del)",
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          608,
+          640
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "w2-resolvedel",
+        "name": "Resolve Deletion",
+        "parameters": {
+          "jsCode": "// Mark the row whose intake post was just deleted.\n//\n// Deliberately status-agnostic. An earlier version only touched OPEN rows, on the theory\n// that a RELEASED project should not be reopened — but marking a row DELETED never\n// reopens it, so that guard bought nothing and created an ordering trap: delete the\n// #releaseme post first and it worked, delete the intake post first and it silently did\n// nothing. One rule now: the intake post is gone, so the row stops counting.\n//\n// The row is kept, not removed. status becomes DELETED, which drops it out of the open\n// list and the digest, while release_ts and posted_date survive as history — useful if\n// Accounting ever asks why a QU has no release.\n//\n// UNTRACKED rows have no qu_number, so appendOrUpdate cannot match them and they cannot\n// be cleaned this way. Rare, and they are already excluded from every count.\nconst req = $('Classify Event').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nconst row = rows.find((r) =>\n  String(r.source_ts || '').trim() === String(req.deleted_ts).trim());\n\nif (!row) return [{ json: { kind: 'NOOP', reason: 'no index row for deleted ts ' + req.deleted_ts } }];\nif (!row.qu_number)\n  return [{ json: { kind: 'NOOP', reason: 'untracked row has no key to update' } }];\nif (String(row.status || '').trim() === 'DELETED')\n  return [{ json: { kind: 'NOOP', reason: 'row is already DELETED' } }];\n\nreturn [{ json: { kind: 'MARK', qu_number: row.qu_number, status: 'DELETED',\n                  was_status: row.status || '', last_seen: new Date().toISOString() } }];"
+        },
+        "position": [
+          832,
+          640
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "w2-fmark",
+        "name": "Should Mark Deleted",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.kind }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "MARK"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          1040,
+          640
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "id": "w2-emitdel",
+        "name": "Emit Deletion",
+        "parameters": {
+          "jsCode": "// Strip the routing key so only the columns we mean to change are written.\nconst r = $input.first().json;\nreturn [{ json: { qu_number: r.qu_number, status: r.status, last_seen: r.last_seen } }];"
+        },
+        "position": [
+          1264,
+          640
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w2-writedel",
+        "name": "Mark Row Deleted",
+        "parameters": {
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "matchingColumns": [
+              "qu_number"
+            ],
+            "schema": [],
+            "value": {}
+          },
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "operation": "appendOrUpdate",
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          1488,
+          640
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "w2-fundo",
+        "name": "Is Release Undone",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.kind }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "RELEASE_UNDONE"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          384,
+          912
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w2-readundo",
+        "name": "Read Index (Undo)",
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          608,
+          912
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "w2-resolveundo",
+        "name": "Resolve Undo",
+        "parameters": {
+          "jsCode": "// Revert a release whose #releaseme post was deleted.\n//\n// Only rows that are actually RELEASED, matched on release_ts — the ts of the message\n// Posty created. A CANCELLED row is left alone: deleting the cancellation notice does not\n// un-cancel a project.\n//\n// notify_ts is deliberately kept. The DM Posty sent still exists, so rocketing it again\n// must still resolve to this project — that is the whole point of an undo.\nconst req = $('Classify Event').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nconst row = rows.find((r) =>\n  String(r.release_ts || '').trim() === String(req.deleted_ts).trim());\n\nif (!row) return [{ json: { kind: 'NOOP', reason: 'no row released as ts ' + req.deleted_ts } }];\nif (String(row.status || '').trim() !== 'RELEASED')\n  return [{ json: { kind: 'NOOP', reason: 'row is ' + row.status + ', not reverting' } }];\nif (!row.qu_number)\n  return [{ json: { kind: 'NOOP', reason: 'no qu_number to match on' } }];\n\nreturn [{ json: { kind: 'REVERT', qu_number: row.qu_number,\n                  status: 'OPEN', released: 'FALSE',\n                  release_ts: '', release_date: '',\n                  last_seen: new Date().toISOString() } }];"
+        },
+        "position": [
+          832,
+          912
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "w2-frevert",
+        "name": "Should Revert",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.kind }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "REVERT"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          1040,
+          912
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "id": "w2-emitundo",
+        "name": "Emit Revert",
+        "parameters": {
+          "jsCode": "// Strip the routing key; write only the columns being reverted.\nconst r = $input.first().json;\nreturn [{ json: { qu_number: r.qu_number, status: r.status, released: r.released,\n                  release_ts: r.release_ts, release_date: r.release_date,\n                  last_seen: r.last_seen } }];"
+        },
+        "position": [
+          1264,
+          912
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w2-writeundo",
+        "name": "Revert Release",
+        "parameters": {
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "matchingColumns": [
+              "qu_number"
+            ],
+            "schema": [],
+            "value": {}
+          },
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "operation": "appendOrUpdate",
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          1488,
+          912
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "w2-fdigest",
+        "name": "Is Digest Request",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.kind }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "DIGEST_REQUEST"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          384,
+          1168
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "id": "w2-emitdigest",
+        "name": "Emit Digest Request",
+        "parameters": {
+          "jsCode": "// Hand the requester to Workflow 3. It resolves recipients itself, so the digest a\n// person asks for is built by exactly the same code as the scheduled one.\n//\n// Read from Classify Event by name, NOT from $input. Reading $input meant that inserting\n// any node upstream silently replaced the payload — an ack reaction did exactly that, the\n// user went undefined, and Workflow 3 fell through to its scheduled gate and sent nothing.\nreturn [{ json: { user: $('Classify Event').first().json.user } }];"
+        },
+        "position": [
+          608,
+          1168
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "alwaysOutputData": true,
+        "id": "w2-rundigest",
+        "name": "Run Digest",
+        "parameters": {
+          "options": {},
+          "workflowId": {
+            "__rl": true,
+            "cachedResultName": "Posty — Monthly Digest",
+            "mode": "id",
+            "value": "7cG9CRcCoT5UvTTi"
+          }
+        },
+        "position": [
+          832,
+          1168
+        ],
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2
+      },
+      {
+        "id": "w2-fclear",
+        "name": "Is Clear Request",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.kind }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "CLEAR_REQUEST"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          384,
+          1424
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w2-readdms",
+        "name": "Read My DMs",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "options": {},
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "channel",
+                "value": "={{ $json.channel }}"
+              },
+              {
+                "name": "limit",
+                "value": "100"
+              }
+            ]
+          },
+          "sendQuery": true,
+          "url": "https://slack.com/api/conversations.history"
+        },
+        "position": [
+          608,
+          1424
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "w2-pickdel",
+        "name": "Pick Deletable",
+        "parameters": {
+          "jsCode": "// Select which messages to delete.\n//\n// TWO HARD LIMITS, both deliberate:\n//   * only messages whose author is Posty (U0BTV2PGDSM) — a person's own messages are\n//     never touched, even though the bot token could not delete them anyway\n//   * only this one DM conversation, never a channel\n//\n// Deleting the list messages also orphans their notify_ts values in the index. That is\n// harmless: a notify_ts pointing at a deleted message simply never matches, and the\n// project is still releasable from its post in #newpostprojects or from a fresh list.\nconst POSTY = 'U0BTV2PGDSM';\nconst body = $input.first().json;\n\nif (!body.ok) {\n  return [{ json: { error: true, reason: 'conversations.history failed: ' + body.error } }];\n}\n\nconst mine = (body.messages || []).filter((m) => m.user === POSTY || m.bot_id);\nconst channel = $('Classify Event').first().json.channel;\n\nif (!mine.length) return [{ json: { nothing: true, channel } }];\n\nreturn mine.map((m) => ({ json: { channel, ts: m.ts, total: mine.length } }));"
+        },
+        "position": [
+          832,
+          1424
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "w2-fhasdel",
+        "name": "Has Deletable",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.ts }}",
+                "operator": {
+                  "operation": "exists",
+                  "singleValue": true,
+                  "type": "string"
+                },
+                "rightValue": ""
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          1040,
+          1424
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w2-delmsg",
+        "name": "Delete Message",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "options": {},
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "channel",
+                "value": "={{ $json.channel }}"
+              },
+              {
+                "name": "ts",
+                "value": "={{ $json.ts }}"
+              }
+            ]
+          },
+          "sendQuery": true,
+          "url": "https://slack.com/api/chat.delete"
+        },
+        "position": [
+          1264,
+          1424
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "w2-clearreport",
+        "name": "Report Cleared",
+        "parameters": {
+          "jsCode": "// One confirmation after the deletes. $input carries one item per chat.delete call.\nconst results = $input.all().map((i) => i.json);\nconst ok = results.filter((r) => r && r.ok).length;\nconst failed = results.length - ok;\n\nlet text = 'Cleared ' + ok + ' message' + (ok === 1 ? '' : 's') + '.';\nif (failed) text += ' ' + failed + ' could not be deleted.';\nif (!ok && !failed) text = 'Nothing to clear.';\n\nreturn [{ json: { user: $('Classify Event').first().json.user, text } }];"
+        },
+        "position": [
+          1488,
+          1424
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w2-clearsend",
+        "name": "Send Clear Result",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $json.user }}"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "={{ $json.text }}"
+        },
+        "position": [
+          1712,
+          1424
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "ad504004-0d82-4ad4-bd52-53835ed509ad"
+      },
+      {
+        "id": "w2-explaindrop",
+        "name": "Explain Drop",
+        "parameters": {
+          "jsCode": "// Explain a drop to whoever reacted. A rocket that does nothing is the single most\n// confusing thing Posty can do — the person cannot tell the difference between \"already\n// handled\" and \"broken\", so they either react again or assume it failed silently.\nconst r = $('Resolve Release').first().json;\nconst row = r.row || {};\n\nconst MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nfunction humanDate(iso) {\n  const m = String(iso || '').match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);\n  return m ? Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1] + ' ' + m[1] : '';\n}\n\nconst label = row.qu_number\n  ? (String(row.qu_number).startsWith('NOQU-') ? 'That project' : 'QU-' + row.qu_number)\n  : 'That project';\n\nlet text;\nif (r.decision === 'DROP_CANCELLED') {\n  text = label + ' is marked cancelled, so I have not reposted it. If that is wrong, '\n       + 'let Tara know and the row can be reopened.';\n} else {\n  const when = humanDate(row.release_date);\n  text = label + ' was already released' + (when ? ' on ' + when : '')\n       + ', so I have not reposted it. Nothing to do.';\n}\n\nreturn [{ json: { user: $('Slack Trigger').first().json.user, text } }];"
+        },
+        "position": [
+          1488,
+          -80
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w2-notifydrop",
+        "name": "Notify Drop",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $json.user }}"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "={{ $json.text }}"
+        },
+        "position": [
+          1712,
+          -80
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "788cc966-39da-41da-ae09-730a8a2d69f1"
+      },
+      {
+        "id": "w2-explainpending",
+        "name": "Explain Pending",
+        "parameters": {
+          "jsCode": "// The reacted-to post is not in the index, so there is nothing to repost.\n//\n// Worded as an instruction rather than a promise: §7 step 4 describes an automatic retry\n// after the nightly refresh, and that retry is NOT built. Telling someone to wait for\n// something that will not happen is worse than telling them to react again.\nconst e = $('Slack Trigger').first().json;\nreturn [{ json: { user: e.user,\n  text: \"I don't have that post in the index yet, so I can't repost it — I've parked it. \"\n      + \"This usually means the post arrived while I was down. React 🚀 again after the \"\n      + \"02:00 refresh tonight and it should go through.\" } }];"
+        },
+        "position": [
+          1712,
+          -240
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w2-notifypending",
+        "name": "Notify Pending",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $json.user }}"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "={{ $json.text }}"
+        },
+        "position": [
+          1920,
+          -240
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "dbb33ff0-3896-4def-8532-5cf50162f94b"
+      },
+      {
+        "id": "w2-notposty",
+        "name": "Not From Posty",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.bot_id }}",
+                "operator": {
+                  "operation": "notExists",
+                  "singleValue": true,
+                  "type": "string"
+                },
+                "rightValue": ""
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          32,
+          0
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "executeOnce": true,
+        "id": "cac2609e-c6bd-4b7c-bc09-da4e7db5a833",
+        "name": "Clear List Ack",
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Slack Trigger').first().json.channel }}"
+          },
+          "name": "eyes",
+          "operation": "remove",
+          "resource": "reaction",
+          "timestamp": "={{ $('Slack Trigger').first().json.ts }}"
+        },
+        "position": [
+          1712,
+          384
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "7fc5f46b-52d3-4913-96ed-1eb17991d604"
+      },
+      {
+        "id": "w2-ishumandm",
+        "name": "Is Human DM",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "h1",
+                "leftValue": "={{ $json.type }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "message"
+              },
+              {
+                "id": "h2",
+                "leftValue": "={{ $json.channel_type }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "im"
+              },
+              {
+                "id": "h3",
+                "leftValue": "={{ $json.subtype }}",
+                "operator": {
+                  "operation": "notExists",
+                  "singleValue": true,
+                  "type": "string"
+                },
+                "rightValue": ""
+              },
+              {
+                "id": "h4",
+                "leftValue": "={{ $json.bot_id }}",
+                "operator": {
+                  "operation": "notExists",
+                  "singleValue": true,
+                  "type": "string"
+                },
+                "rightValue": ""
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          176,
+          -96
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "executeOnce": true,
+        "id": "w2-ackearly",
+        "name": "Ack Early",
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Slack Trigger').first().json.channel }}"
+          },
+          "name": "eyes",
+          "resource": "reaction",
+          "timestamp": "={{ $('Slack Trigger').first().json.ts }}"
+        },
+        "position": [
+          400,
+          -96
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "8679af69-2dbd-424d-b7cd-29eb1832ad69"
+      }
+    ],
+    "updatedAt": "2026-09-03T11:09:11.460Z",
+    "versionId": "c116d8d2-7fe6-4d48-a412-a7b038331213",
+    "workflowId": "eFNMRnaN4yGvmqhc",
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-03T11:09:12.231Z",
+        "event": "activated",
+        "id": 652,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "c116d8d2-7fe6-4d48-a412-a7b038331213",
+        "workflowId": "eFNMRnaN4yGvmqhc"
+      }
+    ]
+  },
+  "activeVersionId": "c116d8d2-7fe6-4d48-a412-a7b038331213",
+  "connections": {
+    "Ack Early": {
+      "main": [
+        []
+      ]
+    },
+    "Build List": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send List Item",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Build Notify Rows": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write Notify Ts",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Build Project Row": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write Project Row",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Build Release Row": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Mark Released",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Classify Event": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Is Release Reaction",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Is New Project",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Is List Request",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Is Deleted Post",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Is Release Undone",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Is Digest Request",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Is Clear Request",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Delete Message": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Report Cleared",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Emit Deletion": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Mark Row Deleted",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Emit Digest Request": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Run Digest",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Emit Pending": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write Pending",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Emit Revert": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Revert Release",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Explain Drop": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Notify Drop",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Explain Pending": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Notify Pending",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Has Deletable": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Delete Message",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Is Clear Request": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read My DMs",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Is Deleted Post": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Index (Del)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Is Digest Request": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Emit Digest Request",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Is Human DM": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Ack Early",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Is List Request": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Index (List)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Is New Project": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Index (New)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Is Release Reaction": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Index",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Is Release Undone": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Index (Undo)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Log Drop": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Explain Drop",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Not From Posty": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Is Human DM",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Classify Event",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Notify Starter": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build Project Row",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Pick Deletable": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Has Deletable",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Post Release": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build Release Row",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Notify Releaser",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Index": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Resolve Release",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Index (Del)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Resolve Deletion",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Index (List)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build List",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Index (New)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Resolve New Project",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Index (Undo)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Resolve Undo",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read My DMs": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Pick Deletable",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Report Cleared": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send Clear Result",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Resolve Deletion": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Should Mark Deleted",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Resolve New Project": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Should Announce",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Resolve Release": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Should Post",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Should Park",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Should Drop",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Resolve Undo": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Should Revert",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run Digest": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Clear List Ack",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Send Clear Result": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Clear List Ack",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Send List Item": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build Notify Rows",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Clear List Ack",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Should Announce": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Notify Starter",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Should Drop": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Log Drop",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Should Mark Deleted": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Emit Deletion",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Should Park": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Emit Pending",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Should Post": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Post Release",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Should Revert": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Emit Revert",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Not From Posty",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Write Notify Ts": {
+      "main": [
+        []
+      ]
+    },
+    "Write Pending": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Explain Pending",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-08-31T07:47:49.923Z",
+  "description": null,
+  "id": "eFNMRnaN4yGvmqhc",
+  "isArchived": false,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Posty — Events Endpoint",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "w2-sticky",
+      "name": "Sticky — read me",
+      "parameters": {
+        "content": "## Posty — Events Endpoint\\n\\nOne Slack app = one Request URL, so every event lands\\nhere and `Classify Event` routes it.\\n\\n### Four flows\\n1. **NEW_PROJECT** — a QU post in #newpostprojects.\\n   Indexes it immediately, DMs the poster\\n   \\\"You started …\\\", records the DM as `notify_ts`.\\n2. **RELEASE** — 🚀 on the intake post OR on a DM\\n   Posty sent. Resolves via `source_ts` then\\n   `notify_ts`. Reposts verbatim, marks released,\\n   DMs the releaser.\\n3. **LIST_REQUEST** — any DM to Posty returns that\\n   person's open projects, oldest first, capped at\\n   25. One message each so they can be rocketed.\\n4. **IGNORE** — everything else, including Posty's\\n   own messages, joins, deletions and un-reactions.\\n\\n### ⚠️ TARGET CHANNEL IS STILL A TEST TARGET\\n`Post Release` posts to **U026N6E1R** (tara's DM),\\nnot #releaseme. §14.9 — a bug here puts junk in\\nfront of Accounting.\\n**To go live:** set Channel on `Post Release` to\\n`CC9EG3K8C`. One field.\\n\\n### Why indexing happens on post\\nThe nightly refresh used to be the only way a row\\nappeared, so a rocket minutes after posting always\\nlanded in PENDING. Indexing on the message event\\nmakes PENDING rare — it now means n8n was down\\nwhen the post happened.\\n\\n### Logic lives in code/\\nresolve-release.js, and the classifier mirrored in\\nscripts/test-classify. Edit there, run the tests,\\npaste back. Never edit only a node.\n\n### Attribution\n`Post Release` appends \"Released by @person\" on a\nsecond line. Every post in #releaseme now comes\nfrom Posty, so without it the channel loses the\nauthor information it used to carry. The verbatim\nfirst line is untouched.\\n\\n### Why `Not From Posty` sits first\\nEvery message Posty sends comes back as an\\nevent. That was ~90% of all executions, and each\\none paid the Code-node cold start — up to 3.6s.\\nSlack retries after 3s, so slow runs were\\nproducing DUPLICATE event deliveries.\\n\\nA Filter node runs in ~2ms and needs no task\\nrunner, so dropping bot messages before\\n`Classify Event` removes the cold start from the\\nvast majority of events.\\n\\n`Classify Event` still checks bot_id itself —\\nthis gate is an optimisation, not the guard.",
+        "height": 1004,
+        "width": 572
+      },
+      "position": [
+        -704,
+        -416
+      ],
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "b1a1f0c2-0002-4a10-9a01-posty000002",
+      "name": "Slack Trigger",
+      "parameters": {
+        "options": {},
+        "trigger": [
+          "any_event"
+        ],
+        "watchWorkspace": true
+      },
+      "position": [
+        -96,
+        0
+      ],
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "webhookId": "posty-slack-webhook"
+    },
+    {
+      "id": "w2-classify",
+      "name": "Classify Event",
+      "parameters": {
+        "jsCode": "// Posty — event router. The Slack Trigger is any_event, so everything the app subscribes\n// to lands here: reaction_added, message.channels, message.im. Route once, so downstream\n// filters test one plain string instead of poking at fields a given event may not have.\n\nconst e = $input.first().json;\nconst NEWPOST = 'C1SJE7404';\nconst RELEASEME = 'CC9EG3K8C';\nconst QU_RE = /QU[\\s]*[-_]?[\\s]*(\\d{4,6})/i;\n\n// A QU- or QU_ prefix with no digits: the agreed convention for a project whose code is\n// not assigned yet. Tracked under a synthetic key so it ages and can be rocketed.\nconst QU_MARKER_RE = /QU[\\s]*[-_]/i;\n\n// Only these people announce projects. Policy list set by Tara 2026-08-31; mirrored in\n// code/parse.js. ADD NEW POST ENGINEERS HERE ON THEIR FIRST DAY — until someone is on this\n// list their posts are invisible to Posty, which is intended, and also how this list goes\n// quietly wrong. A skipped post that carried a QU is reported with its code below, so the\n// omission shows up in the execution list instead of vanishing.\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'alec elijah',\n  'U08V3CKDGJF': 'howard',\n};\nconst isDm = (ch) => typeof ch === 'string' && ch.charAt(0) === 'D';\n\nfunction ignore(reason) {\n  return [{ json: { kind: 'IGNORE', reason, event_type: e.type || null } }];\n}\n\nif (e.type === 'reaction_added') {\n  if (e.reaction !== 'rocket') return ignore('reaction is not rocket');\n  if (!e.item || !e.item.channel) return ignore('reaction has no item');\n  // Two valid origins: the intake post itself, or a DM Posty sent about that project.\n  // resolve-release.js works out which by matching source_ts then notify_ts.\n  const ch = e.item.channel;\n  if (ch !== NEWPOST && !isDm(ch)) return ignore('rocket not in #newpostprojects or a DM');\n  return [{ json: { kind: 'RELEASE', user: e.user, item_ts: e.item.ts, from_dm: isDm(ch) } }];\n}\n\nif (e.type === 'message') {\n  // Posty writes to #releaseme and DMs people. Without this guard it would eventually\n  // see its own messages and act on them.\n  if (e.bot_id) return ignore('bot message');\n\n  // A deleted intake post leaves an index row pointing at a message that no longer\n  // exists. Left alone, a repost is treated as a re-announcement, no new row is written,\n  // and a rocket on the new post matches nothing — the project becomes permanently\n  // unreleasable. Catch the deletion so the row can be re-registered.\n  if (e.subtype === 'message_deleted') {\n    if (!e.deleted_ts) return ignore('deletion with no deleted_ts');\n    if (e.channel === NEWPOST) {\n      return [{ json: { kind: 'DELETED_POST', deleted_ts: String(e.deleted_ts) } }];\n    }\n    // Deleting Posty's post in #releaseme means the release did not actually happen —\n    // this is the undo for a mistaken rocket. Without it a wrong release is permanent:\n    // the row stays RELEASED and the dedupe (§7 step 5) blocks it from ever being\n    // released again.\n    if (e.channel === RELEASEME) {\n      return [{ json: { kind: 'RELEASE_UNDONE', deleted_ts: String(e.deleted_ts) } }];\n    }\n    return ignore('deletion in an unrelated channel');\n  }\n\n  if (e.subtype) return ignore('message subtype: ' + e.subtype);\n  if (!e.user) return ignore('no user on message');\n\n  // A DM to Posty is a request for that person's open projects. There is exactly one\n  // intent, so there is nothing to parse — any DM means \"list mine\".\n  if (isDm(e.channel) || e.channel_type === 'im') {\n    // Two intents, distinguished by one keyword. No language model: \"digest\" or not is a\n    // decision a regex makes correctly every time, and a wrong guess here would send the\n    // whole open-projects list to someone who asked for their own.\n    if (/\\bdigests?\\b/i.test(String(e.text || ''))) {\n      return [{ json: { kind: 'DIGEST_REQUEST', user: e.user, channel: e.channel } }];\n    }\n    // Tidy up the DM. Deletes only Posty's OWN messages, only in this conversation.\n    if (/\\bclear\\b/i.test(String(e.text || ''))) {\n      return [{ json: { kind: 'CLEAR_REQUEST', user: e.user, channel: e.channel } }];\n    }\n    return [{ json: { kind: 'LIST_REQUEST', user: e.user, channel: e.channel } }];\n  }\n\n  if (e.channel !== NEWPOST) return ignore('message not in #newpostprojects');\n\n  // Not a post engineer -> not a project announcement, whatever the message contains.\n  if (!Object.prototype.hasOwnProperty.call(POST_ENGINEERS, String(e.user).trim())) {\n    const stray = String(e.text || '').match(QU_RE);\n    return ignore(stray\n      ? 'not a post engineer, and the message carried QU-' + stray[1] + ' (not tracked)'\n      : 'not a post engineer');\n  }\n\n  // A project is a post with a QU code. Codeless posts are left alone — they still show\n  // in the digest's \"needs manual check\" section, but they are not tracked, because\n  // nothing can be counted, aged or released without an identifier. Post engineers write\n  // a QU code, always.\n  const text = e.text || '';\n  const m = text.match(QU_RE);\n\n  if (m) {\n    return [{ json: { kind: 'NEW_PROJECT', user: e.user, qu_number: m[1], text, ts: e.ts } }];\n  }\n\n  // Marked as a project but not coded yet. Synthetic key from the post's own ts; refuse\n  // an implausible ts, since a shared key would collapse every uncoded project into one.\n  if (QU_MARKER_RE.test(text) && /^\\d{6,}(\\.\\d+)?$/.test(String(e.ts || '').trim())) {\n    return [{ json: { kind: 'NEW_PROJECT', user: e.user,\n                      qu_number: 'NOQU-' + String(e.ts).trim(), text, ts: e.ts,\n                      synthetic: true } }];\n  }\n\n  return ignore('no QU code and no QU- marker');\n}\n\nreturn ignore('unhandled event type');"
+      },
+      "position": [
+        240,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "b1a1f0c2-0003-4a10-9a01-posty000003",
+      "name": "Is Release Reaction",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.kind }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "RELEASE"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        384,
+        -256
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w2-readindex",
+      "name": "Read Index",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        608,
+        -256
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "w2-resolve",
+      "name": "Resolve Release",
+      "parameters": {
+        "jsCode": "// Posty — release decision. code/resolve-release.js pasted verbatim, tested by\n// ./scripts/test-nodes. Edit in code/, run the tests, paste back.\n\n// Posty — Workflow 2's decision node, as a testable module.\n//\n// Given a reaction_added event and the current index, decides what happens. Pure: no I/O,\n// no posting. The node that actually posts sits downstream of this one, so every path that\n// could put a message into #releaseme is decided here and can be tested offline.\n//\n// Handoff §7 Workflow 2. The order of the checks below is the order in §7 and matters:\n// a released row must be dropped BEFORE anything reaches the poster.\n\n\n\nconst DECISIONS = {\n  POST: 'POST',                       // repost source_text verbatim, then mark released\n  DROP_RELEASED: 'DROP_RELEASED',     // already shipped — this is the dedupe\n  DROP_CANCELLED: 'DROP_CANCELLED',   // cancelled projects are never reposted\n  PENDING: 'PENDING',                 // not indexed yet; retry after the nightly refresh\n};\n\n// Slack ts values are identifiers, not numbers. Compare as trimmed strings — a numeric\n// compare would make 1788163608.395249 and 1788163608.39525 look equal, which is exactly\n// the silent failure the text-formatted Sheet column exists to prevent.\n// The stored source_text is decoded for readability. Slack expects &, < and > escaped in\n// chat.postMessage, so re-escape on the way out. This makes the posted bytes identical to\n// what was verified live on 2026-08-31, when the round-trip was confirmed correct.\nfunction escapeForSlack(text) {\n  return String(text == null ? '' : text)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\nfunction sameTs(a, b) {\n  return String(a == null ? '' : a).trim() === String(b == null ? '' : b).trim();\n}\n\nfunction resolveRelease(input) {\n  const { event = {}, indexRows = [], nowIso } = input;\n\n  const itemTs = event.item ? event.item.ts : null;\n  const itemChannel = event.item ? event.item.channel : null;\n\n  // A rocket can arrive from two places, and both must resolve to the same project:\n  //   - on the intake post in #newpostprojects  -> matches source_ts\n  //   - on the DM Posty sent about that project -> matches notify_ts\n  // notify_ts is recorded when Posty DMs about a project, so neither route needs a\n  // conversations.history call to work out what was reacted to (§8, no history on the\n  // hot path). source_ts is checked first: it is the canonical identifier, and a DM is\n  // only ever a pointer back to it.\n  const row = indexRows.find((r) => sameTs(r.source_ts, itemTs))\n           || indexRows.find((r) => r.notify_ts && sameTs(r.notify_ts, itemTs));\n\n  // §7 step 4. The reaction arrived before the nightly refresh indexed the post. Park it;\n  // do NOT call conversations.history to resolve the text here — avoiding that call on the\n  // hot path is the entire reason this design is event-driven rather than polling (§8).\n  if (!row) {\n    return {\n      decision: DECISIONS.PENDING,\n      reason: 'no index row matches source_ts or notify_ts ' + itemTs,\n      pending: {\n        item_ts: String(itemTs == null ? '' : itemTs),\n        item_channel: itemChannel || '',\n        reacted_by: event.user || '',\n        event_ts: String(event.event_ts == null ? '' : event.event_ts),\n        first_seen: nowIso,\n        retry_count: 0,\n        resolved: 'FALSE',\n      },\n    };\n  }\n\n  // §7 step 5 — the dedupe. Keyed on the row's status, deliberately NOT on event_ts:\n  // a second rocket days later carries a completely different event_ts and must still be\n  // dropped. Verified live on 2026-08-31, when one message produced two reaction_added\n  // events 18 seconds apart.\n  if (row.status === 'RELEASED') {\n    return { decision: DECISIONS.DROP_RELEASED, row,\n             reason: 'QU-' + row.qu_number + ' is already RELEASED' };\n  }\n\n  // §7 step 6 / §9 rule 1. Reposting a cancelled project would tell Accounting to bill\n  // something that never went out.\n  if (row.status === 'CANCELLED') {\n    return { decision: DECISIONS.DROP_CANCELLED, row,\n             reason: 'QU-' + row.qu_number + ' is CANCELLED' };\n  }\n\n  // UNTRACKED rows carry no QU number, so there is nothing to mark released and nothing\n  // that would join back to Accounting. Park rather than post.\n  if (!row.qu_number) {\n    return { decision: DECISIONS.PENDING, row,\n             reason: 'row has no QU number (UNTRACKED)',\n             pending: {\n               item_ts: String(itemTs == null ? '' : itemTs),\n               item_channel: itemChannel || '',\n               reacted_by: event.user || '',\n               event_ts: String(event.event_ts == null ? '' : event.event_ts),\n               first_seen: nowIso,\n               retry_count: 0,\n               resolved: 'FALSE',\n             } };\n  }\n\n  // §7 step 7. Repost source_text VERBATIM. This is the whole point: it guarantees the QU\n  // number and title match the intake post exactly, which is what kills the format drift\n  // between posters — glenn writes `QU / Agency / Producer / Client / Title` while rico\n  // writes `QU / Client \"Title\" / Producer / Studio M Recording`.\n  return {\n    decision: DECISIONS.POST,\n    row,\n    text: escapeForSlack(row.source_text),\n    qu_number: row.qu_number,\n    reason: 'QU-' + row.qu_number + ' is ' + (row.status || 'OPEN') + ', reposting',\n  };\n}\n\nconst event = $('Slack Trigger').first().json;\nconst indexRows = $('Read Index').all().map((i) => i.json);\nconst out = resolveRelease({ event, indexRows, nowIso: new Date().toISOString() });\nreturn [{ json: out }];"
+      },
+      "position": [
+        832,
+        -256
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "w2-fpost",
+      "name": "Should Post",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.decision }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "POST"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1040,
+        -416
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w2-post",
+      "name": "Post Release",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "CC9EG3K8C"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "={{ $json.text }}\nReleased by <@{{ $('Slack Trigger').first().json.user }}>"
+      },
+      "position": [
+        1264,
+        -416
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "996dbdc8-58da-4262-907a-5e86bb053c76"
+    },
+    {
+      "id": "w2-relrow",
+      "name": "Build Release Row",
+      "parameters": {
+        "jsCode": "// Write-back after a successful repost. release_ts is the ts of the message POSTY created\n// (§6), not the intake post's ts. The n8n Slack node returns message_timestamp and\n// message.ts — never `ts`. Guessing that field cost a live bug on 2026-08-31.\nconst resolved = $('Resolve Release').first().json;\nconst posted = $input.first().json;\n\n// Manila-local date, matching code/parse.js. UTC+8, no DST. The regex guard is\n// load-bearing: Number('') is 0, which passes Number.isFinite and silently yields\n// 1970-01-01. A blank date is honest; the epoch is a lie that looks like data.\nfunction tsToDate(t) {\n  t = String(t == null ? '' : t).trim();\n  if (!/^\\d{6,}(\\.\\d+)?$/.test(t)) return '';\n  return new Date(Number(t.split('.')[0]) * 1000 + 8 * 3600 * 1000).toISOString().slice(0, 10);\n}\nfunction slackTs(resp) {\n  return String(resp.message_timestamp || (resp.message && resp.message.ts) || '').trim();\n}\n\nconst ts = slackTs(posted);\nconst row = {\n  qu_number: resolved.qu_number,\n  released: 'TRUE',\n  release_ts: ts,\n  release_date: tsToDate(ts),\n  status: 'RELEASED',\n  last_seen: new Date().toISOString(),\n};\n\n// Still RELEASED even if the ts could not be read. The message is already posted and\n// cannot be unposted, so the dedupe (§7 step 5, keyed on status) must hold or the next\n// rocket duplicates it in front of Accounting. A data gap beats a visible mess.\nif (!ts) row.note = 'WARNING: could not read the posted message ts from the Slack response';\n\nreturn [{ json: row }];"
+      },
+      "position": [
+        1488,
+        -560
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w2-markrel",
+      "name": "Mark Released",
+      "parameters": {
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "qu_number"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "operation": "appendOrUpdate",
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        1712,
+        -560
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w2-notifyreleaser",
+      "name": "Notify Releaser",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Slack Trigger').first().json.user }}"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "=You released {{ $('Resolve Release').first().json.text }}"
+      },
+      "position": [
+        1488,
+        -400
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "05362019-8ad9-4de0-a21d-99fb6a9ecf9a"
+    },
+    {
+      "id": "w2-fpark",
+      "name": "Should Park",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.decision }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "PENDING"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1040,
+        -240
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "w2-emitpending",
+      "name": "Emit Pending",
+      "parameters": {
+        "jsCode": "return [{ json: $input.first().json.pending }];"
+      },
+      "position": [
+        1264,
+        -240
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w2-writepending",
+      "name": "Write Pending",
+      "parameters": {
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [],
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "operation": "append",
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_pending"
+        }
+      },
+      "position": [
+        1488,
+        -240
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "w2-fdrop",
+      "name": "Should Drop",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.decision }}",
+              "operator": {
+                "operation": "startsWith",
+                "type": "string"
+              },
+              "rightValue": "DROP"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1040,
+        -80
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "w2-logdrop",
+      "name": "Log Drop",
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nreturn [{ json: { dropped: true, decision: r.decision, reason: r.reason,\n                  qu_number: r.row ? r.row.qu_number : null } }];"
+      },
+      "position": [
+        1264,
+        -80
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "w2-fnew",
+      "name": "Is New Project",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.kind }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "NEW_PROJECT"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        384,
+        128
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w2-readnew",
+      "name": "Read Index (New)",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        608,
+        128
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "w2-resolvenew",
+      "name": "Resolve New Project",
+      "parameters": {
+        "jsCode": "// A new project post. Decide whether it is genuinely new before announcing it.\n//\n//   no row              -> ANNOUNCE, brand new project\n//   row, status OPEN    -> SKIP. A re-announcement keeps the original row untouched\n//                          (§7 step 4); DMing \"You started\" for a repost would be wrong.\n//   row, status DELETED -> ANNOUNCE. The original post was deleted, so this repost is how\n//                          the project exists now. The row is refreshed entirely, dates\n//                          included: the channel's job is an accurate current list of\n//                          ongoing projects, not forensic aging. If a typo went unnoticed\n//                          for weeks, the clock restarting is a fair consequence.\nconst req = $('Classify Event').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nconst existing = rows.find((r) =>\n  String(r.qu_number || '').trim() === String(req.qu_number).trim());\n\nif (existing && String(existing.status || '').trim() !== 'DELETED') {\n  return [{ json: { kind: 'SKIP',\n    reason: 'QU-' + req.qu_number + ' is already indexed (' + existing.status + ')' } }];\n}\n\nreturn [{ json: { kind: 'ANNOUNCE', user: req.user, qu_number: req.qu_number,\n                  text: req.text, ts: req.ts, reregistered: Boolean(existing) } }];"
+      },
+      "position": [
+        832,
+        128
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "w2-fannounce",
+      "name": "Should Announce",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.kind }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "ANNOUNCE"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1040,
+        128
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w2-notifystarter",
+      "name": "Notify Starter",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Resolve New Project').first().json.user }}"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "=You started {{ $('Resolve New Project').first().json.text }}"
+      },
+      "position": [
+        1264,
+        128
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "818699cf-296e-4e10-a7a8-6e1e66599851"
+    },
+    {
+      "id": "w2-projrow",
+      "name": "Build Project Row",
+      "parameters": {
+        "jsCode": "// Index the project immediately, rather than waiting for the nightly refresh. This is why\n// PENDING is now rare: the row exists the moment the post does, so a rocket seconds later\n// already has something to resolve against.\n//\n// notify_ts is the DM Posty just sent. Recording it lets a rocket on that DM resolve to\n// this same project without any conversations.history call (§8).\nconst p = $('Resolve New Project').first().json;\nconst dm = $input.first().json;\n\n// Slack escapes &, < and > in event text. Store decoded; escape again on the way out.\n// Keeps the Sheet readable without changing the bytes Posty posts. See code/parse.js.\nfunction decodeEntities(t) {\n  return String(t == null ? '' : t)\n    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');\n}\nfunction escapeForSlack(t) {\n  return String(t == null ? '' : t)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\n\n// Manila-local date, matching code/parse.js. UTC+8, no DST. The regex guard is\n// load-bearing: Number('') is 0, which passes Number.isFinite and silently yields\n// 1970-01-01. A blank date is honest; the epoch is a lie that looks like data.\nfunction tsToDate(t) {\n  t = String(t == null ? '' : t).trim();\n  if (!/^\\d{6,}(\\.\\d+)?$/.test(t)) return '';\n  return new Date(Number(t.split('.')[0]) * 1000 + 8 * 3600 * 1000).toISOString().slice(0, 10);\n}\nfunction slackTs(resp) {\n  return String(resp.message_timestamp || (resp.message && resp.message.ts) || '').trim();\n}\n\nreturn [{ json: {\n  qu_number: p.qu_number,\n  source_channel: 'C1SJE7404',\n  source_ts: String(p.ts),\n  source_text: decodeEntities(p.text),\n  posted_date: tsToDate(p.ts),\n  released: 'FALSE',\n  release_ts: '',\n  release_date: '',\n  status: 'OPEN',\n  age_days: '',\n  last_seen: new Date().toISOString(),\n  notify_ts: slackTs(dm),\n  posted_by: p.user,\n} }];"
+      },
+      "position": [
+        1488,
+        128
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w2-writeproj",
+      "name": "Write Project Row",
+      "parameters": {
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "qu_number"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "operation": "appendOrUpdate",
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        1712,
+        128
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "w2-flist",
+      "name": "Is List Request",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.kind }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "LIST_REQUEST"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        384,
+        384
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w2-readlist",
+      "name": "Read Index (List)",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        608,
+        384
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "w2-buildlist",
+      "name": "Build List",
+      "parameters": {
+        "jsCode": "// Build the requester's open-project list. One message per project, so each can be\n// rocketed individually — a single combined message would give no way to pick one.\nconst CAP = 25;\nconst req = $('Classify Event').first().json;\nconst rows = $input.all().map((i) => i.json);\n\n// Slack escapes &, < and > in event text. Store decoded; escape again on the way out.\n// Keeps the Sheet readable without changing the bytes Posty posts. See code/parse.js.\nfunction decodeEntities(t) {\n  return String(t == null ? '' : t)\n    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');\n}\nfunction escapeForSlack(t) {\n  return String(t == null ? '' : t)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\n\nfunction ageDays(posted, today) {\n  const a = Date.parse(posted + 'T00:00:00Z'), b = Date.parse(today + 'T00:00:00Z');\n  return (Number.isFinite(a) && Number.isFinite(b)) ? Math.round((b - a) / 86400000) : null;\n}\nconst today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);\n\nconst mine = rows.filter((r) =>\n  String(r.posted_by || '').trim() === String(req.user).trim() &&\n  String(r.status || '').trim() === 'OPEN' &&\n  String(r.qu_number || '').trim() !== '');\n\nmine.sort((a, b) => String(a.posted_date).localeCompare(String(b.posted_date)));\nconst shown = mine.slice(0, CAP);\nconst hidden = mine.length - shown.length;\n\nlet header;\nif (mine.length === 0) {\n  header = 'You have no open projects. Nothing of yours is waiting to be released.';\n} else {\n  header = 'You have ' + mine.length + ' open project' + (mine.length === 1 ? '' : 's') +\n    '. Rocket any message below to release it.';\n  if (hidden > 0) header += ' Showing the ' + shown.length + ' oldest — ' + hidden + ' more not shown.';\n}\n\n// The header carries no qu_number, so the write-back downstream skips it.\nconst out = [{ json: { is_header: true, qu_number: '', text: header } }];\nfor (const r of shown) {\n  const age = ageDays(r.posted_date, today);\n  out.push({ json: { is_header: false, qu_number: r.qu_number,\n                     text: escapeForSlack(r.source_text) + (age === null ? '' : '  —  ' + age + 'd') } });\n}\nreturn out;"
+      },
+      "position": [
+        832,
+        384
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w2-sendlist",
+      "name": "Send List Item",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Classify Event').first().json.user }}"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "={{ $json.text }}"
+      },
+      "position": [
+        1040,
+        384
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "fe9b4092-7e24-4442-8dae-1fbdb8d340e7"
+    },
+    {
+      "id": "w2-notifyrows",
+      "name": "Build Notify Rows",
+      "parameters": {
+        "jsCode": "// Record the ts of each list message as that project's notify_ts, so rocketing the DM\n// resolves back to the project. Pair responses to inputs by index — the Slack node runs\n// once per item and preserves order.\nconst inputs = $('Build List').all().map((i) => i.json);\nconst resps = $input.all().map((i) => i.json);\n\n// Manila-local date, matching code/parse.js. UTC+8, no DST. The regex guard is\n// load-bearing: Number('') is 0, which passes Number.isFinite and silently yields\n// 1970-01-01. A blank date is honest; the epoch is a lie that looks like data.\nfunction tsToDate(t) {\n  t = String(t == null ? '' : t).trim();\n  if (!/^\\d{6,}(\\.\\d+)?$/.test(t)) return '';\n  return new Date(Number(t.split('.')[0]) * 1000 + 8 * 3600 * 1000).toISOString().slice(0, 10);\n}\nfunction slackTs(resp) {\n  return String(resp.message_timestamp || (resp.message && resp.message.ts) || '').trim();\n}\n\nconst out = [];\nfor (let i = 0; i < resps.length; i++) {\n  const src = inputs[i];\n  if (!src || src.is_header || !src.qu_number) continue;   // header is not a project\n  const ts = slackTs(resps[i]);\n  if (!ts) continue;                                        // no ts, nothing to record\n  out.push({ json: { qu_number: src.qu_number, notify_ts: ts,\n                      last_seen: new Date().toISOString() } });\n}\nreturn out;"
+      },
+      "position": [
+        1264,
+        384
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w2-writenotify",
+      "name": "Write Notify Ts",
+      "parameters": {
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "qu_number"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "operation": "appendOrUpdate",
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        1488,
+        384
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "w2-fdel",
+      "name": "Is Deleted Post",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.kind }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "DELETED_POST"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        384,
+        640
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w2-readdel",
+      "name": "Read Index (Del)",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        608,
+        640
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "w2-resolvedel",
+      "name": "Resolve Deletion",
+      "parameters": {
+        "jsCode": "// Mark the row whose intake post was just deleted.\n//\n// Deliberately status-agnostic. An earlier version only touched OPEN rows, on the theory\n// that a RELEASED project should not be reopened — but marking a row DELETED never\n// reopens it, so that guard bought nothing and created an ordering trap: delete the\n// #releaseme post first and it worked, delete the intake post first and it silently did\n// nothing. One rule now: the intake post is gone, so the row stops counting.\n//\n// The row is kept, not removed. status becomes DELETED, which drops it out of the open\n// list and the digest, while release_ts and posted_date survive as history — useful if\n// Accounting ever asks why a QU has no release.\n//\n// UNTRACKED rows have no qu_number, so appendOrUpdate cannot match them and they cannot\n// be cleaned this way. Rare, and they are already excluded from every count.\nconst req = $('Classify Event').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nconst row = rows.find((r) =>\n  String(r.source_ts || '').trim() === String(req.deleted_ts).trim());\n\nif (!row) return [{ json: { kind: 'NOOP', reason: 'no index row for deleted ts ' + req.deleted_ts } }];\nif (!row.qu_number)\n  return [{ json: { kind: 'NOOP', reason: 'untracked row has no key to update' } }];\nif (String(row.status || '').trim() === 'DELETED')\n  return [{ json: { kind: 'NOOP', reason: 'row is already DELETED' } }];\n\nreturn [{ json: { kind: 'MARK', qu_number: row.qu_number, status: 'DELETED',\n                  was_status: row.status || '', last_seen: new Date().toISOString() } }];"
+      },
+      "position": [
+        832,
+        640
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "w2-fmark",
+      "name": "Should Mark Deleted",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.kind }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "MARK"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1040,
+        640
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "w2-emitdel",
+      "name": "Emit Deletion",
+      "parameters": {
+        "jsCode": "// Strip the routing key so only the columns we mean to change are written.\nconst r = $input.first().json;\nreturn [{ json: { qu_number: r.qu_number, status: r.status, last_seen: r.last_seen } }];"
+      },
+      "position": [
+        1264,
+        640
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w2-writedel",
+      "name": "Mark Row Deleted",
+      "parameters": {
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "qu_number"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "operation": "appendOrUpdate",
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        1488,
+        640
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "w2-fundo",
+      "name": "Is Release Undone",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.kind }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "RELEASE_UNDONE"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        384,
+        912
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w2-readundo",
+      "name": "Read Index (Undo)",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        608,
+        912
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "w2-resolveundo",
+      "name": "Resolve Undo",
+      "parameters": {
+        "jsCode": "// Revert a release whose #releaseme post was deleted.\n//\n// Only rows that are actually RELEASED, matched on release_ts — the ts of the message\n// Posty created. A CANCELLED row is left alone: deleting the cancellation notice does not\n// un-cancel a project.\n//\n// notify_ts is deliberately kept. The DM Posty sent still exists, so rocketing it again\n// must still resolve to this project — that is the whole point of an undo.\nconst req = $('Classify Event').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nconst row = rows.find((r) =>\n  String(r.release_ts || '').trim() === String(req.deleted_ts).trim());\n\nif (!row) return [{ json: { kind: 'NOOP', reason: 'no row released as ts ' + req.deleted_ts } }];\nif (String(row.status || '').trim() !== 'RELEASED')\n  return [{ json: { kind: 'NOOP', reason: 'row is ' + row.status + ', not reverting' } }];\nif (!row.qu_number)\n  return [{ json: { kind: 'NOOP', reason: 'no qu_number to match on' } }];\n\nreturn [{ json: { kind: 'REVERT', qu_number: row.qu_number,\n                  status: 'OPEN', released: 'FALSE',\n                  release_ts: '', release_date: '',\n                  last_seen: new Date().toISOString() } }];"
+      },
+      "position": [
+        832,
+        912
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "w2-frevert",
+      "name": "Should Revert",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.kind }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "REVERT"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1040,
+        912
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "w2-emitundo",
+      "name": "Emit Revert",
+      "parameters": {
+        "jsCode": "// Strip the routing key; write only the columns being reverted.\nconst r = $input.first().json;\nreturn [{ json: { qu_number: r.qu_number, status: r.status, released: r.released,\n                  release_ts: r.release_ts, release_date: r.release_date,\n                  last_seen: r.last_seen } }];"
+      },
+      "position": [
+        1264,
+        912
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w2-writeundo",
+      "name": "Revert Release",
+      "parameters": {
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "qu_number"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "operation": "appendOrUpdate",
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        1488,
+        912
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "w2-fdigest",
+      "name": "Is Digest Request",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.kind }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "DIGEST_REQUEST"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        384,
+        1168
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "w2-emitdigest",
+      "name": "Emit Digest Request",
+      "parameters": {
+        "jsCode": "// Hand the requester to Workflow 3. It resolves recipients itself, so the digest a\n// person asks for is built by exactly the same code as the scheduled one.\n//\n// Read from Classify Event by name, NOT from $input. Reading $input meant that inserting\n// any node upstream silently replaced the payload — an ack reaction did exactly that, the\n// user went undefined, and Workflow 3 fell through to its scheduled gate and sent nothing.\nreturn [{ json: { user: $('Classify Event').first().json.user } }];"
+      },
+      "position": [
+        608,
+        1168
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "alwaysOutputData": true,
+      "id": "w2-rundigest",
+      "name": "Run Digest",
+      "parameters": {
+        "options": {},
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "Posty — Monthly Digest",
+          "mode": "id",
+          "value": "7cG9CRcCoT5UvTTi"
+        }
+      },
+      "position": [
+        832,
+        1168
+      ],
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "w2-fclear",
+      "name": "Is Clear Request",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.kind }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "CLEAR_REQUEST"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        384,
+        1424
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w2-readdms",
+      "name": "Read My DMs",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "options": {},
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "={{ $json.channel }}"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://slack.com/api/conversations.history"
+      },
+      "position": [
+        608,
+        1424
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "w2-pickdel",
+      "name": "Pick Deletable",
+      "parameters": {
+        "jsCode": "// Select which messages to delete.\n//\n// TWO HARD LIMITS, both deliberate:\n//   * only messages whose author is Posty (U0BTV2PGDSM) — a person's own messages are\n//     never touched, even though the bot token could not delete them anyway\n//   * only this one DM conversation, never a channel\n//\n// Deleting the list messages also orphans their notify_ts values in the index. That is\n// harmless: a notify_ts pointing at a deleted message simply never matches, and the\n// project is still releasable from its post in #newpostprojects or from a fresh list.\nconst POSTY = 'U0BTV2PGDSM';\nconst body = $input.first().json;\n\nif (!body.ok) {\n  return [{ json: { error: true, reason: 'conversations.history failed: ' + body.error } }];\n}\n\nconst mine = (body.messages || []).filter((m) => m.user === POSTY || m.bot_id);\nconst channel = $('Classify Event').first().json.channel;\n\nif (!mine.length) return [{ json: { nothing: true, channel } }];\n\nreturn mine.map((m) => ({ json: { channel, ts: m.ts, total: mine.length } }));"
+      },
+      "position": [
+        832,
+        1424
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "w2-fhasdel",
+      "name": "Has Deletable",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.ts }}",
+              "operator": {
+                "operation": "exists",
+                "singleValue": true,
+                "type": "string"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1040,
+        1424
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w2-delmsg",
+      "name": "Delete Message",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "options": {},
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "={{ $json.channel }}"
+            },
+            {
+              "name": "ts",
+              "value": "={{ $json.ts }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://slack.com/api/chat.delete"
+      },
+      "position": [
+        1264,
+        1424
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "w2-clearreport",
+      "name": "Report Cleared",
+      "parameters": {
+        "jsCode": "// One confirmation after the deletes. $input carries one item per chat.delete call.\nconst results = $input.all().map((i) => i.json);\nconst ok = results.filter((r) => r && r.ok).length;\nconst failed = results.length - ok;\n\nlet text = 'Cleared ' + ok + ' message' + (ok === 1 ? '' : 's') + '.';\nif (failed) text += ' ' + failed + ' could not be deleted.';\nif (!ok && !failed) text = 'Nothing to clear.';\n\nreturn [{ json: { user: $('Classify Event').first().json.user, text } }];"
+      },
+      "position": [
+        1488,
+        1424
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w2-clearsend",
+      "name": "Send Clear Result",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.user }}"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "={{ $json.text }}"
+      },
+      "position": [
+        1712,
+        1424
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "ad504004-0d82-4ad4-bd52-53835ed509ad"
+    },
+    {
+      "id": "w2-explaindrop",
+      "name": "Explain Drop",
+      "parameters": {
+        "jsCode": "// Explain a drop to whoever reacted. A rocket that does nothing is the single most\n// confusing thing Posty can do — the person cannot tell the difference between \"already\n// handled\" and \"broken\", so they either react again or assume it failed silently.\nconst r = $('Resolve Release').first().json;\nconst row = r.row || {};\n\nconst MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nfunction humanDate(iso) {\n  const m = String(iso || '').match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);\n  return m ? Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1] + ' ' + m[1] : '';\n}\n\nconst label = row.qu_number\n  ? (String(row.qu_number).startsWith('NOQU-') ? 'That project' : 'QU-' + row.qu_number)\n  : 'That project';\n\nlet text;\nif (r.decision === 'DROP_CANCELLED') {\n  text = label + ' is marked cancelled, so I have not reposted it. If that is wrong, '\n       + 'let Tara know and the row can be reopened.';\n} else {\n  const when = humanDate(row.release_date);\n  text = label + ' was already released' + (when ? ' on ' + when : '')\n       + ', so I have not reposted it. Nothing to do.';\n}\n\nreturn [{ json: { user: $('Slack Trigger').first().json.user, text } }];"
+      },
+      "position": [
+        1488,
+        -80
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w2-notifydrop",
+      "name": "Notify Drop",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.user }}"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "={{ $json.text }}"
+      },
+      "position": [
+        1712,
+        -80
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "788cc966-39da-41da-ae09-730a8a2d69f1"
+    },
+    {
+      "id": "w2-explainpending",
+      "name": "Explain Pending",
+      "parameters": {
+        "jsCode": "// The reacted-to post is not in the index, so there is nothing to repost.\n//\n// Worded as an instruction rather than a promise: §7 step 4 describes an automatic retry\n// after the nightly refresh, and that retry is NOT built. Telling someone to wait for\n// something that will not happen is worse than telling them to react again.\nconst e = $('Slack Trigger').first().json;\nreturn [{ json: { user: e.user,\n  text: \"I don't have that post in the index yet, so I can't repost it — I've parked it. \"\n      + \"This usually means the post arrived while I was down. React 🚀 again after the \"\n      + \"02:00 refresh tonight and it should go through.\" } }];"
+      },
+      "position": [
+        1712,
+        -240
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w2-notifypending",
+      "name": "Notify Pending",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.user }}"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "={{ $json.text }}"
+      },
+      "position": [
+        1920,
+        -240
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "dbb33ff0-3896-4def-8532-5cf50162f94b"
+    },
+    {
+      "id": "w2-notposty",
+      "name": "Not From Posty",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.bot_id }}",
+              "operator": {
+                "operation": "notExists",
+                "singleValue": true,
+                "type": "string"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        32,
+        0
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "executeOnce": true,
+      "id": "cac2609e-c6bd-4b7c-bc09-da4e7db5a833",
+      "name": "Clear List Ack",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Slack Trigger').first().json.channel }}"
+        },
+        "name": "eyes",
+        "operation": "remove",
+        "resource": "reaction",
+        "timestamp": "={{ $('Slack Trigger').first().json.ts }}"
+      },
+      "position": [
+        1712,
+        384
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "7fc5f46b-52d3-4913-96ed-1eb17991d604"
+    },
+    {
+      "id": "w2-ishumandm",
+      "name": "Is Human DM",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "h1",
+              "leftValue": "={{ $json.type }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "message"
+            },
+            {
+              "id": "h2",
+              "leftValue": "={{ $json.channel_type }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "im"
+            },
+            {
+              "id": "h3",
+              "leftValue": "={{ $json.subtype }}",
+              "operator": {
+                "operation": "notExists",
+                "singleValue": true,
+                "type": "string"
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "h4",
+              "leftValue": "={{ $json.bot_id }}",
+              "operator": {
+                "operation": "notExists",
+                "singleValue": true,
+                "type": "string"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        176,
+        -96
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "executeOnce": true,
+      "id": "w2-ackearly",
+      "name": "Ack Early",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Slack Trigger').first().json.channel }}"
+        },
+        "name": "eyes",
+        "resource": "reaction",
+        "timestamp": "={{ $('Slack Trigger').first().json.ts }}"
+      },
+      "position": [
+        400,
+        -96
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "8679af69-2dbd-424d-b7cd-29eb1832ad69"
+    }
+  ],
+  "pinData": {},
+  "settings": {
+    "availableInMCP": false,
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "timezone": "Asia/Manila"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-04T07:30:51.492Z",
+      "project": {
+        "createdAt": "2026-09-04T06:28:22.466Z",
+        "creatorId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "zkz4JuokdGopHd2A",
+        "name": "Tara Lim <tara@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-04T07:14:04.840Z"
+      },
+      "projectId": "zkz4JuokdGopHd2A",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-04T07:30:51.492Z",
+      "workflowId": "eFNMRnaN4yGvmqhc"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-09-03T11:09:11.451Z",
+  "versionCounter": 41,
+  "versionId": "c116d8d2-7fe6-4d48-a412-a7b038331213"
+}
