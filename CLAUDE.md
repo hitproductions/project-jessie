@@ -267,6 +267,7 @@ n8n server. Each says how it was found and what it breaks.
 
 ## Related
 
-`../Projects/haist/` holds the HAIST programme docs. `HANDOFF.md` here is the 2026-08-30
-handoff, kept for its design intent — but it has been wrong on several facts. Check anything
-in it against the live workflow before acting on it.
+`DETERMINISM.md` explains what moved out of the prompt and into the workflow, and why.
+`HANDOFF-2026-09-03.md` is the most recent handoff — the pruner and the two Guard Probe
+fixes from that day. Older handoffs and every superseded build live in git history, not the
+working tree; `git log` is the record of why things are the way they are.
