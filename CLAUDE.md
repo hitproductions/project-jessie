@@ -247,6 +247,9 @@ whether a date is in the past.
 [PENDING.md](PENDING.md) — needs a change in Airtable, the Slack app, Google Calendar or the
 n8n server. Each says how it was found and what it breaks.
 
+`SERVER-NOTES.md` is the plain-language version of the server-side fixes (DNS and
+the task runner), for whoever has shell access to the box.
+
 ## Gotchas that already cost time
 
 1. A `throw` inside an **optional** collection like `additionalFields` does not fail the
