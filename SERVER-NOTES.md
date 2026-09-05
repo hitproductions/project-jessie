@@ -5,8 +5,8 @@ fixing on the *server* — not in the n8n workflows. Both make Jessie slow (and 
 also causes the outages) because something the server does at the **start** of
 handling each message is slow.
 
-Don't change the n8n workflows for either of these. The detailed measurements and
-history are in `PENDING.md` items 13, 15 and 18; this is the plain version.
+Don't change the n8n workflows for either of these. The plain fixes are up top; the
+numbers and the outage history are in Measurements at the bottom.
 
 ---
 
@@ -63,7 +63,7 @@ under 1s on most messages.
 
 ## While you're on the box — two more things that need shell access
 
-- **The outages (item 15).** The one thing that would pin down the cause is the
+- **The outages.** The one thing that would pin down the cause is the
   Cloudflare tunnel / `cloudflared` container's own log from a failure window
   (~5am Manila is common). n8n's own logs show nothing at the moment it drops.
 - **Execution storage.** The daily pruner keeps the row count down but does not
