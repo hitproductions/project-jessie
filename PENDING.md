@@ -306,6 +306,20 @@ lookup behind them, so a wrong guess becomes a wrong calendar title. Fixing it
 properly means an Airtable engineer lookup inside `Book Session` — a new node in
 that sub-workflow, and a design decision, not a repair.
 
+**18. The first outbound call of every turn pays a ~4s cold-connection tax — same root
+as the outages.** Measured 2026-09-06 across many turns: `Get Booker` (the first
+Airtable call) takes ~4.2s consistently, while `All Rooms` and `All Session Types`
+— the *same* base and credentials, a few seconds later in the same turn — take
+~1.1s. The Bookers table is ~14 rows, so it is not scan cost or the query; it is
+DNS resolution + TLS handshake on the first call, which later calls reuse warm.
+Spikes to 8–16s coincide with the host's known DNS flapping (`EAI_AGAIN`), the same
+symptom behind the outages in item 15. So caching `Get Booker` would not help — the
+tax just moves to whatever call is first. The fix is on the host: a DNS cache or
+keep-alive so the first call per execution stops paying resolution cost. This and
+item 13 (the Code-node cold start) are the two fixed per-turn costs, ~7.5s of a
+16.5s median turn, and both are server-side, not workflow changes. Cross-links
+[[15]] (the outages) and 13 (the task runner).
+
 ---
 
 ## Withdrawn
