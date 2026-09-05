@@ -1,12 +1,10 @@
-# Server notes — for whoever has shell access to the box
+# Server notes
 
-Jessie and Posty run in Docker on the Mac Mini. These are the two things worth
-fixing on the *server* — not in the n8n workflows. Both make Jessie slow (and one
+These are the two things worth fixing on the server. Both make Jessie slow (and one
 also causes the outages) because something the server does at the **start** of
-handling each message is slow.
-
-Don't change the n8n workflows for either of these. The plain fixes are up top; the
-numbers and the outage history are in Measurements at the bottom.
+handling each message is slow. Neither is fixed in the n8n workflows — the workflows
+are fine, the slowness is underneath them. The plain fixes are up top; the numbers
+and the outage history are in Measurements at the bottom.
 
 ---
 
