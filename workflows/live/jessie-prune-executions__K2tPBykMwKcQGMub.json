@@ -207,6 +207,38 @@
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
         "versionId": "8241a0f1-1d6d-481a-8d11-15323feaabc4",
         "workflowId": "K2tPBykMwKcQGMub"
+      },
+      {
+        "createdAt": "2026-09-04T09:46:36.837Z",
+        "event": "activated",
+        "id": 668,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "8241a0f1-1d6d-481a-8d11-15323feaabc4",
+        "workflowId": "K2tPBykMwKcQGMub"
+      },
+      {
+        "createdAt": "2026-09-04T09:47:14.224Z",
+        "event": "activated",
+        "id": 670,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "8241a0f1-1d6d-481a-8d11-15323feaabc4",
+        "workflowId": "K2tPBykMwKcQGMub"
+      },
+      {
+        "createdAt": "2026-09-04T09:46:36.779Z",
+        "event": "deactivated",
+        "id": 667,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "8241a0f1-1d6d-481a-8d11-15323feaabc4",
+        "workflowId": "K2tPBykMwKcQGMub"
+      },
+      {
+        "createdAt": "2026-09-04T09:47:14.180Z",
+        "event": "deactivated",
+        "id": 669,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "8241a0f1-1d6d-481a-8d11-15323feaabc4",
+        "workflowId": "K2tPBykMwKcQGMub"
       }
     ]
   },
@@ -444,7 +476,7 @@
   },
   "tags": [],
   "triggerCount": 1,
-  "updatedAt": "2026-09-03T11:05:14.010Z",
+  "updatedAt": "2026-09-04T09:47:14.095Z",
   "versionCounter": 20,
   "versionId": "8241a0f1-1d6d-481a-8d11-15323feaabc4"
 }

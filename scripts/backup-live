@@ -16,18 +16,40 @@ if [ -z "${N8N_API_KEY:-}" ] && [ -f .env ]; then set -a; . ./.env; set +a; fi
 : "${N8N_BASE_URL:?set N8N_BASE_URL}"
 
 python3 - <<'PY'
-import json, os, re, subprocess
+import json, os, re, subprocess, time
 base, key = os.environ["N8N_BASE_URL"], os.environ["N8N_API_KEY"]
+
+class Unreachable(Exception): pass
+
 def api(path):
-    out = subprocess.run(["curl","-sS","-H","X-N8N-API-KEY: "+key, base+path],
-                         capture_output=True, text=True)
-    if out.returncode != 0 or not out.stdout.strip():
-        raise SystemExit("n8n request failed for %s: %s" % (path, out.stderr[:200]))
-    return json.loads(out.stdout)
+    # n8n has gone unreachable to the outside world for hours at a time (PENDING 15).
+    # A backup that runs during one of those windows should skip cleanly, not crash
+    # or cry wolf - the outage is not a backup bug. Retry a few times first, in case
+    # it is only a blip.
+    last = ""
+    for attempt in range(4):
+        out = subprocess.run(["curl","-sS","--max-time","30","-H","X-N8N-API-KEY: "+key, base+path],
+                             capture_output=True, text=True)
+        if out.returncode == 0 and out.stdout.strip():
+            try:
+                return json.loads(out.stdout)
+            except ValueError:
+                last = "non-JSON response (first 120 chars): " + out.stdout[:120]
+        else:
+            last = out.stderr.strip()[:200] or "empty response"
+        time.sleep(5 * (attempt + 1))
+    raise Unreachable(last)
 
 os.makedirs("workflows/live", exist_ok=True)
 slug = lambda s: re.sub(r'[^a-zA-Z0-9]+', '-', s).strip('-').lower()[:60]
-data = api("/api/v1/workflows?limit=200").get("data", [])
+try:
+    data = api("/api/v1/workflows?limit=200").get("data", [])
+except Unreachable as e:
+    import sys
+    print("n8n was unreachable after retries - skipping this backup (nothing changed).")
+    print("  last error: %s" % e)
+    print("  if this keeps happening at the same time of day, see PENDING 15 (the outages).")
+    sys.exit(0)
 index = []
 for w in data:
     full = api("/api/v1/workflows/" + w["id"])
@@ -36,8 +58,17 @@ for w in data:
         json.dump(full, f, indent=2, ensure_ascii=False, sort_keys=True)
     index.append("%-42s %-8s %s" % (w.get("name"),
                  "active" if w.get("active") else "inactive", fn))
+# Drop snapshots for workflows that no longer exist in n8n, so the folder mirrors
+# the instance instead of accumulating deleted copies.
+keep = set(fn for _, fn in [(w, "%s__%s.json" % (slug(w.get("name","untitled")), w["id"])) for w in data])
+removed = 0
+for existing in os.listdir("workflows/live"):
+    if existing.endswith(".json") and existing not in keep:
+        os.remove("workflows/live/"+existing); removed += 1
+
 with open("workflows/live/INDEX.txt", "w") as f:
     f.write("Live n8n workflows, snapshot. Backed up nightly by GitHub Actions.\n\n")
     f.write("\n".join(sorted(index)) + "\n")
-print("backed up %d workflows to workflows/live/" % len(data))
+print("backed up %d workflows to workflows/live/%s" % (
+    len(data), (" (removed %d stale)" % removed) if removed else ""))
 PY

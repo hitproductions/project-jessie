@@ -3555,18 +3555,13 @@
   "sourceWorkflowId": null,
   "staticData": {
     "global": {
-      "epoch_U026N6E1R": "1788496170.716109",
+      "epoch_U026N6E1R": "1788642145.113469",
       "epoch_U08JL17A50A": "",
       "epoch_U08V3CKDGJF": "1788425819.012979",
       "epoch_U098UFLG70B": "",
       "epoch_U098UFMKQHZ": "",
       "epoch_U0A1BQFBKSR": "",
       "epoch_U0B4S0EKSAY": "",
-      "lastdate_U026N6E1R": {
-        "date": "2027-09-04",
-        "day": "2027-09-04",
-        "epoch": "1788496170.716109"
-      },
       "lastdate_U08JL17A50A": {
         "date": "2026-09-01",
         "day": "2027-09-01",

@@ -262,19 +262,37 @@ means it is still happening; ~0.07s means it is fixed.
 mismeasurement — that withdrawal was itself the mistake, taken from a sample that
 happened to catch warm runs.*
 
-**15. The instance has gone unreachable to Slack three times, mechanism unproven.**
-On 2026-09-02 and twice on 2026-09-03, Slack messages stopped producing executions
-while n8n kept running scheduled work and serving HTTP — so the container was
-healthy and the inbound path, not n8n, was failing. One recovery happened overnight
-with nobody touching it. The container logs from a failure window show nothing at
-the moment it stops; the only hints are outbound DNS errors (`EAI_AGAIN`, "DNS
-server returned an error") minutes before, which points at the Cloudflare tunnel or
-host DNS rather than n8n. Not confirmed. What would settle it: an external uptime
-check on the public URL (catches it live, needs no server access), and the
-`cloudflared`/tunnel container's own log from a failure window (needs shell). The
-nightly backup and the daily pruner are in place; a watchdog and an uptime check
-are not yet. Pruning correlated with recovery but was never cleanly isolated from
-toggling, so "the execution table filled up" remains a hypothesis, not the cause.
+**15. The instance goes unreachable to the outside world for hours, recurring, mechanism unproven.**
+Recorded so far: 2026-09-02, twice on 2026-09-03, and a long one on 2026-09-05.
+Each time, Slack messages stop producing executions while n8n keeps running
+scheduled work and serving HTTP — so the container is healthy and the inbound path,
+not n8n, is failing. Recoveries have happened with nobody touching it.
+
+The 2026-09-05 window is the best-documented. Jessie's last inbound execution was
+00:05, the next was 13:03 — about thirteen hours. Both bots came back at the *same
+second*: Posty at 13:03:13, Jessie at 13:03:31. Two separate bots resuming together
+means the shared front door recovered, not either bot — strong support for the
+Cloudflare tunnel / host DNS being the cause. The daily pruner (04:00) ran straight
+through the outage, confirming the scheduler stayed alive. Note the reported "up by
+10:30" was not real: no message got through until 13:03, so a test at 10:30 was
+still hitting silence.
+
+Independent, external corroboration arrived by accident: the nightly backup runs on
+GitHub's servers, outside this network, and it failed to reach the API at ~05:00
+Manila on both 2026-09-04 and 2026-09-05 — an outside client getting nothing,
+confirming the site was unreachable from the internet at that time, not merely
+internally wedged. (The backup now retries and skips cleanly instead of crashing,
+and was moved off that window.)
+
+Still the only hints at the moment of failure are outbound DNS errors (`EAI_AGAIN`,
+"DNS server returned an error") minutes before. What would settle it: a real
+external uptime check on the public URL (catches it live, alerts even when the
+network is down, needs no server access), and the `cloudflared`/tunnel container's
+own log from a failure window (needs shell). The nightly backup and daily pruner
+are in place; a watchdog and an uptime check are not yet. Pruning once correlated
+with recovery but was never cleanly isolated from toggling, and the 2026-09-05
+recovery happened with nobody pruning, so "the execution table filled up" is not
+the cause.
 
 **16. A seeded QA event is still on the calendar.** `GUARDCHK / Bea Jose / HL`,
 Studio 6, Friday 2027-09-10 10:00–11:00, carrying a fake booker ref (`UFAKE99999`).

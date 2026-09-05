@@ -16,7 +16,13 @@ name: Nightly n8n backup
 
 on:
   schedule:
-    - cron: '0 19 * * *'   # 19:00 UTC = 03:00 Manila, daily
+    # The instance has gone unreachable to the outside world for hours at a time,
+    # clustered overnight-to-midday Manila (PENDING 15). GitHub also delays cron by
+    # an hour or two. So run twice, both landing in the afternoon/evening Manila even
+    # when delayed, well clear of that window - whichever hits a live moment backs up,
+    # the other skips cleanly.
+    - cron: '0 6 * * *'    # 06:00 UTC = 14:00 Manila
+    - cron: '0 12 * * *'   # 12:00 UTC = 20:00 Manila
   workflow_dispatch: {}     # also runnable by hand from the Actions tab
 
 permissions:

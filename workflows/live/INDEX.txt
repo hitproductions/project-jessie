@@ -10,7 +10,4 @@ Posty — Events Endpoint                    active   posty-events-endpoint__eFN
 Posty — Index Refresh                      active   posty-index-refresh__DItjvgnQPf5aEsIq.json
 Posty — Monthly Digest                     active   posty-monthly-digest__7cG9CRcCoT5UvTTi.json
 Project Jessie v2                          active   project-jessie-v2__uVVYVB2M7kxpLleI.json
-Project Jessie v2 BACKUP aug17_502pm       inactive project-jessie-v2-backup-aug17-502pm__1GcIAeLdJZLeB8js.json
-Project Jessie v2 backup 0814.513pm        inactive project-jessie-v2-backup-0814-513pm__jtNid6MGQiIsWL51.json
-Project Jessie v2 copy aug17_331pm         inactive project-jessie-v2-copy-aug17-331pm__9sTzJ45mOEIv4Las.json
 slack ids                                  inactive slack-ids__EeSu7YekB1R7FYki.json

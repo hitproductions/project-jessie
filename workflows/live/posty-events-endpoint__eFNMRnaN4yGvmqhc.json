@@ -1,7 +1,7 @@
 {
   "active": true,
   "activeVersion": {
-    "authors": "Howard Luistro",
+    "authors": "Tara Lim",
     "autosaved": false,
     "connections": {
       "Ack Early": {
@@ -92,6 +92,11 @@
               "type": "main"
             }
           ]
+        ]
+      },
+      "Clear Ack": {
+        "main": [
+          []
         ]
       },
       "Delete Message": {
@@ -281,6 +286,18 @@
           ]
         ]
       },
+      "Mark Released": {
+        "main": [
+          [],
+          [
+            {
+              "index": 0,
+              "node": "Notify Error",
+              "type": "main"
+            }
+          ]
+        ]
+      },
       "Not From Posty": {
         "main": [
           [
@@ -297,12 +314,42 @@
           ]
         ]
       },
+      "Notify Error": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Alert Tara",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Notify Releaser": {
+        "main": [
+          [],
+          [
+            {
+              "index": 0,
+              "node": "Notify Error",
+              "type": "main"
+            }
+          ]
+        ]
+      },
       "Notify Starter": {
         "main": [
           [
             {
               "index": 0,
               "node": "Build Project Row",
+              "type": "main"
+            }
+          ],
+          [
+            {
+              "index": 0,
+              "node": "Notify Error",
               "type": "main"
             }
           ]
@@ -332,6 +379,13 @@
               "node": "Notify Releaser",
               "type": "main"
             }
+          ],
+          [
+            {
+              "index": 0,
+              "node": "Notify Error",
+              "type": "main"
+            }
           ]
         ]
       },
@@ -341,6 +395,13 @@
             {
               "index": 0,
               "node": "Resolve Release",
+              "type": "main"
+            }
+          ],
+          [
+            {
+              "index": 0,
+              "node": "Notify Error",
               "type": "main"
             }
           ]
@@ -365,6 +426,13 @@
               "node": "Build List",
               "type": "main"
             }
+          ],
+          [
+            {
+              "index": 0,
+              "node": "Notify Error",
+              "type": "main"
+            }
           ]
         ]
       },
@@ -374,6 +442,13 @@
             {
               "index": 0,
               "node": "Resolve New Project",
+              "type": "main"
+            }
+          ],
+          [
+            {
+              "index": 0,
+              "node": "Notify Error",
               "type": "main"
             }
           ]
@@ -471,7 +546,14 @@
           [
             {
               "index": 0,
-              "node": "Clear List Ack",
+              "node": "Clear Ack",
+              "type": "main"
+            }
+          ],
+          [
+            {
+              "index": 0,
+              "node": "Notify Error",
               "type": "main"
             }
           ]
@@ -482,7 +564,7 @@
           [
             {
               "index": 0,
-              "node": "Clear List Ack",
+              "node": "Clear Ack",
               "type": "main"
             }
           ]
@@ -498,7 +580,14 @@
             },
             {
               "index": 0,
-              "node": "Clear List Ack",
+              "node": "Clear Ack",
+              "type": "main"
+            }
+          ],
+          [
+            {
+              "index": 0,
+              "node": "Notify Error",
               "type": "main"
             }
           ]
@@ -596,9 +685,21 @@
             }
           ]
         ]
+      },
+      "Write Project Row": {
+        "main": [
+          [],
+          [
+            {
+              "index": 0,
+              "node": "Notify Error",
+              "type": "main"
+            }
+          ]
+        ]
       }
     },
-    "createdAt": "2026-09-03T11:09:11.460Z",
+    "createdAt": "2026-09-04T10:59:35.477Z",
     "description": null,
     "name": null,
     "nodeGroups": [],
@@ -697,6 +798,7 @@
         },
         "id": "w2-readindex",
         "name": "Read Index",
+        "onError": "continueErrorOutput",
         "parameters": {
           "documentId": {
             "__rl": true,
@@ -772,6 +874,7 @@
         },
         "id": "w2-post",
         "name": "Post Release",
+        "onError": "continueErrorOutput",
         "parameters": {
           "channelId": {
             "__rl": true,
@@ -814,6 +917,7 @@
         },
         "id": "w2-markrel",
         "name": "Mark Released",
+        "onError": "continueErrorOutput",
         "parameters": {
           "columns": {
             "mappingMode": "autoMapInputData",
@@ -852,6 +956,7 @@
         },
         "id": "w2-notifyreleaser",
         "name": "Notify Releaser",
+        "onError": "continueErrorOutput",
         "parameters": {
           "channelId": {
             "__rl": true,
@@ -1042,6 +1147,7 @@
         },
         "id": "w2-readnew",
         "name": "Read Index (New)",
+        "onError": "continueErrorOutput",
         "parameters": {
           "documentId": {
             "__rl": true,
@@ -1117,6 +1223,7 @@
         },
         "id": "w2-notifystarter",
         "name": "Notify Starter",
+        "onError": "continueErrorOutput",
         "parameters": {
           "channelId": {
             "__rl": true,
@@ -1159,6 +1266,7 @@
         },
         "id": "w2-writeproj",
         "name": "Write Project Row",
+        "onError": "continueErrorOutput",
         "parameters": {
           "columns": {
             "mappingMode": "autoMapInputData",
@@ -1230,6 +1338,7 @@
         },
         "id": "w2-readlist",
         "name": "Read Index (List)",
+        "onError": "continueErrorOutput",
         "parameters": {
           "documentId": {
             "__rl": true,
@@ -1272,6 +1381,7 @@
         },
         "id": "w2-sendlist",
         "name": "Send List Item",
+        "onError": "continueErrorOutput",
         "parameters": {
           "channelId": {
             "__rl": true,
@@ -1711,6 +1821,7 @@
         "alwaysOutputData": true,
         "id": "w2-rundigest",
         "name": "Run Digest",
+        "onError": "continueErrorOutput",
         "parameters": {
           "options": {},
           "workflowId": {
@@ -2046,25 +2157,33 @@
         },
         "executeOnce": true,
         "id": "cac2609e-c6bd-4b7c-bc09-da4e7db5a833",
-        "name": "Clear List Ack",
+        "name": "Clear Ack",
         "onError": "continueRegularOutput",
         "parameters": {
-          "channelId": {
-            "__rl": true,
-            "mode": "id",
-            "value": "={{ $('Slack Trigger').first().json.channel }}"
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "options": {},
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "channel",
+                "value": "={{ $('Slack Trigger').first().json.channel }}"
+              },
+              {
+                "name": "ts",
+                "value": "={{ $('Ack Early').first().json.message_timestamp || $('Ack Early').first().json.message.ts }}"
+              }
+            ]
           },
-          "name": "eyes",
-          "operation": "remove",
-          "resource": "reaction",
-          "timestamp": "={{ $('Slack Trigger').first().json.ts }}"
+          "sendQuery": true,
+          "url": "https://slack.com/api/chat.delete"
         },
         "position": [
           1712,
           384
         ],
-        "type": "n8n-nodes-base.slack",
-        "typeVersion": 2.4,
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
         "webhookId": "7fc5f46b-52d3-4913-96ed-1eb17991d604"
       },
       {
@@ -2146,9 +2265,11 @@
             "mode": "id",
             "value": "={{ $('Slack Trigger').first().json.channel }}"
           },
-          "name": "eyes",
-          "resource": "reaction",
-          "timestamp": "={{ $('Slack Trigger').first().json.ts }}"
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "One moment — pulling that up…"
         },
         "position": [
           400,
@@ -2157,23 +2278,85 @@
         "type": "n8n-nodes-base.slack",
         "typeVersion": 2.4,
         "webhookId": "8679af69-2dbd-424d-b7cd-29eb1832ad69"
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "executeOnce": true,
+        "id": "w2-notifyerr",
+        "name": "Notify Error",
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Slack Trigger').first().json.user }}"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "⚠️ I couldn't finish that just now — something went wrong on my end. Please try again in a moment."
+        },
+        "position": [
+          1264,
+          720
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "aacace52-3894-432a-b3ca-88badbe1901a"
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "executeOnce": true,
+        "id": "w2-alerttara",
+        "name": "Alert Tara",
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "U026N6E1R"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": true
+          },
+          "select": "channel",
+          "text": "=🔔 Posty hiccup — a {{ $('Classify Event').first().json.kind }} for <@{{ $('Slack Trigger').first().json.user }}> failed and they were asked to retry. Check the execution log if it repeats."
+        },
+        "position": [
+          1488,
+          720
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "7ac9a7ad-2751-4a88-8727-1b8b4ff9a4a0"
       }
     ],
-    "updatedAt": "2026-09-03T11:09:11.460Z",
-    "versionId": "c116d8d2-7fe6-4d48-a412-a7b038331213",
+    "updatedAt": "2026-09-04T10:59:35.477Z",
+    "versionId": "9cf05e7e-5ce8-4d10-b86a-2c5d46123340",
     "workflowId": "eFNMRnaN4yGvmqhc",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-09-03T11:09:12.231Z",
+        "createdAt": "2026-09-04T10:59:35.873Z",
         "event": "activated",
-        "id": 652,
-        "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "c116d8d2-7fe6-4d48-a412-a7b038331213",
+        "id": 676,
+        "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "versionId": "9cf05e7e-5ce8-4d10-b86a-2c5d46123340",
         "workflowId": "eFNMRnaN4yGvmqhc"
       }
     ]
   },
-  "activeVersionId": "c116d8d2-7fe6-4d48-a412-a7b038331213",
+  "activeVersionId": "9cf05e7e-5ce8-4d10-b86a-2c5d46123340",
   "connections": {
     "Ack Early": {
       "main": [
@@ -2263,6 +2446,11 @@
             "type": "main"
           }
         ]
+      ]
+    },
+    "Clear Ack": {
+      "main": [
+        []
       ]
     },
     "Delete Message": {
@@ -2452,6 +2640,18 @@
         ]
       ]
     },
+    "Mark Released": {
+      "main": [
+        [],
+        [
+          {
+            "index": 0,
+            "node": "Notify Error",
+            "type": "main"
+          }
+        ]
+      ]
+    },
     "Not From Posty": {
       "main": [
         [
@@ -2468,12 +2668,42 @@
         ]
       ]
     },
+    "Notify Error": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Alert Tara",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Notify Releaser": {
+      "main": [
+        [],
+        [
+          {
+            "index": 0,
+            "node": "Notify Error",
+            "type": "main"
+          }
+        ]
+      ]
+    },
     "Notify Starter": {
       "main": [
         [
           {
             "index": 0,
             "node": "Build Project Row",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Notify Error",
             "type": "main"
           }
         ]
@@ -2503,6 +2733,13 @@
             "node": "Notify Releaser",
             "type": "main"
           }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Notify Error",
+            "type": "main"
+          }
         ]
       ]
     },
@@ -2512,6 +2749,13 @@
           {
             "index": 0,
             "node": "Resolve Release",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Notify Error",
             "type": "main"
           }
         ]
@@ -2536,6 +2780,13 @@
             "node": "Build List",
             "type": "main"
           }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Notify Error",
+            "type": "main"
+          }
         ]
       ]
     },
@@ -2545,6 +2796,13 @@
           {
             "index": 0,
             "node": "Resolve New Project",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Notify Error",
             "type": "main"
           }
         ]
@@ -2642,7 +2900,14 @@
         [
           {
             "index": 0,
-            "node": "Clear List Ack",
+            "node": "Clear Ack",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Notify Error",
             "type": "main"
           }
         ]
@@ -2653,7 +2918,7 @@
         [
           {
             "index": 0,
-            "node": "Clear List Ack",
+            "node": "Clear Ack",
             "type": "main"
           }
         ]
@@ -2669,7 +2934,14 @@
           },
           {
             "index": 0,
-            "node": "Clear List Ack",
+            "node": "Clear Ack",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Notify Error",
             "type": "main"
           }
         ]
@@ -2763,6 +3035,18 @@
           {
             "index": 0,
             "node": "Explain Pending",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Write Project Row": {
+      "main": [
+        [],
+        [
+          {
+            "index": 0,
+            "node": "Notify Error",
             "type": "main"
           }
         ]
@@ -2873,6 +3157,7 @@
       },
       "id": "w2-readindex",
       "name": "Read Index",
+      "onError": "continueErrorOutput",
       "parameters": {
         "documentId": {
           "__rl": true,
@@ -2948,6 +3233,7 @@
       },
       "id": "w2-post",
       "name": "Post Release",
+      "onError": "continueErrorOutput",
       "parameters": {
         "channelId": {
           "__rl": true,
@@ -2990,6 +3276,7 @@
       },
       "id": "w2-markrel",
       "name": "Mark Released",
+      "onError": "continueErrorOutput",
       "parameters": {
         "columns": {
           "mappingMode": "autoMapInputData",
@@ -3028,6 +3315,7 @@
       },
       "id": "w2-notifyreleaser",
       "name": "Notify Releaser",
+      "onError": "continueErrorOutput",
       "parameters": {
         "channelId": {
           "__rl": true,
@@ -3218,6 +3506,7 @@
       },
       "id": "w2-readnew",
       "name": "Read Index (New)",
+      "onError": "continueErrorOutput",
       "parameters": {
         "documentId": {
           "__rl": true,
@@ -3293,6 +3582,7 @@
       },
       "id": "w2-notifystarter",
       "name": "Notify Starter",
+      "onError": "continueErrorOutput",
       "parameters": {
         "channelId": {
           "__rl": true,
@@ -3335,6 +3625,7 @@
       },
       "id": "w2-writeproj",
       "name": "Write Project Row",
+      "onError": "continueErrorOutput",
       "parameters": {
         "columns": {
           "mappingMode": "autoMapInputData",
@@ -3406,6 +3697,7 @@
       },
       "id": "w2-readlist",
       "name": "Read Index (List)",
+      "onError": "continueErrorOutput",
       "parameters": {
         "documentId": {
           "__rl": true,
@@ -3448,6 +3740,7 @@
       },
       "id": "w2-sendlist",
       "name": "Send List Item",
+      "onError": "continueErrorOutput",
       "parameters": {
         "channelId": {
           "__rl": true,
@@ -3887,6 +4180,7 @@
       "alwaysOutputData": true,
       "id": "w2-rundigest",
       "name": "Run Digest",
+      "onError": "continueErrorOutput",
       "parameters": {
         "options": {},
         "workflowId": {
@@ -4222,25 +4516,33 @@
       },
       "executeOnce": true,
       "id": "cac2609e-c6bd-4b7c-bc09-da4e7db5a833",
-      "name": "Clear List Ack",
+      "name": "Clear Ack",
       "onError": "continueRegularOutput",
       "parameters": {
-        "channelId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "={{ $('Slack Trigger').first().json.channel }}"
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "options": {},
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "={{ $('Slack Trigger').first().json.channel }}"
+            },
+            {
+              "name": "ts",
+              "value": "={{ $('Ack Early').first().json.message_timestamp || $('Ack Early').first().json.message.ts }}"
+            }
+          ]
         },
-        "name": "eyes",
-        "operation": "remove",
-        "resource": "reaction",
-        "timestamp": "={{ $('Slack Trigger').first().json.ts }}"
+        "sendQuery": true,
+        "url": "https://slack.com/api/chat.delete"
       },
       "position": [
         1712,
         384
       ],
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.4,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "webhookId": "7fc5f46b-52d3-4913-96ed-1eb17991d604"
     },
     {
@@ -4322,9 +4624,11 @@
           "mode": "id",
           "value": "={{ $('Slack Trigger').first().json.channel }}"
         },
-        "name": "eyes",
-        "resource": "reaction",
-        "timestamp": "={{ $('Slack Trigger').first().json.ts }}"
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "One moment — pulling that up…"
       },
       "position": [
         400,
@@ -4333,6 +4637,68 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.4,
       "webhookId": "8679af69-2dbd-424d-b7cd-29eb1832ad69"
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "executeOnce": true,
+      "id": "w2-notifyerr",
+      "name": "Notify Error",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Slack Trigger').first().json.user }}"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "⚠️ I couldn't finish that just now — something went wrong on my end. Please try again in a moment."
+      },
+      "position": [
+        1264,
+        720
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "aacace52-3894-432a-b3ca-88badbe1901a"
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "executeOnce": true,
+      "id": "w2-alerttara",
+      "name": "Alert Tara",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "U026N6E1R"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": true
+        },
+        "select": "channel",
+        "text": "=🔔 Posty hiccup — a {{ $('Classify Event').first().json.kind }} for <@{{ $('Slack Trigger').first().json.user }}> failed and they were asked to retry. Check the execution log if it repeats."
+      },
+      "position": [
+        1488,
+        720
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "7ac9a7ad-2751-4a88-8727-1b8b4ff9a4a0"
     }
   ],
   "pinData": {},
@@ -4367,7 +4733,7 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 1,
-  "updatedAt": "2026-09-03T11:09:11.451Z",
-  "versionCounter": 41,
-  "versionId": "c116d8d2-7fe6-4d48-a412-a7b038331213"
+  "updatedAt": "2026-09-04T10:59:35.472Z",
+  "versionCounter": 45,
+  "versionId": "9cf05e7e-5ce8-4d10-b86a-2c5d46123340"
 }
