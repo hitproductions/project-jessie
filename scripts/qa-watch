@@ -29,7 +29,7 @@ for i in sorted(ids, key=int):
     e=api(f"/api/v1/executions/{i}?includeData=true")
     rd=((e.get("data") or {}).get("resultData") or {}).get("runData") or {}
     trig=((rd.get("Slack Trigger") or [{}])[0].get("data",{}).get("main",[[{}]])[0] or [{}])[0].get("json",{})
-    if trig.get("user")=="U0BNQL8KFKR" or not str(trig.get("text","")).strip(): continue
+    if trig.get("user")=="U0BTZ6BC0P6" or not str(trig.get("text","")).strip(): continue
     seen=int(i)
     tools=[n for n in rd if n in TOOLS]
     gc={}

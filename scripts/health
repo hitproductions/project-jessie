@@ -30,7 +30,7 @@ import json, os, subprocess, sys
 limit = int(sys.argv[1]); show_all = sys.argv[2] == "--all"
 base, key = os.environ["N8N_BASE_URL"], os.environ["N8N_API_KEY"]
 MAIN = "uVVYVB2M7kxpLleI"
-BOT = "U0BNQL8KFKR"          # Jessie's own user id - her replies re-trigger the workflow
+BOT = "U0BTZ6BC0P6"          # current Jessie app's user id - her replies re-trigger the workflow
 SLOW_MS = 1000               # anything above this is worth seeing
 
 def api(path):
