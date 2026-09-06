@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Catch stale identifiers before they cause an incident.
+#
+#   ./scripts/verify-ids
+#
+# The Jessie Slack app was swapped once, leaving an old bot user id baked into
+# scripts that still "looked" fine - health filtered the wrong bot for weeks, and
+# it only surfaced during a live test. This checks the ids that can silently drift
+# when a workflow, app, or resource is replaced, and fails loudly if any has.
+set -euo pipefail
+here="$(cd "$(dirname "$0")/.." && pwd)"; cd "$here"
+set -a; . "$here/.env"; set +a
+
+python3 - <<'PY'
+import json, os, re, subprocess, sys
+base, key = os.environ["N8N_BASE_URL"], os.environ["N8N_API_KEY"]
+def api(p): return json.loads(subprocess.run(["curl","-sS","-H","X-N8N-API-KEY: "+key,base+p],
+                                             capture_output=True, text=True).stdout)
+problems = []
+
+# 1. every workflow id the docs/scripts name must resolve to an ACTIVE workflow
+expect = {
+ "uVVYVB2M7kxpLleI":"Project Jessie v2","EUG3sGXkfsJSYIMz":"Jessie — Book Session",
+ "bAyDw7udhmY0NL38":"Jessie — Cancel Booking","t7lwR2km4tfN8DbM":"Jessie — Move Booking",
+ "yzirq12O227VTFp8":"Jessie — Find Booking","e7tBQB458nstrqei":"Jessie — Room Availability",
+ "K2tPBykMwKcQGMub":"Jessie — Prune Executions"}
+print("workflow ids:")
+for wid, name in expect.items():
+    w = api("/api/v1/workflows/%s" % wid)
+    if w.get("id") != wid:
+        problems.append("workflow %s (%s) no longer exists" % (wid, name)); print("  GONE   %s  %s" % (wid, name)); continue
+    tag = "ok" if (w["name"]==name and w["active"]) else "CHECK"
+    if tag=="CHECK": problems.append("%s: name=%r active=%s" % (wid, w["name"], w["active"]))
+    print("  %-5s %s  %s%s" % (tag, wid, w["name"], "" if w["active"] else "  (INACTIVE)"))
+
+# 2. the Jessie bot id the scripts hardcode must match the app actually replying now.
+#    Live truth: the trigger 'user' on any execution whose message carried a bot_id.
+live_bot = None
+for e in api("/api/v1/executions?workflowId=uVVYVB2M7kxpLleI&limit=20").get("data", []):
+    d = api("/api/v1/executions/%s?includeData=true" % e["id"])
+    run = ((d.get("data") or {}).get("resultData") or {}).get("runData") or {}
+    try:
+        j = run["Slack Trigger"][0]["data"]["main"][0][0]["json"]
+        if j.get("bot_id"): live_bot = j.get("user"); break
+    except Exception: pass
+script_bot = None
+for line in open("scripts/health"):
+    m = re.search(r'BOT\s*=\s*"([A-Z0-9]+)"', line)
+    if m: script_bot = m.group(1); break
+print("\nJessie bot id:")
+if not live_bot:
+    print("  (no recent bot-echo turn to compare against - skipped)")
+else:
+    tag = "ok" if live_bot == script_bot else "STALE"
+    if tag=="STALE":
+        problems.append("scripts hardcode bot %s but the live app replies as %s - the app was swapped" % (script_bot, live_bot))
+    print("  %-5s scripts=%s  live=%s" % (tag, script_bot, live_bot))
+
+print()
+if problems:
+    print("FAIL - %d id(s) drifted:" % len(problems))
+    for p in problems: print("  - " + p)
+    sys.exit(1)
+print("all ids current")
+PY

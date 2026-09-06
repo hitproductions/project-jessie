@@ -38,6 +38,7 @@ else, unprompted:
    ```
    ./scripts/test-nodes --live     # 108 checks + 27 gate scenarios, what is stored
    ./scripts/health                # per-node status and timing, what actually ran
+   ./scripts/verify-ids            # workflow + bot ids still point where they should
    ```
 
    The first reads what n8n has *stored*, the second what it *ran*. They have
@@ -280,6 +281,14 @@ the task runner), for whoever has shell access to the box.
     — just unprocessed, with none of its corrections applied. Nothing looked broken from the
     outside. Read `executionStatus` and `executionTime` per node after any change; a pull only
     proves what is *stored*, never what is *running*.
+
+13. **Detect Jessie's own messages by `bot_id`, never by a hardcoded user id.** The Slack app
+    has been swapped once, changing Jessie's bot user id. The live code survived because
+    `Loop filter` and `Gate Context` both test `bot_id` first — a hardcoded id (`Gate Context`
+    still carries an old one as dead redundant code) would have silently stopped matching. A
+    diagnostic script that *did* hardcode the id filtered the wrong bot for weeks unnoticed.
+    `./scripts/verify-ids` now compares the hardcoded ids to the live app and fails if they
+    drift; run it on start.
 
 ## Not done
 
