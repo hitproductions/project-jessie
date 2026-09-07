@@ -44,12 +44,13 @@ else, unprompted:
    The first reads what n8n has *stored*, the second what it *ran*. They have
    disagreed, and the gap was five turns of silently broken replies.
 
-Then tell them, in plain language:
+Then orient them, in plain language, drawing on *Where things stand* below:
 
 - what Jessie is, and that launch is **25 September 2026**
-- the live versions, and whether anything is failing
+- the live versions, and whether anything is failing (`./scripts/health`)
 - what changed since the last commit (`git log`)
-- the one or two most pressing items from `PENDING.md`
+- the biggest open risk (the outages — server-side, see `SERVER-NOTES.md`) and the
+  one or two most pressing items from `PENDING.md`
 
 And whenever you are about to change a workflow, **pull it first and build from
 that pull** — the n8n UI and this folder overwrite each other silently, and people
@@ -60,6 +61,48 @@ known.
 ```
 ./scripts/n8n pull <workflow-id> <file>
 ```
+
+## Where things stand
+
+**Launch is 25 September 2026.** Jessie is live and in daily use. A second bot,
+Posty (release announcements — Google Sheets and Slack, no Airtable), runs on the
+same n8n instance.
+
+**Working, and proven live:** the six Jessie sub-workflows and the main workflow are
+all active and green. The confirmation gate, the ownership refusals (`NOT_YOURS`),
+and Guard Probe's text rewrites all hold in real conversations. Last verified end to
+end 2026-09-06 — a "test" DM got a clean reply in ~19s, every node green.
+
+**The biggest thing to understand — reliability, and it is not the workflows.**
+Jessie has gone silent to Slack several times (2026-09-02, -03, -05), from minutes
+to ~13 hours, each time recovering on its own. n8n does not crash: it keeps running
+its scheduled jobs and serving HTTP the whole time. What drops is the *inbound path*
+— Slack → the Cloudflare tunnel / host DNS. Both bots go down and recover together
+to the same second, which is what pins it on the shared front door, not either bot.
+n8n's own logs show nothing at the moment it fails, so it is invisible from inside —
+only an outside check sees it. The same host DNS also makes every turn ~3s slower
+(the first outside call each turn pays cold DNS). Plain-language fixes are in
+`SERVER-NOTES.md`; the measurements are in `PENDING.md` items 15 and 18. **This is
+the largest open risk, and it is server-side.**
+
+**Safety nets already in place:**
+- a daily pruner (04:00) keeps the execution table from filling the SQLite database
+- a GitHub Action backs up every live workflow twice a day into `workflows/live/`
+- `./scripts/verify-ids` catches a swapped Slack app or a changed workflow id
+
+**Not yet in place:** an external uptime monitor — the one thing that would catch an
+outage the moment it happens and alert someone. It needs the owner's accounts, not
+a code change. See `PENDING.md` item 15.
+
+**One-account reality.** The whole team shares a single n8n login on the free
+edition. n8n therefore cannot tell you who changed what, and has no restorable
+history. That is why this git repo is both the record and the rollback: pull before
+you change anything, commit after every import. Changes go into n8n by hand through
+the browser UI — there is no API write path in use (`PENDING.md` item 12).
+
+**Taking this over, do this first:** run the session-start checks above, read
+`PENDING.md`, skim `SERVER-NOTES.md`. And before launch, the QA year shift has to go
+to zero — see *Before launch*.
 
 ## Before you finish
 
@@ -128,6 +171,20 @@ Airtable base `app8GQxEInqJi1NRP` · calendar `c_re5mcrg9om0macp9doqhlsi83g@grou
 
 Versions in `workflows/` are a local convention, not n8n's. The live build is whatever was
 last imported and confirmed — check with `./scripts/n8n pull` rather than assuming.
+
+## The scripts
+
+Run from the repo root. Reading is safe — nothing here writes to n8n.
+
+| script | what it does |
+|---|---|
+| `./scripts/n8n list` · `pull <id> <file>` · `execs` · `exec <id>` | read workflows and executions from n8n |
+| `./scripts/test-nodes` · `--live` | 108 offline checks + 27 gate scenarios, on a candidate file or on what is deployed |
+| `./scripts/test-gate` | the confirmation gate and date resolver on their own |
+| `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
+| `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
+| `./scripts/verify-ids` | the seven workflow ids and the Jessie bot id still point at the live app |
+| `./scripts/backup-live` | snapshot every live workflow into `workflows/live/` (also run nightly by the GitHub Action) |
 
 ## The one principle
 
