@@ -1,5 +1,9 @@
 # The outages — what we know
 
+> **Cause confirmed 2026-09-08 — it is Cloudflare challenging Slack's servers. See
+> `CLOUDFLARE.md` for the finding and the fix. The suspects below are kept as the
+> trail that led there; the network-path reasoning held, the specific suspects did not.**
+
 Jessie (and Posty) have gone silent to Slack several times, then come back on their
 own. This is the running record of what the evidence says, so whoever gets server
 access knows what to check and in what order. Nothing here is fixed in the n8n
