@@ -1,63 +1,93 @@
 # The outages — what we know
 
-> **Cause confirmed 2026-09-08 — it is Cloudflare challenging Slack's servers. See
-> `CLOUDFLARE.md` for the finding and the fix. The suspects below are kept as the
-> trail that led there; the network-path reasoning held, the specific suspects did not.**
+Jessie (and Posty) go silent to Slack for minutes to hours, then recover on their
+own. Caught live on 2026-09-08, the cause is **Cloudflare challenging Slack's
+servers**. Nothing here is fixed in the n8n workflows — the fault is at the front
+door, and the fix is in the Cloudflare dashboard.
 
-Jessie (and Posty) have gone silent to Slack several times, then come back on their
-own. This is the running record of what the evidence says, so whoever gets server
-access knows what to check and in what order. Nothing here is fixed in the n8n
-workflows — the fault is in the network path between the box and the internet.
+## The cause (confirmed live 2026-09-08)
+
+Slack reaches n8n through Cloudflare. When Cloudflare decides to **challenge**
+traffic, it answers with a "Just a moment..." page that only a real browser can
+pass (it runs JavaScript). **Slack's servers can't pass it**, so the webhook event
+never reaches n8n and Jessie goes silent. Both bots share the same Cloudflare front,
+so both drop and recover together.
+
+**The proof — same URL, same moment, two source IPs:**
+
+| Request from | Got back |
+|---|---|
+| The office machine's IP | the real n8n API (JSON) — reachable |
+| A datacenter IP (our GitHub backup, standing in for Slack) | Cloudflare `Just a moment...` — blocked |
+
+Slack's webhook-delivery servers are datacenter IPs, exactly like the one blocked.
+
+**How sure are we?** Today is confirmed — we captured the challenge page and tested
+office-IP reachability during the outage. The earlier outages (below) match the same
+signature and their external failures are consistent with it, but the challenge body
+was not logged then, so they are *near-certain*, not proven. The backup now logs the
+body, so the next occurrence confirms it with no caveat.
+
+## Why it explains every symptom
+
+| Symptom | Cloudflare challenge explains it |
+|---|---|
+| Both bots go down at the same second | they share one Cloudflare front |
+| n8n stays alive, scheduled jobs keep running | internal jobs don't go through Cloudflare |
+| Reachable from inside, unreachable from outside | the challenge is applied by source IP |
+| n8n's own logs show nothing | the requests never reach n8n — Cloudflare stops them first |
+| Recovers on its own | Cloudflare's challenge condition clears (e.g. an "Under Attack" burst expiring) |
+| Toggling the workflow "fixed" it | coincidence — recovery lined up with the challenge lifting, not the toggle |
+
+## The fix (Cloudflare dashboard, needs account access)
+
+In order — the first two are the usual cause, the third is the permanent guard.
+
+1. **Turn off "I'm Under Attack" mode.** Security → Settings (zone Security Level).
+   If it is "I'm Under Attack", it challenges everyone, Slack included. Set it to
+   **Managed Challenge** or **Essentially Off** for normal use.
+2. **Turn off Bot Fight Mode / Super Bot Fight Mode.** Security → Bots. It challenges
+   automated traffic, which is what Slack's webhook delivery is. Off, or exclude the
+   webhook path.
+3. **Add a WAF rule that skips security for the webhook path (permanent).**
+   Security → WAF → Custom rules. Match the Slack webhook path (contains `/webhook/`)
+   and set the action to **Skip → All remaining custom rules**, disabling Bot Fight /
+   Managed Challenge for that match. Then Slack can always deliver, whatever the zone
+   security is set to later.
+
+**Confirm it worked:** from a datacenter IP (not the office network) the n8n URL
+should return the app, not "Just a moment..." — the nightly backup does exactly this
+from GitHub, so its runs should stop logging "n8n was unreachable". Then send Jessie
+a Slack message and confirm it produces an execution.
 
 ## When it has happened
 
 | Date        | Down (Manila)        | Recovered | Notes                                  |
 |-------------|----------------------|-----------|----------------------------------------|
 | 2026-09-02  | ~morning             | same day  | first noticed                          |
-| 2026-09-03  | ~09:00–10:20         | ~10:20    | recovered around mid-morning           |
-| 2026-09-05  | 00:05–13:03 (~13 h)  | 13:03     | best-documented; both bots same second |
+| 2026-09-03  | ~09:00–10:20         | ~10:20    | mid-morning                            |
+| 2026-09-05  | 00:05–13:03 (~13 h)  | 13:03     | both bots recovered the same second    |
+| 2026-09-07  | from 22:51           | (caught)  | the one caught live — Cloudflare proven |
 
-Recurring, roughly overnight-to-midday, self-recovering.
+Recurring, self-recovering. Note 2026-09-07 started at night, not the ~5am of the
+earlier ones — so it is not a pure time-of-day trigger.
 
-## What the evidence rules in and out
+## The trail — suspects we ruled out
 
-| What we observed | What it means |
-|---|---|
-| Scheduled jobs (pruner 04:00, index 02:00) ran *during* outages | n8n itself was alive — not crashed |
-| The backup, run from GitHub *outside* the network, could not reach the box at ~05:00 on Sep 4 and 5 | The box was unreachable from the internet — not merely stuck inside |
-| Both bots dropped and recovered at the **same second** (Sep 5: Posty 13:03:13, Jessie 13:03:31) | One shared front door failed, not either bot |
-| n8n's own logs show nothing at the moment it fails | The failure is below n8n — it never sees the lost messages |
-| `EAI_AGAIN` / "DNS server returned an error" appear minutes before | DNS is unhealthy around the failures |
-| The backup hits n8n's API directly, not Slack, and still failed | **Not** a Slack-side problem |
+Before catching it live, the evidence pointed at "the network path between the box
+and the internet," which was right, but the specific suspects were not:
 
-**Conclusion:** alive inside, unreachable from outside → the fault is the network
-path between the box and the internet. Not n8n, not the workflows, not Slack.
-
-## The suspects, most likely first
-
-| # | Cause | Why it fits | How to confirm |
-|---|---|---|---|
-| 1 | **Cloudflare tunnel (`cloudflared`) drops and reconnects** | Tunnel is the one shared door for both bots; a drop stops all inbound and self-heals on reconnect | Read the `cloudflared` container log from a failure window for disconnect/reconnect lines |
-| 2 | **Site internet flaps** (ISP blip, router reboot, public IP change) | Cuts the box off in and out, both bots; recovers when the link/lease restores | Continuous ping from the box to the internet; check router/ISP logs and whether the public IP changed |
-| 3 | **DNS flapping** | The `EAI_AGAIN` errors; likely a *trigger* for 1/2 rather than the root | Check the box's DNS resolver; try a fixed resolver (1.1.1.1 / 8.8.8.8) |
-| 4 | **Mac power management** (sleep / nap / network throttle overnight) | Fits the overnight timing; jobs still fire but the network suspends | `pmset -g`; Console sleep/wake log at the outage times |
-| 5 | **Dynamic IP / DHCP lease change** breaks the tunnel routing | Overnight lease renewals match the timing | Watch the public and LAN IP across a failure |
-
-Less likely, given the evidence: Docker networking (would not self-recover), n8n
-resource exhaustion (the box stayed alive and Sep 5 recovered with no pruning),
-Slack-side delivery (ruled out above).
-
-## The one check that decides it
-
-Get the **`cloudflared` log from a failure window** (outages cluster around 5am
-Manila). If it shows the tunnel disconnecting and reconnecting at those times, it is
-#1. If the tunnel log is clean but the box was still unreachable, it is the link
-itself (#2).
+| Suspect | Why it looked plausible | Why it is not the cause |
+|---|---|---|
+| Cloudflare tunnel dropping | both bots, self-recovery | the tunnel was up — the box answered, it just served a challenge |
+| Site internet flapping | alive inside, dead outside | reachable from the office IP throughout |
+| Host DNS flapping (`EAI_AGAIN`) | errors appeared near outages | a separate, minor *outbound* issue on the box; unrelated to inbound |
+| n8n losing its webhook registration | Sep 3 log showed "webhook not registered" | the challenge stops Slack before n8n is ever asked |
+| Execution table filling SQLite | pruning once coincided with recovery | Sep 5 recovered with no pruning |
 
 ## What would catch the next one live
 
-An **external uptime monitor** (UptimeRobot, Better Stack, or Cloudflare Health
-Checks) pinging the public URL every minute. It watches from outside, so it works
-even when the box's own network is down, and it alerts the moment Jessie drops —
-instead of finding out hours later. This is the single highest-value thing not yet
-in place. It needs the owner's accounts, not a code change.
+An **external uptime monitor** (UptimeRobot, Better Stack, Cloudflare Health Checks)
+pinging the public URL every minute from outside. It sees the challenge the moment it
+starts and alerts you, instead of finding out hours later. Highest-value thing not
+yet in place; needs the owner's accounts, not a code change.

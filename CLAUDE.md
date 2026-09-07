@@ -83,8 +83,8 @@ n8n's own logs show nothing at the moment it fails, so it is invisible from insi
 only an outside check sees it. The same host DNS also makes every turn ~3s slower
 (the first outside call each turn pays cold DNS). Plain-language fixes are in
 `SERVER-NOTES.md`; the measurements are in `PENDING.md` items 15 and 18. The cause was caught live on 2026-09-08 — Cloudflare
-challenging Slack's servers with a "Just a moment..." page; the finding and the fix
-are in `CLOUDFLARE.md`, the evidence trail in `OUTAGES.md`. **This is
+challenging Slack's servers with a "Just a moment..." page. The finding, the fix, and
+the evidence are all in `OUTAGES.md`. **This is
 the largest open risk, and it is server-side.**
 
 **Safety nets already in place:**
