@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# Snapshot the known-good state of the n8n instance, so that after a change or an
+# outage the question "what is different?" is a diff instead of an investigation.
+#
+#   ./scripts/baseline                  # write a timestamped snapshot to evidence/
+#   ./scripts/baseline --print          # print, do not write
+#   ./scripts/baseline --diff <file>    # compare current state against a snapshot
+#
+# Run it BEFORE any planned change (VM work, DNS changes, container recreate, a
+# workflow publish) and again after. On 2026-09-02 a credential swap broke Slack
+# delivery for hours; with a baseline it would have been a one-line diff instead of
+# two days of investigation.
+#
+# Records: every workflow's active state / versionId / updatedAt, every credential's
+# updatedAt, both production webhooks' registration status, /healthz, and the newest
+# execution. Read-only.
+set -uo pipefail
+here="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "$here/.env" ]; then set -a; . "$here/.env"; set +a; fi
+: "${N8N_BASE_URL:?N8N_BASE_URL missing}"
+: "${N8N_API_KEY:?N8N_API_KEY missing}"
+
+MODE="write"; CMP=""
+case "${1:-}" in
+  --print) MODE="print" ;;
+  --diff)  MODE="diff"; CMP="${2:?usage: --diff <snapshot file>}" ;;
+  "")      ;;
+  *) echo "unknown argument: $1" >&2; exit 1 ;;
+esac
+
+python3 - "$N8N_BASE_URL" "$N8N_API_KEY" "$here" "$MODE" "$CMP" <<'PY'
+import json, subprocess, sys, os
+from datetime import datetime, timedelta, timezone
+
+base, key, root, mode, cmp_path = sys.argv[1].rstrip("/"), sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
+MNL = timezone(timedelta(hours=8))
+
+def api(path):
+    r = subprocess.run(["curl", "-sS", "-H", f"X-N8N-API-KEY: {key}", base + path,
+                        "--max-time", "30"], capture_output=True, text=True)
+    try:
+        return json.loads(r.stdout)
+    except Exception:
+        return {}
+
+def code(url, method="GET", data=None):
+    cmd = ["curl", "-sS", "-o", "/dev/null", "-w", "%{http_code}", "-X", method, url,
+           "--max-time", "20"]
+    if data:
+        cmd += ["-H", "Content-Type: application/json", "--data", data]
+    return subprocess.run(cmd, capture_output=True, text=True).stdout.strip()
+
+snap = {"captured_at": datetime.now(MNL).isoformat(timespec="seconds"),
+        "base_url": base, "healthz": code(f"{base}/healthz")}
+
+snap["webhooks"] = {}
+for name, wid in (("jessie", "jessie-slack-webhook"), ("posty", "posty-slack-webhook")):
+    c = code(f"{base}/webhook/{wid}/webhook", "POST", '{"type":"baseline"}')
+    snap["webhooks"][name] = {"status": c,
+                              "registered": c == "401",
+                              "note": "401=registered  404=DEREGISTERED"}
+
+snap["workflows"] = {}
+for w in api("/api/v1/workflows?limit=100").get("data", []):
+    snap["workflows"][w["id"]] = {"name": w.get("name"), "active": w.get("active"),
+                                  "versionId": w.get("versionId"),
+                                  "updatedAt": w.get("updatedAt")}
+
+snap["credentials"] = {}
+for c in api("/api/v1/credentials?limit=100").get("data", []):
+    snap["credentials"][c["id"]] = {"name": c.get("name"), "type": c.get("type"),
+                                    "updatedAt": c.get("updatedAt")}
+
+# which credential each Slack Trigger uses - the exact thing that broke on 2 Sept
+snap["slack_triggers"] = {}
+for wid in ("uVVYVB2M7kxpLleI", "eFNMRnaN4yGvmqhc"):
+    w = api(f"/api/v1/workflows/{wid}")
+    for n in w.get("nodes", []) or []:
+        if n.get("type") == "n8n-nodes-base.slackTrigger":
+            cr = (n.get("credentials") or {}).get("slackApi") or {}
+            snap["slack_triggers"][w.get("name", wid)] = {
+                "webhookId": n.get("webhookId"),
+                "credential_id": cr.get("id"), "credential_name": cr.get("name"),
+                "parameters": n.get("parameters")}
+
+ex = api("/api/v1/executions?limit=1").get("data", [])
+snap["newest_execution"] = {"id": ex[0]["id"], "startedAt": ex[0].get("startedAt"),
+                            "workflowId": ex[0].get("workflowId")} if ex else None
+
+def flatten(d, prefix=""):
+    out = {}
+    for k, v in (d or {}).items():
+        p = f"{prefix}{k}"
+        if isinstance(v, dict):
+            out.update(flatten(v, p + "."))
+        else:
+            out[p] = v
+    return out
+
+if mode == "diff":
+    old = json.load(open(cmp_path))
+    a, b = flatten(old), flatten(snap)
+    changed = [k for k in sorted(set(a) | set(b))
+               if not k.startswith("captured_at") and not k.startswith("newest_execution")
+               and a.get(k) != b.get(k)]
+    print(f"baseline : {old.get('captured_at')}")
+    print(f"now      : {snap['captured_at']}\n")
+    if not changed:
+        print("no differences")
+    else:
+        print(f"{len(changed)} difference(s):\n")
+        for k in changed:
+            print(f"  {k}\n    was: {a.get(k)!r}\n    now: {b.get(k)!r}")
+    sys.exit(1 if changed else 0)
+
+text = json.dumps(snap, indent=1, sort_keys=True)
+if mode == "print":
+    print(text)
+else:
+    d = os.path.join(root, "evidence")
+    os.makedirs(d, exist_ok=True)
+    stamp = datetime.now(MNL).strftime("%Y-%m-%d_%H%M")
+    path = os.path.join(d, f"baseline-{stamp}.json")
+    open(path, "w").write(text + "\n")
+    print(f"wrote {os.path.relpath(path, root)}")
+    print(f"  healthz          {snap['healthz']}")
+    for n, v in snap["webhooks"].items():
+        print(f"  webhook {n:<7} {v['status']} {'registered' if v['registered'] else 'NOT REGISTERED'}")
+    for n, v in snap["slack_triggers"].items():
+        print(f"  trigger cred     {n} -> {v['credential_name']} ({v['credential_id']})")
+    print(f"  workflows        {len(snap['workflows'])}   credentials {len(snap['credentials'])}")
+    print(f"\nAfter the change:  ./scripts/baseline --diff {os.path.relpath(path, root)}")
+PY

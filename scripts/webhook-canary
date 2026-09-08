@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+# Is Slack event delivery actually alive? Catches the two faults that cost 2 September.
+#
+#   ./scripts/webhook-canary            # check both apps, human-readable
+#   ./scripts/webhook-canary --quiet    # only print problems (for cron)
+#   ./scripts/webhook-canary jessie     # one app only
+#
+# Two things can silently stop delivery while everything looks healthy:
+#
+#   1. THE WEBHOOK IS DEREGISTERED. Test-listening or unpublishing a live Slack
+#      Trigger tears down the production webhook (n8n cannot listen for test and
+#      production at once). Slack's POSTs then 404 and vanish. Detectable by an
+#      unsigned probe: registered = 401, deregistered = 404.
+#
+#   2. THE SIGNING SECRET IS WRONG. n8n validates every request against the secret
+#      in the trigger's credential. Wrong secret means 401 on every genuine event -
+#      no execution row, and nothing in the log at `info` level. An unsigned probe
+#      CANNOT see this: a healthy endpoint returns 401 to it too. Only a correctly
+#      signed request tells them apart. This is what broke Jessie on 2026-09-02 and
+#      it went unfound for two days because every probe returned a reassuring 401.
+#
+# n8n checks the signature BEFORE handling `url_verification`, so a signed
+# url_verification is a true end-to-end test of the secret and creates no execution
+# and no Slack traffic. Verified 2026-09-04.
+#
+# Add to .env to enable the signed check (Slack app -> Basic Information -> Signing Secret):
+#   JESSIE_SLACK_SIGNING_SECRET=...
+#   POSTY_SLACK_SIGNING_SECRET=...
+# Without them the script still runs check 1 and says the signed check was skipped.
+#
+# Optional, for unattended runs:
+#   CANALERT deliberately not used - set CANARY_ALERT_WEBHOOK to a Slack Incoming
+#   Webhook URL and the canary posts there when the status CHANGES (ok -> fail, and
+#   fail -> ok). State-change only, so a cron every 10 minutes does not spam.
+#   Outbound posting is independent of inbound event delivery, so the alert still
+#   arrives when Slack -> n8n is completely dead.
+#     CANARY_ALERT_WEBHOOK=https://hooks.slack.com/services/...
+#     CANARY_STATE_FILE=/var/lib/jessie-canary/state   (default /tmp/webhook-canary.state)
+#
+# Exit codes:  0 healthy   2 deregistered   3 bad signature   4 unreachable   1 config
+set -uo pipefail
+here="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "$here/.env" ]; then
+  set -a; . "$here/.env"; set +a
+elif [ -z "${N8N_BASE_URL:-}" ]; then
+  echo "No $here/.env, and N8N_BASE_URL is not in the environment." >&2
+  echo "Either keep the repo layout (<root>/.env plus <root>/scripts/webhook-canary)," >&2
+  echo "or supply the variables from the environment - e.g. a systemd EnvironmentFile." >&2
+  exit 1
+fi
+: "${N8N_BASE_URL:?N8N_BASE_URL missing}"
+
+QUIET=0; ONLY=""
+for a in "$@"; do
+  case "$a" in
+    --quiet|-q) QUIET=1 ;;
+    jessie|posty) ONLY="$a" ;;
+    *) echo "unknown argument: $a" >&2; exit 1 ;;
+  esac
+done
+
+python3 - "$N8N_BASE_URL" "$QUIET" "$ONLY" <<'PY'
+import hashlib, hmac, json, os, subprocess, sys, time
+
+base, quiet, only = sys.argv[1].rstrip("/"), sys.argv[2] == "1", sys.argv[3]
+APPS = [("jessie", "jessie-slack-webhook", "JESSIE_SLACK_SIGNING_SECRET"),
+        ("posty",  "posty-slack-webhook",  "POSTY_SLACK_SIGNING_SECRET")]
+if only:
+    APPS = [a for a in APPS if a[0] == only]
+
+def post(url, body, headers=()):
+    cmd = ["curl", "-sS", "-o", "/dev/stderr", "-w", "%{http_code}",
+           "-X", "POST", url, "-H", "Content-Type: application/json",
+           "--data", body, "--max-time", "20"]
+    for h in headers:
+        cmd += ["-H", h]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    return r.stdout.strip(), (r.stderr or "").strip()
+
+def get_code(url):
+    r = subprocess.run(["curl", "-sS", "-o", "/dev/null", "-w", "%{http_code}",
+                        url, "--max-time", "20"], capture_output=True, text=True)
+    return r.stdout.strip()
+
+out, worst = [], 0
+def say(line):
+    out.append(line)
+
+# --- instance reachable at all
+hz = get_code(f"{base}/healthz")
+if hz != "200":
+    say(f"FAIL  /healthz returned {hz or 'no response'} — instance unreachable")
+    worst = max(worst, 4)
+else:
+    say("ok    /healthz 200")
+
+for name, wid, secret_env in APPS:
+    url = f"{base}/webhook/{wid}/webhook"
+
+    # --- check 1: is the production webhook registered?
+    code, _ = post(url, '{"type":"canary"}')
+    if code == "401":
+        say(f"ok    {name:<6} registered (401 to unsigned probe)")
+    elif code == "404":
+        say(f"FAIL  {name:<6} WEBHOOK DEREGISTERED (404). Slack's events are being")
+        say(f"      dropped right now. Someone test-listened or unpublished the")
+        say(f"      workflow — republish it, and never test-listen a live one.")
+        worst = max(worst, 2)
+        continue
+    else:
+        say(f"WARN  {name:<6} unexpected {code or 'no response'} to unsigned probe")
+        worst = max(worst, 4)
+        continue
+
+    # --- check 2: does the stored signing secret still match the Slack app?
+    secret = os.environ.get(secret_env, "").strip()
+    if not secret:
+        say(f"skip  {name:<6} signed check — set {secret_env} in .env to enable")
+        continue
+
+    challenge = f"canary-{int(time.time())}"
+    body = json.dumps({"type": "url_verification", "challenge": challenge})
+    ts = str(int(time.time()))
+    sig = "v0=" + hmac.new(secret.encode(),
+                           f"v0:{ts}:{body}".encode(), hashlib.sha256).hexdigest()
+    code, resp = post(url, body, [f"X-Slack-Request-Timestamp: {ts}",
+                                  f"X-Slack-Signature: {sig}"])
+    if code == "401":
+        say(f"FAIL  {name:<6} SIGNING SECRET MISMATCH. The endpoint answers 401 to a")
+        say(f"      correctly signed request, so it is rejecting every real Slack")
+        say(f"      event too — silently, with no execution and no log line.")
+        say(f"      Re-copy the Signing Secret from the Slack app into the n8n")
+        say(f"      credential used by {name}'s Slack Trigger.")
+        worst = max(worst, 3)
+    elif code.startswith("2"):
+        echoed = challenge in resp
+        say(f"ok    {name:<6} signature accepted ({code})"
+            + ("" if echoed else " — challenge not echoed, but auth passed"))
+    else:
+        say(f"WARN  {name:<6} signed probe returned {code or 'no response'}")
+        worst = max(worst, 4)
+
+# --- informational: how stale is the newest execution?
+key = os.environ.get("N8N_API_KEY", "")
+if key:
+    r = subprocess.run(["curl", "-sS", "-H", f"X-N8N-API-KEY: {key}",
+                        f"{base}/api/v1/executions?limit=1"],
+                       capture_output=True, text=True)
+    try:
+        d = json.loads(r.stdout).get("data", [])
+        if d and d[0].get("startedAt"):
+            from datetime import datetime, timezone, timedelta
+            t = datetime.fromisoformat(d[0]["startedAt"].replace("Z", "+00:00"))
+            mins = (datetime.now(timezone.utc) - t).total_seconds() / 60
+            local = t.astimezone(timezone(timedelta(hours=8)))
+            say(f"info  newest execution {mins:.0f} min ago "
+                f"({local:%m-%d %H:%M:%S} Manila) — quiet gaps are normal, not a fault")
+    except Exception:
+        pass
+
+# --- alert on state CHANGE only, so an every-10-minutes cron does not spam
+report = "\n".join(out)
+state_path = os.environ.get("CANARY_STATE_FILE", "/tmp/webhook-canary.state")
+prev = ""
+try:
+    with open(state_path) as f:
+        prev = f.read().strip()
+except OSError:
+    pass
+now = "fail" if worst else "ok"
+changed = prev != now
+try:
+    os.makedirs(os.path.dirname(state_path) or ".", exist_ok=True)
+    with open(state_path, "w") as f:
+        f.write(now)
+except OSError:
+    pass
+
+hook = os.environ.get("CANARY_ALERT_WEBHOOK", "").strip()
+if hook and changed:
+    if worst:
+        text = (f":rotating_light: *Jessie webhook canary FAILED* (exit {worst})\n"
+                f"```{report}```")
+    else:
+        text = f":white_check_mark: *Jessie webhook canary recovered*\n```{report}```"
+    subprocess.run(["curl", "-sS", "-o", "/dev/null", "-X", "POST", hook,
+                    "-H", "Content-Type: application/json",
+                    "--data", json.dumps({"text": text}), "--max-time", "20"],
+                   capture_output=True, text=True)
+
+if worst == 0 and quiet:
+    sys.exit(0)
+print(report)
+if worst:
+    print(f"\ncanary FAILED (exit {worst}) — see OUTAGE-2026-09-02.md")
+sys.exit(worst)
+PY
