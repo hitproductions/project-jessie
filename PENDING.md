@@ -320,6 +320,49 @@ item 13 (the Code-node cold start) are the two fixed per-turn costs, ~7.5s of a
 16.5s median turn, and both are server-side, not workflow changes. Cross-links
 [[15]] (the outages) and 13 (the task runner).
 
+**19. Two diverging working copies of this repo, and the other one has more in it.**
+Verified 8 Sep: the live main workflow is **byte-for-byte identical** to
+`workflows/project-jessie-v119.json` — same 40 nodes, same Guard Probe (436 lines),
+same system prompt. Howard's EOD calls that same live build **v120**. So the numbering
+diverged but the content did not: **v119 here == v120 there**, no conflict, and nothing
+is lost. Pick one convention before the next import; the safest is to stop numbering
+by hand and name files after what is live at the time of the pull.
+
+The real problem is that his copy is **not this repo**. His EOD reports "nothing
+committed since 31 Aug 12:29", while this repo has been committed to daily all week —
+so he is working in a separate folder (most likely the original handoff copy, not a
+clone). Things that exist only in his copy and are **missing from here**:
+
+- `scripts/webhook-canary` — the signed-verification probe, the only thing that
+  catches a silent signature rejection
+- `scripts/baseline` and `evidence/baseline-2026-09-07_1712.json`
+- `evidence/jessie-executions-2026-09-02_to_09-04.json` — **the only surviving copy of
+  the 2-4 Sept execution data**, everything else was pruned
+- `QA-2026-09-07.md`, `TEST-LOG-2026-09-07.md`, `OUTAGE-2026-09-02.md`,
+  `CANARY-SETUP.md`, `EOD-2026-09-08.md`
+- his `v116-v120` and `book-session v26-28` workflow files
+
+Until those are merged in, this repo is not the record it claims to be. Whoever
+reconciles them should merge *into* this repo (it has the history), not the other way.
+
+**20. `EOD-2026-09-08.md` is referenced but not in hand.** `MONITOR-SETUP.md` cites it
+for the **connector-machine-sleeps hypothesis** — that the machine running the
+Cloudflare tunnel connector sleeps, dropping inbound while n8n keeps running. That
+would fit the "breaks when nobody is using it, heals itself" pattern better than
+anything in `OUTAGES.md`. Note the 8 Sept instrumented window argues against it for
+*that* window (278 consecutive 200s straight through the tunnel), but it may well
+explain others. Get that doc and the connector's sleep/wake log.
+
+**21. Two checks nobody can do from the VM.** Both are needed to finish the outage
+investigation and both need an account, not a shell:
+- **Cloudflare → Security → Events**, filtered to `signal.hitpromanila.net`: do Slack's
+  IPs appear being challenged or blocked during an outage?
+- **Slack app → Event Subscriptions**: the delivery/failure counts. Does Slack think it
+  delivered?
+
+If Slack's IPs are in the Cloudflare log, that is the answer. If they are absent, Slack
+never sent, and the answer is on Slack's side.
+
 ---
 
 ## Withdrawn
