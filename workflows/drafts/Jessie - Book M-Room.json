@@ -1,0 +1,202 @@
+{
+  "name": "Jessie — Book M-Room",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            { "name": "room", "type": "string" },
+            { "name": "summary", "type": "string" },
+            { "name": "start_iso", "type": "string" },
+            { "name": "end_iso", "type": "string" },
+            { "name": "all_day", "type": "boolean" },
+            { "name": "description", "type": "string" },
+            { "name": "requester_name", "type": "string" },
+            { "name": "requester_slack_id", "type": "string" }
+          ]
+        }
+      },
+      "id": "bm-trigger",
+      "name": "When called by agent",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [-1000, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---- Book M-Room: validate the room and set up its hold config ----\n// This tool is ONLY for the three held booths: M2, M6, M7. Ordinary booths\n// (M1/M3/M4/M5/M8) and every other room go through Book Session as before.\nconst ROOMS = {\n  M2: { holdOwner: 'Peemo Morato',            approverName: 'Peemo Morato', resource: 'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com', holdWords: ['peemo'] },\n  M6: { holdOwner: 'Marketing',            approverName: 'Nicole Miller', resource: 'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com', holdWords: ['marketing'] },\n  M7: { holdOwner: 'Business Development (BD)', approverName: 'Ana Cadelina', resource: 'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com', holdWords: ['bd', 'business development'] }\n};\n\nconst ZONE = 'Asia/Manila';\nconst inp = $input.first().json;\nconst room = String(inp.room || '').trim().toUpperCase();\nconst cfg = ROOMS[room];\n\nif (!cfg) {\n  return [{ json: { terminate: true, status: 'WRONG_TOOL', human: 'Book M-Room only handles M2, M6 and M7. Use Book Session for ' + (room || 'that room') + '.' } }];\n}\n\nconst allDay = inp.all_day === true || inp.all_day === 'true';\nconst dateIso = String(inp.start_iso || '').slice(0, 10);\nconst bookingStart = allDay\n  ? DateTime.fromISO(dateIso, { zone: ZONE }).startOf('day')\n  : DateTime.fromISO(String(inp.start_iso), { zone: ZONE });\nif (!bookingStart.isValid) {\n  return [{ json: { terminate: true, status: 'BAD_INPUT', human: 'I could not read the date/time for that ' + room + ' booking.' } }];\n}\nconst now = DateTime.now().setZone(ZONE);\nif (bookingStart < now.startOf('day')) {\n  return [{ json: { terminate: true, status: 'BLOCKED', human: 'That date has already passed — send me the correct date and I\\'ll book ' + room + '.' } }];\n}\n\nconst bookingEnd = allDay\n  ? DateTime.fromISO(dateIso, { zone: ZONE }).plus({ days: 1 }).startOf('day')\n  : DateTime.fromISO(String(inp.end_iso), { zone: ZONE });\n\nreturn [{ json: {\n  terminate: false,\n  room,\n  holdOwner: cfg.holdOwner,\n  approverName: cfg.approverName,\n  resource: cfg.resource,\n  holdWords: cfg.holdWords,\n  summary: inp.summary || (room + ' - booking'),\n  description: inp.description || '',\n  requesterName: inp.requester_name || 'the requester',\n  requesterSlackId: inp.requester_slack_id || '',\n  allDay,\n  dateIso,\n  startIso: allDay ? dateIso : String(inp.start_iso),\n  endIso: allDay ? bookingEnd.toISODate() : String(inp.end_iso),\n  windowStartIso: bookingStart.toISO(),\n  windowEndIso: bookingEnd.toISO(),\n  bookingDateHuman: bookingStart.toFormat('cccc, MMMM d, yyyy'),\n  timeHuman: allDay ? 'All day' : (bookingStart.toFormat('h:mm a') + ' – ' + bookingEnd.toFormat('h:mm a'))\n} }];\n"
+      },
+      "id": "bm-classify",
+      "name": "Classify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-800, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            { "id": "c-cont", "leftValue": "={{ $json.terminate }}", "rightValue": false, "operator": { "type": "boolean", "operation": "false", "singleValue": true } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bm-if-continue",
+      "name": "Valid held room?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-600, 0]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "KDC Bookings"
+        },
+        "returnAll": true,
+        "options": {
+          "timeMin": "={{ $json.windowStartIso }}",
+          "timeMax": "={{ $json.windowEndIso }}"
+        }
+      },
+      "id": "bm-list",
+      "name": "List Events",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [-380, -60],
+      "credentials": {
+        "googleCalendarOAuth2Api": { "id": "6D1r3kaq6KaFdL0a", "name": "Google Calendar account" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decide the mode by looking at what is on this room for the window:\n//  - a standing hold overlaps            -> 'approval' (shared use, needs the approver)\n//  - some OTHER booking overlaps          -> 'taken'    (ordinary conflict)\n//  - nothing overlaps                     -> 'book'     (ordinary M-booth booking)\nconst c = $('Classify').item.json;\nconst ZONE = 'Asia/Manila';\nconst room = c.room;\nconst holdWords = c.holdWords || [];\nconst reqStart = DateTime.fromISO(c.windowStartIso, { zone: ZONE });\nconst reqEnd = DateTime.fromISO(c.windowEndIso, { zone: ZONE });\n\nconst events = $input.all().map(i => i.json).filter(e => e && (e.summary || e.start));\nlet holdHit = false, otherHit = null;\nfor (const e of events) {\n  const title = String(e.summary || '').trim();\n  if (!new RegExp('^' + room + '\\\\b', 'i').test(title)) continue; // this room only\n  const es = e.start && (e.start.dateTime || e.start.date);\n  const ee = e.end && (e.end.dateTime || e.end.date);\n  if (!es || !ee) continue;\n  const s = DateTime.fromISO(String(es), { zone: ZONE });\n  const en = DateTime.fromISO(String(ee), { zone: ZONE });\n  if (!(s < reqEnd && en > reqStart)) continue; // overlap only\n  const lower = title.toLowerCase();\n  if (holdWords.some(w => lower.includes(w))) { holdHit = true; }\n  else { otherHit = title; }\n}\n\nlet mode;\nif (otherHit) mode = 'taken';\nelse if (holdHit) mode = 'approval';\nelse mode = 'book';\n\nreturn [{ json: Object.assign({}, c, { mode, conflictTitle: otherHit || '' }) }];\n"
+      },
+      "id": "bm-decide",
+      "name": "Decide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-160, -60]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "options": { "caseSensitive": true, "typeValidation": "strict" }, "conditions": [ { "leftValue": "={{ $json.mode }}", "rightValue": "book", "operator": { "type": "string", "operation": "equals" } } ], "combinator": "and" }, "outputKey": "book" },
+            { "conditions": { "options": { "caseSensitive": true, "typeValidation": "strict" }, "conditions": [ { "leftValue": "={{ $json.mode }}", "rightValue": "approval", "operator": { "type": "string", "operation": "equals" } } ], "combinator": "and" }, "outputKey": "approval" },
+            { "conditions": { "options": { "caseSensitive": true, "typeValidation": "strict" }, "conditions": [ { "leftValue": "={{ $json.mode }}", "rightValue": "taken", "operator": { "type": "string", "operation": "equals" } } ], "combinator": "and" }, "outputKey": "taken" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bm-switch",
+      "name": "Route by mode",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [60, -60]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "KDC Bookings"
+        },
+        "start": "={{ $json.startIso }}",
+        "end": "={{ $json.endIso }}",
+        "additionalFields": {
+          "allday": "={{ $json.allDay }}",
+          "summary": "={{ $json.summary }}",
+          "description": "={{ ($json.description ? $json.description + ' | ' : '') + 'Booked by: ' + $json.requesterName + ' | ref: ' + $json.requesterSlackId }}",
+          "attendees": [ "={{ $json.resource }}" ]
+        }
+      },
+      "id": "bm-create",
+      "name": "Create Booking",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [300, -220],
+      "credentials": {
+        "googleCalendarOAuth2Api": { "id": "6D1r3kaq6KaFdL0a", "name": "Google Calendar account" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $('Decide').item.json;\nreturn [{ json: { status: 'CREATED', human: 'Booked ' + c.room + ' — ' + c.bookingDateHuman + ', ' + c.timeHuman + '.' } }];\n"
+      },
+      "id": "bm-ret-created",
+      "name": "Return CREATED",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, -220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "<<N8N_WEBHOOK_BASE>>/webhook/jessie-mroom-approval",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ room: $json.room, summary: $json.summary, description: $json.description, start_iso: $json.startIso, end_iso: $json.endIso, all_day: $json.allDay, booking_date: $json.dateIso, requester_name: $json.requesterName, requester_slack_id: $json.requesterSlackId }) }}",
+        "options": { "timeout": 8000 }
+      },
+      "id": "bm-fire",
+      "name": "Fire Approval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [300, -40]
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $('Decide').item.json;\nreturn [{ json: { status: 'PENDING_APPROVAL', approver: c.approverName, room: c.room, human: 'That overlaps the ' + c.holdOwner + ' hold on ' + c.room + ', so it needs ' + c.approverName + '\\'s OK. I\\'ve asked them — I\\'ll confirm as soon as they respond, or once the approval window closes. Nothing is booked yet.' } }];\n"
+      },
+      "id": "bm-ret-pending",
+      "name": "Return PENDING",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, -40]
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $('Decide').item.json;\nreturn [{ json: { status: 'ROOM_TAKEN', room: c.room, human: c.room + ' is already booked for that window (' + c.conflictTitle + '). Want a different booth or a different time?' } }];\n"
+      },
+      "id": "bm-ret-taken",
+      "name": "Return TAKEN",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 140]
+    }
+  ],
+  "connections": {
+    "When called by agent": { "main": [[{ "node": "Classify", "type": "main", "index": 0 }]] },
+    "Classify": { "main": [[{ "node": "Valid held room?", "type": "main", "index": 0 }]] },
+    "Valid held room?": {
+      "main": [
+        [{ "node": "List Events", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "List Events": { "main": [[{ "node": "Decide", "type": "main", "index": 0 }]] },
+    "Decide": { "main": [[{ "node": "Route by mode", "type": "main", "index": 0 }]] },
+    "Route by mode": {
+      "main": [
+        [{ "node": "Create Booking", "type": "main", "index": 0 }],
+        [{ "node": "Fire Approval", "type": "main", "index": 0 }],
+        [{ "node": "Return TAKEN", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Booking": { "main": [[{ "node": "Return CREATED", "type": "main", "index": 0 }]] },
+    "Fire Approval": { "main": [[{ "node": "Return PENDING", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "meta": { "instanceId": "jessie-book-mroom" },
+  "tags": []
+}

@@ -1,0 +1,255 @@
+{
+  "name": "Jessie — M-Room Approval",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jessie-mroom-approval",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Approval Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1040, 0],
+      "webhookId": "jessie-mroom-approval"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---- M-Room Approval: parse the request from Book M-Room and size the window ----\n// The webhook body carries the shared-use request that overlapped a standing hold.\n// All times are Philippine Standard Time (Asia/Manila, UTC+8).\n\n// FILL THESE IN: the approvers' Slack member IDs (Uxxxxxxxx). Placeholders below.\nconst ROOMS = {\n  M2: { holdOwner: 'Peemo Morato',            approverName: 'Peemo Morato', approverSlackId: '<<M2_APPROVER_SLACK_ID>>', resource: 'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com' },\n  M6: { holdOwner: 'Marketing',            approverName: 'Nicole Miller', approverSlackId: '<<M6_APPROVER_SLACK_ID>>', resource: 'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com' },\n  M7: { holdOwner: 'Business Development (BD)', approverName: 'Ana Cadelina', approverSlackId: '<<M7_APPROVER_SLACK_ID>>', resource: 'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com' }\n};\n\nconst b = $input.first().json.body || $input.first().json;\n\nconst room = String(b.room || '').trim().toUpperCase();\nconst cfg = ROOMS[room];\nif (!cfg) { throw new Error('M-Room Approval called for a room without a hold: ' + room); }\n\nconst ZONE = 'Asia/Manila';\nconst now = DateTime.now().setZone(ZONE);\n\nconst allDay = b.all_day === true || b.all_day === 'true';\n// Booking start: for a timed booking use start_iso; for all-day use the start of the booking date.\nconst bookingDateIso = String(b.booking_date || b.start_iso || '').slice(0, 10);\nconst bookingStart = allDay\n  ? DateTime.fromISO(bookingDateIso, { zone: ZONE }).startOf('day')\n  : DateTime.fromISO(String(b.start_iso), { zone: ZONE });\n\nif (!bookingStart.isValid) { throw new Error('Could not read the booking start from the request.'); }\n\n// ---- Lead-time window (PST) ----\n// same-day request        -> 1 hour\n// requested the day before -> until 10:00 AM on the booking day\n// requested 2+ days before -> 24 hours\nconst dReq  = now.startOf('day');\nconst dBook = bookingStart.startOf('day');\nconst daysAhead = Math.round(dBook.diff(dReq, 'days').days);\n\nlet deadline, category;\nif (daysAhead <= 0) {\n  category = 'same-day';\n  deadline = now.plus({ hours: 1 });\n} else if (daysAhead === 1) {\n  category = 'day-before';\n  deadline = dBook.set({ hour: 10, minute: 0, second: 0, millisecond: 0 });\n} else {\n  category = '2+ days';\n  deadline = now.plus({ hours: 24 });\n}\n\n// Never wait past the session itself. For a timed booking, cap at the start time;\n// for an all-day booking, cap at the end of the booking day.\nconst latest = allDay ? dBook.endOf('day') : bookingStart;\nif (deadline > latest) { deadline = latest; }\n// If the window has already effectively closed (booking is imminent/past), the\n// approver still gets a heads-up but the wait resolves at the (near) deadline.\nif (deadline < now) { deadline = now.plus({ minutes: 1 }); }\n\nreturn [{ json: {\n  room,\n  holdOwner: cfg.holdOwner,\n  approverName: cfg.approverName,\n  approverSlackId: cfg.approverSlackId,\n  resource: cfg.resource,\n  requesterName: b.requester_name || 'the requester',\n  requesterSlackId: b.requester_slack_id || '',\n  title: b.summary || (room + ' - booking'),\n  startIso: allDay ? bookingDateIso : String(b.start_iso),\n  endIso: allDay ? DateTime.fromISO(bookingDateIso, { zone: ZONE }).plus({ days: 1 }).toISODate() : String(b.end_iso),\n  allDay,\n  bookingStartIso: bookingStart.toISO(),\n  bookingDateHuman: bookingStart.toFormat('cccc, MMMM d, yyyy'),\n  timeHuman: allDay ? 'All day' : (bookingStart.toFormat('h:mm a') + ' – ' + DateTime.fromISO(String(b.end_iso), { zone: ZONE }).toFormat('h:mm a')),\n  description: b.description || '',\n  bookerRef: b.requester_slack_id || '',\n  category,\n  deadlineIso: deadline.toISO(),\n  deadlineHuman: deadline.toFormat('cccc, MMMM d, h:mm a')\n} }];\n"
+      },
+      "id": "node-compute",
+      "name": "Compute",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-840, 0]
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "={{ $json.approverSlackId }}",
+          "mode": "id"
+        },
+        "text": "=*Shared-use approval — {{ $json.room }}*\n{{ $json.requesterName }} wants *{{ $json.room }}* (your standing hold) for:\n*Date:* {{ $json.bookingDateHuman }}\n*Time:* {{ $json.timeHuman }}\n\nThis overlaps the {{ $json.holdOwner }} hold, so it needs your OK.\nRespond by *{{ $json.deadlineHuman }}* — if I don't hear back by then the room is treated as free and I'll book it.\n\n✅ Approve →  {{ $execution.resumeUrl }}?decision=approve\n❌ Decline →  {{ $execution.resumeUrl }}?decision=decline",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "node-notify",
+      "name": "Notify Approver",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [-640, 0],
+      "credentials": {
+        "slackApi": { "id": "EcX8szEJrOLYLUfl", "name": "Jessie Slack (signed)" }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "limitWaitTime": true,
+        "limitType": "atSpecifiedTime",
+        "maxDateAndTime": "={{ $('Compute').item.json.deadlineIso }}",
+        "options": {}
+      },
+      "id": "node-wait",
+      "name": "Approval Window",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [-440, 0],
+      "webhookId": "jessie-mroom-approval-wait"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read how the wait resumed. A click carries ?decision=approve|decline in the query;\n// a time-limit resume carries no decision -> non-response -> BOOK (never blocks).\nconst w = $input.first().json || {};\nconst decision = String(\n  (w.query && w.query.decision) ||\n  (w.params && w.params.decision) ||\n  (w.body && w.body.decision) ||\n  w.decision || ''\n).toLowerCase().trim();\n\nlet outcome, reason;\nif (decision === 'decline' || decision === 'declined' || decision === 'no') {\n  outcome = 'decline'; reason = 'declined';\n} else if (decision === 'approve' || decision === 'approved' || decision === 'yes') {\n  outcome = 'book'; reason = 'approved';\n} else {\n  outcome = 'book'; reason = 'no-response';\n}\n\nconst c = $('Compute').item.json;\nreturn [{ json: Object.assign({}, c, { outcome, reason }) }];\n"
+      },
+      "id": "node-resolve",
+      "name": "Resolve Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-240, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-book",
+              "leftValue": "={{ $json.outcome }}",
+              "rightValue": "book",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-book",
+      "name": "Book?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-40, 0]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "KDC Bookings"
+        },
+        "returnAll": true,
+        "options": {
+          "timeMin": "={{ $json.bookingStartIso }}",
+          "timeMax": "={{ $json.allDay ? $json.endIso : $json.endIso }}"
+        }
+      },
+      "id": "node-recheck",
+      "name": "Recheck Availability",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [200, -120],
+      "credentials": {
+        "googleCalendarOAuth2Api": { "id": "6D1r3kaq6KaFdL0a", "name": "Google Calendar account" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Safety re-check before creating: has a NON-hold booking taken the room since the\n// request came in, or has the start slipped into the past? The standing hold itself\n// does NOT count as a conflict — approval (or non-response) is exactly permission to\n// overlap it.\nconst c = $('Resolve Outcome').item.json;\nconst ZONE = 'Asia/Manila';\nconst room = c.room;\n\n// Hold owner keywords per room, to tell the standing hold apart from a real booking.\nconst HOLD_KEYWORDS = { M2: ['peemo'], M6: ['marketing'], M7: ['bd', 'business development'] };\nconst holdWords = HOLD_KEYWORDS[room] || [];\n\nconst reqStart = DateTime.fromISO(c.bookingStartIso, { zone: ZONE });\nconst reqEnd = c.allDay\n  ? DateTime.fromISO(c.startIso, { zone: ZONE }).plus({ days: 1 }).startOf('day')\n  : DateTime.fromISO(c.endIso, { zone: ZONE });\nconst now = DateTime.now().setZone(ZONE);\n\nif (reqStart < now.startOf('day')) {\n  return [{ json: Object.assign({}, c, { slot: 'past' }) }];\n}\n\nconst events = $input.all().map(i => i.json).filter(e => e && (e.summary || e.start));\nlet conflict = null;\nfor (const e of events) {\n  const title = String(e.summary || '');\n  // Only events for THIS room (internal-room titles start with the room name).\n  if (!new RegExp('^' + room + '\\\\b', 'i').test(title.trim())) continue;\n  // Skip the standing hold itself.\n  const lower = title.toLowerCase();\n  const isHold = holdWords.some(w => lower.includes(w));\n  if (isHold) continue;\n  // Overlap test.\n  const es = e.start && (e.start.dateTime || e.start.date);\n  const ee = e.end && (e.end.dateTime || e.end.date);\n  if (!es || !ee) continue;\n  const s = DateTime.fromISO(String(es), { zone: ZONE });\n  const en = DateTime.fromISO(String(ee), { zone: ZONE });\n  if (s < reqEnd && en > reqStart) { conflict = title; break; }\n}\n\nreturn [{ json: Object.assign({}, c, { slot: conflict ? 'taken' : 'ok', conflictTitle: conflict || '' }) }];\n"
+      },
+      "id": "node-guard",
+      "name": "Final Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, -120]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-ok",
+              "leftValue": "={{ $json.slot }}",
+              "rightValue": "ok",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-ok",
+      "name": "Slot OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [600, -120]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "KDC Bookings"
+        },
+        "start": "={{ $json.startIso }}",
+        "end": "={{ $json.endIso }}",
+        "additionalFields": {
+          "allday": "={{ $json.allDay }}",
+          "summary": "={{ $json.title }}",
+          "description": "={{ ($json.description ? $json.description + ' | ' : '') + 'Booked by: ' + $json.requesterName + ' | ref: ' + $json.bookerRef }}",
+          "attendees": [ "={{ $json.resource }}" ]
+        }
+      },
+      "id": "node-create",
+      "name": "Create Booking",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [800, -220],
+      "credentials": {
+        "googleCalendarOAuth2Api": { "id": "6D1r3kaq6KaFdL0a", "name": "Google Calendar account" }
+      }
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": { "__rl": true, "value": "={{ $('Resolve Outcome').item.json.requesterSlackId }}", "mode": "id" },
+        "text": "={{ $('Resolve Outcome').item.json.reason === 'approved' ? ($('Resolve Outcome').item.json.approverName + ' approved it — you\\'re booked.') : ('No word back from ' + $('Resolve Outcome').item.json.approverName + ' by the window, so ' + $('Resolve Outcome').item.json.room + ' is yours — booked.') }}\n*{{ $('Resolve Outcome').item.json.room }}* · {{ $('Resolve Outcome').item.json.bookingDateHuman }} · {{ $('Resolve Outcome').item.json.timeHuman }}",
+        "otherOptions": { "includeLinkToWorkflow": false }
+      },
+      "id": "node-tell-booked",
+      "name": "Tell Requester Booked",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [1020, -220],
+      "credentials": {
+        "slackApi": { "id": "EcX8szEJrOLYLUfl", "name": "Jessie Slack (signed)" }
+      }
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": { "__rl": true, "value": "={{ $('Resolve Outcome').item.json.requesterSlackId }}", "mode": "id" },
+        "text": "={{ $json.slot === 'past' ? ('That ' + $json.room + ' slot is now in the past, so I didn\\'t book it — send me a new date and time.') : ('Couldn\\'t book ' + $json.room + ' — it got taken in the meantime (' + $json.conflictTitle + '). Want a different booth or time?') }}",
+        "otherOptions": { "includeLinkToWorkflow": false }
+      },
+      "id": "node-tell-blocked",
+      "name": "Tell Requester Blocked",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [800, -20],
+      "credentials": {
+        "slackApi": { "id": "EcX8szEJrOLYLUfl", "name": "Jessie Slack (signed)" }
+      }
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": { "__rl": true, "value": "={{ $('Resolve Outcome').item.json.requesterSlackId }}", "mode": "id" },
+        "text": "={{ $('Resolve Outcome').item.json.approverName }} wasn't able to release *{{ $('Resolve Outcome').item.json.room }}* for {{ $('Resolve Outcome').item.json.bookingDateHuman }} ({{ $('Resolve Outcome').item.json.timeHuman }}), so I didn't book it.\nWant me to check another M booth for that window, or a different time?",
+        "otherOptions": { "includeLinkToWorkflow": false }
+      },
+      "id": "node-tell-declined",
+      "name": "Tell Requester Declined",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [200, 200],
+      "credentials": {
+        "slackApi": { "id": "EcX8szEJrOLYLUfl", "name": "Jessie Slack (signed)" }
+      }
+    }
+  ],
+  "connections": {
+    "Approval Webhook": { "main": [[{ "node": "Compute", "type": "main", "index": 0 }]] },
+    "Compute": { "main": [[{ "node": "Notify Approver", "type": "main", "index": 0 }]] },
+    "Notify Approver": { "main": [[{ "node": "Approval Window", "type": "main", "index": 0 }]] },
+    "Approval Window": { "main": [[{ "node": "Resolve Outcome", "type": "main", "index": 0 }]] },
+    "Resolve Outcome": { "main": [[{ "node": "Book?", "type": "main", "index": 0 }]] },
+    "Book?": {
+      "main": [
+        [{ "node": "Recheck Availability", "type": "main", "index": 0 }],
+        [{ "node": "Tell Requester Declined", "type": "main", "index": 0 }]
+      ]
+    },
+    "Recheck Availability": { "main": [[{ "node": "Final Guard", "type": "main", "index": 0 }]] },
+    "Final Guard": { "main": [[{ "node": "Slot OK?", "type": "main", "index": 0 }]] },
+    "Slot OK?": {
+      "main": [
+        [{ "node": "Create Booking", "type": "main", "index": 0 }],
+        [{ "node": "Tell Requester Blocked", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Booking": { "main": [[{ "node": "Tell Requester Booked", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "meta": { "instanceId": "jessie-mroom-approval" },
+  "tags": []
+}
