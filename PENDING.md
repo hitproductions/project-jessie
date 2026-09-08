@@ -321,12 +321,14 @@ item 13 (the Code-node cold start) are the two fixed per-turn costs, ~7.5s of a
 [[15]] (the outages) and 13 (the task runner).
 
 **19. Two diverging working copies of this repo, and the other one has more in it.**
-Verified 8 Sep: the live main workflow is **byte-for-byte identical** to
-`workflows/project-jessie-v119.json` — same 40 nodes, same Guard Probe (436 lines),
-same system prompt. Howard's EOD calls that same live build **v120**. So the numbering
-diverged but the content did not: **v119 here == v120 there**, no conflict, and nothing
-is lost. Pick one convention before the next import; the safest is to stop numbering
-by hand and name files after what is live at the time of the pull.
+Numbering is settled: **we use v120**, Howard's number. Verified 8 Sep that the live
+main workflow is **byte-for-byte identical** to
+`workflows/project-jessie-v120.json` — same 40 nodes, same Guard Probe (436 lines),
+same system prompt. (It was briefly numbered v119 here; renamed, content untouched, so
+the file still matches live exactly. Guard Probe's own code comments still say "until
+v119" — left alone deliberately, since editing them would make the file stop matching
+live.) Going forward, don't hand-number in parallel: name the file after what the pull
+actually is.
 
 The real problem is that his copy is **not this repo**. His EOD reports "nothing
 committed since 31 Aug 12:29", while this repo has been committed to daily all week —

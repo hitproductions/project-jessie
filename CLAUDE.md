@@ -210,7 +210,7 @@ booker name against Airtable.
 
 That last one is narrower than it sounds, and the wide version was a bug. "Booked
 by:" is not always the requester - a cancel or a lookup shows someone else's
-booking - and until v119 the rewrite relabelled it as theirs. It now only
+booking - and until v120 the rewrite relabelled it as theirs. It now only
 overwrites a name that is both absent from what the tools returned this turn and
 a near-miss of the real one by edit distance: a corruption is neither reported
 nor plausible, a third party's name is reported and is nobody's typo. Each of those was a prompt rule first, and

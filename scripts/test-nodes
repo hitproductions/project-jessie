@@ -272,7 +272,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"BAD_WINDOW"}]'}]},
       x=>/^Studio 8 is free/.test(x.output)],
 
-    // v119. The undated corrector was undoing the dated one: `\d{1,2}` backtracked
+    // v120. The undated corrector was undoing the dated one: `\d{1,2}` backtracked
     // past its own year lookahead, matched the first digit of a two-digit day, and
     // printed the weekday of the 1st instead. Two-digit days are the whole point of
     // these cases - a single-digit day never reproduced it.
@@ -286,7 +286,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
       'Your slot is Monday, September 22.',{dateNotice:'THE DATE UNDER DISCUSSION IS Thursday, 9 September 2027.'},
       x=>/Wednesday, September 22/.test(x.output)],
 
-    // v119. "Booked by:" is not always the requester - a cancel or a lookup shows
+    // v120. "Booked by:" is not always the requester - a cancel or a lookup shows
     // someone else's booking, and the rewrite was relabelling it as theirs.
     ['booker is not always you','keeps a booker a tool reported',
       'I found this booking:\n*Booked by:* Howard Luistro',
