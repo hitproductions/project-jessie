@@ -1,25 +1,26 @@
 # Server notes
 
-These are the two things worth fixing on the server. Both make Jessie slow (and one
-also causes the outages) because something the server does at the **start** of
-handling each message is slow. Neither is fixed in the n8n workflows — the workflows
-are fine, the slowness is underneath them. The plain fixes are up top; the numbers
-and the outage history are in Measurements at the bottom.
+These are the two things worth fixing on the server. Both make Jessie **slow**.
+Neither is fixed in the n8n workflows — the workflows are fine, the slowness is
+underneath them.
+
+**Neither of these causes the outages.** An earlier version of this file said the DNS
+problem did; that was wrong. The `EAI_AGAIN` errors are on *outbound* calls and the
+outages are inbound — outbound was working mid-outage. The outages are a separate,
+still-unsolved problem: see `OUTAGES.md`.
 
 ---
 
-## 1. The server is slow to look up addresses (DNS) — and sometimes fails outright
+## 1. The server's DNS lookups are slow, and sometimes fail (outbound only)
 
 *(the numbers behind this are in Measurements, at the bottom)*
 
-Every time Jessie talks to Airtable or Google, the server first looks up "where is
-that server?" On this box that lookup is slow: it adds about **3 seconds to the
-first outside call of every message** (later calls in the same message reuse it and
-are fast). When the lookup *fails* completely, that's the **outages** — Jessie goes
-silent because the machine briefly can't reach the internet.
+Every time Jessie talks to Airtable or Google, the server looks up "where is that
+server?" On this box that lookup is slow, and the `EAI_AGAIN` errors in the container
+log show it failing outright at times.
 
-This is the biggest win: it fixes the slowness **and** the outages, because they are
-the same root cause.
+This is **outbound only** — it slows Jessie down and it is worth fixing, but it does
+not cause the outages. Don't conflate the two.
 
 **What to try, simplest first:**
 
@@ -61,9 +62,10 @@ under 1s on most messages.
 
 ## While you're on the box — two more things that need shell access
 
-- **The outages.** The one thing that would pin down the cause is the
-  Cloudflare tunnel / `cloudflared` container's own log from a failure window
-  (~5am Manila is common). n8n's own logs show nothing at the moment it drops.
+- **The outages.** Not a DNS problem — see `OUTAGES.md`. The 8 Sep instrumented
+  window shows the tunnel up and the webhook registered while a Slack message never
+  arrived, so what is left needs Cloudflare Security Events and Slack's delivery log,
+  neither of which is on the box.
 - **Execution storage.** The daily pruner keeps the row count down but does not
   shrink the database file — that needs a `VACUUM`. The real long-term fix is moving
   n8n off the single-file SQLite database to Postgres.
@@ -106,25 +108,28 @@ turn 5137    +0.8s  4.11s    +5.4s  0.12s*    +5.5s  8.93s**  +14.4s 1.16s
 
 - `Get Booker` and `All Rooms` hit the **same Airtable base with the same
   credentials**. `Get Booker` (first) takes ~4.2s every time; `All Rooms` (seconds
-  later) takes ~1.1s. The only difference is that one is first — so the ~3s gap is
-  cold DNS + TLS the first call pays and later calls reuse. The Bookers table is
-  ~14 rows, so it is not the query or table size.
+  later) takes ~1.1s. The Bookers table is ~14 rows, so it is not the query or the
+  table size — something about being *first* costs ~3s.
+- **The spikes are concurrency, not DNS.** Genzo's flood test on 7 Sep measured
+  `Get Booker` going 1.2s → 3.36s under ten overlapping messages, which accounts for
+  its previously unexplained 8-12s outliers. An earlier version of this file blamed
+  cold DNS for those; the controlled test is better evidence than that inference.
 - `*` in turn 5137 `Gate Context` was 0.12s — that is the Code helper being *warm*
   for once (problem 2), which is what it should always look like.
-- `**` in the same turn `All Rooms` spiked to 8.9s. That turn was ~05:00 Manila,
-  in the outage window, and the spike is the same DNS flapping getting worse.
+- `**` in the same turn `All Rooms` spiked to 8.9s — concurrency, same as the
+  `Get Booker` spikes above.
 
-`Get Booker` across many turns: mostly ~4s, tail of 5.7s, 8.9s, 16.5s — the long
-tail lines up with the host's `EAI_AGAIN` DNS errors.
+`Get Booker` across many turns: mostly ~4s, with a tail of 5.7s, 8.9s and 16.5s.
+That tail is concurrency (Genzo's flood test), not DNS.
 
-### Proof that problems 1 and the outages share a root cause
+### Turn time, measured on clean turns only
 
-The outage on 2026-09-05: the last message got through at **00:05**, the next not
-until **13:03** — ~13 hours. Both bots came back at the **same second** (Posty
-13:03:13, Jessie 13:03:31), which means the shared front door recovered, not either
-bot. The scheduled pruner ran at 04:00 straight through it, so n8n itself was alive
-— only the path in and out was down. Independently, the nightly backup, which runs
-from GitHub's servers *outside* this network, failed to reach the site at ~05:00 on
-both 2026-09-04 and -05 — an outside client getting nothing, i.e. the box was
-unreachable from the internet, not merely wedged. All of it points at the network
-layer (Cloudflare tunnel / host DNS), the same thing making the first call slow.
+Concurrent turns inflate everything, so these exclude any turn with another execution
+overlapping it: **median 14.1s** across 8 clean turns (range 8.2–15.1s), 7–8 Sep.
+Sampled earlier in the week at 12.8s, but that figure cannot be re-filtered the same
+way because those executions are pruned — treat the difference as noise, not a
+regression.
+
+Genzo measures ~10.5s serial / 9.2s under load. That is wall-clock Slack-to-reply;
+the numbers above are the sum of node execution times. Different measures — do not put
+them in one table. His is closer to what a user feels.

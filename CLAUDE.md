@@ -49,7 +49,7 @@ Then orient them, in plain language, drawing on *Where things stand* below:
 - what Jessie is, and that launch is **25 September 2026**
 - the live versions, and whether anything is failing (`./scripts/health`)
 - what changed since the last commit (`git log`)
-- the biggest open risk (the outages — server-side, see `SERVER-NOTES.md`) and the
+- the biggest open risk (the outages — unsolved, see `OUTAGES.md`) and the
   one or two most pressing items from `PENDING.md`
 
 And whenever you are about to change a workflow, **pull it first and build from
@@ -74,18 +74,21 @@ and Guard Probe's text rewrites all hold in real conversations. Last verified en
 end 2026-09-06 — a "test" DM got a clean reply in ~19s, every node green.
 
 **The biggest thing to understand — reliability, and it is not the workflows.**
-Jessie has gone silent to Slack several times (2026-09-02, -03, -05), from minutes
-to ~13 hours, each time recovering on its own. n8n does not crash: it keeps running
-its scheduled jobs and serving HTTP the whole time. What drops is the *inbound path*
-— Slack → the Cloudflare tunnel / host DNS. Both bots go down and recover together
-to the same second, which is what pins it on the shared front door, not either bot.
-n8n's own logs show nothing at the moment it fails, so it is invisible from inside —
-only an outside check sees it. The same host DNS also makes every turn ~3s slower
-(the first outside call each turn pays cold DNS). Plain-language fixes are in
-`SERVER-NOTES.md`; the measurements are in `PENDING.md` items 15 and 18. The cause was caught live on 2026-09-08 — Cloudflare
-challenging Slack's servers with a "Just a moment..." page. The finding, the fix, and
-the evidence are all in `OUTAGES.md`. **This is
-the largest open risk, and it is server-side.**
+Jessie has gone silent to Slack repeatedly (2, 3, 5, 7-8 September), from minutes to
+~13 hours, each time recovering on its own. n8n does not crash: it keeps running
+scheduled jobs and serving HTTP throughout.
+
+**2 September is solved** — a Slack signing-secret mismatch plus a webhook
+deregistration from test-listening on the live trigger. Everything after it is **not
+solved**. The 8 September window is the only one with instrumentation, and it shows
+the tunnel up, the webhook registered, n8n error-free — and a Slack message never
+arriving. So what remains is on Slack's side or between Slack and our front door.
+
+Read `OUTAGES.md` before touching this. It records what is ruled out, what survives,
+and — importantly — three theories that were confidently wrong (host DNS, Cloudflare
+challenging Slack, SQLite) so nobody re-chases them. `MONITOR-SETUP.md` is the
+external monitor that would finally timestamp these properly. **This is the largest
+open risk, and it is not in the workflows.**
 
 **Safety nets already in place:**
 - a daily pruner (04:00) keeps the execution table from filling the SQLite database
@@ -340,6 +343,14 @@ the task runner), for whoever has shell access to the box.
     — just unprocessed, with none of its corrections applied. Nothing looked broken from the
     outside. Read `executionStatus` and `executionTime` per node after any change; a pull only
     proves what is *stored*, never what is *running*.
+
+14. **A Slack signing-secret mismatch is completely silent.** n8n receives the POST,
+    checks the signature, rejects it, and at the default log level writes *nothing*. No
+    execution, no log line, and the webhook still reports as registered — so "the
+    webhook is registered" proves nothing about whether events are being processed.
+    This was the 2 September root cause and it cost days. `N8N_LOG_LEVEL=debug` is now
+    set, which makes it visible; `./scripts/webhook-canary` (on the VM) sends a *signed*
+    verification, which is the only probe that catches it.
 
 13. **Detect Jessie's own messages by `bot_id`, never by a hardcoded user id.** The Slack app
     has been swapped once, changing Jessie's bot user id. The live code survived because
