@@ -5,7 +5,7 @@ failure mode the on-VM tooling can never see — when the tunnel or the box's ne
 down, anything running on the box goes dark with it. A hosted monitor sits outside all of
 it and alerts the moment Jessie's public route fails.
 
-Flagged in [OUTAGES.md](OUTAGES.md) as "the single highest-value thing not yet in place."
+Flagged in [OUTAGES.md](../../OUTAGES.md) as "the single highest-value thing not yet in place."
 It **detects and timestamps** the outage; it does not fix the tunnel. Those timestamps are
 what let us confirm the connector-machine-sleeps hypothesis (see EOD-2026-09-08) by lining
 them up against the connector's sleep/wake log.
