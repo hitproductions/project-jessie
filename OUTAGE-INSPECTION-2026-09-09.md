@@ -1,111 +1,101 @@
-# Overnight outage inspection — night of 8→9 September 2026
+# Overnight inspection — night of 8→9 September 2026
 
-**Bottom line: no outage overnight.** The first fully-instrumented night shows the public
-path stayed up continuously. This also captured the outage *mechanism* at small scale
-(DHCP lease loss) and resolves the "2am down" report.
+**Bottom line (corrected 9 Sept):** the VM, n8n, and the tunnel endpoint stayed healthy all
+night — but a **real Slack message still dropped**: Tara messaged Jessie at 2:12 AM and it
+never arrived (no reply, no execution). So there was **no whole-system outage, but there
+*was* a real delivery failure** — and the health checks could not see it. That gap is the
+most important finding here.
+
+> This doc originally concluded "no outage overnight" and claimed we had "captured the
+> outage mechanism (DHCP lease loss)." Both were wrong and are corrected below, after
+> Tara's screenshot and Genzo's technical review.
 
 ## Background (for anyone new to this)
 
-Jessie and Posty are Slack bots running on a self-hosted n8n instance (a Kubernetes
-`cloudflared` tunnel exposes it at `signal.hitpromanila.net`). Between 2 and 5 September
-they went silent to Slack several times and recovered on their own. The investigation
-concluded the fault is in the **network path**, not Slack and not n8n. On 8 September
-Genzo stood up VM-side logging, so this is the **first night with full instrumentation**.
+Jessie and Posty are Slack bots on a self-hosted n8n instance, exposed via a Kubernetes
+`cloudflared` tunnel at `signal.hitpromanila.net`. Between 2 and 5 September they went
+silent to Slack several times and recovered on their own. 8 September was the first night
+with full VM-side logging (canary, VM health, DNS journal, debug log).
 
 ## What was inspected
 
-Genzo's observability export covering **8 Sept 12:00 → 9 Sept ~15:00 PHT**:
-`canary.jsonl` (path probes every ~65 s), `vm-health.jsonl`, the DNS/network journal,
-docker + system journals, an external soak CSV, and the n8n event audit — cross-checked
-against n8n execution history and Slack.
+Genzo's observability export (8 Sept 12:00 → 9 Sept ~15:00 PHT), cross-checked against the
+n8n execution audit, the webhook debug log, and Tara's Slack DM with Jessie.
 
 ## Findings
 
-### 1. No outage — and now that's measured, not assumed
+### 1. The VM and endpoint were healthy all night — but that is not the same as "working"
 
-The canary probed the public path **every ~65 seconds** from 8 Sept 12:00 to 9 Sept 15:08
-PHT — **4,521 probes, largest gap 1.1 min** — and was **green the entire time**, except
-four probes during Genzo's 8 Sept afternoon maintenance window. n8n was running, gateway
-reachable at 0.6 ms, DNS resolvers healthy.
+The canary probed the public path every ~65 s (4,521 probes, largest gap 1.1 min) and was
+green throughout, except four probes during Genzo's afternoon maintenance. n8n ran, gateway
+reachable, DNS resolvers healthy. **This proves the endpoint was reachable. It does not
+prove Slack's events were being delivered** — see #2.
 
-The ~5-hour overnight gap in bot activity (22:45 → ~09:33) was **no inbound traffic**
-(nobody messaged the bots overnight), **not downtime** — the path was up throughout.
+### 2. Confirmed: a real Slack message dropped at 2:12 AM
 
-### 2. The "2am down" report — no outage at 2am
+Tara messaged Jessie "Test" at **2:12 AM**; Jessie did not reply. The debug log records
+*every* webhook n8n receives — around 18:12 UTC it shows only the 65-second canary probes,
+**no receipt for Tara's actual message, and no execution.** Real Slack events reaching
+Jessie were absent for **8.5 hours (00:32 → 09:04 AM PHT)**; her 12:06 PM re-test got
+through normally. At 2:12 AM the VM was healthy (canary green, no network event), so **the
+message was lost upstream of the box — between Slack and the tunnel, not on the VM.**
 
-The concern that it was "down around 2am" is not borne out: the canary was green every
-65 s through the whole night. The reporter did not message the bot at 2am (their Slack is
-silent from 8 Sept 16:54 to 9 Sept 10:21), so it was an inference, not a failed check —
-phrased as "around 2am, I think."
+**This is the actual outage signature, and the key lesson:** the endpoint stays reachable
+(so every health check passes) while real Slack events silently fail to arrive. It is
+exactly why earlier investigations kept finding "n8n healthy, webhook registered" during
+the outages — the green checks were masking the real failure.
 
-What *was* real overnight: a 155-minute quiet stretch (22:45 → 01:20) followed by a burst
-of ~30 Posty events at 01:21. A quiet-then-burst pattern can look like "down then
-recovered" in activity history, but it reflects low overnight traffic plus likely Slack
-pacing its delivery after brief afternoon blips — not a crash.
+### 3. The DHCP lease losses were admin-triggered — NOT the mechanism
 
-The linked worry — that the tunnel connector "asks to update" (an old version) and might
-be crashing — is not supported: that update prompt is a daily cosmetic warning, and the
-connector ran 28 days without a single restart. (The upgrade is still worth doing; see
-Next actions.)
+The two lease-loss events (≈2:46 and 2:50 PM on 8 Sept) were **caused by an administrator
+running `sudo netplan apply`** — the log shows the command at 06:46:19 UTC, with the lease
+loss 2 seconds later. So they demonstrate what a brief interruption looks like; they do
+**not** show DHCP caused the Sept 3/5 outages, and a 4-second reacquire cannot be
+extrapolated to a multi-hour outage. A DHCP reservation for `192.168.0.230` is still worth
+doing as **preventive hardening**, but it is not a confirmed root-cause fix.
 
-### 3. The outage mechanism, captured at small scale: DHCP lease loss
+### 4. The tunnel connector is largely cleared (edge side still unchecked)
 
-The most valuable find. On **8 Sept afternoon** the logs caught the mechanism directly
-(times UTC):
+The `cloudflared` connector is a stable Kubernetes pod, ran Aug 11 → Sept 8 with zero
+restarts, and logged no reconnects or origin errors during the Sept 3/5 windows. But its
+own log cannot show whether Cloudflare's *edge* routed traffic to it — only the dashboard
+can. Given #2 (a message lost upstream of the VM), that edge-side check is now central.
 
-```
-06:46:21  ens3: DHCP lease lost               ← the VM's network interface drops its lease
-06:46:23  probe: couldn't resolve host         ← 2 s later, no network → DNS fails
-06:46:25  ens3: DHCPv4 192.168.0.230 acquired  ← lease reacquired 4 s after loss
-```
+### 5. Two supporting points
 
-A second lease-loss followed at 06:50. **DHCP lease loss → brief total network loss →
-DNS failure → delivery would fail.** This unifies two long-standing suspects (DNS
-flapping and DHCP lease change) — they are the same event.
-
-This reconciles the entire outage profile. A 4-second lease-loss is invisible; but a
-lease that **doesn't reacquire quickly, returns with a different IP, or whose DHCP server
-stalls** leaves the VM with no network for hours — which is exactly what the outages
-looked like: both bots down the same second (whole VM offline), n8n healthy inside
-(process fine, no network), unreachable from outside, self-recovering when the lease
-returns.
-
-*Caveat:* these specific lease-losses fell inside Genzo's maintenance window, so they may
-be maintenance-induced rather than spontaneous. But the mechanism is now demonstrated,
-and the fix applies either way.
-
-### 4. The Cloudflare tunnel connector is largely cleared
-
-From Pao's `cloudflared` log (separately analysed): the connector is a stable Kubernetes
-pod, ran Aug 11 → Sept 8 with **zero restarts**, and logged nothing but a daily version
-warning during the real outages — no reconnects, no origin errors. So the tunnel connector
-is not the cause. (One edge-side check remains — see Next actions.)
-
-### 5. Two pieces of good news
-
-- **DNS `EAI_AGAIN` errors: zero.** The container outbound-DNS problems from 2 September
-  have not recurred — the DNS hardening worked on that layer.
-- **Task-runner starvation down** — 4 occurrences in 27 hours, versus ~12/day before.
+- DNS `EAI_AGAIN` errors: none after the hardening (good, but that layer was never the
+  inbound-delivery cause).
+- No runner-starvation errors in the package — but we lack a clean before/after rate, so
+  treat "improved" as plausible, not measured.
 
 ## What it means
 
-- **The sustained outage did not recur** on the first fully-instrumented night.
-- **The strongest lead has shifted** from "the Cloudflare tunnel" to **the VM's own
-  network — DHCP lease loss / DNS instability.** That's a more fixable place.
-- The instrumentation is working: it caught seconds-long blips that execution history
-  alone would miss.
+- **The failure is upstream of the VM** — Slack → Cloudflare edge. The box, n8n, the tunnel
+  connector, and DHCP are not implicated in the 2:12 AM drop.
+- **Reachability checks (canary, `/healthz`, an external uptime monitor) cannot detect this
+  class of failure.** They test whether the endpoint answers, not whether Slack's events
+  arrive. Detecting real drops requires correlating actual Slack messages against
+  executions (which is how this one was caught).
+- **The outages are not proven to share one universal cause.** Sept 2/7/8 had confirmed
+  origin/LAN failures tied to n8n restarts; the 2:12 AM drop is an upstream delivery failure
+  with the box healthy. Different signatures.
 
-## Next actions (server), in priority order
+## Next actions
 
-1. **Assign the n8n VM a static IP / DHCP reservation** for `192.168.0.230` (lease comes
-   from the router at `192.168.0.100`). Removes the lease-loss failure mode entirely —
-   the demonstrated mechanism. **Highest priority.**
-2. **Cloudflare dashboard check** for the 3 Sept / 5 Sept windows — the one edge-side view
-   that confirms whether requests reached the connector. Checklist:
+1. **Slack app → Event Subscriptions delivery/failure log** — did Slack even send the 2:12
+   event, or did it fail / back off? This is now the most direct lead, and it's free.
+2. **Cloudflare dashboard** for the Sept 3/5 windows and, ideally, the 2:12 AM window —
+   did the request reach the edge? Checklist:
    [docs/runbooks/CLOUDFLARE-CHECK.md](docs/runbooks/CLOUDFLARE-CHECK.md).
-3. **Upgrade `cloudflared`** off the ~18-month-old `2025.2.1` (rolling restart, low risk).
-4. **Stand up an external uptime monitor** to timestamp the next drop from outside:
-   [docs/runbooks/MONITOR-SETUP.md](docs/runbooks/MONITOR-SETUP.md).
+3. **DHCP reservation** for `192.168.0.230` — preventive hardening (not a confirmed fix).
+4. **Upgrade `cloudflared`** off `2025.2.1`, and add a second replica **on a different host
+   / k8s node** (a same-host replica protects against nothing).
+5. **Add a real end-to-end delivery check** — a periodic signed Slack-style event, or a
+   Slack-message-vs-execution reconciliation — since reachability probes miss real drops.
 
-Full investigation history: [OUTAGE-2026-09-02.md](OUTAGE-2026-09-02.md) and
+## Credits / corrections
+
+Tara's 2:12 AM screenshot established the real delivery failure. Genzo's technical review
+(with ChatGPT) corrected the DHCP framing and the 502 interpretation, and refined the
+replica and runner points. Full history: [OUTAGE-2026-09-02.md](OUTAGE-2026-09-02.md),
 [OUTAGES.md](OUTAGES.md).
