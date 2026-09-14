@@ -327,9 +327,9 @@
         ]
       }
     },
-    "createdAt": "2026-09-03T12:17:34.344Z",
+    "createdAt": "2026-09-07T10:14:38.247Z",
     "description": "",
-    "name": "Version 011d2b92",
+    "name": "Version 43d6b275",
     "nodeGroups": [],
     "nodes": [
       {
@@ -1744,37 +1744,37 @@
         "typeVersion": 2.2
       }
     ],
-    "updatedAt": "2026-09-03T12:17:50.000Z",
-    "versionId": "011d2b92-a65d-4e82-980f-fb18c11bbc82",
+    "updatedAt": "2026-09-07T19:05:59.000Z",
+    "versionId": "43d6b275-4a75-41e2-a183-e17c52030dc1",
     "workflowId": "uVVYVB2M7kxpLleI",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-09-03T12:17:42.116Z",
+        "createdAt": "2026-09-07T19:05:30.330Z",
         "event": "activated",
-        "id": 658,
-        "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "011d2b92-a65d-4e82-980f-fb18c11bbc82",
+        "id": 685,
+        "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "versionId": "43d6b275-4a75-41e2-a183-e17c52030dc1",
         "workflowId": "uVVYVB2M7kxpLleI"
       },
       {
-        "createdAt": "2026-09-03T12:17:50.247Z",
+        "createdAt": "2026-09-07T19:05:59.493Z",
         "event": "activated",
-        "id": 660,
-        "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "011d2b92-a65d-4e82-980f-fb18c11bbc82",
+        "id": 687,
+        "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "versionId": "43d6b275-4a75-41e2-a183-e17c52030dc1",
         "workflowId": "uVVYVB2M7kxpLleI"
       },
       {
-        "createdAt": "2026-09-03T12:17:46.186Z",
+        "createdAt": "2026-09-07T19:05:54.294Z",
         "event": "deactivated",
-        "id": 659,
-        "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "011d2b92-a65d-4e82-980f-fb18c11bbc82",
+        "id": 686,
+        "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "versionId": "43d6b275-4a75-41e2-a183-e17c52030dc1",
         "workflowId": "uVVYVB2M7kxpLleI"
       }
     ]
   },
-  "activeVersionId": "011d2b92-a65d-4e82-980f-fb18c11bbc82",
+  "activeVersionId": "43d6b275-4a75-41e2-a183-e17c52030dc1",
   "connections": {
     "Ack Reaction": {
       "main": [
@@ -3197,7 +3197,7 @@
         "description": "Find out whether a room is free, or which rooms are free, in a window. Pass the window, the session type when there is one, and the room the requester named if they named one.\nWhen you pass a room it answers about that room directly - free, taken and by what, not run for that session type, or free but only a last-resort choice while priority rooms are open. Relay that answer; do not work it out yourself from the busy list, and never report a room as taken because some other room is.\nWith no room it returns the rooms that are free - offer exactly those and never add to the list.\nUse this for any question about availability. Do not use List Events to work out what is free.",
         "workflowId": {
           "__rl": true,
-          "cachedResultName": "Jessie — Room Availability",
+          "cachedResultName": "Jessie — Jessie — Room Availability",
           "cachedResultUrl": "/workflow/e7tBQB458nstrqei",
           "mode": "list",
           "value": "e7tBQB458nstrqei"
@@ -3555,37 +3555,39 @@
   "sourceWorkflowId": null,
   "staticData": {
     "global": {
-      "epoch_U026N6E1R": "1788642145.113469",
+      "epoch_U026N6E1R": "1789232050.307889",
+      "epoch_U045A3VQER3": "",
       "epoch_U08JL17A50A": "",
-      "epoch_U08V3CKDGJF": "1788425819.012979",
+      "epoch_U08V3CKDGJF": "1788772912.331619",
       "epoch_U098UFLG70B": "",
       "epoch_U098UFMKQHZ": "",
       "epoch_U0A1BQFBKSR": "",
       "epoch_U0B4S0EKSAY": "",
+      "lastdate_U045A3VQER3": {
+        "date": "2027-09-13",
+        "day": "2027-09-12",
+        "epoch": ""
+      },
       "lastdate_U08JL17A50A": {
         "date": "2026-09-01",
         "day": "2027-09-01",
         "epoch": ""
       },
       "lastdate_U08V3CKDGJF": {
-        "date": "2027-09-09",
-        "day": "2027-09-03",
-        "epoch": "1788425819.012979"
+        "date": "2027-09-10",
+        "day": "2027-09-09",
+        "epoch": "1788772912.331619"
       },
       "lastdate_U098UFLG70B": {
         "date": "2027-09-06",
         "day": "2027-09-03",
         "epoch": ""
-      },
-      "startonly_U08V3CKDGJF": {
-        "day": "2027-09-04",
-        "epoch": "1788425819.012979"
       }
     }
   },
   "tags": [],
   "triggerCount": 1,
-  "updatedAt": "2026-09-03T12:17:34.330Z",
-  "versionCounter": 902,
-  "versionId": "011d2b92-a65d-4e82-980f-fb18c11bbc82"
+  "updatedAt": "2026-09-12T16:04:58.278Z",
+  "versionCounter": 905,
+  "versionId": "bd05206c-f61a-4976-bf32-2e6b158c88ba"
 }

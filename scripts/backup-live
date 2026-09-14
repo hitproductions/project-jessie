@@ -52,10 +52,17 @@ try:
     data = api("/api/v1/workflows?limit=200").get("data", [])
 except Unreachable as e:
     import sys
-    print("n8n was unreachable after retries - skipping this backup (nothing changed).")
+    # This used to exit 0 so an outage would not cry wolf. That was a mistake: from
+    # 2026-09-06 to -13 the job reported success every run while backing up nothing,
+    # because Cloudflare was challenging GitHub's runners (403, cf-mitigated:
+    # challenge). Eight days of no backup, invisible. A backup that cannot back up is
+    # a failure, even when the reason is not our fault - fail loudly.
+    print("FAILED: n8n was unreachable after retries - NOTHING WAS BACKED UP.")
     print("  last error: %s" % e)
-    print("  if this keeps happening at the same time of day, see PENDING 15 (the outages).")
-    sys.exit(0)
+    print("  A 403 with 'cf-mitigated: challenge' means Cloudflare is challenging this")
+    print("  runner's IP. Fix: allowlist GitHub's IP ranges in Cloudflare, or run")
+    print("  scripts/backup-live from the VM instead, where it is not challenged.")
+    sys.exit(1)
 index = []
 for w in data:
     full = api("/api/v1/workflows/" + w["id"])

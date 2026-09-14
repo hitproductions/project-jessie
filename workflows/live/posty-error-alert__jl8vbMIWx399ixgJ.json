@@ -1,0 +1,176 @@
+{
+  "active": true,
+  "activeVersion": {
+    "authors": "Tara Lim",
+    "autosaved": false,
+    "connections": {
+      "On Error": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "DM Tara",
+              "type": "main"
+            }
+          ]
+        ]
+      }
+    },
+    "createdAt": "2026-09-05T21:34:22.277Z",
+    "description": null,
+    "name": null,
+    "nodeGroups": [],
+    "nodes": [
+      {
+        "id": "pe-trigger",
+        "name": "On Error",
+        "parameters": {},
+        "position": [
+          400,
+          300
+        ],
+        "type": "n8n-nodes-base.errorTrigger",
+        "typeVersion": 1
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "pe-dm",
+        "name": "DM Tara",
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "U026N6E1R"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "=🔔 A Posty workflow errored.\n*Workflow:* {{ $json.workflow.name }}\n*Failed at:* {{ $json.execution.lastNodeExecuted }}\n*Error:* {{ $json.execution.error.message }}\n{{ $json.execution.url }}"
+        },
+        "position": [
+          640,
+          300
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "09605d3b-cf18-489c-82b8-2bef6c16358c"
+      }
+    ],
+    "updatedAt": "2026-09-05T21:34:22.277Z",
+    "versionId": "1abf5bdc-deee-4c01-bae8-bc98da4117b5",
+    "workflowId": "jl8vbMIWx399ixgJ",
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-05T21:34:36.327Z",
+        "event": "activated",
+        "id": 677,
+        "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "versionId": "1abf5bdc-deee-4c01-bae8-bc98da4117b5",
+        "workflowId": "jl8vbMIWx399ixgJ"
+      }
+    ]
+  },
+  "activeVersionId": "1abf5bdc-deee-4c01-bae8-bc98da4117b5",
+  "connections": {
+    "On Error": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "DM Tara",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-09-05T21:34:22.268Z",
+  "description": null,
+  "id": "jl8vbMIWx399ixgJ",
+  "isArchived": false,
+  "meta": null,
+  "name": "Posty — Error Alert",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "pe-trigger",
+      "name": "On Error",
+      "parameters": {},
+      "position": [
+        400,
+        300
+      ],
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "pe-dm",
+      "name": "DM Tara",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "U026N6E1R"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "=🔔 A Posty workflow errored.\n*Workflow:* {{ $json.workflow.name }}\n*Failed at:* {{ $json.execution.lastNodeExecuted }}\n*Error:* {{ $json.execution.error.message }}\n{{ $json.execution.url }}"
+      },
+      "position": [
+        640,
+        300
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "09605d3b-cf18-489c-82b8-2bef6c16358c"
+    }
+  ],
+  "pinData": null,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Manila"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-05T21:34:22.274Z",
+      "project": {
+        "createdAt": "2026-09-04T06:28:22.466Z",
+        "creatorId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "zkz4JuokdGopHd2A",
+        "name": "Tara Lim <tara@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-04T07:14:04.840Z"
+      },
+      "projectId": "zkz4JuokdGopHd2A",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-05T21:34:22.274Z",
+      "workflowId": "jl8vbMIWx399ixgJ"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-09-05T21:37:10.627Z",
+  "versionCounter": 1,
+  "versionId": "1abf5bdc-deee-4c01-bae8-bc98da4117b5"
+}

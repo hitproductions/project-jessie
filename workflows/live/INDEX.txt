@@ -6,6 +6,8 @@ Jessie — Find Booking                      active   jessie-find-booking__yzirq
 Jessie — Move Booking                      active   jessie-move-booking__t7lwR2km4tfN8DbM.json
 Jessie — Prune Executions                  active   jessie-prune-executions__K2tPBykMwKcQGMub.json
 Jessie — Room Availability                 active   jessie-room-availability__e7tBQB458nstrqei.json
+Posty — Airtable Typo Check                active   posty-airtable-typo-check__cXsAqwMXa6c8yATc.json
+Posty — Error Alert                        active   posty-error-alert__jl8vbMIWx399ixgJ.json
 Posty — Events Endpoint                    active   posty-events-endpoint__eFNMRnaN4yGvmqhc.json
 Posty — Index Refresh                      active   posty-index-refresh__DItjvgnQPf5aEsIq.json
 Posty — Monthly Digest                     active   posty-monthly-digest__7cG9CRcCoT5UvTTi.json
