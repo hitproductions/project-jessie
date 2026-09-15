@@ -79,15 +79,23 @@ Jessie has gone silent to Slack repeatedly (2, 3, 5, 7-8 September), from minute
 scheduled jobs and serving HTTP throughout.
 
 **2 September is solved** — a Slack signing-secret mismatch plus a webhook
-deregistration from test-listening on the live trigger. Everything after it is **not
-solved**. The 8 September window is the only one with instrumentation, and it shows
-the tunnel up, the webhook registered, n8n error-free — and a Slack message never
-arriving. So what remains is on Slack's side or between Slack and our front door.
+deregistration from test-listening on the live trigger.
 
-Read `OUTAGES.md` before touching this. It records what is ruled out, what survives,
-and — importantly — three theories that were confidently wrong (host DNS, Cloudflare
-challenging Slack, SQLite) so nobody re-chases them. `MONITOR-SETUP.md` is the
-external monitor that would finally timestamp these properly. **This is the largest
+**A second mechanism was confirmed on 15 September.** Slack support stated that every
+request they sent to Jessie's event URL had been answered with **403** for at least 24
+hours, and that Slack had therefore turned off event dispatch for the app. A 403 comes
+from **Cloudflare**, at the edge — n8n never sees the request, which is why n8n logged
+nothing, cloudflared logged nothing, and every check run from the VM or from a laptop
+came back green. The same URL probed from a home connection returns 401 (reached n8n,
+no valid signature); from a datacenter IP it returned 403. **Cloudflare is treating
+Slack's servers differently from ours.** Whether this also explains 3, 5 and 7–8
+September is unproven, but it fits all of them.
+
+Read `OUTAGES.md` before touching this — it has the ranked causes, the onset window,
+and the one lookup that would settle it. Two theories in it were confidently wrong
+(host DNS, SQLite). A third, Cloudflare, was wrongly *retracted* and cost a week;
+that is written up there too. `MONITOR-SETUP.md` is the external monitor that would
+timestamp these properly and probe from outside our network. **This is the largest
 open risk, and it is not in the workflows.**
 
 **Safety nets already in place:**

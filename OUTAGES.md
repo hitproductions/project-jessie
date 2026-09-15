@@ -1,11 +1,14 @@
 # The outages — what we know
 
 Jessie and Posty go silent to Slack, then recover on their own with nobody touching
-them. **2 September is solved. Everything after it is not.** This file is the state of
-the investigation as of 8 September, including the theories that turned out to be
-wrong, so nobody spends a day re-chasing them.
+them.
 
-Nothing here is fixed in the n8n workflows.
+**State as of 15 September: 2 September is solved, and a second mechanism is now
+confirmed — Cloudflare returned 403 to Slack's servers, and Slack responded by turning
+off event dispatch for the app.** Whether that mechanism explains the earlier outages
+(3, 5, 7–8 September) is not proven. It fits all of them.
+
+Nothing here is fixed in the n8n workflows. The fault has never been in the workflows.
 
 ## Solved: 2 September
 
@@ -31,19 +34,140 @@ That last point matters: a registered webhook proves nothing. It can be register
 receiving requests, and silently discarding every one. `N8N_LOG_LEVEL=debug` is now
 set, which makes this case legible next time.
 
-## Not solved: 3 September onward
+## Confirmed: 14–15 September — Cloudflare 403 to Slack, dispatch disabled
+
+Slack support, in writing, in response to a request for their delivery records:
+
+> It seems that Event dispatches to this App were turned off because for at least the
+> past 24 hours, every HTTP Request we've sent to the Event Request URL for your App
+> has received HTTP 403 Response.
+
+This is the first evidence from the sending side, and it is decisive about the
+mechanism. Two things follow from it.
+
+**The 403 is Cloudflare's, not n8n's.** n8n has no code path that returns 403 for this
+URL. Its two responses are:
+
+| Response | Source | Means |
+|---|---|---|
+| `404` + `not registered for GET requests. Did you mean POST?` | n8n | webhook is live |
+| `401 Unauthorized` (12 bytes) | n8n | reached n8n, signature rejected |
+| `403` | **Cloudflare edge** | never reached the tunnel, never reached n8n |
+
+A 403 is returned before the request enters the tunnel. That is why n8n logged
+nothing, cloudflared logged nothing, and the canary stayed green: **there was nothing
+on our side to log.**
+
+**It discriminates by source IP.** Probed from Tara's Mac on a residential connection
+at 15 Sep 08:22 UTC, the same URL returned **401** — through Cloudflare, through the
+tunnel, into n8n, rejected there only because the probe carried no valid Slack
+signature. The whole path was up. Slack, from AWS, got 403 at the edge.
+
+This is exactly the blind spot the 8 September write-up flagged: a check that leaves
+from our own IP cannot see Cloudflare treating someone else's IP differently.
+
+### When it started
+
+The nightly backup runs from a GitHub Actions runner — a datacenter IP, like Slack's —
+twice a day. It is an unintentional but continuous probe of exactly the condition that
+matters.
+
+| Run (UTC) | Result |
+|---|---|
+| 6 Sep through 13 Sep 15:50 | **20 consecutive successes** |
+| **14 Sep 11:45** | **failure** |
+| **14 Sep 17:54** | **failure** |
+
+So datacenter-IP access broke between **13 Sep 15:50 UTC and 14 Sep 11:45 UTC**, and
+stayed broken through at least 14 Sep 17:54 UTC. That window is independent of Slack's
+account and agrees with it.
+
+### Two things that do not line up — do not smooth them over
+
+1. **Jessie received events at 14 Sep 23:00 and 15 Sep 00:00 UTC** (execs 8819 and
+   8821), which sits inside Slack's "at least the past 24 hours." Either Slack's agent
+   was approximating, or dispatch was disabled shortly after those two got through.
+   Worth asking Slack to give the exact time the 403s began.
+2. **The earlier claim that the GitHub backup was being challenged intermittently
+   through early September does not survive the run history above** — 6 to 13 September
+   is 20 clean runs. Whatever produced the earlier 403s, the clean datacenter signal
+   starts on 14 September. Treat pre-14-September GitHub evidence as unreliable.
+
+### What could produce an intermittent 403 at Cloudflare
+
+Ranked by how well each explains *all* the observed behaviour — invisible to the
+origin, source-discriminating, needs no traffic from us, and turns itself off again.
+
+1. **Bot Fight Mode / Super Bot Fight Mode.** Blocks traffic scored "definitely
+   automated," which is what a webhook dispatcher from AWS looks like. Returns 403,
+   logs nothing at the origin, and varies as bot scores and IP pools shift. Fits every
+   property including the self-healing. **Most likely.**
+2. **HTTP DDoS managed ruleset auto-mitigation.** Cloudflare turns mitigations on and
+   off by itself when it detects a pattern. Explains onset and recovery with nobody
+   touching any setting.
+3. **Security Level set to High, or IP-reputation challenges.** Datacenter IPs fail
+   challenges they cannot solve. Intermittent as Slack rotates dispatch IPs.
+4. **Browser Integrity Check.** 403s requests whose headers do not look like a browser.
+   Fits the 403, but would be constant rather than intermittent unless recently enabled.
+5. **A WAF managed rule firing on payload content.** A Slack message whose text trips an
+   OWASP rule. This is per-request, so it cannot produce a sustained 24-hour block.
+6. **An IP or ASN access rule covering AWS.** Would be constant, and somebody had to
+   create it.
+7. **Rate limiting configured to block rather than challenge.** Usually returns 429.
+
+**The discriminator is one lookup.** A blocked request carries a `cf-ray` and a
+`cf-mitigated` header. Given either, Cloudflare → Security → Events names the exact
+rule or service that fired. Ask Slack for the full response headers from one of the
+403s; with a `cf-ray` this stops being a ranked list and becomes a fact.
+
+### The fix, when the cause is named
+
+A WAF **skip** rule on the webhook paths for `signal.hitpromanila.net`, so no bot,
+reputation or challenge logic is applied to them. Slack's dispatcher can never solve a
+challenge, so any rule that can challenge that path will eventually take the bots down
+again. This needs doing before 25 September regardless of whether it is down today.
+
+## The 15 September outage — the first one properly timestamped
+
+Test messages were sent on a schedule and checked against n8n executions. This is the
+only outage where the start and end are measured rather than inferred backwards from
+"the last message that worked."
+
+| Sent (PHT) | UTC | Reached n8n? |
+|---|---|---|
+| 02:12:56 | 14 Sep 18:12:56 | no |
+| 02:14:54 | 14 Sep 18:14:54 | no |
+| 02:23:34 | 14 Sep 18:23:34 | no |
+| 03:00:00 | 14 Sep 19:00:00 | no |
+| 04:00:03 | 14 Sep 20:00:03 | no |
+| 05:00:02 | 14 Sep 21:00:02 | no |
+| 06:00:00 | 14 Sep 22:00:00 | no |
+| 07:00:00 | 14 Sep 23:00:00 | **yes** — exec 8819, replied 07:00:20 |
+| 08:00:12 | 15 Sep 00:00:12 | **yes** — exec 8821, replied 08:00:28 |
+
+Recovery happened between **22:00 and 23:00 UTC on 14 September**, with nobody touching
+anything. The pruner ran at 04:00 PHT, mid-outage, and changed nothing.
+
+Every one of those messages posted to Slack successfully and is in the conversation
+history. Slack accepted them; the dispatch is what failed.
+
+## Not solved: 3, 5, 7–8 September
 
 Recorded: 3 Sep (~09:00–10:20), 5 Sep (00:05–13:03, ~13 h), 7–8 Sep (overnight).
 Not credential, not restart, not test-listen, not load.
+
+The Cloudflare 403 mechanism fits all of them — same invisibility, same
+self-healing, same green checks from the VM — but there is no direct evidence for those
+dates. Do not record them as explained.
 
 ### What is established
 
 - Both bots stop receiving; n8n itself stays up — scheduled jobs run straight through
 - **Outbound works mid-outage** — Posty Index reached Google Sheets and Slack's API at
   02:00 on 8 Sep, inside the outage
-- **Cloudflare→origin worked mid-outage** — at 02:35 a request returned real n8n JSON
-  (`cf-cache-status: DYNAMIC`, so from the origin) while Jessie was dead
-- It needs **no traffic** — it has broken across a weekend with nobody using it
+- **Cloudflare→origin worked mid-outage from the VM's own IP** — at 02:35 a request
+  returned real n8n JSON while Jessie was dead. This says nothing about Slack's IPs
+- It needs **no traffic from us** — it has broken across a weekend with nobody using it
 - It needs **no human** — it heals itself
 - **Not the signing secret** — the secret is unchanged and it still heals itself
 - n8n has **79 days uptime**; no restarts, no OOM, disk 34% used
@@ -54,18 +178,22 @@ Not credential, not restart, not test-listen, not load.
 
 | Suspect | Killed by |
 |---|---|
-| Anything traffic-triggered — Slack throttle, rate limits, fail2ban, bot challenges | it breaks across an idle weekend; no traffic to trigger anything |
 | Signing secret expiring or rotating | secret unchanged, still self-heals |
 | n8n crashing or restarting | 79 days uptime, scheduled jobs run through it |
 | The box offline, or its DNS broken | outbound worked mid-outage |
 | SQLite / execution table | see above |
 | Per-workflow webhook registration | independent per bot; cannot explain both |
+| Anything triggered by *our* traffic volume — throttling, fail2ban | it breaks across an idle weekend |
 
-### The 8 September window — the one properly instrumented
+**Removed from this table on 15 September:** "bot challenges." They were ruled out on
+the grounds that nothing we did could trigger one. That reasoning was wrong — the
+trigger is the reputation and classification of *Slack's* source IPs, which has nothing
+to do with our traffic. Slack has now confirmed 403s.
+
+### The 8 September window — the one with instrumentation
 
 Genzo's canary and `N8N_LOG_LEVEL=debug` were both running for 00:00–05:00 PHT on
-8 Sep, inside a window where Jessie was not answering. This is the only outage window
-with real instrumentation, and it localises the fault precisely.
+8 Sep, inside a window where Jessie was not answering.
 
 | Check | Result across the window |
 |---|---|
@@ -75,66 +203,54 @@ with real instrumentation, and it localises the fault precisely.
 | webhooks n8n actually received | **278 — every one the canary's own probe** |
 
 A test Slack message was sent at **18:35:53 UTC (02:35:53 PHT)**. The canary probes
-land on a strict 65s beat (…18:34:58, 18:36:03, 18:37:08), so the nearby receive is
-the canary. **There is no extra receive anywhere in the window.**
+land on a strict 65s beat, so the nearby receive is the canary. **There is no extra
+receive anywhere in the window.**
 
 **So the message never reached n8n**, while the tunnel was up, the webhook was
-registered, and n8n was healthy.
+registered, and n8n was healthy. That is precisely the signature of an edge 403.
 
-This rules out, for this window:
-
-- **the tunnel dropping, and the connector machine sleeping** — 278 consecutive 200s
-  straight through it (so the connector-sleep hypothesis in `MONITOR-SETUP.md` does not
-  explain *this* window, whatever it explains elsewhere)
-- **webhook deregistration** — route present on all 278 probes
-- **n8n being unhealthy** — zero errors of any kind
-- **a signature mismatch** — a rejection still logs `Received webhook` first. Nothing
-  arrived to be rejected.
-
-**One blind spot to be honest about:** the canary runs *on the VM*, so its "public"
+**The blind spot, now the main event:** the canary runs *on the VM*, so its "public"
 check leaves and returns from the VM's own IP. It cannot detect Cloudflare treating
-**Slack's** IPs differently from the VM's. A green canary does not clear Cloudflare —
-that is exactly the gap the external monitor in `MONITOR-SETUP.md` exists to close.
-
-### Still standing, ranked
-
-After the 8 Sep window, two candidates remain — and both are about what happens
-*before* the request reaches our front door:
-
-1. **Slack did not deliver the event.** Nothing arrived, so either Slack never sent it
-   or it was dropped upstream. Split it with the Slack app's Event Subscriptions
-   delivery/failure counts.
-2. **Something between Slack and the origin dropped it, discriminating by source.**
-   The canary's request from the VM sails through Cloudflare; Slack's did not arrive.
-   Anything that treats those two sources differently fits. Split it with
-   Cloudflare → Security → Events, filtered to the hostname: if Slack's IPs appear
-   being challenged or blocked, that is the answer; if they never appear, Slack never
-   sent.
-
-Those two checks are the whole remaining question, and neither can be done from the VM.
-
-**This is what survived one enumeration, not a closed set.** The signature-rejection
-mechanism above was in nobody's list until Genzo found it, and there is no reason to
-think it was the only gap.
+**Slack's** IPs differently. A green canary does not clear Cloudflare. The external
+monitor in `MONITOR-SETUP.md` exists to close this gap and is still not in place.
 
 ## Theories that were wrong — do not re-chase
 
 | Theory | Why it is wrong |
 |---|---|
 | **Host DNS causes the outages** | The `EAI_AGAIN` errors are on *outbound* calls. The outages are inbound. Outbound worked mid-outage. Written into SERVER-NOTES as the cause; it was not. |
-| **Cloudflare challenges Slack's servers** | Built on the GitHub backup being challenged and treated as a stand-in for Slack. Slack is not challenged — a re-verify from Slack got through. And the GitHub challenge is intermittent and independent: the backup failed at 05:00 on 6 Sep while Jessie worked fine at 05:02. |
 | **SQLite / execution table filling** | Ruled out with specific evidence. Pruning once coincided with recovery; 5 Sep recovered with no pruning. |
 
-**And a method note, because it produced most of the above.** Several "eliminations"
-came from a single probe taken hours into a multi-hour outage, then written up as
-covering the whole window. A reading at 02:35 says nothing about 22:51. Anything
-measured mid-outage needs its timestamp recorded and its scope stated.
+**A retraction that was itself wrong.** "Cloudflare challenges Slack's servers" was in
+this table until 15 September, dismissed because the evidence for it — a GitHub Actions
+runner getting 403 — had been treated as a stand-in for Slack without justification.
+The evidence was bad; the conclusion was right. Slack has now confirmed the 403s
+directly. **Bad evidence for a claim is not evidence against it**, and writing the
+theory into a do-not-chase list on that basis cost roughly a week.
+
+**And a method note, because it produced most of this section.** Several
+"eliminations" came from a single probe taken hours into a multi-hour outage, then
+written up as covering the whole window. A reading at 02:35 says nothing about 22:51.
+Anything measured mid-outage needs its timestamp recorded and its scope stated. The
+same applies to *where a probe is sent from*: a request from the VM and a request from
+AWS are different experiments.
 
 ## What to do when it next drops
 
 Do these **while it is confirmed down**, and note the time.
 
-**1. Are the webhooks registered?** Two GETs:
+**1. Probe from a datacenter IP, not from your laptop.** This is the check that would
+have found it in a day. Your home connection is treated differently from Slack's
+servers, so a green result from your Mac means nothing.
+
+```bash
+gh workflow run nightly-backup.yml
+```
+
+That runs the backup from a GitHub runner. If it fails with 403 while your own curl
+returns 401 or 404, Cloudflare is blocking datacenter traffic and that is the outage.
+
+**2. Are the webhooks registered?** Two GETs, from anywhere:
 
 ```
 curl https://signal.hitpromanila.net/webhook/jessie-slack-webhook/webhook
@@ -143,27 +259,30 @@ curl https://signal.hitpromanila.net/webhook/posty-slack-webhook/webhook
 
 | Response | Means |
 |---|---|
-| `This webhook is not registered for GET requests. Did you mean to make a POST request?` | webhook is **live** — this is the healthy baseline, confirmed 8 Sep 09:48 with both bots working |
+| `not registered for GET requests. Did you mean to make a POST request?` | webhook is **live** |
 | `The requested webhook "…" is not registered` | webhook is **gone** from the registry |
+| `403` | **Cloudflare is blocking you** — this is the outage, not an n8n problem |
 
-**2. Can Slack reach it?** In the Slack app → Event Subscriptions, paste the Request
-URL and save. That forces a fresh challenge from Slack's own servers. "Verified" means
-Slack got through; an error means it did not. The persistent green badge proves
-nothing — it survives every outage.
+**3. Cloudflare → Security → Events**, filtered to `signal.hitpromanila.net`. Blocked
+requests appear here with the rule that caught them. Nothing about this is visible from
+the VM.
 
-**3. Read the container log.** With `N8N_LOG_LEVEL=debug` now on, this shows whether
-Slack's request **arrived** at all. That single fact splits the list: nothing arriving
-points at 1, 3 or 4 above; arriving and being rejected points at 2 or a signature
-problem.
+**4. Check the Slack app's Event Subscriptions is still enabled.** Slack disables
+dispatch automatically after sustained delivery failures, and it stays disabled. A
+recovered tunnel does not bring the bot back if Slack has stopped sending.
 
-**4. `./scripts/webhook-canary`** (Genzo's) — an unsigned probe for registration plus a
-*signed* verification, which is the only thing that catches a silent signature
-rejection. Better than the two GETs above; use it if you can.
+**5. Read the container log.** With `N8N_LOG_LEVEL=debug`, this shows whether Slack's
+request **arrived** at all. Nothing arriving points at the edge; arriving and being
+rejected points at a signature problem.
+
+**6. `./scripts/webhook-canary`** (Genzo's) — an unsigned probe for registration plus a
+*signed* verification, the only thing that catches a silent signature rejection. Note
+it runs on the VM, so it cannot see an edge block.
 
 ## Still not in place
 
-An **external uptime monitor** on the public URL. It would catch the drop the moment
-it happens and record the exact start and end, instead of everyone inferring backwards
-from "the last message that worked." Every argument in this file has been weakened by
-not knowing when the outages actually begin — the timestamps we quote are the last
-successful message, which is not the same thing.
+An **external uptime monitor** on the public URL, **running from outside our network**.
+It would catch the drop when it happens, record the exact start and end, and — the part
+that matters most — probe from a source IP that Cloudflare classifies the way it
+classifies Slack's. Every argument in this file has been weakened by not knowing when
+the outages actually begin.
