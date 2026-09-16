@@ -3,10 +3,15 @@
 Jessie and Posty go silent to Slack, then recover on their own with nobody touching
 them.
 
-**State as of 15 September: 2 September is solved, and a second mechanism is now
-confirmed — Cloudflare returned 403 to Slack's servers, and Slack responded by turning
-off event dispatch for the app.** Whether that mechanism explains the earlier outages
-(3, 5, 7–8 September) is not proven. It fits all of them.
+**State as of 16 September. The mechanism is found: Cloudflare is issuing Managed
+Challenges to automated callers, and a challenge no machine can solve is a 403.** Slack
+support confirmed the 403s and said they had turned off event dispatch because of them;
+a captured `cf-mitigated: challenge` header proves the response is Cloudflare's. What
+remains unknown is only *which rule or setting* issues the challenge — one lookup in
+Cloudflare's Security Events answers that.
+
+Whether this also explains the earlier outages (3, 5, 7–8 September) is not proven. It
+fits all of them, and nothing else found so far fits any of them.
 
 Nothing here is fixed in the n8n workflows. The fault has never been in the workflows.
 
@@ -77,10 +82,27 @@ matters.
 | 6 Sep through 13 Sep 15:50 | **20 consecutive successes** |
 | **14 Sep 11:45** | **failure** |
 | **14 Sep 17:54** | **failure** |
+| **15 Sep 11:02** | **failure** |
+| **15 Sep 16:34** | **failure** |
 
-So datacenter-IP access broke between **13 Sep 15:50 UTC and 14 Sep 11:45 UTC**, and
-stayed broken through at least 14 Sep 17:54 UTC. That window is independent of Slack's
-account and agrees with it.
+So datacenter-IP access broke between **13 Sep 15:50 UTC and 14 Sep 11:45 UTC** and has
+not recovered since. That window is independent of Slack's account and agrees with it.
+
+**The failure is a Cloudflare Managed Challenge, captured verbatim** from the 15 Sep
+16:34 run:
+
+```
+HTTP/2 403 | cf-mitigated: challenge | server: cloudflare | cf-ray: a3b90afebfcd9b19-PDX
+<!DOCTYPE html><html lang="en-US"><head><title>Just a moment...</title>
+```
+
+`cf-mitigated: challenge` and the "Just a moment…" interstitial identify a **Managed
+Challenge**. This matters more than it looks: **no automated client can ever solve one.**
+There is no browser to run the JavaScript. For Slack, GitHub, an uptime monitor or any
+other machine caller, a challenge is simply a permanent 403 on that request.
+
+That `cf-ray`, `a3b90afebfcd9b19`, is the key to Cloudflare → Security → Events, which
+will name the exact rule or service that issued it.
 
 ### Two things that do not line up — do not smooth them over
 
@@ -92,6 +114,23 @@ account and agrees with it.
    through early September does not survive the run history above** — 6 to 13 September
    is 20 clean runs. Whatever produced the earlier 403s, the clean datacenter signal
    starts on 14 September. Treat pre-14-September GitHub evidence as unreliable.
+
+3. **GitHub is challenged on every run since 14 September, yet Slack delivered seven of
+   nine test messages on the night of 15–16 September.** So this is not a blanket block
+   on datacenter traffic. Cloudflare scores each source address, and Slack's dispatch
+   IPs mostly pass where GitHub's runners never do.
+
+**That third point is the explanation, not an inconsistency.** Slack dispatches from a
+pool of addresses. Most of them clear Cloudflare; occasionally one does not, and every
+event sent from it is challenged and lost. The bot goes silent until Slack happens to
+dispatch from an address that passes. Nobody has to do anything for it to break, and
+nobody has to do anything for it to recover.
+
+That single mechanism accounts for every property of these outages that made them so
+hard to chase: no execution and no log line on our side, because nothing arrived; a
+green canary, because the canary leaves from the VM's own IP; breakage across an idle
+weekend, because the trigger is Cloudflare's opinion of Slack's IPs rather than our
+traffic; and self-healing, because the IP pool rotates.
 
 ### What could produce an intermittent 403 at Cloudflare
 
@@ -107,18 +146,21 @@ origin, source-discriminating, needs no traffic from us, and turns itself off ag
    touching any setting.
 3. **Security Level set to High, or IP-reputation challenges.** Datacenter IPs fail
    challenges they cannot solve. Intermittent as Slack rotates dispatch IPs.
-4. **Browser Integrity Check.** 403s requests whose headers do not look like a browser.
-   Fits the 403, but would be constant rather than intermittent unless recently enabled.
-5. **A WAF managed rule firing on payload content.** A Slack message whose text trips an
-   OWASP rule. This is per-request, so it cannot produce a sustained 24-hour block.
-6. **An IP or ASN access rule covering AWS.** Would be constant, and somebody had to
-   create it.
-7. **Rate limiting configured to block rather than challenge.** Usually returns 429.
+4. **Browser Integrity Check**, or a **custom WAF rule whose action is Managed
+   Challenge**. Both produce exactly this response.
 
-**The discriminator is one lookup.** A blocked request carries a `cf-ray` and a
-`cf-mitigated` header. Given either, Cloudflare → Security → Events names the exact
-rule or service that fired. Ask Slack for the full response headers from one of the
-403s; with a `cf-ray` this stops being a ranked list and becomes a fact.
+**Narrowed by the captured header.** `cf-mitigated: challenge` means the action was a
+*challenge*, not a block. That removes everything that blocks outright: an IP or ASN
+access rule set to Block, a WAF managed rule firing on payload content, and rate
+limiting (which returns 429). Whatever is configured, it is something that issues
+challenges — and a challenge to a machine is a block, because no non-browser client can
+solve one.
+
+**One lookup ends the guessing.** `cf-ray: a3b90afebfcd9b19` is from the 15 Sep 16:34
+run. In Cloudflare → Security → Events, search that ray id: the entry names the exact
+service or rule that issued the challenge. That is the GitHub request rather than
+Slack's, but it is almost certainly the same rule, and it is available right now without
+waiting on Slack.
 
 ### The fix, when the cause is named
 
@@ -127,11 +169,14 @@ reputation or challenge logic is applied to them. Slack's dispatcher can never s
 challenge, so any rule that can challenge that path will eventually take the bots down
 again. This needs doing before 25 September regardless of whether it is down today.
 
-## The 15 September outage — the first one properly timestamped
+## The measured outages — 15 and 16 September
 
-Test messages were sent on a schedule and checked against n8n executions. This is the
-only outage where the start and end are measured rather than inferred backwards from
-"the last message that worked."
+Hourly test messages were scheduled through Slack and checked against n8n executions.
+These are the only outages whose start and end are measured rather than inferred
+backwards from "the last message that worked." The method is cheap and should be the
+default whenever this is being investigated.
+
+### Night of 14–15 September
 
 | Sent (PHT) | UTC | Reached n8n? |
 |---|---|---|
@@ -150,6 +195,35 @@ anything. The pruner ran at 04:00 PHT, mid-outage, and changed nothing.
 
 Every one of those messages posted to Slack successfully and is in the conversation
 history. Slack accepted them; the dispatch is what failed.
+
+### Night of 15–16 September
+
+Nine messages, 23:00 through 07:00 PHT. Jessie only.
+
+| Sent (PHT) | UTC | Reached n8n? |
+|---|---|---|
+| 23:00 | 15 Sep 15:00 | yes — exec 8939 |
+| 00:00 | 15 Sep 16:00 | yes — exec 8941 |
+| 01:00 | 15 Sep 17:00 | yes — exec 8943 |
+| 02:00 | 15 Sep 18:00 | yes — exec 8945 |
+| 03:00 | 15 Sep 19:00 | yes — exec 8948 |
+| 04:00 | 15 Sep 20:00 | yes — exec 8950 |
+| **05:00** | **15 Sep 21:00** | **no** |
+| **06:00** | **15 Sep 22:00** | **no** |
+| 07:00 | 15 Sep 23:00 | yes — exec 8953 |
+
+**Outage window: 21:00–22:00 UTC (05:00–06:00 PHT), recovered by 23:00 UTC.** Both
+missing messages are in the Slack conversation history, posted normally; Jessie did not
+reply to either, and n8n has no execution for either. The messages on both sides got
+replies within 20 seconds.
+
+Two consecutive nights, both recovering in the 06:00–07:00 PHT hour. Two points is not a
+pattern, but a third would make it one and would be worth explaining.
+
+**This gives an exact hour to look up.** Cloudflare → Security → Events, filtered to
+`signal.hitpromanila.net`, 21:00–22:00 UTC on 15 September. Slack's blocked requests
+should appear there with the rule that caught them. If nothing appears in that hour at
+all, Slack never dispatched and the fault is upstream of Cloudflare.
 
 ## Not solved: 3, 5, 7–8 September
 
