@@ -365,6 +365,23 @@ investigation and both need an account, not a shell:
 If Slack's IPs are in the Cloudflare log, that is the answer. If they are absent, Slack
 never sent, and the answer is on Slack's side.
 
+**22. The nightly backup is disabled, and `workflows/live/` is stale.** Disabled
+manually on 2026-09-16 (`gh workflow disable nightly-backup.yml`) because every run
+since 14 September failed on a Cloudflare Managed Challenge — the runner is a
+datacenter IP and cannot solve one. **The last snapshot is 14 September 10:22.**
+
+This is the rollback artifact, so while it is off the repo is the only copy of what n8n
+runs, and it is only as current as the last hand commit. Re-enable with:
+
+```bash
+gh workflow enable nightly-backup.yml
+```
+
+Do that as soon as the Cloudflare rule in item 21 is fixed — a WAF skip on `/webhook/*`
+plus API access for the runner, or an allowlist for GitHub's ranges. Until then, either
+run `./scripts/backup-live` from the VM (not challenged there) or take a manual snapshot
+before any risky change. See `OUTAGES.md` for the captured challenge response.
+
 ---
 
 ## Withdrawn
