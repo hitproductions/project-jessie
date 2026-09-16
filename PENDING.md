@@ -372,9 +372,12 @@ What to ask for, in this order:
 4. While they are in there: allow the GitHub Actions ranges, or include the API path in
    the skip, so the nightly backup can run again (item 22).
 
-Separately, and this one **is** doable from the Slack app: **Event Subscriptions must be
-enabled.** Slack turns dispatch off automatically after sustained delivery failures and
-it stays off, so a fixed tunnel does not bring the bot back on its own.
+**Event Subscriptions is enabled — do not send anyone to check it.** Slack's email said
+they had turned dispatch off, but events have arrived since on both nights measured
+(exec 8953, 16 Sep 07:00 PHT, replied in 19s). Nothing arrives with dispatch off, so it
+is on. Either Slack re-enabled it once requests started succeeding, or the wording was
+loose. Worth one glance only if the bot is silent for a full day and the Cloudflare side
+is known good.
 
 **22. The nightly backup is disabled, and `workflows/live/` is stale.** Disabled
 manually on 2026-09-16 (`gh workflow disable nightly-backup.yml`) because every run
