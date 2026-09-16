@@ -355,15 +355,26 @@ anything in `OUTAGES.md`. Note the 8 Sept instrumented window argues against it 
 *that* window (278 consecutive 200s straight through the tunnel), but it may well
 explain others. Get that doc and the connector's sleep/wake log.
 
-**21. Two checks nobody can do from the VM.** Both are needed to finish the outage
-investigation and both need an account, not a shell:
-- **Cloudflare → Security → Events**, filtered to `signal.hitpromanila.net`: do Slack's
-  IPs appear being challenged or blocked during an outage?
-- **Slack app → Event Subscriptions**: the delivery/failure counts. Does Slack think it
-  delivered?
+**21. The Cloudflare change — and nobody on this project can make it.** The Cloudflare
+account for `signal.hitpromanila.net` belongs to IT, not to anyone working on Jessie. Do
+not write this up as something the reader can go and do; it has to be **requested**.
 
-If Slack's IPs are in the Cloudflare log, that is the answer. If they are absent, Slack
-never sent, and the answer is on Slack's side.
+What to ask for, in this order:
+
+1. **Look up ray id `a3b90afebfcd9b19`** in Security → Events. It names the exact rule or
+   service that issued the challenge. One lookup, and the cause stops being a shortlist.
+2. **Filter Security → Events to `signal.hitpromanila.net` for 21:00–22:00 UTC on
+   15 September** — a measured outage hour. Slack's blocked requests should be there.
+3. **The fix: a WAF skip rule on `/webhook/*` for that hostname**, exempting it from bot,
+   reputation and challenge logic. Needed before 25 September regardless of what the
+   lookups say — any rule that can issue a challenge on that path will take both bots
+   down again, and **no automated caller can ever solve a challenge**.
+4. While they are in there: allow the GitHub Actions ranges, or include the API path in
+   the skip, so the nightly backup can run again (item 22).
+
+Separately, and this one **is** doable from the Slack app: **Event Subscriptions must be
+enabled.** Slack turns dispatch off automatically after sustained delivery failures and
+it stays off, so a fixed tunnel does not bring the bot back on its own.
 
 **22. The nightly backup is disabled, and `workflows/live/` is stale.** Disabled
 manually on 2026-09-16 (`gh workflow disable nightly-backup.yml`) because every run
