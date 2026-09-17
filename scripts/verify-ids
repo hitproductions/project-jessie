@@ -27,6 +27,20 @@ expect = {
 print("workflow ids:")
 for wid, name in expect.items():
     w = api("/api/v1/workflows/%s" % wid)
+    # A key that cannot SEE a workflow gets "Forbidden"; one that asks for a workflow
+    # that is really gone gets "not found". Reporting both as GONE cost an hour on
+    # 2026-09-17: all seven read as deleted when Jessie had simply moved into another
+    # account's project and the key in .env belonged to a different account.
+    msg = str(w.get("message") or "")
+    if w.get("id") != wid and msg:
+        if "forbid" in msg.lower() or "unauthor" in msg.lower():
+            problems.append("workflow %s (%s): %s - the API key cannot SEE it. Nothing is "
+                            "deleted; the key belongs to an account without access to the "
+                            "project this workflow lives in. Use a key from the owning account."
+                            % (wid, name, msg))
+            print("  NO ACCESS  %s  %s" % (wid, name)); continue
+        problems.append("workflow %s (%s): API said %r" % (wid, name, msg))
+        print("  ERROR      %s  %s  (%s)" % (wid, name, msg)); continue
     if w.get("id") != wid:
         problems.append("workflow %s (%s) no longer exists" % (wid, name)); print("  GONE   %s  %s" % (wid, name)); continue
     tag = "ok" if (w["name"]==name and w["active"]) else "CHECK"

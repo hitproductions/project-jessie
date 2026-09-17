@@ -1,0 +1,1554 @@
+{
+  "active": true,
+  "activeVersion": {
+    "authors": "Tara Lim",
+    "autosaved": false,
+    "connections": {
+      "Advance Watermark": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Write State",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Build Flags": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Reply In Thread",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Classify": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Should DM",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Build Flags",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Empty Preview": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "DM Tara Empty",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Fetch Newpost": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Gather",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Fetch Quote": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Classify",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Gather": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Has Candidates",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Empty Preview",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Advance Watermark",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Has Candidates": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Split Candidates",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Normalize": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read State",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "On Request": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Normalize",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read State": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Set Oldest",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Schedule — 10:00": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Normalize",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Schedule — 17:00": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Normalize",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Set Oldest": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Fetch Newpost",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Should DM": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "DM Tara",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Split Candidates": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Fetch Quote",
+              "type": "main"
+            }
+          ]
+        ]
+      }
+    },
+    "createdAt": "2026-09-17T10:45:34.265Z",
+    "description": null,
+    "name": null,
+    "nodeGroups": [],
+    "nodes": [
+      {
+        "id": "schedule---10:00",
+        "name": "Schedule — 10:00",
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "expression": "0 10 * * *",
+                "field": "cronExpression"
+              }
+            ]
+          }
+        },
+        "position": [
+          -260,
+          -40
+        ],
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2
+      },
+      {
+        "id": "schedule---17:00",
+        "name": "Schedule — 17:00",
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "expression": "0 17 * * *",
+                "field": "cronExpression"
+              }
+            ]
+          }
+        },
+        "position": [
+          -260,
+          120
+        ],
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2
+      },
+      {
+        "id": "on-request",
+        "name": "On Request",
+        "parameters": {},
+        "position": [
+          -260,
+          280
+        ],
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1
+      },
+      {
+        "id": "normalize",
+        "name": "Normalize",
+        "parameters": {
+          "jsCode": "\n// Determine mode straight off the trigger input, BEFORE the state read replaces $input.\n// A request carries a user -> preview (DM the asker, post nothing). A schedule fire carries\n// none -> scheduled (post publicly + advance the watermark).\nconst items = $input.all();\nconst first = items.length ? items[0].json : {};\nconst user = first.user || (first.body && first.body.user) || '';\nconst mode = user ? 'preview' : 'scheduled';\nconst TARA = 'U026N6E1R';\nconst requester = user || TARA;\nconst MANILA = 8 * 3600 * 1000;\nconst now = new Date(Date.now() + MANILA);\nconst todayDate = now.toISOString().slice(0, 10);\nconst midnightUnix = Math.floor(Date.parse(todayDate + 'T00:00:00Z') / 1000) - 8 * 3600;\nreturn [{ json: {\n  mode: mode, requester: requester,\n  todayDate: todayDate, dateLabel: todayDate,\n  midnightUnix: String(midnightUnix), user: user\n} }];\n"
+        },
+        "position": [
+          -40,
+          100
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "read-state",
+        "name": "Read State",
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_state"
+          }
+        },
+        "position": [
+          180,
+          100
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "set-oldest",
+        "name": "Set Oldest",
+        "parameters": {
+          "jsCode": "\n// Choose the lower bound of the fetch. Scheduled runs read since the stored watermark\n// (last_typo_ts) so nothing is ever checked twice and nothing between runs is missed;\n// preview reads from midnight today. First run / empty watermark falls back to midnight.\nconst meta = $('Normalize').first().json;\nconst st = ($('Read State').first() || { json: {} }).json || {};\nconst wm = st.last_typo_ts != null ? String(st.last_typo_ts).trim() : '';\nconst oldest = (meta.mode === 'scheduled' && wm) ? wm : meta.midnightUnix;\nreturn [{ json: {\n  mode: meta.mode, requester: meta.requester,\n  todayDate: meta.todayDate, dateLabel: meta.dateLabel,\n  oldestUnix: String(oldest),\n  stateRow: st.row_number != null ? st.row_number : '',\n  oldWatermark: wm\n} }];\n"
+        },
+        "position": [
+          400,
+          100
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "fetch-newpost",
+        "name": "Fetch Newpost",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "options": {
+            "pagination": {
+              "pagination": {
+                "completeExpression": "={{ !$response.body.has_more }}",
+                "limitPagesFetched": true,
+                "maxRequests": 30,
+                "paginationCompleteWhen": "other",
+                "paginationMode": "updateAParameterInEachRequest",
+                "parameters": {
+                  "parameters": [
+                    {
+                      "name": "cursor",
+                      "type": "qs",
+                      "value": "={{ $response.body.response_metadata ? $response.body.response_metadata.next_cursor : '' }}"
+                    }
+                  ]
+                },
+                "requestInterval": 1200
+              }
+            }
+          },
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "channel",
+                "value": "C1SJE7404"
+              },
+              {
+                "name": "limit",
+                "value": "100"
+              },
+              {
+                "name": "oldest",
+                "value": "={{ $json.oldestUnix }}"
+              }
+            ]
+          },
+          "sendQuery": true,
+          "url": "https://slack.com/api/conversations.history"
+        },
+        "position": [
+          620,
+          100
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "gather",
+        "name": "Gather",
+        "parameters": {
+          "jsCode": "// Posty — QU parsing and status classification.\n//\n// This file is the single source of truth for how a Slack message becomes an index row.\n// It is pasted verbatim into the Code nodes of Workflow 1 (index refresh) and Workflow 3\n// (digest). Keep it dependency-free and side-effect-free so `./scripts/test-parser` can\n// run it offline, and so the same code that is tested is the code that ships.\n//\n// Rules come from the build handoff §9. Do not tighten them without re-reading it:\n// every shape below was taken from a real post in #newpostprojects or #releaseme.\n\n\n\n// Handoff §9: case-insensitive, first match wins. {4,6} is deliberate headroom — real\n// numbers are 5 digits but QU-50052 exists and the range is not contiguous. Do not\n// narrow to {5}. The separator is not reliably a slash: space, dash, double space and\n// underscore all occur, hence the character class. `QU_13577` is real and appears in both\n// channels — before the underscore was added, that project was invisible to Posty\n// entirely, on the intake side and the release side.\n// Separators seen in real posts: dash, underscore, space, double space, none at all, and\n// \" - \" with spaces on both sides. `QU - 17295 ref 17037` is real and appears in BOTH\n// channels — before the surrounding whitespace was allowed, that project was invisible on\n// the intake side and the release side alike.\n//\n// Widening this was diffed across all 1,658 backfilled messages: 2 newly matched, 0\n// extractions changed. Re-run that diff before widening it further.\nconst QU_RE = /QU[\\s]*[-_]?[\\s]*(\\d{4,6})/i;\n\n// A synthetic key for a keyless project. Derived from the post's own ts, so it is unique,\n// stable for the life of the row, and obviously not a real QU number at a glance.\n//\n// It deliberately cannot join an intake post to a separate release post — those are two\n// different messages with no shared identifier, and guessing a link between them would be\n// exactly the heuristic §9 warns against. It does not need to: releases now happen by\n// reacting to the intake post, which resolves through the row's own source_ts.\n// Handoff §9: (CANCELLED) anywhere in a #releaseme post means CANCELLED, not RELEASED.\n// A naive diff scores it as released, which is wrong. Currently affects QU-17590.\nconst CANCELLED_RE = /\\(\\s*CANCELLED\\s*\\)/i;\n\n// A Studio M / van recording is a production service (a recording session or a studio /\n// mobile-van rental), NOT a releasable deliverable. Set by Tara 2026-09-08: once one of\n// these is announced in #newpostprojects it is logged and left alone — it never enters the\n// open pool to be chased, and it is never marked RELEASED. Matched by the phrases that\n// name the service; the bare word \"van\" is deliberately excluded (it appears in \"Van\n// Digital\" and elsewhere and over-matches). The status these rows carry is STUDIO_M below.\nconst STUDIO_M_RE = /studio\\s*m|van\\s*record|os\\s*van/i;\n\nfunction isStudioM(text) {\n  return typeof text === 'string' && STUDIO_M_RE.test(text);\n}\n\n// The status value for those rows. A distinct state, neither OPEN (build-digest and the\n// reminders only look at OPEN, so these drop out of both) nor RELEASED (so they never read\n// as shipped to Accounting). The release path must treat it like RELEASED/CANCELLED and\n// never overwrite it.\nconst STUDIO_M_STATUS = 'STUDIO M';\n\n// Only these people announce projects. Set by Tara 2026-08-31 to keep channel chatter out\n// of the index — a message from anyone else is not a project post, whatever it contains.\n//\n// This is a policy list, not a heuristic: it is maintained by a human who knows who the\n// post engineers are, which is the only thing that reliably distinguishes an announcement\n// from a conversation.\n//\n// **Add new post engineers here on their first day.** Until someone is on this list their\n// posts are invisible to Posty — which is the intended behaviour, and also the way this\n// list silently goes wrong. `isPostEngineer` is checked in the Workflow 2 classifier and in\n// build-index.js, and a skipped message that DID carry a QU is logged with its code so the\n// omission is discoverable in the execution list rather than silent.\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nfunction isPostEngineer(user) {\n  return Object.prototype.hasOwnProperty.call(POST_ENGINEERS, String(user || '').trim());\n}\n\n// Names are for grouping the digest. A row whose author is not on the list — a historical\n// row from before the allowlist, or a blank posted_by — groups under \"unassigned\" rather\n// than being hidden, so nothing falls out of a total.\nfunction engineerName(user) {\n  const u = String(user || '').trim();\n  return POST_ENGINEERS[u] || 'unassigned';\n}\n\n// The \"New Project\" intake form (Slack Workflow Builder) posts announcements as a bot, not\n// as the human who filled it in — so the post has no `user`, carries a `bot_id`/`subtype:\n// bot_message`, and would be dropped by both the noise filter and the post-engineer gate.\n// These are the bot/app identities of the APPROVED intake workflows, maintained the same way\n// as POST_ENGINEERS: a post from one of these, carrying a QU, is a project announcement.\n//\n// The message payload identifies the workflow by bot_id (always present) or app_id — NOT by\n// the \"Wf…\" Workflow Builder id, which never appears on the post. **If the workflow is\n// rebuilt from scratch its bot/app id changes and must be added here**, exactly like adding\n// a new post engineer. Added 2026-09-10 when the form intake went live.\nconst INTAKE_WORKFLOW_BOTS = { 'B0C0US9CXU2': 'New Project form' };\nconst INTAKE_WORKFLOW_APPS = { 'A0C0YBR1GG4': 'New Project form' };\n\nfunction isIntakeWorkflow(msg) {\n  if (!msg || typeof msg !== 'object') return false;\n  const bot = String(msg.bot_id || '').trim();\n  const app = String(msg.app_id || '').trim();\n  return Object.prototype.hasOwnProperty.call(INTAKE_WORKFLOW_BOTS, bot)\n      || Object.prototype.hasOwnProperty.call(INTAKE_WORKFLOW_APPS, app);\n}\n\n// The form writes the person who submitted it as a leading Slack mention, e.g.\n// \"<@U026N6E1R> - *QU-*12345 / …\". That mention is the real poster, and recording it as\n// posted_by is what lets the react-to-release flow work for form posts too — the engineer\n// who filed the project can react to release it, even though the message came from the bot.\nfunction submitterFromText(text) {\n  const m = String(text == null ? '' : text).match(/<@([A-Z0-9]+)>/);\n  return m ? m[1] : '';\n}\n\n// The stored, human-readable form of a workflow post: drop the leading \"<@submitter> -\"\n// (that is metadata, not the project) and the mrkdwn bold markers, leaving the clean project\n// line \"QU-12345 / Agency / …\" that the index, the digest and the #releaseme repost all use.\nfunction cleanWorkflowText(text) {\n  return String(text == null ? '' : text)\n    .replace(/^\\s*<@[A-Z0-9]+>\\s*[-–—:]?\\s*/, '')\n    .replace(/\\*/g, '')\n    .trim();\n}\n\nconst NEWPOST_CHANNEL = 'C1SJE7404';\nconst RELEASEME_CHANNEL = 'CC9EG3K8C';\n\n// Returns the QU digits as a string with no QU- prefix, or null when the message\n// carries no code at all. String, not number: these are identifiers, and leading\n// zeros would be lost the moment anything coerces them.\nfunction extractQu(text) {\n  if (typeof text !== 'string') return null;\n  // Strip mrkdwn bold/italic asterisks first: the \"New Project\" intake form writes the code\n  // as *QU-*12345, and the `*` between the separator and the digits would otherwise defeat\n  // QU_RE. `*` is never part of a QU, so removing it is safe for ordinary posts too.\n  const m = text.replace(/\\*/g, '').match(QU_RE);\n  return m ? m[1] : null;\n}\n\n// Slack's conversations.history escapes &, < and > in message text, so PC&V arrives as\n// PC&amp;V. Stored raw, the Sheet fills with &amp; and is unpleasant to read, and so is\n// any digest line built from it.\n//\n// Decode on the way IN, escape again on the way OUT (escapeForSlack, in resolve-release).\n// The bytes Posty posts are therefore unchanged from the verified-working behaviour, while\n// the stored copy is what a human would have typed.\n//\n// Order matters: &amp; must be decoded LAST, or \"&amp;lt;\" would turn into \"<\" instead of\n// the literal \"&lt;\" it represents.\nfunction decodeEntities(text) {\n  if (typeof text !== 'string') return text;\n  return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');\n}\n\n// Every QU a #releaseme post closes.\n//\n// Usually one. But bulk release posts are common in the 2024 archive — several complete\n// project lines in a single message — and \"first match wins\" (§9) then closes the first\n// and leaves the rest open forever. That is 24 projects wrongly in the chase list.\n//\n// So on the RELEASE side, take every code. The one thing that must not be swept up is a\n// BACK-REFERENCE: \"(Addcost from QU-10317)\" mentions an older project without releasing\n// it, and closing it would tell Accounting to bill work that never shipped.\n//\n// Intake keeps first-match-wins: a post announcing several projects is a different\n// question, and getting it wrong there invents projects rather than closing them.\nconst BACKREF_RE = /\\b(?:from|ref|per|vs|supersedes|replaces|addcost\\s+(?:from|of))\\s*:?\\s*$/i;\n\nfunction extractReleasedQus(text) {\n  if (typeof text !== 'string') return [];\n  const s = text.replace(/\\*/g, '');   // see extractQu: tolerate bold *QU-* on the release side too\n  const re = new RegExp(QU_RE.source, 'gi');\n  const found = [];\n  let m;\n  while ((m = re.exec(s)) !== null) {\n    const before = s.slice(Math.max(0, m.index - 40), m.index);\n    if (found.length && BACKREF_RE.test(before)) continue;\n    if (found.indexOf(m[1]) === -1) found.push(m[1]);\n  }\n  return found;\n}\n\n// A QU- or QU_ prefix with no digits after it. This is the agreed posting convention:\n// when a project has no code yet — pro bono, awaiting assignment, placeholder — the poster\n// still writes \"QU-\" so the post is recognisably a project.\n//\n// A rule people are TOLD beats a rule inferred from punctuation. This replaced an earlier\n// attempt that guessed from slash counts.\nconst QU_MARKER_RE = /QU[\\s]*[-_]/i;\n\nfunction hasQuMarker(text) {\n  return typeof text === 'string' && QU_MARKER_RE.test(text);\n}\n\n// Synthetic key for a marked-but-uncoded project, derived from the post's own ts so it is\n// unique and stable. Returns null for an implausible ts: a shared key would silently\n// collapse every uncoded project onto one row.\nfunction syntheticKey(ts) {\n  const t = String(ts == null ? '' : ts).trim();\n  if (!/^\\d{6,}(\\.\\d+)?$/.test(t)) return null;\n  return 'NOQU-' + t;\n}\n\nfunction isCancelled(text) {\n  return typeof text === 'string' && CANCELLED_RE.test(text);\n}\n\n// Slack ts -> ISO date in Manila local time.\n//\n// The timezone is a judgment call the handoff does not make. Hit Productions is in\n// Manila and age_days is counted in working days people recognise, so a post made at\n// 07:00 Manila must date to that morning and not to the previous day in UTC. Asia/Manila\n// is UTC+8 with no DST, so the fixed offset is exact rather than an approximation.\nconst MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;\n\nfunction tsToDate(ts) {\n  if (ts === null || ts === undefined) return null;\n  const seconds = Number(String(ts).split('.')[0]);\n  if (!Number.isFinite(seconds)) return null;\n  return new Date(seconds * 1000 + MANILA_OFFSET_MS).toISOString().slice(0, 10);\n}\n\n// Whole-day difference between two ISO dates. Both are already Manila-local calendar\n// dates, so this is plain date arithmetic — no timezone maths, and no drift from the\n// clock time of day the digest happens to run at.\nfunction ageDays(postedDate, asOfDate) {\n  if (!postedDate || !asOfDate) return null;\n  const a = Date.parse(postedDate + 'T00:00:00Z');\n  const b = Date.parse(asOfDate + 'T00:00:00Z');\n  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;\n  return Math.round((b - a) / 86400000);\n}\n\n// Handoff §7 Workflow 3: >= 90 escalated, 45..89 flagged, < 45 omitted entirely.\n// The boundaries are inclusive at 45 and at 90 — a project at exactly 45 days appears.\nfunction bucketOf(age) {\n  if (!Number.isFinite(age)) return null;\n  if (age >= 90) return 'ESCALATED';\n  if (age >= 45) return 'FLAGGED';\n  return null;\n}\n\n// Turn one Slack message into an index row fragment. The caller supplies the channel so\n// the CANCELLED rule stays scoped to #releaseme, where the handoff puts it.\nfunction parseMessage(msg) {\n  const text = decodeEntities((msg && msg.text) || '');\n  const ts = msg && msg.ts;\n  const channel = (msg && msg.channel) || '';\n  let qu = extractQu(text);\n  let synthetic = false;\n\n  // Marked as a project but carrying no code -> track it under a synthetic key. It ages,\n  // buckets and can be rocketed like anything else; when the real code arrives the poster\n  // reposts with it.\n  if (!qu && hasQuMarker(text)) {\n    qu = syntheticKey(ts);\n    synthetic = qu !== null;\n  }\n\n  // No QU digits and no QU- marker -> UNTRACKED. Never counted as open or as released.\n  // Deliberately simple: a project is tracked when it carries a QU code, and not\n  // otherwise. Codeless posts — placeholder codes, \"QU-Not Available\", foreign numbering,\n  // \"(NO Q-CODE)\", pro bono — were briefly tracked under synthetic keys on 2026-08-31 and\n  // that was reverted the same day in favour of a posting convention: post engineers write\n  // a QU code, always.\n  //\n  // Nothing is lost by this. UNTRACKED rows still appear in the digest's \"needs manual\n  // check\" section, so codeless work stays visible to a human — it simply is not counted,\n  // aged or releasable, none of which can be done honestly without an identifier.\n  if (!qu) {\n    return {\n      qu_number: null,\n      synthetic: false,\n      source_channel: channel,\n      source_ts: String(ts),\n      source_text: text,\n      posted_date: tsToDate(ts),\n      status: 'UNTRACKED',\n    };\n  }\n\n  const cancelled = channel === RELEASEME_CHANNEL && isCancelled(text);\n\n  return {\n    qu_number: qu,\n    synthetic,\n    source_channel: channel,\n    source_ts: String(ts),\n    source_text: text,\n    posted_date: tsToDate(ts),\n    status: cancelled ? 'CANCELLED' : (channel === RELEASEME_CHANNEL ? 'RELEASED' : 'OPEN'),\n  };\n}\n\n// Posty — Xero typo check.\n//\n// Pure logic for the scheduled check (Workflow 5) that validates each morning's\n// #newpostprojects QU codes against Xero. The QU IS the Xero **Quote Number**\n// (QuoteNumber = \"QU-18030\"), and Xero is where a project's quote is raised first —\n// ahead of the announcement — so it is the authority. Was Airtable through\n// 2026-09-16; switched to Xero 2026-09-17 (Tara) once the org's Xero connection was\n// authorized. Pasted verbatim into the Code nodes of Workflow 5; dependency-free so\n// scripts/test-xero runs it offline and the tested code is the shipped code.\n//\n// A quote is fetched per QU: GET /Quotes?QuoteNumber=QU-<digits>. A non-existent\n// number comes back 200 with an empty Quotes array — that is the \"not found\" signal.\n//\n// Existence only. A QU that matches no Xero quote is a NOT_FOUND — a high-confidence typo,\n// and the ONLY thing posted publicly (gently, in-thread). A customer/agency/producer match\n// was tried and dropped 2026-09-17: Xero has no agency or producer field, and its customer\n// (Contact) is the parent client (Unilever for a Knorr project), so it cried wolf. See\n// classifyXero. Public messages say \"the database\", not \"Xero\" — Tara's call, 2026-09-17.\n//\n// Comparison is on DIGITS, never the raw reference string: the post side writes\n// \"QU-18077\" / \"QU_18077\" / \"QU - 18077\" and Xero writes \"QU-18077\", and neither side's\n// separator or prefix casing may cause a false \"not found\". See parse.js QU_RE.\n\n\n\n// Digits of a QU reference, or null. Tolerant of both the post-side separator forms\n// and the Xero-side canonical \"QU-16867\", and of a bare number with no prefix.\n// {4,6} matches parse.js.\nfunction quDigits(s) {\n  if (typeof s !== 'string') return null;\n  const m = s.match(/QU[\\s]*[-_]?[\\s]*(\\d{4,6})/i);\n  if (m) return m[1];\n  const bare = s.match(/\\b(\\d{4,6})\\b/);\n  return bare ? bare[1] : null;\n}\n\n\n// A Xero field value as a display string.\nfunction cellText(v) {\n  if (Array.isArray(v)) return v.filter(x => x != null).join(', ');\n  return v == null ? '' : String(v);\n}\n\n// Build the {digits -> quote} lookup from the Xero responses. Each response is the body\n// of one GET /Quotes?QuoteNumber=… call, so it carries a Quotes array with 0 or 1 (rarely\n// more) quotes. A candidate whose QU is absent here is NOT_FOUND. DELETED quotes are\n// dropped — a deleted quote is not a live project and must not vouch for a mistyped QU.\nfunction indexQuotes(responses) {\n  const byDigits = {};\n  for (const resp of (responses || [])) {\n    const quotes = (resp && (resp.Quotes || (resp.body && resp.body.Quotes))) || [];\n    for (const q of quotes) {\n      if (!q) continue;\n      const status = cellText(q.Status).toUpperCase();\n      if (status === 'DELETED') continue;\n      const d = quDigits(cellText(q.QuoteNumber));\n      if (!d) continue;\n      if (!(d in byDigits)) {\n        byDigits[d] = {\n          quoteNumber: cellText(q.QuoteNumber),\n          client: q.Contact ? cellText(q.Contact.Name) : '',\n          status: cellText(q.Status),\n        };\n      }\n    }\n  }\n  return byDigits;\n}\n\n// One post that carries a real QU. Built by gatherCandidates. Shape:\n//   { qu, quDisplay, ts, channel, text }\n//\n// helpers is the parse.js surface, injected so this module stays require-free when pasted\n// into an n8n node: { isPostEngineer, extractQu, decodeEntities, tsToDate, isIntakeWorkflow,\n// submitterFromText, cleanWorkflowText }.\n//\n// A post counts as a project either because a post engineer wrote it OR because it came from\n// the \"New Project\" intake form — which now posts as a bot with no `user`, so without the\n// isIntakeWorkflow branch the typo check would silently skip every form post, i.e. the whole\n// point of the check on the primary intake path. Form posts contribute the cleaned line and\n// the submitter is irrelevant here (we only validate the QU + client).\n//\n// dateFilter is optional. The window is really bounded by the Slack `oldest` the caller\n// fetched with — either midnight today (preview) or the since-last-checked watermark\n// (scheduled). Pass a YYYY-MM-DD to additionally keep only that day's posts; pass null to\n// keep everything the fetch returned, which is what the watermark path wants (its window\n// can legitimately span more than one day if a run was missed).\nfunction gatherCandidates(messages, dateFilter, helpers) {\n  const out = [];\n  const seen = {};\n  for (const m of (messages || [])) {\n    if (!m) continue;\n    const wf = typeof helpers.isIntakeWorkflow === 'function' && helpers.isIntakeWorkflow(m);\n    let text;\n    if (wf) {\n      text = typeof helpers.cleanWorkflowText === 'function' ? helpers.cleanWorkflowText(m.text) : (m.text || '');\n    } else {\n      if (m.subtype) continue;                       // joins, leaves, non-intake bot posts\n      if (!helpers.isPostEngineer(m.user)) continue; // only announcements, excludes Posty\n      text = helpers.decodeEntities(m.text || '');\n    }\n    const qu = helpers.extractQu(text);              // null for no-code / QU- placeholder\n    if (!qu) continue;\n    if (dateFilter && helpers.tsToDate(m.ts) !== dateFilter) continue; // preview only\n    if (seen[qu]) continue;                          // same code posted twice, check once\n    seen[qu] = true;\n    out.push({\n      qu: qu,\n      quDisplay: 'QU-' + qu,\n      ts: String(m.ts),\n      channel: m.channel || '',\n      text: text,\n    });\n  }\n  return out;\n}\n\n// Existence-only against Xero. A Xero quote has no agency or producer field, and its\n// customer (Contact) is the parent client (Unilever for a Knorr project), so matching it to\n// the post cried wolf constantly — dropped 2026-09-17 (Tara). The only Xero signal is\n// whether the QU is a real quote number at all: found -> ok, absent -> notFound (the public\n// typo flag). `mismatch` is kept empty so the summary and findings count stay uniform.\nfunction classifyXero(candidates, byDigits) {\n  const notFound = [], ok = [];\n  for (const c of (candidates || [])) {\n    if (byDigits[c.qu]) ok.push(c); else notFound.push(c);\n  }\n  return { notFound: notFound, mismatch: [], ok: ok };\n}\n\n// The public in-thread reply. mrkdwn (single-asterisk bold). Gentle by design: it\n// asks for a check, it does not assert the poster is wrong — Xero can lag a little,\n// and a false accusation in the intake channel is exactly what erodes trust in Posty.\n// \"the database\" rather than \"Xero\" — the source is kept generic in what people see\n// (Tara, 2026-09-17). Only the messages use this wording; the code still checks Xero.\nfunction flagText(c) {\n  return c.quDisplay + \" isn't in the database — mind double-checking? \" +\n    \"If it's correct, just ignore this.\";\n}\n\n// The post text with the leading QU token stripped, so a summary line can read\n// \"QU-71498 — OMT / Producer / Title\" without repeating the code.\nfunction afterQu(text) {\n  const t = firstLine(text);\n  const idx = t.indexOf('/');\n  return idx !== -1 ? t.slice(idx + 1).trim() : t;\n}\n\n// Tara's DM summary. mode is 'scheduled' or 'preview'. In preview nothing was posted\n// publicly, so the summary says what *would* post. res is classify()'s result.\nfunction buildTaraSummary(res, ctx) {\n  const c = ctx || {};\n  const mode = c.mode === 'preview' ? 'preview' : 'scheduled';\n  const checked = c.checked == null ? 0 : c.checked;\n  const day = c.dateLabel || '';\n  const lines = [];\n\n  lines.push(mode === 'preview'\n    ? '*Typo check — ' + (day || 'today') + '*  (preview — nothing posted publicly)'\n    : '*Typo check — ' + (day || 'today') + '*');\n  lines.push('Checked ' + checked + ' post' + (checked === 1 ? '' : 's') + ' from this morning.');\n\n  if (res.notFound.length) {\n    lines.push('');\n    lines.push(mode === 'preview'\n      ? \"🔴 *Not in the database* — I'd reply on these posts:\"\n      : '🔴 *Not in the database* — replied on these posts:');\n    res.notFound.forEach((x, i) => lines.push((i + 1) + '. ' + x.quDisplay + ' — ' + afterQu(x.text)));\n  }\n\n  if (!res.notFound.length) {\n    lines.push('');\n    lines.push('✅ All clear — every QU is in the database.');\n  }\n\n  return lines.join('\\n');\n}\n\n// First line of a post, trimmed, for a compact summary row.\nfunction firstLine(text) {\n  const t = String(text == null ? '' : text).split('\\n')[0].trim();\n  return t.length > 90 ? t.slice(0, 87) + '…' : t;\n}\n// ---- node glue ----\nconst meta = $('Set Oldest').first().json;\nconst CH = 'C1SJE7404';\nconst pages = $('Fetch Newpost').all();\nlet msgs = [];\nlet maxTs = '';\nfor (const p of pages) {\n  const arr = (p.json && p.json.messages) || [];\n  for (const m of arr) {\n    msgs.push(Object.assign({}, m, { channel: CH }));\n    const t = String(m.ts || '');\n    // Watermark advances to the newest ts READ, noise included, so a trailing chatter\n    // post cannot stall it (the Workflow-1 watermark lesson).\n    if (t && (maxTs === '' || Number(t) > Number(maxTs))) maxTs = t;\n  }\n}\nconst helpers = { isPostEngineer, extractQu, decodeEntities, tsToDate,\n                  isIntakeWorkflow, submitterFromText, cleanWorkflowText };\nconst dateFilter = meta.mode === 'preview' ? meta.todayDate : null;\nconst candidates = gatherCandidates(msgs, dateFilter, helpers);\nreturn [{ json: {\n  mode: meta.mode, requester: meta.requester, dateLabel: meta.dateLabel,\n  candidates: candidates, count: candidates.length,\n  maxTs: maxTs, stateRow: meta.stateRow, oldWatermark: meta.oldWatermark\n} }];\n"
+        },
+        "position": [
+          840,
+          100
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "has-candidates",
+        "name": "Has Candidates",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.count }}",
+                "operator": {
+                  "operation": "gt",
+                  "type": "number"
+                },
+                "rightValue": "={{ 0 }}"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          1060,
+          60
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "id": "classify",
+        "name": "Classify",
+        "parameters": {
+          "jsCode": "// Posty — QU parsing and status classification.\n//\n// This file is the single source of truth for how a Slack message becomes an index row.\n// It is pasted verbatim into the Code nodes of Workflow 1 (index refresh) and Workflow 3\n// (digest). Keep it dependency-free and side-effect-free so `./scripts/test-parser` can\n// run it offline, and so the same code that is tested is the code that ships.\n//\n// Rules come from the build handoff §9. Do not tighten them without re-reading it:\n// every shape below was taken from a real post in #newpostprojects or #releaseme.\n\n\n\n// Handoff §9: case-insensitive, first match wins. {4,6} is deliberate headroom — real\n// numbers are 5 digits but QU-50052 exists and the range is not contiguous. Do not\n// narrow to {5}. The separator is not reliably a slash: space, dash, double space and\n// underscore all occur, hence the character class. `QU_13577` is real and appears in both\n// channels — before the underscore was added, that project was invisible to Posty\n// entirely, on the intake side and the release side.\n// Separators seen in real posts: dash, underscore, space, double space, none at all, and\n// \" - \" with spaces on both sides. `QU - 17295 ref 17037` is real and appears in BOTH\n// channels — before the surrounding whitespace was allowed, that project was invisible on\n// the intake side and the release side alike.\n//\n// Widening this was diffed across all 1,658 backfilled messages: 2 newly matched, 0\n// extractions changed. Re-run that diff before widening it further.\nconst QU_RE = /QU[\\s]*[-_]?[\\s]*(\\d{4,6})/i;\n\n// A synthetic key for a keyless project. Derived from the post's own ts, so it is unique,\n// stable for the life of the row, and obviously not a real QU number at a glance.\n//\n// It deliberately cannot join an intake post to a separate release post — those are two\n// different messages with no shared identifier, and guessing a link between them would be\n// exactly the heuristic §9 warns against. It does not need to: releases now happen by\n// reacting to the intake post, which resolves through the row's own source_ts.\n// Handoff §9: (CANCELLED) anywhere in a #releaseme post means CANCELLED, not RELEASED.\n// A naive diff scores it as released, which is wrong. Currently affects QU-17590.\nconst CANCELLED_RE = /\\(\\s*CANCELLED\\s*\\)/i;\n\n// A Studio M / van recording is a production service (a recording session or a studio /\n// mobile-van rental), NOT a releasable deliverable. Set by Tara 2026-09-08: once one of\n// these is announced in #newpostprojects it is logged and left alone — it never enters the\n// open pool to be chased, and it is never marked RELEASED. Matched by the phrases that\n// name the service; the bare word \"van\" is deliberately excluded (it appears in \"Van\n// Digital\" and elsewhere and over-matches). The status these rows carry is STUDIO_M below.\nconst STUDIO_M_RE = /studio\\s*m|van\\s*record|os\\s*van/i;\n\nfunction isStudioM(text) {\n  return typeof text === 'string' && STUDIO_M_RE.test(text);\n}\n\n// The status value for those rows. A distinct state, neither OPEN (build-digest and the\n// reminders only look at OPEN, so these drop out of both) nor RELEASED (so they never read\n// as shipped to Accounting). The release path must treat it like RELEASED/CANCELLED and\n// never overwrite it.\nconst STUDIO_M_STATUS = 'STUDIO M';\n\n// Only these people announce projects. Set by Tara 2026-08-31 to keep channel chatter out\n// of the index — a message from anyone else is not a project post, whatever it contains.\n//\n// This is a policy list, not a heuristic: it is maintained by a human who knows who the\n// post engineers are, which is the only thing that reliably distinguishes an announcement\n// from a conversation.\n//\n// **Add new post engineers here on their first day.** Until someone is on this list their\n// posts are invisible to Posty — which is the intended behaviour, and also the way this\n// list silently goes wrong. `isPostEngineer` is checked in the Workflow 2 classifier and in\n// build-index.js, and a skipped message that DID carry a QU is logged with its code so the\n// omission is discoverable in the execution list rather than silent.\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nfunction isPostEngineer(user) {\n  return Object.prototype.hasOwnProperty.call(POST_ENGINEERS, String(user || '').trim());\n}\n\n// Names are for grouping the digest. A row whose author is not on the list — a historical\n// row from before the allowlist, or a blank posted_by — groups under \"unassigned\" rather\n// than being hidden, so nothing falls out of a total.\nfunction engineerName(user) {\n  const u = String(user || '').trim();\n  return POST_ENGINEERS[u] || 'unassigned';\n}\n\n// The \"New Project\" intake form (Slack Workflow Builder) posts announcements as a bot, not\n// as the human who filled it in — so the post has no `user`, carries a `bot_id`/`subtype:\n// bot_message`, and would be dropped by both the noise filter and the post-engineer gate.\n// These are the bot/app identities of the APPROVED intake workflows, maintained the same way\n// as POST_ENGINEERS: a post from one of these, carrying a QU, is a project announcement.\n//\n// The message payload identifies the workflow by bot_id (always present) or app_id — NOT by\n// the \"Wf…\" Workflow Builder id, which never appears on the post. **If the workflow is\n// rebuilt from scratch its bot/app id changes and must be added here**, exactly like adding\n// a new post engineer. Added 2026-09-10 when the form intake went live.\nconst INTAKE_WORKFLOW_BOTS = { 'B0C0US9CXU2': 'New Project form' };\nconst INTAKE_WORKFLOW_APPS = { 'A0C0YBR1GG4': 'New Project form' };\n\nfunction isIntakeWorkflow(msg) {\n  if (!msg || typeof msg !== 'object') return false;\n  const bot = String(msg.bot_id || '').trim();\n  const app = String(msg.app_id || '').trim();\n  return Object.prototype.hasOwnProperty.call(INTAKE_WORKFLOW_BOTS, bot)\n      || Object.prototype.hasOwnProperty.call(INTAKE_WORKFLOW_APPS, app);\n}\n\n// The form writes the person who submitted it as a leading Slack mention, e.g.\n// \"<@U026N6E1R> - *QU-*12345 / …\". That mention is the real poster, and recording it as\n// posted_by is what lets the react-to-release flow work for form posts too — the engineer\n// who filed the project can react to release it, even though the message came from the bot.\nfunction submitterFromText(text) {\n  const m = String(text == null ? '' : text).match(/<@([A-Z0-9]+)>/);\n  return m ? m[1] : '';\n}\n\n// The stored, human-readable form of a workflow post: drop the leading \"<@submitter> -\"\n// (that is metadata, not the project) and the mrkdwn bold markers, leaving the clean project\n// line \"QU-12345 / Agency / …\" that the index, the digest and the #releaseme repost all use.\nfunction cleanWorkflowText(text) {\n  return String(text == null ? '' : text)\n    .replace(/^\\s*<@[A-Z0-9]+>\\s*[-–—:]?\\s*/, '')\n    .replace(/\\*/g, '')\n    .trim();\n}\n\nconst NEWPOST_CHANNEL = 'C1SJE7404';\nconst RELEASEME_CHANNEL = 'CC9EG3K8C';\n\n// Returns the QU digits as a string with no QU- prefix, or null when the message\n// carries no code at all. String, not number: these are identifiers, and leading\n// zeros would be lost the moment anything coerces them.\nfunction extractQu(text) {\n  if (typeof text !== 'string') return null;\n  // Strip mrkdwn bold/italic asterisks first: the \"New Project\" intake form writes the code\n  // as *QU-*12345, and the `*` between the separator and the digits would otherwise defeat\n  // QU_RE. `*` is never part of a QU, so removing it is safe for ordinary posts too.\n  const m = text.replace(/\\*/g, '').match(QU_RE);\n  return m ? m[1] : null;\n}\n\n// Slack's conversations.history escapes &, < and > in message text, so PC&V arrives as\n// PC&amp;V. Stored raw, the Sheet fills with &amp; and is unpleasant to read, and so is\n// any digest line built from it.\n//\n// Decode on the way IN, escape again on the way OUT (escapeForSlack, in resolve-release).\n// The bytes Posty posts are therefore unchanged from the verified-working behaviour, while\n// the stored copy is what a human would have typed.\n//\n// Order matters: &amp; must be decoded LAST, or \"&amp;lt;\" would turn into \"<\" instead of\n// the literal \"&lt;\" it represents.\nfunction decodeEntities(text) {\n  if (typeof text !== 'string') return text;\n  return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');\n}\n\n// Every QU a #releaseme post closes.\n//\n// Usually one. But bulk release posts are common in the 2024 archive — several complete\n// project lines in a single message — and \"first match wins\" (§9) then closes the first\n// and leaves the rest open forever. That is 24 projects wrongly in the chase list.\n//\n// So on the RELEASE side, take every code. The one thing that must not be swept up is a\n// BACK-REFERENCE: \"(Addcost from QU-10317)\" mentions an older project without releasing\n// it, and closing it would tell Accounting to bill work that never shipped.\n//\n// Intake keeps first-match-wins: a post announcing several projects is a different\n// question, and getting it wrong there invents projects rather than closing them.\nconst BACKREF_RE = /\\b(?:from|ref|per|vs|supersedes|replaces|addcost\\s+(?:from|of))\\s*:?\\s*$/i;\n\nfunction extractReleasedQus(text) {\n  if (typeof text !== 'string') return [];\n  const s = text.replace(/\\*/g, '');   // see extractQu: tolerate bold *QU-* on the release side too\n  const re = new RegExp(QU_RE.source, 'gi');\n  const found = [];\n  let m;\n  while ((m = re.exec(s)) !== null) {\n    const before = s.slice(Math.max(0, m.index - 40), m.index);\n    if (found.length && BACKREF_RE.test(before)) continue;\n    if (found.indexOf(m[1]) === -1) found.push(m[1]);\n  }\n  return found;\n}\n\n// A QU- or QU_ prefix with no digits after it. This is the agreed posting convention:\n// when a project has no code yet — pro bono, awaiting assignment, placeholder — the poster\n// still writes \"QU-\" so the post is recognisably a project.\n//\n// A rule people are TOLD beats a rule inferred from punctuation. This replaced an earlier\n// attempt that guessed from slash counts.\nconst QU_MARKER_RE = /QU[\\s]*[-_]/i;\n\nfunction hasQuMarker(text) {\n  return typeof text === 'string' && QU_MARKER_RE.test(text);\n}\n\n// Synthetic key for a marked-but-uncoded project, derived from the post's own ts so it is\n// unique and stable. Returns null for an implausible ts: a shared key would silently\n// collapse every uncoded project onto one row.\nfunction syntheticKey(ts) {\n  const t = String(ts == null ? '' : ts).trim();\n  if (!/^\\d{6,}(\\.\\d+)?$/.test(t)) return null;\n  return 'NOQU-' + t;\n}\n\nfunction isCancelled(text) {\n  return typeof text === 'string' && CANCELLED_RE.test(text);\n}\n\n// Slack ts -> ISO date in Manila local time.\n//\n// The timezone is a judgment call the handoff does not make. Hit Productions is in\n// Manila and age_days is counted in working days people recognise, so a post made at\n// 07:00 Manila must date to that morning and not to the previous day in UTC. Asia/Manila\n// is UTC+8 with no DST, so the fixed offset is exact rather than an approximation.\nconst MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;\n\nfunction tsToDate(ts) {\n  if (ts === null || ts === undefined) return null;\n  const seconds = Number(String(ts).split('.')[0]);\n  if (!Number.isFinite(seconds)) return null;\n  return new Date(seconds * 1000 + MANILA_OFFSET_MS).toISOString().slice(0, 10);\n}\n\n// Whole-day difference between two ISO dates. Both are already Manila-local calendar\n// dates, so this is plain date arithmetic — no timezone maths, and no drift from the\n// clock time of day the digest happens to run at.\nfunction ageDays(postedDate, asOfDate) {\n  if (!postedDate || !asOfDate) return null;\n  const a = Date.parse(postedDate + 'T00:00:00Z');\n  const b = Date.parse(asOfDate + 'T00:00:00Z');\n  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;\n  return Math.round((b - a) / 86400000);\n}\n\n// Handoff §7 Workflow 3: >= 90 escalated, 45..89 flagged, < 45 omitted entirely.\n// The boundaries are inclusive at 45 and at 90 — a project at exactly 45 days appears.\nfunction bucketOf(age) {\n  if (!Number.isFinite(age)) return null;\n  if (age >= 90) return 'ESCALATED';\n  if (age >= 45) return 'FLAGGED';\n  return null;\n}\n\n// Turn one Slack message into an index row fragment. The caller supplies the channel so\n// the CANCELLED rule stays scoped to #releaseme, where the handoff puts it.\nfunction parseMessage(msg) {\n  const text = decodeEntities((msg && msg.text) || '');\n  const ts = msg && msg.ts;\n  const channel = (msg && msg.channel) || '';\n  let qu = extractQu(text);\n  let synthetic = false;\n\n  // Marked as a project but carrying no code -> track it under a synthetic key. It ages,\n  // buckets and can be rocketed like anything else; when the real code arrives the poster\n  // reposts with it.\n  if (!qu && hasQuMarker(text)) {\n    qu = syntheticKey(ts);\n    synthetic = qu !== null;\n  }\n\n  // No QU digits and no QU- marker -> UNTRACKED. Never counted as open or as released.\n  // Deliberately simple: a project is tracked when it carries a QU code, and not\n  // otherwise. Codeless posts — placeholder codes, \"QU-Not Available\", foreign numbering,\n  // \"(NO Q-CODE)\", pro bono — were briefly tracked under synthetic keys on 2026-08-31 and\n  // that was reverted the same day in favour of a posting convention: post engineers write\n  // a QU code, always.\n  //\n  // Nothing is lost by this. UNTRACKED rows still appear in the digest's \"needs manual\n  // check\" section, so codeless work stays visible to a human — it simply is not counted,\n  // aged or releasable, none of which can be done honestly without an identifier.\n  if (!qu) {\n    return {\n      qu_number: null,\n      synthetic: false,\n      source_channel: channel,\n      source_ts: String(ts),\n      source_text: text,\n      posted_date: tsToDate(ts),\n      status: 'UNTRACKED',\n    };\n  }\n\n  const cancelled = channel === RELEASEME_CHANNEL && isCancelled(text);\n\n  return {\n    qu_number: qu,\n    synthetic,\n    source_channel: channel,\n    source_ts: String(ts),\n    source_text: text,\n    posted_date: tsToDate(ts),\n    status: cancelled ? 'CANCELLED' : (channel === RELEASEME_CHANNEL ? 'RELEASED' : 'OPEN'),\n  };\n}\n\n// Posty — Xero typo check.\n//\n// Pure logic for the scheduled check (Workflow 5) that validates each morning's\n// #newpostprojects QU codes against Xero. The QU IS the Xero **Quote Number**\n// (QuoteNumber = \"QU-18030\"), and Xero is where a project's quote is raised first —\n// ahead of the announcement — so it is the authority. Was Airtable through\n// 2026-09-16; switched to Xero 2026-09-17 (Tara) once the org's Xero connection was\n// authorized. Pasted verbatim into the Code nodes of Workflow 5; dependency-free so\n// scripts/test-xero runs it offline and the tested code is the shipped code.\n//\n// A quote is fetched per QU: GET /Quotes?QuoteNumber=QU-<digits>. A non-existent\n// number comes back 200 with an empty Quotes array — that is the \"not found\" signal.\n//\n// Existence only. A QU that matches no Xero quote is a NOT_FOUND — a high-confidence typo,\n// and the ONLY thing posted publicly (gently, in-thread). A customer/agency/producer match\n// was tried and dropped 2026-09-17: Xero has no agency or producer field, and its customer\n// (Contact) is the parent client (Unilever for a Knorr project), so it cried wolf. See\n// classifyXero. Public messages say \"the database\", not \"Xero\" — Tara's call, 2026-09-17.\n//\n// Comparison is on DIGITS, never the raw reference string: the post side writes\n// \"QU-18077\" / \"QU_18077\" / \"QU - 18077\" and Xero writes \"QU-18077\", and neither side's\n// separator or prefix casing may cause a false \"not found\". See parse.js QU_RE.\n\n\n\n// Digits of a QU reference, or null. Tolerant of both the post-side separator forms\n// and the Xero-side canonical \"QU-16867\", and of a bare number with no prefix.\n// {4,6} matches parse.js.\nfunction quDigits(s) {\n  if (typeof s !== 'string') return null;\n  const m = s.match(/QU[\\s]*[-_]?[\\s]*(\\d{4,6})/i);\n  if (m) return m[1];\n  const bare = s.match(/\\b(\\d{4,6})\\b/);\n  return bare ? bare[1] : null;\n}\n\n\n// A Xero field value as a display string.\nfunction cellText(v) {\n  if (Array.isArray(v)) return v.filter(x => x != null).join(', ');\n  return v == null ? '' : String(v);\n}\n\n// Build the {digits -> quote} lookup from the Xero responses. Each response is the body\n// of one GET /Quotes?QuoteNumber=… call, so it carries a Quotes array with 0 or 1 (rarely\n// more) quotes. A candidate whose QU is absent here is NOT_FOUND. DELETED quotes are\n// dropped — a deleted quote is not a live project and must not vouch for a mistyped QU.\nfunction indexQuotes(responses) {\n  const byDigits = {};\n  for (const resp of (responses || [])) {\n    const quotes = (resp && (resp.Quotes || (resp.body && resp.body.Quotes))) || [];\n    for (const q of quotes) {\n      if (!q) continue;\n      const status = cellText(q.Status).toUpperCase();\n      if (status === 'DELETED') continue;\n      const d = quDigits(cellText(q.QuoteNumber));\n      if (!d) continue;\n      if (!(d in byDigits)) {\n        byDigits[d] = {\n          quoteNumber: cellText(q.QuoteNumber),\n          client: q.Contact ? cellText(q.Contact.Name) : '',\n          status: cellText(q.Status),\n        };\n      }\n    }\n  }\n  return byDigits;\n}\n\n// One post that carries a real QU. Built by gatherCandidates. Shape:\n//   { qu, quDisplay, ts, channel, text }\n//\n// helpers is the parse.js surface, injected so this module stays require-free when pasted\n// into an n8n node: { isPostEngineer, extractQu, decodeEntities, tsToDate, isIntakeWorkflow,\n// submitterFromText, cleanWorkflowText }.\n//\n// A post counts as a project either because a post engineer wrote it OR because it came from\n// the \"New Project\" intake form — which now posts as a bot with no `user`, so without the\n// isIntakeWorkflow branch the typo check would silently skip every form post, i.e. the whole\n// point of the check on the primary intake path. Form posts contribute the cleaned line and\n// the submitter is irrelevant here (we only validate the QU + client).\n//\n// dateFilter is optional. The window is really bounded by the Slack `oldest` the caller\n// fetched with — either midnight today (preview) or the since-last-checked watermark\n// (scheduled). Pass a YYYY-MM-DD to additionally keep only that day's posts; pass null to\n// keep everything the fetch returned, which is what the watermark path wants (its window\n// can legitimately span more than one day if a run was missed).\nfunction gatherCandidates(messages, dateFilter, helpers) {\n  const out = [];\n  const seen = {};\n  for (const m of (messages || [])) {\n    if (!m) continue;\n    const wf = typeof helpers.isIntakeWorkflow === 'function' && helpers.isIntakeWorkflow(m);\n    let text;\n    if (wf) {\n      text = typeof helpers.cleanWorkflowText === 'function' ? helpers.cleanWorkflowText(m.text) : (m.text || '');\n    } else {\n      if (m.subtype) continue;                       // joins, leaves, non-intake bot posts\n      if (!helpers.isPostEngineer(m.user)) continue; // only announcements, excludes Posty\n      text = helpers.decodeEntities(m.text || '');\n    }\n    const qu = helpers.extractQu(text);              // null for no-code / QU- placeholder\n    if (!qu) continue;\n    if (dateFilter && helpers.tsToDate(m.ts) !== dateFilter) continue; // preview only\n    if (seen[qu]) continue;                          // same code posted twice, check once\n    seen[qu] = true;\n    out.push({\n      qu: qu,\n      quDisplay: 'QU-' + qu,\n      ts: String(m.ts),\n      channel: m.channel || '',\n      text: text,\n    });\n  }\n  return out;\n}\n\n// Existence-only against Xero. A Xero quote has no agency or producer field, and its\n// customer (Contact) is the parent client (Unilever for a Knorr project), so matching it to\n// the post cried wolf constantly — dropped 2026-09-17 (Tara). The only Xero signal is\n// whether the QU is a real quote number at all: found -> ok, absent -> notFound (the public\n// typo flag). `mismatch` is kept empty so the summary and findings count stay uniform.\nfunction classifyXero(candidates, byDigits) {\n  const notFound = [], ok = [];\n  for (const c of (candidates || [])) {\n    if (byDigits[c.qu]) ok.push(c); else notFound.push(c);\n  }\n  return { notFound: notFound, mismatch: [], ok: ok };\n}\n\n// The public in-thread reply. mrkdwn (single-asterisk bold). Gentle by design: it\n// asks for a check, it does not assert the poster is wrong — Xero can lag a little,\n// and a false accusation in the intake channel is exactly what erodes trust in Posty.\n// \"the database\" rather than \"Xero\" — the source is kept generic in what people see\n// (Tara, 2026-09-17). Only the messages use this wording; the code still checks Xero.\nfunction flagText(c) {\n  return c.quDisplay + \" isn't in the database — mind double-checking? \" +\n    \"If it's correct, just ignore this.\";\n}\n\n// The post text with the leading QU token stripped, so a summary line can read\n// \"QU-71498 — OMT / Producer / Title\" without repeating the code.\nfunction afterQu(text) {\n  const t = firstLine(text);\n  const idx = t.indexOf('/');\n  return idx !== -1 ? t.slice(idx + 1).trim() : t;\n}\n\n// Tara's DM summary. mode is 'scheduled' or 'preview'. In preview nothing was posted\n// publicly, so the summary says what *would* post. res is classify()'s result.\nfunction buildTaraSummary(res, ctx) {\n  const c = ctx || {};\n  const mode = c.mode === 'preview' ? 'preview' : 'scheduled';\n  const checked = c.checked == null ? 0 : c.checked;\n  const day = c.dateLabel || '';\n  const lines = [];\n\n  lines.push(mode === 'preview'\n    ? '*Typo check — ' + (day || 'today') + '*  (preview — nothing posted publicly)'\n    : '*Typo check — ' + (day || 'today') + '*');\n  lines.push('Checked ' + checked + ' post' + (checked === 1 ? '' : 's') + ' from this morning.');\n\n  if (res.notFound.length) {\n    lines.push('');\n    lines.push(mode === 'preview'\n      ? \"🔴 *Not in the database* — I'd reply on these posts:\"\n      : '🔴 *Not in the database* — replied on these posts:');\n    res.notFound.forEach((x, i) => lines.push((i + 1) + '. ' + x.quDisplay + ' — ' + afterQu(x.text)));\n  }\n\n  if (!res.notFound.length) {\n    lines.push('');\n    lines.push('✅ All clear — every QU is in the database.');\n  }\n\n  return lines.join('\\n');\n}\n\n// First line of a post, trimmed, for a compact summary row.\nfunction firstLine(text) {\n  const t = String(text == null ? '' : text).split('\\n')[0].trim();\n  return t.length > 90 ? t.slice(0, 87) + '…' : t;\n}\n// ---- node glue ----\nconst g = $('Gather').first().json;\nconst candidates = g.candidates || [];\nconst responses = $('Fetch Quote').all().map(function (it) { return it.json; });\nconst byDigits = indexQuotes(responses);\nconst res = classifyXero(candidates, byDigits);\nconst summary = buildTaraSummary(res, { mode: g.mode, checked: candidates.length, dateLabel: g.dateLabel });\nconst flags = res.notFound.map(function (c) { return { channel: c.channel, ts: c.ts, text: flagText(c) }; });\nconst findings = res.notFound.length + res.mismatch.length;\nreturn [{ json: {\n  mode: g.mode, requester: g.requester,\n  summary: summary, flags: flags,\n  notFound: res.notFound.length, mismatch: res.mismatch.length, findings: findings\n} }];\n"
+        },
+        "position": [
+          1720,
+          60
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "should-dm",
+        "name": "Should DM",
+        "parameters": {
+          "conditions": {
+            "combinator": "or",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.mode }}",
+                "operator": {
+                  "operation": "notEquals",
+                  "type": "string"
+                },
+                "rightValue": "scheduled"
+              },
+              {
+                "id": "c2",
+                "leftValue": "={{ $json.findings }}",
+                "operator": {
+                  "operation": "gt",
+                  "type": "number"
+                },
+                "rightValue": "={{ 0 }}"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          1940,
+          0
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "dm-tara",
+        "name": "DM Tara",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "options": {},
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "channel",
+                "value": "={{ $json.requester }}"
+              },
+              {
+                "name": "text",
+                "value": "={{ $json.summary }}"
+              }
+            ]
+          },
+          "sendQuery": true,
+          "url": "https://slack.com/api/chat.postMessage"
+        },
+        "position": [
+          2160,
+          0
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "build-flags",
+        "name": "Build Flags",
+        "parameters": {
+          "jsCode": "\nconst j = $('Classify').first().json;\nif (j.mode !== 'scheduled') return [];\nreturn (j.flags || []).map(function (f) { return { json: f }; });\n"
+        },
+        "position": [
+          1940,
+          140
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "reply-in-thread",
+        "name": "Reply In Thread",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "options": {},
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "channel",
+                "value": "={{ $json.channel }}"
+              },
+              {
+                "name": "thread_ts",
+                "value": "={{ $json.ts }}"
+              },
+              {
+                "name": "text",
+                "value": "={{ $json.text }}"
+              }
+            ]
+          },
+          "sendQuery": true,
+          "url": "https://slack.com/api/chat.postMessage"
+        },
+        "position": [
+          2160,
+          140
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "empty-preview",
+        "name": "Empty Preview",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.count }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "={{ 0 }}"
+              },
+              {
+                "id": "c2",
+                "leftValue": "={{ $json.mode }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "preview"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          1060,
+          300
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "dm-tara-empty",
+        "name": "DM Tara Empty",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "options": {},
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "channel",
+                "value": "={{ $json.requester }}"
+              },
+              {
+                "name": "text",
+                "value": "No project posts to check right now — all quiet. :white_check_mark:"
+              }
+            ]
+          },
+          "sendQuery": true,
+          "url": "https://slack.com/api/chat.postMessage"
+        },
+        "position": [
+          1280,
+          300
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "advance-watermark",
+        "name": "Advance Watermark",
+        "parameters": {
+          "jsCode": "\n// Advance the since-last-checked watermark — scheduled runs only. maxTs is the newest ts\n// actually read this run; write it only if it moved past the old mark. Preview runs, quiet\n// runs (no messages) and a missing state row all no-op, leaving the watermark untouched.\nconst g = $('Gather').first().json;\nif (g.mode !== 'scheduled') return [];\nconst maxTs = String(g.maxTs || '');\nif (!maxTs) return [];\nif (g.oldWatermark && Number(maxTs) <= Number(g.oldWatermark)) return [];\nif (g.stateRow === '' || g.stateRow == null) return [];\nreturn [{ json: { row_number: g.stateRow, last_typo_ts: maxTs } }];\n"
+        },
+        "position": [
+          1060,
+          440
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "write-state",
+        "name": "Write State",
+        "parameters": {
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "matchingColumns": [
+              "row_number"
+            ],
+            "schema": [],
+            "value": {}
+          },
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "operation": "update",
+          "options": {
+            "cellFormat": "RAW"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_state"
+          }
+        },
+        "position": [
+          1280,
+          440
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "split-candidates",
+        "name": "Split Candidates",
+        "parameters": {
+          "jsCode": "const g = $('Gather').first().json;\nreturn (g.candidates || []).map(function (c) {\n  return { json: { quDisplay: c.quDisplay, qu: c.qu, text: c.text, ts: c.ts, channel: c.channel } };\n});\n"
+        },
+        "position": [
+          1280,
+          60
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "xeroOAuth2Api": {
+            "id": "BUHiogIRlY5QMoyg",
+            "name": "Xero account"
+          }
+        },
+        "id": "fetch-quote",
+        "name": "Fetch Quote",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Accept",
+                "value": "application/json"
+              },
+              {
+                "name": "Xero-tenant-id",
+                "value": "8a53d0bd-2999-4fa8-a964-c23cbc852617"
+              }
+            ]
+          },
+          "nodeCredentialType": "xeroOAuth2Api",
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          },
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "QuoteNumber",
+                "value": "={{ $json.quDisplay }}"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "sendQuery": true,
+          "url": "https://api.xero.com/api.xro/2.0/Quotes"
+        },
+        "position": [
+          1500,
+          60
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      }
+    ],
+    "updatedAt": "2026-09-17T10:45:34.265Z",
+    "versionId": "0d410313-2816-4b89-8447-6ea9513a88db",
+    "workflowId": "cXsAqwMXa6c8yATc",
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-17T10:45:34.773Z",
+        "event": "activated",
+        "id": 789,
+        "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "versionId": "0d410313-2816-4b89-8447-6ea9513a88db",
+        "workflowId": "cXsAqwMXa6c8yATc"
+      }
+    ]
+  },
+  "activeVersionId": "0d410313-2816-4b89-8447-6ea9513a88db",
+  "connections": {
+    "Advance Watermark": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write State",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Build Flags": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Reply In Thread",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Classify": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Should DM",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Build Flags",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Empty Preview": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "DM Tara Empty",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Fetch Newpost": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Gather",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Fetch Quote": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Classify",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Gather": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Has Candidates",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Empty Preview",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Advance Watermark",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Has Candidates": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Split Candidates",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Normalize": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read State",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "On Request": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Normalize",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read State": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Set Oldest",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Schedule — 10:00": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Normalize",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Schedule — 17:00": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Normalize",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Set Oldest": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Fetch Newpost",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Should DM": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "DM Tara",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Split Candidates": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Fetch Quote",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-09-09T02:37:06.234Z",
+  "description": null,
+  "id": "cXsAqwMXa6c8yATc",
+  "isArchived": false,
+  "meta": null,
+  "name": "Posty — Xero Typo Check",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "schedule---10:00",
+      "name": "Schedule — 10:00",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 10 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        -260,
+        -40
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "schedule---17:00",
+      "name": "Schedule — 17:00",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 17 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        -260,
+        120
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "on-request",
+      "name": "On Request",
+      "parameters": {},
+      "position": [
+        -260,
+        280
+      ],
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1
+    },
+    {
+      "id": "normalize",
+      "name": "Normalize",
+      "parameters": {
+        "jsCode": "\n// Determine mode straight off the trigger input, BEFORE the state read replaces $input.\n// A request carries a user -> preview (DM the asker, post nothing). A schedule fire carries\n// none -> scheduled (post publicly + advance the watermark).\nconst items = $input.all();\nconst first = items.length ? items[0].json : {};\nconst user = first.user || (first.body && first.body.user) || '';\nconst mode = user ? 'preview' : 'scheduled';\nconst TARA = 'U026N6E1R';\nconst requester = user || TARA;\nconst MANILA = 8 * 3600 * 1000;\nconst now = new Date(Date.now() + MANILA);\nconst todayDate = now.toISOString().slice(0, 10);\nconst midnightUnix = Math.floor(Date.parse(todayDate + 'T00:00:00Z') / 1000) - 8 * 3600;\nreturn [{ json: {\n  mode: mode, requester: requester,\n  todayDate: todayDate, dateLabel: todayDate,\n  midnightUnix: String(midnightUnix), user: user\n} }];\n"
+      },
+      "position": [
+        -40,
+        100
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "read-state",
+      "name": "Read State",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_state"
+        }
+      },
+      "position": [
+        180,
+        100
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "set-oldest",
+      "name": "Set Oldest",
+      "parameters": {
+        "jsCode": "\n// Choose the lower bound of the fetch. Scheduled runs read since the stored watermark\n// (last_typo_ts) so nothing is ever checked twice and nothing between runs is missed;\n// preview reads from midnight today. First run / empty watermark falls back to midnight.\nconst meta = $('Normalize').first().json;\nconst st = ($('Read State').first() || { json: {} }).json || {};\nconst wm = st.last_typo_ts != null ? String(st.last_typo_ts).trim() : '';\nconst oldest = (meta.mode === 'scheduled' && wm) ? wm : meta.midnightUnix;\nreturn [{ json: {\n  mode: meta.mode, requester: meta.requester,\n  todayDate: meta.todayDate, dateLabel: meta.dateLabel,\n  oldestUnix: String(oldest),\n  stateRow: st.row_number != null ? st.row_number : '',\n  oldWatermark: wm\n} }];\n"
+      },
+      "position": [
+        400,
+        100
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "fetch-newpost",
+      "name": "Fetch Newpost",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "options": {
+          "pagination": {
+            "pagination": {
+              "completeExpression": "={{ !$response.body.has_more }}",
+              "limitPagesFetched": true,
+              "maxRequests": 30,
+              "paginationCompleteWhen": "other",
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "cursor",
+                    "type": "qs",
+                    "value": "={{ $response.body.response_metadata ? $response.body.response_metadata.next_cursor : '' }}"
+                  }
+                ]
+              },
+              "requestInterval": 1200
+            }
+          }
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "C1SJE7404"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "oldest",
+              "value": "={{ $json.oldestUnix }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://slack.com/api/conversations.history"
+      },
+      "position": [
+        620,
+        100
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "gather",
+      "name": "Gather",
+      "parameters": {
+        "jsCode": "// Posty — QU parsing and status classification.\n//\n// This file is the single source of truth for how a Slack message becomes an index row.\n// It is pasted verbatim into the Code nodes of Workflow 1 (index refresh) and Workflow 3\n// (digest). Keep it dependency-free and side-effect-free so `./scripts/test-parser` can\n// run it offline, and so the same code that is tested is the code that ships.\n//\n// Rules come from the build handoff §9. Do not tighten them without re-reading it:\n// every shape below was taken from a real post in #newpostprojects or #releaseme.\n\n\n\n// Handoff §9: case-insensitive, first match wins. {4,6} is deliberate headroom — real\n// numbers are 5 digits but QU-50052 exists and the range is not contiguous. Do not\n// narrow to {5}. The separator is not reliably a slash: space, dash, double space and\n// underscore all occur, hence the character class. `QU_13577` is real and appears in both\n// channels — before the underscore was added, that project was invisible to Posty\n// entirely, on the intake side and the release side.\n// Separators seen in real posts: dash, underscore, space, double space, none at all, and\n// \" - \" with spaces on both sides. `QU - 17295 ref 17037` is real and appears in BOTH\n// channels — before the surrounding whitespace was allowed, that project was invisible on\n// the intake side and the release side alike.\n//\n// Widening this was diffed across all 1,658 backfilled messages: 2 newly matched, 0\n// extractions changed. Re-run that diff before widening it further.\nconst QU_RE = /QU[\\s]*[-_]?[\\s]*(\\d{4,6})/i;\n\n// A synthetic key for a keyless project. Derived from the post's own ts, so it is unique,\n// stable for the life of the row, and obviously not a real QU number at a glance.\n//\n// It deliberately cannot join an intake post to a separate release post — those are two\n// different messages with no shared identifier, and guessing a link between them would be\n// exactly the heuristic §9 warns against. It does not need to: releases now happen by\n// reacting to the intake post, which resolves through the row's own source_ts.\n// Handoff §9: (CANCELLED) anywhere in a #releaseme post means CANCELLED, not RELEASED.\n// A naive diff scores it as released, which is wrong. Currently affects QU-17590.\nconst CANCELLED_RE = /\\(\\s*CANCELLED\\s*\\)/i;\n\n// A Studio M / van recording is a production service (a recording session or a studio /\n// mobile-van rental), NOT a releasable deliverable. Set by Tara 2026-09-08: once one of\n// these is announced in #newpostprojects it is logged and left alone — it never enters the\n// open pool to be chased, and it is never marked RELEASED. Matched by the phrases that\n// name the service; the bare word \"van\" is deliberately excluded (it appears in \"Van\n// Digital\" and elsewhere and over-matches). The status these rows carry is STUDIO_M below.\nconst STUDIO_M_RE = /studio\\s*m|van\\s*record|os\\s*van/i;\n\nfunction isStudioM(text) {\n  return typeof text === 'string' && STUDIO_M_RE.test(text);\n}\n\n// The status value for those rows. A distinct state, neither OPEN (build-digest and the\n// reminders only look at OPEN, so these drop out of both) nor RELEASED (so they never read\n// as shipped to Accounting). The release path must treat it like RELEASED/CANCELLED and\n// never overwrite it.\nconst STUDIO_M_STATUS = 'STUDIO M';\n\n// Only these people announce projects. Set by Tara 2026-08-31 to keep channel chatter out\n// of the index — a message from anyone else is not a project post, whatever it contains.\n//\n// This is a policy list, not a heuristic: it is maintained by a human who knows who the\n// post engineers are, which is the only thing that reliably distinguishes an announcement\n// from a conversation.\n//\n// **Add new post engineers here on their first day.** Until someone is on this list their\n// posts are invisible to Posty — which is the intended behaviour, and also the way this\n// list silently goes wrong. `isPostEngineer` is checked in the Workflow 2 classifier and in\n// build-index.js, and a skipped message that DID carry a QU is logged with its code so the\n// omission is discoverable in the execution list rather than silent.\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nfunction isPostEngineer(user) {\n  return Object.prototype.hasOwnProperty.call(POST_ENGINEERS, String(user || '').trim());\n}\n\n// Names are for grouping the digest. A row whose author is not on the list — a historical\n// row from before the allowlist, or a blank posted_by — groups under \"unassigned\" rather\n// than being hidden, so nothing falls out of a total.\nfunction engineerName(user) {\n  const u = String(user || '').trim();\n  return POST_ENGINEERS[u] || 'unassigned';\n}\n\n// The \"New Project\" intake form (Slack Workflow Builder) posts announcements as a bot, not\n// as the human who filled it in — so the post has no `user`, carries a `bot_id`/`subtype:\n// bot_message`, and would be dropped by both the noise filter and the post-engineer gate.\n// These are the bot/app identities of the APPROVED intake workflows, maintained the same way\n// as POST_ENGINEERS: a post from one of these, carrying a QU, is a project announcement.\n//\n// The message payload identifies the workflow by bot_id (always present) or app_id — NOT by\n// the \"Wf…\" Workflow Builder id, which never appears on the post. **If the workflow is\n// rebuilt from scratch its bot/app id changes and must be added here**, exactly like adding\n// a new post engineer. Added 2026-09-10 when the form intake went live.\nconst INTAKE_WORKFLOW_BOTS = { 'B0C0US9CXU2': 'New Project form' };\nconst INTAKE_WORKFLOW_APPS = { 'A0C0YBR1GG4': 'New Project form' };\n\nfunction isIntakeWorkflow(msg) {\n  if (!msg || typeof msg !== 'object') return false;\n  const bot = String(msg.bot_id || '').trim();\n  const app = String(msg.app_id || '').trim();\n  return Object.prototype.hasOwnProperty.call(INTAKE_WORKFLOW_BOTS, bot)\n      || Object.prototype.hasOwnProperty.call(INTAKE_WORKFLOW_APPS, app);\n}\n\n// The form writes the person who submitted it as a leading Slack mention, e.g.\n// \"<@U026N6E1R> - *QU-*12345 / …\". That mention is the real poster, and recording it as\n// posted_by is what lets the react-to-release flow work for form posts too — the engineer\n// who filed the project can react to release it, even though the message came from the bot.\nfunction submitterFromText(text) {\n  const m = String(text == null ? '' : text).match(/<@([A-Z0-9]+)>/);\n  return m ? m[1] : '';\n}\n\n// The stored, human-readable form of a workflow post: drop the leading \"<@submitter> -\"\n// (that is metadata, not the project) and the mrkdwn bold markers, leaving the clean project\n// line \"QU-12345 / Agency / …\" that the index, the digest and the #releaseme repost all use.\nfunction cleanWorkflowText(text) {\n  return String(text == null ? '' : text)\n    .replace(/^\\s*<@[A-Z0-9]+>\\s*[-–—:]?\\s*/, '')\n    .replace(/\\*/g, '')\n    .trim();\n}\n\nconst NEWPOST_CHANNEL = 'C1SJE7404';\nconst RELEASEME_CHANNEL = 'CC9EG3K8C';\n\n// Returns the QU digits as a string with no QU- prefix, or null when the message\n// carries no code at all. String, not number: these are identifiers, and leading\n// zeros would be lost the moment anything coerces them.\nfunction extractQu(text) {\n  if (typeof text !== 'string') return null;\n  // Strip mrkdwn bold/italic asterisks first: the \"New Project\" intake form writes the code\n  // as *QU-*12345, and the `*` between the separator and the digits would otherwise defeat\n  // QU_RE. `*` is never part of a QU, so removing it is safe for ordinary posts too.\n  const m = text.replace(/\\*/g, '').match(QU_RE);\n  return m ? m[1] : null;\n}\n\n// Slack's conversations.history escapes &, < and > in message text, so PC&V arrives as\n// PC&amp;V. Stored raw, the Sheet fills with &amp; and is unpleasant to read, and so is\n// any digest line built from it.\n//\n// Decode on the way IN, escape again on the way OUT (escapeForSlack, in resolve-release).\n// The bytes Posty posts are therefore unchanged from the verified-working behaviour, while\n// the stored copy is what a human would have typed.\n//\n// Order matters: &amp; must be decoded LAST, or \"&amp;lt;\" would turn into \"<\" instead of\n// the literal \"&lt;\" it represents.\nfunction decodeEntities(text) {\n  if (typeof text !== 'string') return text;\n  return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');\n}\n\n// Every QU a #releaseme post closes.\n//\n// Usually one. But bulk release posts are common in the 2024 archive — several complete\n// project lines in a single message — and \"first match wins\" (§9) then closes the first\n// and leaves the rest open forever. That is 24 projects wrongly in the chase list.\n//\n// So on the RELEASE side, take every code. The one thing that must not be swept up is a\n// BACK-REFERENCE: \"(Addcost from QU-10317)\" mentions an older project without releasing\n// it, and closing it would tell Accounting to bill work that never shipped.\n//\n// Intake keeps first-match-wins: a post announcing several projects is a different\n// question, and getting it wrong there invents projects rather than closing them.\nconst BACKREF_RE = /\\b(?:from|ref|per|vs|supersedes|replaces|addcost\\s+(?:from|of))\\s*:?\\s*$/i;\n\nfunction extractReleasedQus(text) {\n  if (typeof text !== 'string') return [];\n  const s = text.replace(/\\*/g, '');   // see extractQu: tolerate bold *QU-* on the release side too\n  const re = new RegExp(QU_RE.source, 'gi');\n  const found = [];\n  let m;\n  while ((m = re.exec(s)) !== null) {\n    const before = s.slice(Math.max(0, m.index - 40), m.index);\n    if (found.length && BACKREF_RE.test(before)) continue;\n    if (found.indexOf(m[1]) === -1) found.push(m[1]);\n  }\n  return found;\n}\n\n// A QU- or QU_ prefix with no digits after it. This is the agreed posting convention:\n// when a project has no code yet — pro bono, awaiting assignment, placeholder — the poster\n// still writes \"QU-\" so the post is recognisably a project.\n//\n// A rule people are TOLD beats a rule inferred from punctuation. This replaced an earlier\n// attempt that guessed from slash counts.\nconst QU_MARKER_RE = /QU[\\s]*[-_]/i;\n\nfunction hasQuMarker(text) {\n  return typeof text === 'string' && QU_MARKER_RE.test(text);\n}\n\n// Synthetic key for a marked-but-uncoded project, derived from the post's own ts so it is\n// unique and stable. Returns null for an implausible ts: a shared key would silently\n// collapse every uncoded project onto one row.\nfunction syntheticKey(ts) {\n  const t = String(ts == null ? '' : ts).trim();\n  if (!/^\\d{6,}(\\.\\d+)?$/.test(t)) return null;\n  return 'NOQU-' + t;\n}\n\nfunction isCancelled(text) {\n  return typeof text === 'string' && CANCELLED_RE.test(text);\n}\n\n// Slack ts -> ISO date in Manila local time.\n//\n// The timezone is a judgment call the handoff does not make. Hit Productions is in\n// Manila and age_days is counted in working days people recognise, so a post made at\n// 07:00 Manila must date to that morning and not to the previous day in UTC. Asia/Manila\n// is UTC+8 with no DST, so the fixed offset is exact rather than an approximation.\nconst MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;\n\nfunction tsToDate(ts) {\n  if (ts === null || ts === undefined) return null;\n  const seconds = Number(String(ts).split('.')[0]);\n  if (!Number.isFinite(seconds)) return null;\n  return new Date(seconds * 1000 + MANILA_OFFSET_MS).toISOString().slice(0, 10);\n}\n\n// Whole-day difference between two ISO dates. Both are already Manila-local calendar\n// dates, so this is plain date arithmetic — no timezone maths, and no drift from the\n// clock time of day the digest happens to run at.\nfunction ageDays(postedDate, asOfDate) {\n  if (!postedDate || !asOfDate) return null;\n  const a = Date.parse(postedDate + 'T00:00:00Z');\n  const b = Date.parse(asOfDate + 'T00:00:00Z');\n  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;\n  return Math.round((b - a) / 86400000);\n}\n\n// Handoff §7 Workflow 3: >= 90 escalated, 45..89 flagged, < 45 omitted entirely.\n// The boundaries are inclusive at 45 and at 90 — a project at exactly 45 days appears.\nfunction bucketOf(age) {\n  if (!Number.isFinite(age)) return null;\n  if (age >= 90) return 'ESCALATED';\n  if (age >= 45) return 'FLAGGED';\n  return null;\n}\n\n// Turn one Slack message into an index row fragment. The caller supplies the channel so\n// the CANCELLED rule stays scoped to #releaseme, where the handoff puts it.\nfunction parseMessage(msg) {\n  const text = decodeEntities((msg && msg.text) || '');\n  const ts = msg && msg.ts;\n  const channel = (msg && msg.channel) || '';\n  let qu = extractQu(text);\n  let synthetic = false;\n\n  // Marked as a project but carrying no code -> track it under a synthetic key. It ages,\n  // buckets and can be rocketed like anything else; when the real code arrives the poster\n  // reposts with it.\n  if (!qu && hasQuMarker(text)) {\n    qu = syntheticKey(ts);\n    synthetic = qu !== null;\n  }\n\n  // No QU digits and no QU- marker -> UNTRACKED. Never counted as open or as released.\n  // Deliberately simple: a project is tracked when it carries a QU code, and not\n  // otherwise. Codeless posts — placeholder codes, \"QU-Not Available\", foreign numbering,\n  // \"(NO Q-CODE)\", pro bono — were briefly tracked under synthetic keys on 2026-08-31 and\n  // that was reverted the same day in favour of a posting convention: post engineers write\n  // a QU code, always.\n  //\n  // Nothing is lost by this. UNTRACKED rows still appear in the digest's \"needs manual\n  // check\" section, so codeless work stays visible to a human — it simply is not counted,\n  // aged or releasable, none of which can be done honestly without an identifier.\n  if (!qu) {\n    return {\n      qu_number: null,\n      synthetic: false,\n      source_channel: channel,\n      source_ts: String(ts),\n      source_text: text,\n      posted_date: tsToDate(ts),\n      status: 'UNTRACKED',\n    };\n  }\n\n  const cancelled = channel === RELEASEME_CHANNEL && isCancelled(text);\n\n  return {\n    qu_number: qu,\n    synthetic,\n    source_channel: channel,\n    source_ts: String(ts),\n    source_text: text,\n    posted_date: tsToDate(ts),\n    status: cancelled ? 'CANCELLED' : (channel === RELEASEME_CHANNEL ? 'RELEASED' : 'OPEN'),\n  };\n}\n\n// Posty — Xero typo check.\n//\n// Pure logic for the scheduled check (Workflow 5) that validates each morning's\n// #newpostprojects QU codes against Xero. The QU IS the Xero **Quote Number**\n// (QuoteNumber = \"QU-18030\"), and Xero is where a project's quote is raised first —\n// ahead of the announcement — so it is the authority. Was Airtable through\n// 2026-09-16; switched to Xero 2026-09-17 (Tara) once the org's Xero connection was\n// authorized. Pasted verbatim into the Code nodes of Workflow 5; dependency-free so\n// scripts/test-xero runs it offline and the tested code is the shipped code.\n//\n// A quote is fetched per QU: GET /Quotes?QuoteNumber=QU-<digits>. A non-existent\n// number comes back 200 with an empty Quotes array — that is the \"not found\" signal.\n//\n// Existence only. A QU that matches no Xero quote is a NOT_FOUND — a high-confidence typo,\n// and the ONLY thing posted publicly (gently, in-thread). A customer/agency/producer match\n// was tried and dropped 2026-09-17: Xero has no agency or producer field, and its customer\n// (Contact) is the parent client (Unilever for a Knorr project), so it cried wolf. See\n// classifyXero. Public messages say \"the database\", not \"Xero\" — Tara's call, 2026-09-17.\n//\n// Comparison is on DIGITS, never the raw reference string: the post side writes\n// \"QU-18077\" / \"QU_18077\" / \"QU - 18077\" and Xero writes \"QU-18077\", and neither side's\n// separator or prefix casing may cause a false \"not found\". See parse.js QU_RE.\n\n\n\n// Digits of a QU reference, or null. Tolerant of both the post-side separator forms\n// and the Xero-side canonical \"QU-16867\", and of a bare number with no prefix.\n// {4,6} matches parse.js.\nfunction quDigits(s) {\n  if (typeof s !== 'string') return null;\n  const m = s.match(/QU[\\s]*[-_]?[\\s]*(\\d{4,6})/i);\n  if (m) return m[1];\n  const bare = s.match(/\\b(\\d{4,6})\\b/);\n  return bare ? bare[1] : null;\n}\n\n\n// A Xero field value as a display string.\nfunction cellText(v) {\n  if (Array.isArray(v)) return v.filter(x => x != null).join(', ');\n  return v == null ? '' : String(v);\n}\n\n// Build the {digits -> quote} lookup from the Xero responses. Each response is the body\n// of one GET /Quotes?QuoteNumber=… call, so it carries a Quotes array with 0 or 1 (rarely\n// more) quotes. A candidate whose QU is absent here is NOT_FOUND. DELETED quotes are\n// dropped — a deleted quote is not a live project and must not vouch for a mistyped QU.\nfunction indexQuotes(responses) {\n  const byDigits = {};\n  for (const resp of (responses || [])) {\n    const quotes = (resp && (resp.Quotes || (resp.body && resp.body.Quotes))) || [];\n    for (const q of quotes) {\n      if (!q) continue;\n      const status = cellText(q.Status).toUpperCase();\n      if (status === 'DELETED') continue;\n      const d = quDigits(cellText(q.QuoteNumber));\n      if (!d) continue;\n      if (!(d in byDigits)) {\n        byDigits[d] = {\n          quoteNumber: cellText(q.QuoteNumber),\n          client: q.Contact ? cellText(q.Contact.Name) : '',\n          status: cellText(q.Status),\n        };\n      }\n    }\n  }\n  return byDigits;\n}\n\n// One post that carries a real QU. Built by gatherCandidates. Shape:\n//   { qu, quDisplay, ts, channel, text }\n//\n// helpers is the parse.js surface, injected so this module stays require-free when pasted\n// into an n8n node: { isPostEngineer, extractQu, decodeEntities, tsToDate, isIntakeWorkflow,\n// submitterFromText, cleanWorkflowText }.\n//\n// A post counts as a project either because a post engineer wrote it OR because it came from\n// the \"New Project\" intake form — which now posts as a bot with no `user`, so without the\n// isIntakeWorkflow branch the typo check would silently skip every form post, i.e. the whole\n// point of the check on the primary intake path. Form posts contribute the cleaned line and\n// the submitter is irrelevant here (we only validate the QU + client).\n//\n// dateFilter is optional. The window is really bounded by the Slack `oldest` the caller\n// fetched with — either midnight today (preview) or the since-last-checked watermark\n// (scheduled). Pass a YYYY-MM-DD to additionally keep only that day's posts; pass null to\n// keep everything the fetch returned, which is what the watermark path wants (its window\n// can legitimately span more than one day if a run was missed).\nfunction gatherCandidates(messages, dateFilter, helpers) {\n  const out = [];\n  const seen = {};\n  for (const m of (messages || [])) {\n    if (!m) continue;\n    const wf = typeof helpers.isIntakeWorkflow === 'function' && helpers.isIntakeWorkflow(m);\n    let text;\n    if (wf) {\n      text = typeof helpers.cleanWorkflowText === 'function' ? helpers.cleanWorkflowText(m.text) : (m.text || '');\n    } else {\n      if (m.subtype) continue;                       // joins, leaves, non-intake bot posts\n      if (!helpers.isPostEngineer(m.user)) continue; // only announcements, excludes Posty\n      text = helpers.decodeEntities(m.text || '');\n    }\n    const qu = helpers.extractQu(text);              // null for no-code / QU- placeholder\n    if (!qu) continue;\n    if (dateFilter && helpers.tsToDate(m.ts) !== dateFilter) continue; // preview only\n    if (seen[qu]) continue;                          // same code posted twice, check once\n    seen[qu] = true;\n    out.push({\n      qu: qu,\n      quDisplay: 'QU-' + qu,\n      ts: String(m.ts),\n      channel: m.channel || '',\n      text: text,\n    });\n  }\n  return out;\n}\n\n// Existence-only against Xero. A Xero quote has no agency or producer field, and its\n// customer (Contact) is the parent client (Unilever for a Knorr project), so matching it to\n// the post cried wolf constantly — dropped 2026-09-17 (Tara). The only Xero signal is\n// whether the QU is a real quote number at all: found -> ok, absent -> notFound (the public\n// typo flag). `mismatch` is kept empty so the summary and findings count stay uniform.\nfunction classifyXero(candidates, byDigits) {\n  const notFound = [], ok = [];\n  for (const c of (candidates || [])) {\n    if (byDigits[c.qu]) ok.push(c); else notFound.push(c);\n  }\n  return { notFound: notFound, mismatch: [], ok: ok };\n}\n\n// The public in-thread reply. mrkdwn (single-asterisk bold). Gentle by design: it\n// asks for a check, it does not assert the poster is wrong — Xero can lag a little,\n// and a false accusation in the intake channel is exactly what erodes trust in Posty.\n// \"the database\" rather than \"Xero\" — the source is kept generic in what people see\n// (Tara, 2026-09-17). Only the messages use this wording; the code still checks Xero.\nfunction flagText(c) {\n  return c.quDisplay + \" isn't in the database — mind double-checking? \" +\n    \"If it's correct, just ignore this.\";\n}\n\n// The post text with the leading QU token stripped, so a summary line can read\n// \"QU-71498 — OMT / Producer / Title\" without repeating the code.\nfunction afterQu(text) {\n  const t = firstLine(text);\n  const idx = t.indexOf('/');\n  return idx !== -1 ? t.slice(idx + 1).trim() : t;\n}\n\n// Tara's DM summary. mode is 'scheduled' or 'preview'. In preview nothing was posted\n// publicly, so the summary says what *would* post. res is classify()'s result.\nfunction buildTaraSummary(res, ctx) {\n  const c = ctx || {};\n  const mode = c.mode === 'preview' ? 'preview' : 'scheduled';\n  const checked = c.checked == null ? 0 : c.checked;\n  const day = c.dateLabel || '';\n  const lines = [];\n\n  lines.push(mode === 'preview'\n    ? '*Typo check — ' + (day || 'today') + '*  (preview — nothing posted publicly)'\n    : '*Typo check — ' + (day || 'today') + '*');\n  lines.push('Checked ' + checked + ' post' + (checked === 1 ? '' : 's') + ' from this morning.');\n\n  if (res.notFound.length) {\n    lines.push('');\n    lines.push(mode === 'preview'\n      ? \"🔴 *Not in the database* — I'd reply on these posts:\"\n      : '🔴 *Not in the database* — replied on these posts:');\n    res.notFound.forEach((x, i) => lines.push((i + 1) + '. ' + x.quDisplay + ' — ' + afterQu(x.text)));\n  }\n\n  if (!res.notFound.length) {\n    lines.push('');\n    lines.push('✅ All clear — every QU is in the database.');\n  }\n\n  return lines.join('\\n');\n}\n\n// First line of a post, trimmed, for a compact summary row.\nfunction firstLine(text) {\n  const t = String(text == null ? '' : text).split('\\n')[0].trim();\n  return t.length > 90 ? t.slice(0, 87) + '…' : t;\n}\n// ---- node glue ----\nconst meta = $('Set Oldest').first().json;\nconst CH = 'C1SJE7404';\nconst pages = $('Fetch Newpost').all();\nlet msgs = [];\nlet maxTs = '';\nfor (const p of pages) {\n  const arr = (p.json && p.json.messages) || [];\n  for (const m of arr) {\n    msgs.push(Object.assign({}, m, { channel: CH }));\n    const t = String(m.ts || '');\n    // Watermark advances to the newest ts READ, noise included, so a trailing chatter\n    // post cannot stall it (the Workflow-1 watermark lesson).\n    if (t && (maxTs === '' || Number(t) > Number(maxTs))) maxTs = t;\n  }\n}\nconst helpers = { isPostEngineer, extractQu, decodeEntities, tsToDate,\n                  isIntakeWorkflow, submitterFromText, cleanWorkflowText };\nconst dateFilter = meta.mode === 'preview' ? meta.todayDate : null;\nconst candidates = gatherCandidates(msgs, dateFilter, helpers);\nreturn [{ json: {\n  mode: meta.mode, requester: meta.requester, dateLabel: meta.dateLabel,\n  candidates: candidates, count: candidates.length,\n  maxTs: maxTs, stateRow: meta.stateRow, oldWatermark: meta.oldWatermark\n} }];\n"
+      },
+      "position": [
+        840,
+        100
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "has-candidates",
+      "name": "Has Candidates",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "operation": "gt",
+                "type": "number"
+              },
+              "rightValue": "={{ 0 }}"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1060,
+        60
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "classify",
+      "name": "Classify",
+      "parameters": {
+        "jsCode": "// Posty — QU parsing and status classification.\n//\n// This file is the single source of truth for how a Slack message becomes an index row.\n// It is pasted verbatim into the Code nodes of Workflow 1 (index refresh) and Workflow 3\n// (digest). Keep it dependency-free and side-effect-free so `./scripts/test-parser` can\n// run it offline, and so the same code that is tested is the code that ships.\n//\n// Rules come from the build handoff §9. Do not tighten them without re-reading it:\n// every shape below was taken from a real post in #newpostprojects or #releaseme.\n\n\n\n// Handoff §9: case-insensitive, first match wins. {4,6} is deliberate headroom — real\n// numbers are 5 digits but QU-50052 exists and the range is not contiguous. Do not\n// narrow to {5}. The separator is not reliably a slash: space, dash, double space and\n// underscore all occur, hence the character class. `QU_13577` is real and appears in both\n// channels — before the underscore was added, that project was invisible to Posty\n// entirely, on the intake side and the release side.\n// Separators seen in real posts: dash, underscore, space, double space, none at all, and\n// \" - \" with spaces on both sides. `QU - 17295 ref 17037` is real and appears in BOTH\n// channels — before the surrounding whitespace was allowed, that project was invisible on\n// the intake side and the release side alike.\n//\n// Widening this was diffed across all 1,658 backfilled messages: 2 newly matched, 0\n// extractions changed. Re-run that diff before widening it further.\nconst QU_RE = /QU[\\s]*[-_]?[\\s]*(\\d{4,6})/i;\n\n// A synthetic key for a keyless project. Derived from the post's own ts, so it is unique,\n// stable for the life of the row, and obviously not a real QU number at a glance.\n//\n// It deliberately cannot join an intake post to a separate release post — those are two\n// different messages with no shared identifier, and guessing a link between them would be\n// exactly the heuristic §9 warns against. It does not need to: releases now happen by\n// reacting to the intake post, which resolves through the row's own source_ts.\n// Handoff §9: (CANCELLED) anywhere in a #releaseme post means CANCELLED, not RELEASED.\n// A naive diff scores it as released, which is wrong. Currently affects QU-17590.\nconst CANCELLED_RE = /\\(\\s*CANCELLED\\s*\\)/i;\n\n// A Studio M / van recording is a production service (a recording session or a studio /\n// mobile-van rental), NOT a releasable deliverable. Set by Tara 2026-09-08: once one of\n// these is announced in #newpostprojects it is logged and left alone — it never enters the\n// open pool to be chased, and it is never marked RELEASED. Matched by the phrases that\n// name the service; the bare word \"van\" is deliberately excluded (it appears in \"Van\n// Digital\" and elsewhere and over-matches). The status these rows carry is STUDIO_M below.\nconst STUDIO_M_RE = /studio\\s*m|van\\s*record|os\\s*van/i;\n\nfunction isStudioM(text) {\n  return typeof text === 'string' && STUDIO_M_RE.test(text);\n}\n\n// The status value for those rows. A distinct state, neither OPEN (build-digest and the\n// reminders only look at OPEN, so these drop out of both) nor RELEASED (so they never read\n// as shipped to Accounting). The release path must treat it like RELEASED/CANCELLED and\n// never overwrite it.\nconst STUDIO_M_STATUS = 'STUDIO M';\n\n// Only these people announce projects. Set by Tara 2026-08-31 to keep channel chatter out\n// of the index — a message from anyone else is not a project post, whatever it contains.\n//\n// This is a policy list, not a heuristic: it is maintained by a human who knows who the\n// post engineers are, which is the only thing that reliably distinguishes an announcement\n// from a conversation.\n//\n// **Add new post engineers here on their first day.** Until someone is on this list their\n// posts are invisible to Posty — which is the intended behaviour, and also the way this\n// list silently goes wrong. `isPostEngineer` is checked in the Workflow 2 classifier and in\n// build-index.js, and a skipped message that DID carry a QU is logged with its code so the\n// omission is discoverable in the execution list rather than silent.\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nfunction isPostEngineer(user) {\n  return Object.prototype.hasOwnProperty.call(POST_ENGINEERS, String(user || '').trim());\n}\n\n// Names are for grouping the digest. A row whose author is not on the list — a historical\n// row from before the allowlist, or a blank posted_by — groups under \"unassigned\" rather\n// than being hidden, so nothing falls out of a total.\nfunction engineerName(user) {\n  const u = String(user || '').trim();\n  return POST_ENGINEERS[u] || 'unassigned';\n}\n\n// The \"New Project\" intake form (Slack Workflow Builder) posts announcements as a bot, not\n// as the human who filled it in — so the post has no `user`, carries a `bot_id`/`subtype:\n// bot_message`, and would be dropped by both the noise filter and the post-engineer gate.\n// These are the bot/app identities of the APPROVED intake workflows, maintained the same way\n// as POST_ENGINEERS: a post from one of these, carrying a QU, is a project announcement.\n//\n// The message payload identifies the workflow by bot_id (always present) or app_id — NOT by\n// the \"Wf…\" Workflow Builder id, which never appears on the post. **If the workflow is\n// rebuilt from scratch its bot/app id changes and must be added here**, exactly like adding\n// a new post engineer. Added 2026-09-10 when the form intake went live.\nconst INTAKE_WORKFLOW_BOTS = { 'B0C0US9CXU2': 'New Project form' };\nconst INTAKE_WORKFLOW_APPS = { 'A0C0YBR1GG4': 'New Project form' };\n\nfunction isIntakeWorkflow(msg) {\n  if (!msg || typeof msg !== 'object') return false;\n  const bot = String(msg.bot_id || '').trim();\n  const app = String(msg.app_id || '').trim();\n  return Object.prototype.hasOwnProperty.call(INTAKE_WORKFLOW_BOTS, bot)\n      || Object.prototype.hasOwnProperty.call(INTAKE_WORKFLOW_APPS, app);\n}\n\n// The form writes the person who submitted it as a leading Slack mention, e.g.\n// \"<@U026N6E1R> - *QU-*12345 / …\". That mention is the real poster, and recording it as\n// posted_by is what lets the react-to-release flow work for form posts too — the engineer\n// who filed the project can react to release it, even though the message came from the bot.\nfunction submitterFromText(text) {\n  const m = String(text == null ? '' : text).match(/<@([A-Z0-9]+)>/);\n  return m ? m[1] : '';\n}\n\n// The stored, human-readable form of a workflow post: drop the leading \"<@submitter> -\"\n// (that is metadata, not the project) and the mrkdwn bold markers, leaving the clean project\n// line \"QU-12345 / Agency / …\" that the index, the digest and the #releaseme repost all use.\nfunction cleanWorkflowText(text) {\n  return String(text == null ? '' : text)\n    .replace(/^\\s*<@[A-Z0-9]+>\\s*[-–—:]?\\s*/, '')\n    .replace(/\\*/g, '')\n    .trim();\n}\n\nconst NEWPOST_CHANNEL = 'C1SJE7404';\nconst RELEASEME_CHANNEL = 'CC9EG3K8C';\n\n// Returns the QU digits as a string with no QU- prefix, or null when the message\n// carries no code at all. String, not number: these are identifiers, and leading\n// zeros would be lost the moment anything coerces them.\nfunction extractQu(text) {\n  if (typeof text !== 'string') return null;\n  // Strip mrkdwn bold/italic asterisks first: the \"New Project\" intake form writes the code\n  // as *QU-*12345, and the `*` between the separator and the digits would otherwise defeat\n  // QU_RE. `*` is never part of a QU, so removing it is safe for ordinary posts too.\n  const m = text.replace(/\\*/g, '').match(QU_RE);\n  return m ? m[1] : null;\n}\n\n// Slack's conversations.history escapes &, < and > in message text, so PC&V arrives as\n// PC&amp;V. Stored raw, the Sheet fills with &amp; and is unpleasant to read, and so is\n// any digest line built from it.\n//\n// Decode on the way IN, escape again on the way OUT (escapeForSlack, in resolve-release).\n// The bytes Posty posts are therefore unchanged from the verified-working behaviour, while\n// the stored copy is what a human would have typed.\n//\n// Order matters: &amp; must be decoded LAST, or \"&amp;lt;\" would turn into \"<\" instead of\n// the literal \"&lt;\" it represents.\nfunction decodeEntities(text) {\n  if (typeof text !== 'string') return text;\n  return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');\n}\n\n// Every QU a #releaseme post closes.\n//\n// Usually one. But bulk release posts are common in the 2024 archive — several complete\n// project lines in a single message — and \"first match wins\" (§9) then closes the first\n// and leaves the rest open forever. That is 24 projects wrongly in the chase list.\n//\n// So on the RELEASE side, take every code. The one thing that must not be swept up is a\n// BACK-REFERENCE: \"(Addcost from QU-10317)\" mentions an older project without releasing\n// it, and closing it would tell Accounting to bill work that never shipped.\n//\n// Intake keeps first-match-wins: a post announcing several projects is a different\n// question, and getting it wrong there invents projects rather than closing them.\nconst BACKREF_RE = /\\b(?:from|ref|per|vs|supersedes|replaces|addcost\\s+(?:from|of))\\s*:?\\s*$/i;\n\nfunction extractReleasedQus(text) {\n  if (typeof text !== 'string') return [];\n  const s = text.replace(/\\*/g, '');   // see extractQu: tolerate bold *QU-* on the release side too\n  const re = new RegExp(QU_RE.source, 'gi');\n  const found = [];\n  let m;\n  while ((m = re.exec(s)) !== null) {\n    const before = s.slice(Math.max(0, m.index - 40), m.index);\n    if (found.length && BACKREF_RE.test(before)) continue;\n    if (found.indexOf(m[1]) === -1) found.push(m[1]);\n  }\n  return found;\n}\n\n// A QU- or QU_ prefix with no digits after it. This is the agreed posting convention:\n// when a project has no code yet — pro bono, awaiting assignment, placeholder — the poster\n// still writes \"QU-\" so the post is recognisably a project.\n//\n// A rule people are TOLD beats a rule inferred from punctuation. This replaced an earlier\n// attempt that guessed from slash counts.\nconst QU_MARKER_RE = /QU[\\s]*[-_]/i;\n\nfunction hasQuMarker(text) {\n  return typeof text === 'string' && QU_MARKER_RE.test(text);\n}\n\n// Synthetic key for a marked-but-uncoded project, derived from the post's own ts so it is\n// unique and stable. Returns null for an implausible ts: a shared key would silently\n// collapse every uncoded project onto one row.\nfunction syntheticKey(ts) {\n  const t = String(ts == null ? '' : ts).trim();\n  if (!/^\\d{6,}(\\.\\d+)?$/.test(t)) return null;\n  return 'NOQU-' + t;\n}\n\nfunction isCancelled(text) {\n  return typeof text === 'string' && CANCELLED_RE.test(text);\n}\n\n// Slack ts -> ISO date in Manila local time.\n//\n// The timezone is a judgment call the handoff does not make. Hit Productions is in\n// Manila and age_days is counted in working days people recognise, so a post made at\n// 07:00 Manila must date to that morning and not to the previous day in UTC. Asia/Manila\n// is UTC+8 with no DST, so the fixed offset is exact rather than an approximation.\nconst MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;\n\nfunction tsToDate(ts) {\n  if (ts === null || ts === undefined) return null;\n  const seconds = Number(String(ts).split('.')[0]);\n  if (!Number.isFinite(seconds)) return null;\n  return new Date(seconds * 1000 + MANILA_OFFSET_MS).toISOString().slice(0, 10);\n}\n\n// Whole-day difference between two ISO dates. Both are already Manila-local calendar\n// dates, so this is plain date arithmetic — no timezone maths, and no drift from the\n// clock time of day the digest happens to run at.\nfunction ageDays(postedDate, asOfDate) {\n  if (!postedDate || !asOfDate) return null;\n  const a = Date.parse(postedDate + 'T00:00:00Z');\n  const b = Date.parse(asOfDate + 'T00:00:00Z');\n  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;\n  return Math.round((b - a) / 86400000);\n}\n\n// Handoff §7 Workflow 3: >= 90 escalated, 45..89 flagged, < 45 omitted entirely.\n// The boundaries are inclusive at 45 and at 90 — a project at exactly 45 days appears.\nfunction bucketOf(age) {\n  if (!Number.isFinite(age)) return null;\n  if (age >= 90) return 'ESCALATED';\n  if (age >= 45) return 'FLAGGED';\n  return null;\n}\n\n// Turn one Slack message into an index row fragment. The caller supplies the channel so\n// the CANCELLED rule stays scoped to #releaseme, where the handoff puts it.\nfunction parseMessage(msg) {\n  const text = decodeEntities((msg && msg.text) || '');\n  const ts = msg && msg.ts;\n  const channel = (msg && msg.channel) || '';\n  let qu = extractQu(text);\n  let synthetic = false;\n\n  // Marked as a project but carrying no code -> track it under a synthetic key. It ages,\n  // buckets and can be rocketed like anything else; when the real code arrives the poster\n  // reposts with it.\n  if (!qu && hasQuMarker(text)) {\n    qu = syntheticKey(ts);\n    synthetic = qu !== null;\n  }\n\n  // No QU digits and no QU- marker -> UNTRACKED. Never counted as open or as released.\n  // Deliberately simple: a project is tracked when it carries a QU code, and not\n  // otherwise. Codeless posts — placeholder codes, \"QU-Not Available\", foreign numbering,\n  // \"(NO Q-CODE)\", pro bono — were briefly tracked under synthetic keys on 2026-08-31 and\n  // that was reverted the same day in favour of a posting convention: post engineers write\n  // a QU code, always.\n  //\n  // Nothing is lost by this. UNTRACKED rows still appear in the digest's \"needs manual\n  // check\" section, so codeless work stays visible to a human — it simply is not counted,\n  // aged or releasable, none of which can be done honestly without an identifier.\n  if (!qu) {\n    return {\n      qu_number: null,\n      synthetic: false,\n      source_channel: channel,\n      source_ts: String(ts),\n      source_text: text,\n      posted_date: tsToDate(ts),\n      status: 'UNTRACKED',\n    };\n  }\n\n  const cancelled = channel === RELEASEME_CHANNEL && isCancelled(text);\n\n  return {\n    qu_number: qu,\n    synthetic,\n    source_channel: channel,\n    source_ts: String(ts),\n    source_text: text,\n    posted_date: tsToDate(ts),\n    status: cancelled ? 'CANCELLED' : (channel === RELEASEME_CHANNEL ? 'RELEASED' : 'OPEN'),\n  };\n}\n\n// Posty — Xero typo check.\n//\n// Pure logic for the scheduled check (Workflow 5) that validates each morning's\n// #newpostprojects QU codes against Xero. The QU IS the Xero **Quote Number**\n// (QuoteNumber = \"QU-18030\"), and Xero is where a project's quote is raised first —\n// ahead of the announcement — so it is the authority. Was Airtable through\n// 2026-09-16; switched to Xero 2026-09-17 (Tara) once the org's Xero connection was\n// authorized. Pasted verbatim into the Code nodes of Workflow 5; dependency-free so\n// scripts/test-xero runs it offline and the tested code is the shipped code.\n//\n// A quote is fetched per QU: GET /Quotes?QuoteNumber=QU-<digits>. A non-existent\n// number comes back 200 with an empty Quotes array — that is the \"not found\" signal.\n//\n// Existence only. A QU that matches no Xero quote is a NOT_FOUND — a high-confidence typo,\n// and the ONLY thing posted publicly (gently, in-thread). A customer/agency/producer match\n// was tried and dropped 2026-09-17: Xero has no agency or producer field, and its customer\n// (Contact) is the parent client (Unilever for a Knorr project), so it cried wolf. See\n// classifyXero. Public messages say \"the database\", not \"Xero\" — Tara's call, 2026-09-17.\n//\n// Comparison is on DIGITS, never the raw reference string: the post side writes\n// \"QU-18077\" / \"QU_18077\" / \"QU - 18077\" and Xero writes \"QU-18077\", and neither side's\n// separator or prefix casing may cause a false \"not found\". See parse.js QU_RE.\n\n\n\n// Digits of a QU reference, or null. Tolerant of both the post-side separator forms\n// and the Xero-side canonical \"QU-16867\", and of a bare number with no prefix.\n// {4,6} matches parse.js.\nfunction quDigits(s) {\n  if (typeof s !== 'string') return null;\n  const m = s.match(/QU[\\s]*[-_]?[\\s]*(\\d{4,6})/i);\n  if (m) return m[1];\n  const bare = s.match(/\\b(\\d{4,6})\\b/);\n  return bare ? bare[1] : null;\n}\n\n\n// A Xero field value as a display string.\nfunction cellText(v) {\n  if (Array.isArray(v)) return v.filter(x => x != null).join(', ');\n  return v == null ? '' : String(v);\n}\n\n// Build the {digits -> quote} lookup from the Xero responses. Each response is the body\n// of one GET /Quotes?QuoteNumber=… call, so it carries a Quotes array with 0 or 1 (rarely\n// more) quotes. A candidate whose QU is absent here is NOT_FOUND. DELETED quotes are\n// dropped — a deleted quote is not a live project and must not vouch for a mistyped QU.\nfunction indexQuotes(responses) {\n  const byDigits = {};\n  for (const resp of (responses || [])) {\n    const quotes = (resp && (resp.Quotes || (resp.body && resp.body.Quotes))) || [];\n    for (const q of quotes) {\n      if (!q) continue;\n      const status = cellText(q.Status).toUpperCase();\n      if (status === 'DELETED') continue;\n      const d = quDigits(cellText(q.QuoteNumber));\n      if (!d) continue;\n      if (!(d in byDigits)) {\n        byDigits[d] = {\n          quoteNumber: cellText(q.QuoteNumber),\n          client: q.Contact ? cellText(q.Contact.Name) : '',\n          status: cellText(q.Status),\n        };\n      }\n    }\n  }\n  return byDigits;\n}\n\n// One post that carries a real QU. Built by gatherCandidates. Shape:\n//   { qu, quDisplay, ts, channel, text }\n//\n// helpers is the parse.js surface, injected so this module stays require-free when pasted\n// into an n8n node: { isPostEngineer, extractQu, decodeEntities, tsToDate, isIntakeWorkflow,\n// submitterFromText, cleanWorkflowText }.\n//\n// A post counts as a project either because a post engineer wrote it OR because it came from\n// the \"New Project\" intake form — which now posts as a bot with no `user`, so without the\n// isIntakeWorkflow branch the typo check would silently skip every form post, i.e. the whole\n// point of the check on the primary intake path. Form posts contribute the cleaned line and\n// the submitter is irrelevant here (we only validate the QU + client).\n//\n// dateFilter is optional. The window is really bounded by the Slack `oldest` the caller\n// fetched with — either midnight today (preview) or the since-last-checked watermark\n// (scheduled). Pass a YYYY-MM-DD to additionally keep only that day's posts; pass null to\n// keep everything the fetch returned, which is what the watermark path wants (its window\n// can legitimately span more than one day if a run was missed).\nfunction gatherCandidates(messages, dateFilter, helpers) {\n  const out = [];\n  const seen = {};\n  for (const m of (messages || [])) {\n    if (!m) continue;\n    const wf = typeof helpers.isIntakeWorkflow === 'function' && helpers.isIntakeWorkflow(m);\n    let text;\n    if (wf) {\n      text = typeof helpers.cleanWorkflowText === 'function' ? helpers.cleanWorkflowText(m.text) : (m.text || '');\n    } else {\n      if (m.subtype) continue;                       // joins, leaves, non-intake bot posts\n      if (!helpers.isPostEngineer(m.user)) continue; // only announcements, excludes Posty\n      text = helpers.decodeEntities(m.text || '');\n    }\n    const qu = helpers.extractQu(text);              // null for no-code / QU- placeholder\n    if (!qu) continue;\n    if (dateFilter && helpers.tsToDate(m.ts) !== dateFilter) continue; // preview only\n    if (seen[qu]) continue;                          // same code posted twice, check once\n    seen[qu] = true;\n    out.push({\n      qu: qu,\n      quDisplay: 'QU-' + qu,\n      ts: String(m.ts),\n      channel: m.channel || '',\n      text: text,\n    });\n  }\n  return out;\n}\n\n// Existence-only against Xero. A Xero quote has no agency or producer field, and its\n// customer (Contact) is the parent client (Unilever for a Knorr project), so matching it to\n// the post cried wolf constantly — dropped 2026-09-17 (Tara). The only Xero signal is\n// whether the QU is a real quote number at all: found -> ok, absent -> notFound (the public\n// typo flag). `mismatch` is kept empty so the summary and findings count stay uniform.\nfunction classifyXero(candidates, byDigits) {\n  const notFound = [], ok = [];\n  for (const c of (candidates || [])) {\n    if (byDigits[c.qu]) ok.push(c); else notFound.push(c);\n  }\n  return { notFound: notFound, mismatch: [], ok: ok };\n}\n\n// The public in-thread reply. mrkdwn (single-asterisk bold). Gentle by design: it\n// asks for a check, it does not assert the poster is wrong — Xero can lag a little,\n// and a false accusation in the intake channel is exactly what erodes trust in Posty.\n// \"the database\" rather than \"Xero\" — the source is kept generic in what people see\n// (Tara, 2026-09-17). Only the messages use this wording; the code still checks Xero.\nfunction flagText(c) {\n  return c.quDisplay + \" isn't in the database — mind double-checking? \" +\n    \"If it's correct, just ignore this.\";\n}\n\n// The post text with the leading QU token stripped, so a summary line can read\n// \"QU-71498 — OMT / Producer / Title\" without repeating the code.\nfunction afterQu(text) {\n  const t = firstLine(text);\n  const idx = t.indexOf('/');\n  return idx !== -1 ? t.slice(idx + 1).trim() : t;\n}\n\n// Tara's DM summary. mode is 'scheduled' or 'preview'. In preview nothing was posted\n// publicly, so the summary says what *would* post. res is classify()'s result.\nfunction buildTaraSummary(res, ctx) {\n  const c = ctx || {};\n  const mode = c.mode === 'preview' ? 'preview' : 'scheduled';\n  const checked = c.checked == null ? 0 : c.checked;\n  const day = c.dateLabel || '';\n  const lines = [];\n\n  lines.push(mode === 'preview'\n    ? '*Typo check — ' + (day || 'today') + '*  (preview — nothing posted publicly)'\n    : '*Typo check — ' + (day || 'today') + '*');\n  lines.push('Checked ' + checked + ' post' + (checked === 1 ? '' : 's') + ' from this morning.');\n\n  if (res.notFound.length) {\n    lines.push('');\n    lines.push(mode === 'preview'\n      ? \"🔴 *Not in the database* — I'd reply on these posts:\"\n      : '🔴 *Not in the database* — replied on these posts:');\n    res.notFound.forEach((x, i) => lines.push((i + 1) + '. ' + x.quDisplay + ' — ' + afterQu(x.text)));\n  }\n\n  if (!res.notFound.length) {\n    lines.push('');\n    lines.push('✅ All clear — every QU is in the database.');\n  }\n\n  return lines.join('\\n');\n}\n\n// First line of a post, trimmed, for a compact summary row.\nfunction firstLine(text) {\n  const t = String(text == null ? '' : text).split('\\n')[0].trim();\n  return t.length > 90 ? t.slice(0, 87) + '…' : t;\n}\n// ---- node glue ----\nconst g = $('Gather').first().json;\nconst candidates = g.candidates || [];\nconst responses = $('Fetch Quote').all().map(function (it) { return it.json; });\nconst byDigits = indexQuotes(responses);\nconst res = classifyXero(candidates, byDigits);\nconst summary = buildTaraSummary(res, { mode: g.mode, checked: candidates.length, dateLabel: g.dateLabel });\nconst flags = res.notFound.map(function (c) { return { channel: c.channel, ts: c.ts, text: flagText(c) }; });\nconst findings = res.notFound.length + res.mismatch.length;\nreturn [{ json: {\n  mode: g.mode, requester: g.requester,\n  summary: summary, flags: flags,\n  notFound: res.notFound.length, mismatch: res.mismatch.length, findings: findings\n} }];\n"
+      },
+      "position": [
+        1720,
+        60
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "should-dm",
+      "name": "Should DM",
+      "parameters": {
+        "conditions": {
+          "combinator": "or",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.mode }}",
+              "operator": {
+                "operation": "notEquals",
+                "type": "string"
+              },
+              "rightValue": "scheduled"
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.findings }}",
+              "operator": {
+                "operation": "gt",
+                "type": "number"
+              },
+              "rightValue": "={{ 0 }}"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1940,
+        0
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "dm-tara",
+      "name": "DM Tara",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "options": {},
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "={{ $json.requester }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.summary }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://slack.com/api/chat.postMessage"
+      },
+      "position": [
+        2160,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "build-flags",
+      "name": "Build Flags",
+      "parameters": {
+        "jsCode": "\nconst j = $('Classify').first().json;\nif (j.mode !== 'scheduled') return [];\nreturn (j.flags || []).map(function (f) { return { json: f }; });\n"
+      },
+      "position": [
+        1940,
+        140
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "reply-in-thread",
+      "name": "Reply In Thread",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "options": {},
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "={{ $json.channel }}"
+            },
+            {
+              "name": "thread_ts",
+              "value": "={{ $json.ts }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.text }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://slack.com/api/chat.postMessage"
+      },
+      "position": [
+        2160,
+        140
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "empty-preview",
+      "name": "Empty Preview",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "={{ 0 }}"
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.mode }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "preview"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1060,
+        300
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "dm-tara-empty",
+      "name": "DM Tara Empty",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "options": {},
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "={{ $json.requester }}"
+            },
+            {
+              "name": "text",
+              "value": "No project posts to check right now — all quiet. :white_check_mark:"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://slack.com/api/chat.postMessage"
+      },
+      "position": [
+        1280,
+        300
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "advance-watermark",
+      "name": "Advance Watermark",
+      "parameters": {
+        "jsCode": "\n// Advance the since-last-checked watermark — scheduled runs only. maxTs is the newest ts\n// actually read this run; write it only if it moved past the old mark. Preview runs, quiet\n// runs (no messages) and a missing state row all no-op, leaving the watermark untouched.\nconst g = $('Gather').first().json;\nif (g.mode !== 'scheduled') return [];\nconst maxTs = String(g.maxTs || '');\nif (!maxTs) return [];\nif (g.oldWatermark && Number(maxTs) <= Number(g.oldWatermark)) return [];\nif (g.stateRow === '' || g.stateRow == null) return [];\nreturn [{ json: { row_number: g.stateRow, last_typo_ts: maxTs } }];\n"
+      },
+      "position": [
+        1060,
+        440
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "write-state",
+      "name": "Write State",
+      "parameters": {
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "operation": "update",
+        "options": {
+          "cellFormat": "RAW"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_state"
+        }
+      },
+      "position": [
+        1280,
+        440
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "split-candidates",
+      "name": "Split Candidates",
+      "parameters": {
+        "jsCode": "const g = $('Gather').first().json;\nreturn (g.candidates || []).map(function (c) {\n  return { json: { quDisplay: c.quDisplay, qu: c.qu, text: c.text, ts: c.ts, channel: c.channel } };\n});\n"
+      },
+      "position": [
+        1280,
+        60
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "xeroOAuth2Api": {
+          "id": "BUHiogIRlY5QMoyg",
+          "name": "Xero account"
+        }
+      },
+      "id": "fetch-quote",
+      "name": "Fetch Quote",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Xero-tenant-id",
+              "value": "8a53d0bd-2999-4fa8-a964-c23cbc852617"
+            }
+          ]
+        },
+        "nodeCredentialType": "xeroOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "QuoteNumber",
+              "value": "={{ $json.quDisplay }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "sendQuery": true,
+        "url": "https://api.xero.com/api.xro/2.0/Quotes"
+      },
+      "position": [
+        1500,
+        60
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    }
+  ],
+  "pinData": null,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "timezone": "Asia/Manila"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-09T02:37:06.240Z",
+      "project": {
+        "createdAt": "2026-09-04T06:28:22.466Z",
+        "creatorId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "zkz4JuokdGopHd2A",
+        "name": "Tara Lim <tara@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-04T07:14:04.840Z"
+      },
+      "projectId": "zkz4JuokdGopHd2A",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-09T02:37:06.240Z",
+      "workflowId": "cXsAqwMXa6c8yATc"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": {
+    "node:Schedule — 10:00": {
+      "recurrenceRules": []
+    },
+    "node:Schedule — 17:00": {
+      "recurrenceRules": []
+    }
+  },
+  "tags": [],
+  "triggerCount": 2,
+  "updatedAt": "2026-09-17T10:45:34.260Z",
+  "versionCounter": 10,
+  "versionId": "0d410313-2816-4b89-8447-6ea9513a88db"
+}

@@ -1,0 +1,64 @@
+{
+  "active": false,
+  "activeVersion": null,
+  "activeVersionId": null,
+  "connections": {},
+  "createdAt": "2026-09-11T01:38:18.424Z",
+  "description": null,
+  "id": "JAGZ1SDEVg1ZHRQr",
+  "isArchived": false,
+  "meta": null,
+  "name": "My workflow",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "73b120da-ed02-4b99-825c-ff3f59e7ed77",
+      "name": "Webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "slack-form-submit"
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "webhookId": "ecd19151-9f44-4883-afff-5836a5f8dc5c"
+    }
+  ],
+  "pinData": {},
+  "settings": {
+    "availableInMCP": false,
+    "binaryMode": "separate",
+    "executionOrder": "v1"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-11T01:38:18.434Z",
+      "project": {
+        "createdAt": "2026-09-04T07:25:08.901Z",
+        "creatorId": "01a180ca-debe-49d6-90e6-cc876a86a992",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "Db0gcLxThujnBHSC",
+        "name": "Tricia Rumbaoa <trish@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-04T07:29:26.925Z"
+      },
+      "projectId": "Db0gcLxThujnBHSC",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-11T01:38:18.434Z",
+      "workflowId": "JAGZ1SDEVg1ZHRQr"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-09-16T09:31:11.037Z",
+  "versionCounter": 7,
+  "versionId": "8baa8a59-8d7d-4473-bcfd-e255bc3a6392"
+}

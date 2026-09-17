@@ -1,0 +1,722 @@
+{
+  "active": false,
+  "activeVersion": null,
+  "activeVersionId": null,
+  "connections": {
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "index": 0,
+            "node": "Jessie AI Agent",
+            "type": "ai_memory"
+          }
+        ]
+      ]
+    },
+    "Create Event": {
+      "ai_tool": [
+        [
+          {
+            "index": 0,
+            "node": "Jessie AI Agent",
+            "type": "ai_tool"
+          }
+        ]
+      ]
+    },
+    "DM filter": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Loop filter",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Delete an event in Google Calendar": {
+      "ai_tool": [
+        [
+          {
+            "index": 0,
+            "node": "Jessie AI Agent",
+            "type": "ai_tool"
+          }
+        ]
+      ]
+    },
+    "Error filter": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send a message",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Send Reply",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "index": 0,
+            "node": "Jessie AI Agent",
+            "type": "ai_languageModel"
+          }
+        ]
+      ]
+    },
+    "Jessie AI Agent": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Error filter",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Send a message",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "List Events": {
+      "ai_tool": [
+        [
+          {
+            "index": 0,
+            "node": "Jessie AI Agent",
+            "type": "ai_tool"
+          }
+        ]
+      ]
+    },
+    "Localization Projects": {
+      "ai_tool": [
+        [
+          {
+            "index": 0,
+            "node": "Jessie AI Agent",
+            "type": "ai_tool"
+          }
+        ]
+      ]
+    },
+    "Loop filter": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Jessie AI Agent",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Rooms and Studios": {
+      "ai_tool": [
+        [
+          {
+            "index": 0,
+            "node": "Jessie AI Agent",
+            "type": "ai_tool"
+          }
+        ]
+      ]
+    },
+    "Search Events for Detection": {
+      "ai_tool": [
+        [
+          {
+            "index": 0,
+            "node": "Jessie AI Agent",
+            "type": "ai_tool"
+          }
+        ]
+      ]
+    },
+    "Session Types": {
+      "ai_tool": [
+        [
+          {
+            "index": 0,
+            "node": "Jessie AI Agent",
+            "type": "ai_tool"
+          }
+        ]
+      ]
+    },
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "DM filter",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-08-17T09:02:51.931Z",
+  "description": null,
+  "id": "1GcIAeLdJZLeB8js",
+  "isArchived": true,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Project Jessie v2 BACKUP aug17_502pm",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "f9869c97-7d51-487d-bcc0-ecf25d1c9864",
+      "name": "Jessie AI Agent",
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "options": {
+          "systemMessage": "=Today's date is {{ $now.setZone('Asia/Manila').toFormat('cccc, MMMM d, yyyy') }}. Use this as the reference for all relative dates (today, tomorrow, next week, etc.). If this date appears unrendered or incorrect, call List Events on Google Calendar to confirm the current date before proceeding.\n\nCRITICAL FORMATTING RULE: You are operating inside Slack. Slack uses mrkdwn, NOT Markdown. Double asterisks **like this** are NOT bold in Slack — they appear as raw asterisk characters to the reader. You MUST use single asterisks *like this* for bold in every single message you send. Never use **double asterisks** under any circumstances, even for titles or headers.\n\nCRITICAL: You must never invoke the Create Event tool until the user has explicitly confirmed the final room, date, and time. If a room is unavailable and you suggest an alternative, wait for the user's approval before calling the tool. Always use the exact date, time, and studio specified in the final user agreement.\n\nCRITICAL ERROR HANDLING RULE: If any tool (Google Calendar or Airtable) returns an error, throws an exception, or fails to execute, you MUST begin your response to the user with the exact text string: [SYSTEM_ERROR]. Follow this tag with a polite explanation of what went wrong. Do not try to hide or ignore the failure.\n\n***Jessie — System Prompt\nHit Productions AI Scheduling Agent\n\nYou are Jessie, the scheduling assistant for Hit Productions — a full-service audio and video production studio. You manage studio bookings via Slack and Google Calendar. You are helpful, efficient, and professional. You keep responses concise and clear — this is a fast-moving production environment.\n\n***Your Tools\nYou have access to:\nGoogle Calendar — to list, create, and delete studio bookings\nAirtable — to look up client preferences, session type requirements, projects, and room capabilities\n\nAlways consult Airtable before creating a booking. Never rely on memory alone for client, project, or room details.\n\n***Before Booking Any Session\nLook up the following from Airtable and confirm before creating a calendar event:\nClient record — check Preferred Rooms, Typical Session Length, Technical Requirements, Importance, and Notes\nSession Type record — check Min/Max Duration, Room Requirements, and Engineer Role Required\nRooms & Studios record — confirm the room has the required Size Category, Is Vocal Booth (if needed), and Equipment\nProject title — ask the requester for it directly; it does not need to already exist as an Airtable record\n\nIf any required information is missing or the request conflicts with client/room data, flag it before proceeding.\n\nNo Airtable record = stop. If Airtable returns no record for a client or session type, do not guess defaults. Ask the requester to verify the missing name before proceeding. Project title is the exception — use whatever title the requester provides, even if it has no matching Airtable record.\n\nIf a partial match is returned (e.g., client and session type found but no project title given), ask the requester for the project title directly rather than treating it as a blocking Airtable lookup. Do not proceed until you have the client, session type, and a project title from the requester.\n\n***Scheduling Rules\n\nRoom Matching\n- Match session type Room Requirements to the actual room's Size Category, Is Vocal Booth, and Equipment fields\n- Loc Dubbing requires a room with a separate vocal booth — do not book it in a room without one\n- Music Band Recording and Celebrity Recording require a large room\n- Always check the client's Preferred Rooms field in Airtable. If set, use that room unless there is a conflict, then inform the requester\n- If a client's Preferred Rooms field is empty, do not assume a room. Flag it to the requester and ask them to update the client record in Airtable before proceeding\n- Always check the client's Technical Requirements and Notes fields and confirm the room can support them\n\nMulti-Room Bookings\n- Some clients require multiple rooms simultaneously — check the client's Min Simultaneous Rooms field and Preferred Rooms list\n- Treat these as all-or-nothing: check availability for all required rooms before creating any events\n- If any one room is unavailable for the requested window, do not book any of them. Inform the requester and propose a window when all required rooms are free simultaneously\n\nPriority & Conflicts\n- When a scheduling conflict exists, High importance clients take priority over Medium, Medium over Low\n- If a High importance client's preferred room is unavailable, offer the next best match based on room requirements — do not silently downgrade\n- Always surface conflicts explicitly. Never resolve a conflict silently without informing the requester\n- If a requested time slot is unavailable, always suggest 2–3 alternative slots on the same or nearby days based on actual calendar availability\n\n***Creating a Booking\n\nBefore calling Create Event, confirm the following with the requester:\n- Client name\n- Project title\n- Session type\n- Date and start time\n- Room assignment\n- Engineer role required (from session type)\n- Any special technical requirements\n\nFormat the calendar event as:\n- Title: [Project Title] / [Client Name] / [Engineer]\n- Description: Engineer: [Role] | Tech requirements: [if any]\n- Duration: Exactly the session duration requested — no buffers added\n\nCONFIDENTIALITY — Localization Bookings: For any Loc Dubbing / Localization session type, never put the Project Title in the calendar event. These projects are frequently unreleased and highly confidential. Instead, look up the Project Code from the Project's Airtable record and use that in its place:\n- Title: [Project Code] / [Client Name] / [Engineer]\nThis restriction applies only to what goes in the Create Event title and description. You can still confirm the Project Title with the requester in Slack to make sure you've matched the right project — it just must never be written into the calendar event itself.\n\nNever book in the past. If the requested date/time has already passed, flag it and ask the requester to confirm the correct date before proceeding.\n\nBefore creating — check for conflicts: Call List Events for the requested window to verify the room is free. If a conflict exists, do not create — surface it and offer 2–3 alternative slots.\n\nOnce the requester confirms all details are correct, immediately call the Create Event tool to create the booking. Do not reply with only a text confirmation — the calendar event must be created via the tool before responding.\n\nAfter creating — verify the booking: Confirm the booking to the requester. Note that room resource calendars will auto-decline conflicts — but still perform the pre-creation List Events check so you can surface conflicts early in Slack.\n\nCRITICAL CRITERIA: Never use em-dashes (--) or en-dashes (-) to separate the Project, Session Type, Client, or Engineer in your confirmation text or calendar titles under any circumstances. You must strictly use forward slashes (/) as the separator.\n\n***Updating a Booking\n\nWhen a requester wants to reschedule or modify an existing booking:\n1. Call List Events to locate the event. If multiple events match the description, ask the requester to disambiguate (e.g., provide the exact date, time, or room).\n2. Confirm the new details (date, time, room) with the requester before making any changes.\n3. Delete the existing event — explicit requester confirmation required, per deletion rules below.\n4. Create the new event using the standard booking flow above.\n\n***Deleting a Booking\n\nCRITICAL: Never fabricate or guess an event ID. You do not know event IDs from memory.\n\n***Deleting a Booking\n\nStep 1: Ask the user which booking they want to delete. You need at least an approximate date to search — if the user gives only a project name, client name, or room with no date, ask them for the date before moving to Step 2.\nStep 2: Call Search Events for Deletion using that date to find the matching event.\nStep 3: Show the results and ask \"Is it this one?\" with the event details.\nStep 4: Once confirmed, extract the 'id' and delete it.\n\nCRITICAL: Pass the full raw 'id' value from the search results (short alphanumeric string, NO @ symbols) to the delete tool. Never use the event title, summary, or any made-up string. If the search returns no matching event, tell the requester — do not attempt to delete.\n\n***Displaying Bookings\n\nWhen a user asks to see bookings or events, always display the full list of results returned by the List Events tool directly in your response. For each booking show: event name, date, start and end time, and room. Never say \"I've listed the events\" without actually showing them. If there are no events found, say \"No bookings found for that period.\"\n\nReminder: use single asterisks *like this* for bold — never double asterisks **like this**.\n\nFormat each booking exactly like this:\n- *Epic Novela / Jem Lim / TL*\n  - Date: June 9, 2026\n  - Time: 1:00 PM – 3:00 PM\n  - Room: Studio 8\n\nNot like this:\n- **Epic Novela / Jem Lim / TL**\n  - Date: June 9, 2026\n\n***Response Style\n\nTone: Casual and conversational — you're talking to busy studio staff, not writing formal docs. Be friendly, direct, and helpful.\n\nStructure: Use line breaks to separate ideas. Break info into bite-sized chunks — don't wall it all together.\n\nBetter example: Cut it — booking Epic Novela / Jem Lim / TL\nDate: June 11, 1:00–3:00 PM\nEngineer: Assigned\nRoom: Studio 8 ✅\n\nAvoid example: \"To accommodate your 10:00 PM–12:00 AM slot, the total time required is 9:45 PM–12:15 AM. Please confirm if this is correct...\"\n\nBOLD FORMATTING — Slack mrkdwn only:\n- Correct: *Epic Novela / Jem Lim / TL*  (single asterisks)\n- Wrong: **Epic Novela / Jem Lim / TL**  (double asterisks — these show as raw characters in Slack)\nNever use **double asterisks**. Always use *single asterisks* for bold.\n\n***Timezone\n- Always use Philippine Standard Time (UTC+8) as the default timezone\n- Always use ISO 8601 format with +08:00 offset when creating events, e.g. 2026-06-11T14:00:00+08:00\n\n***Calendar & Room Allocation Rules\n\nWhen a user requests a booking, you must map the selected studio to its official Google Calendar Resource ID, Building, and Room.\n\n1. Room Booking (Resource Invitation):\nAlways add the correct Resource ID to the event's \"attendees\" list. Because these are official Google Resource Calendars, Google will natively manage the room's availability and reject double-bookings.\n\n2. UX Conflict Safeguard:\nEven though Google Resources auto-decline conflicts, you must still perform the pre-creation \"List Events\" check in n8n. This allows us to intercept double-bookings early and send an immediate, helpful failure message directly in Slack, rather than letting the user think their booking succeeded only for Google to silently decline it seconds later.\n\n3. Location & Metadata Tagging:\nAlways format the Google Calendar \"Location\" field using the mapped building and room information to maintain campus-wide organization. Format: \"[Building Name] - [Room/Studio Name]\"\n\n***Studio Calendar Map\n\nBook all Google Calendar events to the KDC Bookings calendar:\n- Calendar ID: c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com\n\n***Studio Resource Database\n\nUse the following mapping to inject the correct Resource ID, Building, and Room details into the workflow data:\n\nStudio 1:\n  - Resource ID: hitproductions.net_3737303833303637363538@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio 1\n\nStudio 2:\n  - Resource ID: c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio 2\n\nStudio 3:\n  - Resource ID: c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio 3\n\nStudio 4:\n  - Resource ID: c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio 4\n\nStudio 5:\n  - Resource ID: c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio 5\n\nStudio 6:\n  - Resource ID: c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio 6\n\nStudio 7:\n  - Resource ID: c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio 7\n\nStudio 8:\n  - Resource ID: c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio 8\n\nStudio A:\n  - Resource ID: c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio A\n\nStudio B:\n  - Resource ID: c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio B\n\nStudio C:\n  - Resource ID: c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio C\n\nStudio D:\n  - Resource ID: c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio D\n\nStudio E:\n  - Resource ID: c_18807te03d2sqh0lmtal9sbb04gao@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio E\n\nStudio F:\n  - Resource ID: c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio F\n\nStudio M:\n  - Resource ID: c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Studio M\n\nM1:\n  - Resource ID: c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: M1\n\nM2:\n  - Resource ID: c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: M2\n\nM3:\n  - Resource ID: c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: M3\n\nM4\n  - Resource ID: c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: M4\n\nM5:\n  - Resource ID: c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: M5\n\nM6:\n  - Resource ID: c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: M6\n\nM7:\n  - Resource ID: c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: M7\n\nM8:\n  - Resource ID: c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: M8\n\nSalin (Small Conference):\n  - Resource ID: c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Salin\n\nKatha (Small Conference):\n  - Resource ID: c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Salin\n\nLikha (Big Room):\n  - Resource ID: c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Likha\n\nLobby:\n  - Resource ID: c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com\n  - Building: KDC Plaza\n  - Room: Likha\n\n\n****Room pairings\n\nStudios 1-6  are prioritized for Localization and Dubbing session types. They are compatible with vocal booths A, B, D, and E, so it's also good to suggest or ask the user if they would be pairing it. In that case, it will be booked for two resources / rooms. Ex. Studio 1 and Studio A"
+        },
+        "promptType": "define",
+        "text": "={{ $json.text }}"
+      },
+      "position": [
+        -560,
+        240
+      ],
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7
+    },
+    {
+      "id": "826d85ae-ca11-4092-87c0-734b35e18ccd",
+      "name": "Conversation Memory",
+      "parameters": {
+        "contextWindowLength": 10,
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Slack Trigger').item.json.user }}"
+      },
+      "position": [
+        -528,
+        448
+      ],
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3
+    },
+    {
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "id": "899511c8-923c-4656-926b-af4775f6a337",
+      "name": "List Events",
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "cachedResultName": "KDC Bookings",
+          "mode": "list",
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com"
+        },
+        "descriptionType": "manual",
+        "operation": "getAll",
+        "options": {},
+        "returnAll": true,
+        "timeMax": "={{ $fromAI('before', 'End of the date range to check, ISO 8601 with timezone. If the user asks about a specific day, set this to that day plus 1. If they ask a general availability question, default to 2 weeks out. Only go further out if they name a specific future date.', 'string', $now.plus({ weeks: 2 }).setZone('Asia/Manila').toISO()) }}",
+        "timeMin": "={{ $fromAI('after', 'Start of the date range to check, ISO 8601 with timezone. Use the date the user is asking about, or now if unspecified.', 'string', $now.setZone('Asia/Manila').toISO()) }}",
+        "toolDescription": "List upcoming events from the Hit Productions studio booking calendar. Use this to check availability or show what is booked."
+      },
+      "position": [
+        144,
+        448
+      ],
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3
+    },
+    {
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "id": "a4bf268c-dddd-4950-b672-8252ceb5b31a",
+      "name": "Create Event",
+      "parameters": {
+        "additionalFields": {
+          "attendees": [
+            "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('attendees0_Attendees', ``, 'string') }}"
+          ],
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('description', 'Optional description or notes', 'string') }}",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('summary', 'Event title / booking name', 'string') }}"
+        },
+        "calendar": {
+          "__rl": true,
+          "cachedResultName": "KDC Bookings",
+          "mode": "list",
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com"
+        },
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end', 'ISO 8601 end datetime with timezone', 'string') }}",
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', `ISO 8601 start datetime with timezone e.g. 2026-01-06T09:00:00+08:00`, 'string') }}"
+      },
+      "position": [
+        -112,
+        448
+      ],
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Slack account"
+        }
+      },
+      "id": "6045d1fe-cae2-4d5f-942e-2f07b9dc2e14",
+      "name": "Send Reply",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Slack Trigger').item.json.channel }}"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "path": "0a50daf2-daef-4777-a645-e6e3be337824",
+        "select": "channel",
+        "text": "={{ $json.output }}"
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "webhookId": "0a50daf2-daef-4777-a645-e6e3be337824"
+    },
+    {
+      "credentials": {
+        "googlePalmApi": {
+          "id": "XWwRE4506eTpfh0j",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "id": "a021512a-9d03-4ce2-8bc4-cc26eee7aea4",
+      "name": "Google Gemini Chat Model",
+      "parameters": {
+        "modelName": "models/gemini-3.6-flash",
+        "options": {}
+      },
+      "position": [
+        -672,
+        416
+      ],
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Slack account"
+        }
+      },
+      "id": "40b8c729-9153-4427-8653-f32b64ecae3e",
+      "name": "Send a message",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Slack Trigger').item.json.channel }}"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "path": "a2c91aa3-595e-40a9-966f-60b0da6c1828",
+        "select": "channel",
+        "text": "Whoops, I ran into a tiny hiccup trying to process that. Give it a second and try again?"
+      },
+      "position": [
+        0,
+        192
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "a2c91aa3-595e-40a9-966f-60b0da6c1828"
+    },
+    {
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "id": "c0c59075-0011-40e8-a5b0-06c6dd296c59",
+      "name": "Delete an event in Google Calendar",
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "cachedResultName": "KDC Bookings",
+          "mode": "list",
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', `The Google Calendar event ID to delete. Extract this from Search Events for Deletion results. Must be a short alphanumeric string from the 'id' field. Never use a calendar ID, resource email, or any string containing '@'.`, 'string') }}",
+        "operation": "delete",
+        "options": {}
+      },
+      "position": [
+        16,
+        448
+      ],
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Slack account"
+        }
+      },
+      "id": "c486c637-1fc9-43c4-a8b1-a1651f407ac1",
+      "name": "Slack Trigger",
+      "parameters": {
+        "options": {},
+        "path": "58a77a85-50d4-4863-8896-f3dc1a3d4015",
+        "trigger": [
+          "any_event"
+        ],
+        "watchWorkspace": true
+      },
+      "position": [
+        -1216,
+        256
+      ],
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "webhookId": "58a77a85-50d4-4863-8896-f3dc1a3d4015"
+    },
+    {
+      "id": "2f29e4f8-5718-463e-9088-bb6d6fec8e91",
+      "name": "DM filter",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "e29178ec-c63c-4550-b3ff-b130371c7fa5",
+              "leftValue": "={{ $json.channel_type }}",
+              "operator": {
+                "name": "filter.operator.equals",
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "im"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        -976,
+        160
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "id": "f234a66d-370e-4a9b-9fa7-f772f1aa3e49",
+      "name": "Loop filter",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "2e429a18-d936-466b-be98-a65b7d44a7bf",
+              "leftValue": "={{ $json.bot_id }}",
+              "operator": {
+                "name": "filter.operator.equals",
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        -976,
+        352
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "id": "0328a9c0-c45c-45a3-a96f-0b0e77a28228",
+      "name": "Error filter",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "f59c35b6-bd49-4e50-835f-6f416ec02d79",
+              "leftValue": "={{ $json.output }}",
+              "operator": {
+                "operation": "contains",
+                "type": "string"
+              },
+              "rightValue": "[SYSTEM_ERROR]"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        -288,
+        80
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "id": "3f6eba9c-8080-4af2-b020-dd6a565bdaef",
+      "name": "Session Types",
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP",
+          "mode": "list",
+          "value": "app8GQxEInqJi1NRP"
+        },
+        "filterByFormula": "={{ $fromAI('session_type_filter', 'Airtable formula to find the matching Session Type record. Match on {Type} using the EXACT value as it appears in the table - one of: Band Recording, Celebrity Recording, Event, Localization Dubbing, Localization Editing, Localization Mixing, Meeting, Music Mixing, Music Vox Recording, Post Mixing, QC, VO Recording. Do not abbreviate or paraphrase the value (e.g. use \"Localization Dubbing\", not \"Loc Dubbing\"). If the requester described a need rather than naming a type, match on {Room Requirements} or {Engineer Role Required} instead.', 'string') }}",
+        "operation": "search",
+        "options": {},
+        "table": {
+          "__rl": true,
+          "cachedResultName": "Session Types",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tblxEvRNPneUhQxUv",
+          "mode": "list",
+          "value": "tblxEvRNPneUhQxUv"
+        }
+      },
+      "position": [
+        -448,
+        720
+      ],
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "id": "177f883d-ec81-418b-9063-19a2774f95c2",
+      "name": "Rooms and Studios",
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP",
+          "mode": "list",
+          "value": "app8GQxEInqJi1NRP"
+        },
+        "filterByFormula": "={{ $fromAI('room_filter', 'Airtable formula to find matching Rooms & Studios record(s). If the requester named a specific room, match on {Room Name} = \\'Studio A\\' (etc). If they described requirements instead, combine relevant fields like {Size Category}, {Room Type}, or {Vocal Booth} with AND()/OR(). Only consider rooms where {Active / Bookable} is checked.', 'string') }}",
+        "operation": "search",
+        "options": {},
+        "table": {
+          "__rl": true,
+          "cachedResultName": "Rooms & Studios",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tblwZYK9ENUojZ21W",
+          "mode": "list",
+          "value": "tblwZYK9ENUojZ21W"
+        }
+      },
+      "position": [
+        -288,
+        720
+      ],
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "id": "762d8c5b-a3ea-43a0-9084-867c63faf5e7",
+      "name": "Localization Projects",
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP",
+          "mode": "list",
+          "value": "app8GQxEInqJi1NRP"
+        },
+        "filterByFormula": "={{ $fromAI('loc_project_filter', 'Airtable formula to find the matching Localization Projects record. The requester may give either the official Project Code (e.g. NET-CMA, LOPH S2) or the full Project Title. If it looks like a short code, match on {Project Code}. If it looks like a full title, match on {Project Title}. If unsure which the requester meant, combine both with OR() so either matches.', 'string') }}",
+        "operation": "search",
+        "options": {},
+        "table": {
+          "__rl": true,
+          "cachedResultName": "Localization Projects",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tbljkG6z7odPUtTIf",
+          "mode": "list",
+          "value": "tbljkG6z7odPUtTIf"
+        }
+      },
+      "position": [
+        -128,
+        720
+      ],
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "disabled": true,
+      "id": "d85bf9cf-0b32-44ec-894d-67b7587ded54",
+      "name": "Advertising Projects",
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP",
+          "mode": "list",
+          "value": "app8GQxEInqJi1NRP"
+        },
+        "operation": "search",
+        "options": {},
+        "table": {
+          "__rl": true,
+          "cachedResultName": "Advertising Projects",
+          "cachedResultUrl": "https://airtable.com/app8GQxEInqJi1NRP/tbldeuQvdGv2fotQa",
+          "mode": "list",
+          "value": "tbldeuQvdGv2fotQa"
+        }
+      },
+      "position": [
+        48,
+        720
+      ],
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "id": "583edd8a-0a6d-4c6d-9727-44fe494cfd18",
+      "name": "Search Events for Detection",
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "cachedResultName": "KDC Bookings",
+          "mode": "list",
+          "value": "c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com"
+        },
+        "descriptionType": "manual",
+        "operation": "getAll",
+        "options": {},
+        "returnAll": true,
+        "timeMax": "={{ $fromAI('before', 'End of the target window, ISO 8601 with timezone. Normally this should just be the same date as after plus 1 day, to catch the single booking in question. Only widen if the user described a multi-day booking.', 'string') }}",
+        "timeMin": "={{ $fromAI('after', 'Start of the exact date the user wants to cancel or delete a booking for, ISO 8601 with timezone. Do not widen this to search broadly — if the user has not specified which date the booking is on, do not search yet; ask them to confirm the date first.', 'string') }}",
+        "toolDescription": "Search for an event to delete. Provide the date range (start and end dates in ISO 8601 format) to narrow down the search window. Returns event ID, title, date, and time so you can verify the correct event before deleting."
+      },
+      "position": [
+        272,
+        448
+      ],
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3
+    }
+  ],
+  "pinData": {},
+  "settings": {
+    "availableInMCP": false,
+    "binaryMode": "separate",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-08-17T09:02:51.940Z",
+      "project": {
+        "createdAt": "2026-06-16T08:07:47.559Z",
+        "creatorId": "146478c9-471a-4651-8e62-0216984196e9",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "518sXYqvqTl1cuns",
+        "name": "Howard Luistro <howard@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-07-30T08:01:27.418Z"
+      },
+      "projectId": "518sXYqvqTl1cuns",
+      "role": "workflow:owner",
+      "updatedAt": "2026-08-17T09:02:51.940Z",
+      "workflowId": "1GcIAeLdJZLeB8js"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-08-28T12:14:17.000Z",
+  "versionCounter": 1,
+  "versionId": "c1ff6602-d850-4082-b568-ddfddf4a2296"
+}

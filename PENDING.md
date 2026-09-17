@@ -382,10 +382,14 @@ is known good.
 **22. The nightly backup is disabled, and `workflows/live/` is stale.** Disabled
 manually on 2026-09-16 (`gh workflow disable nightly-backup.yml`) because every run
 since 14 September failed on a Cloudflare Managed Challenge — the runner is a
-datacenter IP and cannot solve one. **The last snapshot is 14 September 10:22.**
+datacenter IP and cannot solve one.
 
-This is the rollback artifact, so while it is off the repo is the only copy of what n8n
-runs, and it is only as current as the last hand commit. Re-enable with:
+**Refreshed by hand on 2026-09-17** — `./scripts/backup-live` run from a Mac works
+fine, because a residential IP is not challenged. That is the stopgap while the
+GitHub job is off: run it locally and commit, rather than letting the snapshot age.
+
+This is the rollback artifact, so while the job is off the repo is the only copy of
+what n8n runs, and it is only as current as the last hand run. Re-enable with:
 
 ```bash
 gh workflow enable nightly-backup.yml

@@ -107,9 +107,13 @@ open risk, and it is not in the workflows.**
 outage the moment it happens and alert someone. It needs the owner's accounts, not
 a code change. See `PENDING.md` item 15.
 
-**One-account reality.** The whole team shares a single n8n login on the free
-edition. n8n therefore cannot tell you who changed what, and has no restorable
-history. That is why this git repo is both the record and the rollback: pull before
+**Whose account, and which key.** There is more than one n8n account now, and the
+**Jessie workflows live in Howard's Personal project**. An n8n API key carries the
+permissions of the account that created it, so a key made on any other account gets
+`Forbidden` on all seven of them and the scripts go blind — see gotcha 15, which cost
+an hour on 2026-09-17. **The key in `.env` must be created on the account that owns
+Jessie.** It is still one shared login in practice, so n8n cannot tell you who changed
+what, and has no restorable history. That is why this git repo is both the record and the rollback: pull before
 you change anything, commit after every import. Changes go into n8n by hand through
 the browser UI — there is no API write path in use (`PENDING.md` item 12).
 
@@ -367,6 +371,18 @@ the task runner), for whoever has shell access to the box.
     diagnostic script that *did* hardcode the id filtered the wrong bot for weeks unnoticed.
     `./scripts/verify-ids` now compares the hardcoded ids to the live app and fails if they
     drift; run it on start.
+
+15. **`Forbidden` from the n8n API means "this key cannot see it", not "it is gone".**
+    An API key carries its creating account's permissions. Point one at a workflow in
+    another account's project and you get `{"message":"Forbidden"}` — where a genuinely
+    deleted workflow gives a not-found. On 2026-09-17 the key in `.env` belonged to a
+    different account than the one holding Jessie: `n8n list` showed 5 workflows instead
+    of 18, `execs` returned nothing, and `verify-ids` reported all seven as *no longer
+    exists*. Nothing was deleted and Jessie never stopped running. Both scripts now
+    distinguish the two. **A short list from n8n means check the key first.** And note
+    what nearly followed: `backup-live` used to delete snapshots for workflows n8n did
+    not list, so one nightly run with that key would have erased the entire rollback
+    artifact and exited 0. It no longer deletes anything — it warns and leaves them.
 
 ## Not done
 

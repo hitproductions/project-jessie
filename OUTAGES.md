@@ -217,8 +217,47 @@ missing messages are in the Slack conversation history, posted normally; Jessie 
 reply to either, and n8n has no execution for either. The messages on both sides got
 replies within 20 seconds.
 
-Two consecutive nights, both recovering in the 06:00–07:00 PHT hour. Two points is not a
-pattern, but a third would make it one and would be worth explaining.
+### Night of 16–17 September
+
+Nine messages again, same schedule. Confirmed twice over: Slack shows which messages
+Jessie replied to, and the execution list agrees exactly.
+
+| Sent (PHT) | UTC | Reached n8n? |
+|---|---|---|
+| 23:00 | 16 Sep 15:00 | yes — exec 9079, replied 23:00:45 |
+| 00:00 | 16 Sep 16:00 | yes — exec 9081, replied 00:00:38 |
+| 01:00 | 16 Sep 17:00 | yes — exec 9083, replied 01:00:18 |
+| **02:00** | **16 Sep 18:00** | **no** |
+| **03:00** | **16 Sep 19:00** | **no** |
+| **04:00** | **16 Sep 20:00** | **no** |
+| **05:00** | **16 Sep 21:00** | **no** |
+| **06:00** | **16 Sep 22:00** | **no** |
+| 07:00 | 16 Sep 23:00 | yes — exec 9087, replied 07:00:29 |
+
+**Outage window: 18:00–22:00 UTC (02:00–06:00 PHT), recovered by 23:00 UTC.**
+
+### Three nights, one recovery hour
+
+| Night | Down (PHT) | Back by |
+|---|---|---|
+| 14–15 Sep | 02:12 – 06:00 | 07:00 |
+| 15–16 Sep | 05:00 – 06:00 | 07:00 |
+| 16–17 Sep | 02:00 – 06:00 | 07:00 |
+
+The start times vary. **The recovery hour does not.** Three nights running, service
+returns between 06:00 and 07:00 Manila (22:00–23:00 UTC).
+
+**This is the most useful fact in this file, and it argues against the explanation
+above.** Per-request IP scoring should not respect a daily boundary. Something that
+recovers at the same hour every night looks scheduled: a rule with a time condition, a
+reputation or bot-score feed that refreshes daily, a rate-limit counter resetting, or a
+cache expiring. Whoever looks at the Cloudflare side should be told this, because it
+narrows the search from "which rule" to "which rule has a daily cycle."
+
+Worth keeping honest: three points is a pattern, not a proof, and every test message was
+sent on the hour, so the resolution is one hour and no better. Recovery could fall
+anywhere in 06:00–07:00. Messages every fifteen minutes across that hour would pin it
+down and cost nothing.
 
 **This gives an exact hour to look up.** Cloudflare → Security → Events, filtered to
 `signal.hitpromanila.net`, 21:00–22:00 UTC on 15 September. Slack's blocked requests

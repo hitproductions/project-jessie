@@ -215,24 +215,21 @@
   },
   "shared": [
     {
-      "createdAt": "2026-09-04T07:28:42.746Z",
+      "createdAt": "2026-09-17T05:26:01.418Z",
       "project": {
-        "createdAt": "2026-09-04T07:27:37.988Z",
+        "createdAt": "2026-06-16T08:07:47.559Z",
         "creatorId": "146478c9-471a-4651-8e62-0216984196e9",
         "customTelemetryTags": [],
-        "description": "Hit's scheduling bot!",
-        "icon": {
-          "type": "icon",
-          "value": "layers"
-        },
-        "id": "QZYdo1FNvLjucQwT",
-        "name": "Jessie",
-        "type": "team",
-        "updatedAt": "2026-09-04T07:29:59.000Z"
+        "description": null,
+        "icon": null,
+        "id": "518sXYqvqTl1cuns",
+        "name": "Howard Luistro <howard@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-07-30T08:01:27.418Z"
       },
-      "projectId": "QZYdo1FNvLjucQwT",
+      "projectId": "518sXYqvqTl1cuns",
       "role": "workflow:owner",
-      "updatedAt": "2026-09-04T07:28:42.746Z",
+      "updatedAt": "2026-09-17T05:26:01.418Z",
       "workflowId": "yzirq12O227VTFp8"
     }
   ],

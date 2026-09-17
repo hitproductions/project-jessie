@@ -71,17 +71,42 @@ for w in data:
         json.dump(full, f, indent=2, ensure_ascii=False, sort_keys=True)
     index.append("%-42s %-8s %s" % (w.get("name"),
                  "active" if w.get("active") else "inactive", fn))
-# Drop snapshots for workflows that no longer exist in n8n, so the folder mirrors
-# the instance instead of accumulating deleted copies.
-keep = set(fn for _, fn in [(w, "%s__%s.json" % (slug(w.get("name","untitled")), w["id"])) for w in data])
-removed = 0
-for existing in os.listdir("workflows/live"):
-    if existing.endswith(".json") and existing not in keep:
-        os.remove("workflows/live/"+existing); removed += 1
+# The snapshot must contain everything this project cannot afford to lose. A key
+# that has lost access to a project does not error - it returns a SHORTER list. So
+# a short list means "check the key", never "these were deleted".
+EXPECTED = {
+ "uVVYVB2M7kxpLleI":"Project Jessie v2","EUG3sGXkfsJSYIMz":"Jessie — Book Session",
+ "bAyDw7udhmY0NL38":"Jessie — Cancel Booking","t7lwR2km4tfN8DbM":"Jessie — Move Booking",
+ "yzirq12O227VTFp8":"Jessie — Find Booking","e7tBQB458nstrqei":"Jessie — Room Availability",
+ "K2tPBykMwKcQGMub":"Jessie — Prune Executions"}
+seen    = set(w["id"] for w in data)
+missing = {k: v for k, v in EXPECTED.items() if k not in seen}
+if missing:
+    import sys
+    print("FAILED: the API key cannot see %d workflow(s) this backup must include." % len(missing))
+    for k, v in missing.items():
+        print("    missing: %s  %s" % (k, v))
+    print("  Saw %d workflow(s). Existing snapshots were left untouched." % len(data))
+    print("  This is almost always the API key, not a deletion: n8n returns a shorter")
+    print("  list - not an error - when the key's account cannot see a project. Use a")
+    print("  key created on the account that owns these workflows.")
+    sys.exit(1)
+
+# Never delete a snapshot automatically. This loop used to mirror the instance by
+# removing anything n8n no longer listed. With a key that could see 5 of 12
+# workflows - exactly the state on 2026-09-17 - it would have deleted all seven
+# Jessie snapshots, which are the rollback artifact, and reported success.
+keep  = set("%s__%s.json" % (slug(w.get("name","untitled")), w["id"]) for w in data)
+stale = sorted(f for f in os.listdir("workflows/live")
+               if f.endswith(".json") and f not in keep)
 
 with open("workflows/live/INDEX.txt", "w") as f:
     f.write("Live n8n workflows, snapshot. Backed up nightly by GitHub Actions.\n\n")
     f.write("\n".join(sorted(index)) + "\n")
-print("backed up %d workflows to workflows/live/%s" % (
-    len(data), (" (removed %d stale)" % removed) if removed else ""))
+print("backed up %d workflows to workflows/live/" % len(data))
+if stale:
+    print("\n  %d snapshot(s) here are not in n8n's list:" % len(stale))
+    for f in stale: print("      %s" % f)
+    print("  Left in place on purpose. Confirm they were really deleted in n8n - not")
+    print("  merely invisible to this key - before removing any by hand.")
 PY
