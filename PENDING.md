@@ -167,17 +167,27 @@ the limits are on the n8n side. Whether a newer version lifts any of them is an
 open question, not a promise: worth checking the changelogs for those two nodes
 against what's installed before deciding whether an update is worth the restart.
 
-**12. `PUT /api/v1/workflows/:id` reports success and changes nothing.**
+**12. `PUT /api/v1/workflows/:id` reports success and changes nothing.** — RESOLVED 2026-09-18.
 
 Seen on 2026-08-30 pushing the main workflow: the request returned without an
 error, the response carried no `name` or `updatedAt`, and pulling the workflow
 back showed every node unchanged. The same JSON imported through the browser UI
 applied correctly.
 
-Until this is understood, `./scripts/n8n push` cannot be trusted and every
-workflow change has to be imported by hand — which is slow and is itself a
-source of mistakes, since it depends on importing the right file in the right
-order. Reading via the API is unaffected and remains reliable.
+**Root cause: payload shape, not a broken write path.** The public API `PUT`
+accepts a body of exactly `{name, nodes, connections, settings}` and rejects any
+extra top-level or `settings` key (`400 request/body/settings must NOT have
+additional properties`). The 2026-08-30 attempt sent the whole pulled export
+(carrying `id`, `active`, `activeVersion`, `tags`, and settings keys like
+`binaryMode`, `callerPolicy`, `availableInMCP`, `timeSavedMode`), so it never
+applied. Pruning `settings` to the API-allowed keys makes the `PUT` land, and
+n8n *preserves* the internal settings that were not sent (verified: `binaryMode`
+and `callerPolicy` survive a prune-and-PUT), so nothing is lost.
+
+`./scripts/n8n-write` now does this safely: `put <id> <file>` (schema-clean PUT),
+plus `activate` / `deactivate` for the tool-schema reload toggle. Proven on the
+live main + Book Session on 2026-09-18 (External/Personal `bookingType` ship).
+Still: pull before you write, and toggle Active off/on after changing tool inputs.
 
 **14. A Code node cannot reference a tool node — it hangs the task runner.**
 

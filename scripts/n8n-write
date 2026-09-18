@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Writes to the n8n public API: schema-clean PUT, plus activate/deactivate.
+#
+#   ./scripts/n8n-write put <id> <file>     import a workflow JSON
+#   ./scripts/n8n-write activate <id>        activate a workflow
+#   ./scripts/n8n-write deactivate <id>      deactivate a workflow
+#
+# Reads N8N_BASE_URL and N8N_API_KEY from ../.env and talks ONLY to that host.
+#
+# Discovered 2026-09-18: the public PUT works when the body is exactly
+# {name,nodes,connections,settings} with settings pruned to the API-allowed
+# keys. PENDING #12 ("PUT reports success and changes nothing") was a
+# payload-shape problem — the old attempt sent the whole pulled export, which
+# the API silently rejected — not a broken write path. n8n preserves internal
+# settings (binaryMode, callerPolicy, ...) that are not sent, so pruning is safe.
+#
+# After changing a tool's inputs or adding/removing a tool, deactivate then
+# activate the MAIN workflow so the agent reloads the tool schema (CLAUDE.md).
+set -euo pipefail
+
+here="$(cd "$(dirname "$0")/.." && pwd)"
+[ -f "$here/.env" ] || { echo "No $here/.env — copy .env.example and add your key." >&2; exit 1; }
+set -a; . "$here/.env"; set +a
+: "${N8N_BASE_URL:?N8N_BASE_URL missing from .env}"
+: "${N8N_API_KEY:?N8N_API_KEY missing from .env}"
+
+cmd="${1:-}"; id="${2:-}"
+[ -n "$cmd" ] && [ -n "$id" ] || { echo "usage: n8n-write {put <id> <file>|activate <id>|deactivate <id>}" >&2; exit 1; }
+
+case "$cmd" in
+  put)
+    file="${3:-}"
+    [ -f "$file" ] || { echo "usage: n8n-write put <id> <file>" >&2; exit 1; }
+    body="$(mktemp)"; trap 'rm -f "$body"' EXIT
+    python3 - "$file" > "$body" <<'PY'
+import json, sys
+w = json.load(open(sys.argv[1]))
+ALLOWED = {"saveExecutionProgress","saveManualExecutions","saveDataErrorExecution",
+           "saveDataSuccessExecution","executionTimeout","errorWorkflow","timezone","executionOrder"}
+clean = {k: v for k, v in (w.get("settings") or {}).items() if k in ALLOWED} or {"executionOrder": "v1"}
+json.dump({"name": w["name"], "nodes": w["nodes"], "connections": w["connections"], "settings": clean}, sys.stdout)
+PY
+    curl -sS -X PUT -H "X-N8N-API-KEY: $N8N_API_KEY" -H "Content-Type: application/json" \
+      --data @"$body" "$N8N_BASE_URL/api/v1/workflows/$id" \
+      -o /dev/null -w "PUT %{http_code}\n"
+    ;;
+  activate|deactivate)
+    curl -sS -X POST -H "X-N8N-API-KEY: $N8N_API_KEY" \
+      "$N8N_BASE_URL/api/v1/workflows/$id/$cmd" -o /dev/null -w "$cmd %{http_code}\n"
+    ;;
+  *)
+    echo "usage: n8n-write {put <id> <file>|activate <id>|deactivate <id>}" >&2
+    exit 1
+    ;;
+esac
