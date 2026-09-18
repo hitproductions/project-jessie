@@ -114,8 +114,9 @@ permissions of the account that created it, so a key made on any other account g
 an hour on 2026-09-17. **The key in `.env` must be created on the account that owns
 Jessie.** It is still one shared login in practice, so n8n cannot tell you who changed
 what, and has no restorable history. That is why this git repo is both the record and the rollback: pull before
-you change anything, commit after every import. Changes go into n8n by hand through
-the browser UI — there is no API write path in use (`PENDING.md` item 12).
+you change anything, commit after every import. Changes go into n8n through
+`./scripts/n8n-write` (the API write path, working since 2026-09-18 — see
+`PENDING.md` item 12), or by hand through the browser UI as a fallback.
 
 **Taking this over, do this first:** run the session-start checks above, read
 `PENDING.md`, skim `SERVER-NOTES.md`. And before launch, the QA year shift has to go
@@ -139,8 +140,9 @@ knowledge accumulates.
   each other without warning, and a file built from a stale pull throws away the canvas
   layout along with anything else changed since.
 - **Build every file from a fresh pull and keep the full export shape.** Do not strip the
-  file down to `name/nodes/connections/settings`. These are imported by hand through the
-  n8n browser UI, which expects what n8n exports.
+  file down to `name/nodes/connections/settings`. `./scripts/n8n-write` prunes to that shape
+  itself at PUT time, and the browser-UI fallback expects the full n8n export — so the repo
+  files stay full-shape either way.
 - **Run `./scripts/check-fromai` on every build.** An unescaped apostrophe in a `$fromAI`
   description takes the whole agent down, and it fails at runtime, not on save.
 - **Run `./scripts/test-nodes` before shipping anything.** It runs every Code node that
@@ -191,11 +193,13 @@ last imported and confirmed — check with `./scripts/n8n pull` rather than assu
 
 ## The scripts
 
-Run from the repo root. Reading is safe — nothing here writes to n8n.
+Run from the repo root. Everything here reads except `n8n-write`, which is the
+only script that writes to n8n.
 
 | script | what it does |
 |---|---|
 | `./scripts/n8n list` · `pull <id> <file>` · `execs` · `exec <id>` | read workflows and executions from n8n |
+| `./scripts/n8n-write put <id> <file>` · `activate <id>` · `deactivate <id>` | **writes to n8n** — schema-clean import, and the Active toggle for a tool-schema reload |
 | `./scripts/test-nodes` · `--live` | 108 offline checks + 27 gate scenarios, on a candidate file or on what is deployed |
 | `./scripts/test-gate` | the confirmation gate and date resolver on their own |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
@@ -343,9 +347,12 @@ the task runner), for whoever has shell access to the box.
    version. Grep will find stale names and values in it. Check the nodes, not the whole file.
 9. **Renaming a tool leaves dangling references** in the prompt, other tool descriptions and
    the sticky notes. Search for the old name everywhere before shipping.
-10. **Workflows are imported by hand** through the n8n browser UI, then verified with a
-    pull. The API write path reported success and changed nothing (PENDING 12), so it is
-    not used — reading through the API is unaffected and reliable.
+10. **Import with `./scripts/n8n-write put <id> <file>`, then verify with a pull.** The API
+    write path works when the body is schema-clean (name/nodes/connections/settings, settings
+    pruned to the API-allowed keys) — the old "PUT changed nothing" was a payload-shape
+    problem, now handled by the helper (PENDING 12). The browser UI import still works as a
+    fallback. Either way, pull afterward to confirm what is stored, and `./scripts/health` to
+    confirm what ran.
 11. **Never reference a tool node from a Code node.** `$('Book Session')` inside `Guard Probe`
     hangs the task runner until it times out — 60,007 ms, then `Unknown error`. `$('Gate
     Context')` and `$('Room Table')` are fine at ~70 ms; it is specifically nodes wired to the
