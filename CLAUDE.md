@@ -36,7 +36,7 @@ else, unprompted:
 3. Check what is live and what it actually did:
 
    ```
-   ./scripts/test-nodes --live     # 109 checks + 27 gate scenarios, what is stored
+   ./scripts/test-nodes --live     # 114 checks + 27 gate scenarios, what is stored
    ./scripts/health                # per-node status and timing, what actually ran
    ./scripts/verify-ids            # workflow + bot ids still point where they should
    ```
@@ -148,7 +148,7 @@ knowledge accumulates.
 - **Run `./scripts/test-nodes` before shipping anything.** It runs every Code node that
   decides something — `Guard Probe`, `Check Conflicts`, `Check Ownership`, `Shape Results`,
   `Resolve Booking` — against a table of scenarios offline, then delegates to
-  `./scripts/test-gate` for `Gate Context`. 109 checks, plus 27 gate scenarios. `--live` tests what is actually
+  `./scripts/test-gate` for `Gate Context`. 114 checks, plus 27 gate scenarios. `--live` tests what is actually
   deployed; five explicit paths (main, book, cancel, find, move) test a candidate before
   importing it. Every one of those nodes shipped a bug this weekend that was caught by
   reading output by hand.
@@ -183,6 +183,7 @@ Slack DM → n8n → agent (Gemini 3.5 Flash Lite, temp 0.2) → Airtable + Goog
 | `Jessie — Move Booking` | `t7lwR2km4tfN8DbM` | the only way one is rescheduled |
 | `Jessie — Find Booking` | `yzirq12O227VTFp8` | shapes a day's events before the model sees them |
 | `Jessie — Room Availability` | `e7tBQB458nstrqei` | what is free, computed not reasoned |
+| `Jessie — Expand Series` | `hkx9PXcgW9nrzY2a` | computes the dates of a recurring booking (deterministic; the model does not do the date math) |
 | `Jessie — Prune Executions` | `K2tPBykMwKcQGMub` | daily 04:00 cleanup so the DB does not fill |
 
 Airtable base `app8GQxEInqJi1NRP` · calendar `c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com`
@@ -200,7 +201,7 @@ only script that writes to n8n.
 |---|---|
 | `./scripts/n8n list` · `pull <id> <file>` · `execs` · `exec <id>` | read workflows and executions from n8n |
 | `./scripts/n8n-write put <id> <file>` · `activate <id>` · `deactivate <id>` | **writes to n8n** — schema-clean import, and the Active toggle for a tool-schema reload |
-| `./scripts/test-nodes` · `--live` | 109 offline checks + 27 gate scenarios, on a candidate file or on what is deployed |
+| `./scripts/test-nodes` · `--live` | 114 offline checks + 27 gate scenarios, on a candidate file or on what is deployed |
 | `./scripts/test-gate` | the confirmation gate and date resolver on their own |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
 | `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
@@ -331,6 +332,11 @@ the task runner), for whoever has shell access to the box.
 
 ## Gotchas that already cost time
 
+0. **A sub-workflow must be `active` to be callable as a tool.** A workflow created through the
+   API (`./scripts/n8n-write create`) defaults to `active:false`, and the agent's tool call
+   then fails with the model reporting the tool "unavailable" — with **no execution record** on
+   the sub-workflow to point at. Activate it: `./scripts/n8n-write activate <id>`. This cost a
+   QA round on 2026-09-18 with `Expand Series`.
 1. A `throw` inside an **optional** collection like `additionalFields` does not fail the
    node — n8n drops the field. Guards only work in required top-level fields.
 2. Never put a fan-out node in the agent's main chain without collapsing back to one item.

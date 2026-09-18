@@ -344,6 +344,19 @@ suite('Check Conflicts — the booking guards', ()=>{
   check('cc','music initials survive',r.s==='BABY / Dante Nora / DR x PL',r.s);
 });
 
+// ── Confirmation gate ───────────────────────────────────────────────────────
+suite('Confirmation gate — a series must be confirmed', ()=>{
+  const whole=src('Check Conflicts');
+  const i=whole.indexOf('const confirmed ='), j=whole.indexOf('// --- duration limits');
+  const gate=whole.slice(i,j);
+  const run=REQ=>{ const r=new Function('REQ',gate+'\nreturn null;')(REQ); return r?r[0].json.reason:'CLEAR'; };
+  check('cg','studio unconfirmed is refused',run({rooms:'Studio 8',confirmed:false})==='NOT_CONFIRMED');
+  check('cg','studio confirmed passes',run({rooms:'Studio 8',confirmed:true})==='CLEAR');
+  check('cg','a single M booth skips confirmation',run({rooms:'M3',confirmed:false})==='CLEAR');
+  check('cg','an M booth series must be confirmed',run({rooms:'M3',confirmed:false,series:true})==='NOT_CONFIRMED');
+  check('cg','an M booth series with a yes passes',run({rooms:'M3',confirmed:true,series:true})==='CLEAR');
+});
+
 // ── Check Ownership ────────────────────────────────────────────────────────
 suite('Check Ownership — who may cancel what', ()=>{
   const s=src('Check Ownership');

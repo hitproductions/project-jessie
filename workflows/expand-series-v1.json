@@ -1,0 +1,76 @@
+{
+  "name": "Jessie — Expand Series",
+  "nodes": [
+    {
+      "id": "expandseries-trigger",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "frequency"
+            },
+            {
+              "name": "by_days"
+            },
+            {
+              "name": "start_date"
+            },
+            {
+              "name": "count",
+              "type": "number"
+            },
+            {
+              "name": "until_date"
+            },
+            {
+              "name": "all_day",
+              "type": "boolean"
+            },
+            {
+              "name": "time_start"
+            },
+            {
+              "name": "time_end"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "expandseries-code",
+      "name": "Expand Dates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Expand a structured recurrence into concrete date windows.\n// Pure calendar math in UTC (dates only); the +08:00 time is attached at the end,\n// so the runtime timezone never shifts a day. Returns a refusal object or {occurrences}.\n//\n// Guards enforced here (the safety-critical part):\n//   - frequency and start_date required\n//   - an explicit end required: exactly a count OR an until_date (never open-ended)\n//   - the series may not span more than one year from the start\n//\n// Inputs (from the agent via the Book Series tool):\n//   frequency  'daily' | 'weekly'\n//   by_days    ['MO','TU',...] for weekly (defaults to the start date's weekday)\n//   start_date 'YYYY-MM-DD'\n//   count      integer  (one of count / until_date required)\n//   until_date 'YYYY-MM-DD'\n//   all_day    boolean\n//   time_start 'HH:MM'   (required unless all_day)\n//   time_end   'HH:MM'\nfunction expandDates(REQ) {\n  const DOW = { SU:0, MO:1, TU:2, WE:3, TH:4, FR:5, SA:6 };\n  const isDate = s => /^\\d{4}-\\d{2}-\\d{2}$/.test(String(s || '').trim());\n  const fmt = d => d.toISOString().slice(0, 10);\n\n  const freq = String(REQ.frequency || '').trim().toLowerCase();\n  const start = String(REQ.start_date || '').trim();\n  const allDay = REQ.all_day === true || String(REQ.all_day).toLowerCase() === 'true';\n  const t0 = String(REQ.time_start || '').trim();\n  const t1 = String(REQ.time_end || '').trim();\n\n  if (freq !== 'daily' && freq !== 'weekly')\n    return { status: 'MISSING_DETAILS', reason: 'I need to know how often it repeats - daily or weekly.' };\n  if (!isDate(start))\n    return { status: 'MISSING_DETAILS', reason: 'I need the date the series starts on.' };\n  if (!allDay && (!/^\\d{1,2}:\\d{2}$/.test(t0) || !/^\\d{1,2}:\\d{2}$/.test(t1)))\n    return { status: 'MISSING_DETAILS', reason: 'I need a start and end time (or say it is all-day).' };\n\n  const hasCount = REQ.count != null && String(REQ.count).trim() !== '' && Number(REQ.count) > 0;\n  const hasUntil = isDate(REQ.until_date);\n  if (!hasCount && !hasUntil)\n    return { status: 'MISSING_END', reason: 'A repeating booking needs an end - a number of sessions or a stop date. How many, or until when?' };\n\n  const startD = new Date(start + 'T00:00:00Z');\n  if (isNaN(startD.getTime()))\n    return { status: 'MISSING_DETAILS', reason: 'The start date is not a real date.' };\n\n  const oneYear = new Date(startD); oneYear.setUTCFullYear(oneYear.getUTCFullYear() + 1);\n  const untilD = hasUntil ? new Date(REQ.until_date + 'T00:00:00Z') : null;\n  if (untilD && untilD < startD)\n    return { status: 'MISSING_DETAILS', reason: 'The stop date is before the start date.' };\n  if (untilD && untilD > oneYear)\n    return { status: 'SPAN_TOO_LONG', reason: 'A repeating booking can run at most one year. Give a stop date within a year of the start, or a smaller count.' };\n\n  // weekly day-of-week set (default to the start date's weekday).\n  // Accepts an array or a comma string (\"TU\" or \"MO,WE\"); the agent passes a string.\n  let byDays = Array.isArray(REQ.by_days)\n    ? REQ.by_days.map(d => String(d).toUpperCase().slice(0, 2))\n    : String(REQ.by_days || '').split(',').map(d => d.trim().toUpperCase().slice(0, 2)).filter(Boolean);\n  if (freq === 'weekly' && !byDays.length) {\n    byDays = [Object.keys(DOW).find(k => DOW[k] === startD.getUTCDay())];\n  }\n  const wanted = new Set(byDays.map(d => DOW[d]).filter(n => n != null));\n  if (freq === 'weekly' && !wanted.size)\n    return { status: 'MISSING_DETAILS', reason: 'Which day(s) of the week should it repeat on?' };\n\n  const N = hasCount ? Number(REQ.count) : Infinity;\n  const dates = [];\n  const cur = new Date(startD);\n  // Absolute iteration ceiling: one year of days plus slack. Prevents any runaway.\n  for (let guard = 0; guard <= 372 && dates.length < N; guard++) {\n    if (cur > oneYear) break;\n    if (untilD && cur > untilD) break;\n    if (freq === 'daily' || wanted.has(cur.getUTCDay())) dates.push(fmt(cur));\n    cur.setUTCDate(cur.getUTCDate() + 1);\n  }\n\n  if (hasCount && dates.length < N)\n    return { status: 'SPAN_TOO_LONG', reason: 'That many sessions would run past one year. Use a smaller count or a shorter interval.', got: dates.length, wanted: N };\n  if (!dates.length)\n    return { status: 'MISSING_DETAILS', reason: 'That pattern produced no dates - check the day(s) and range.' };\n\n  const occurrences = dates.map(d => allDay\n    ? { date: d, all_day: true }\n    : { start_iso: d + 'T' + t0.padStart(5, '0') + ':00+08:00',\n        end_iso:   d + 'T' + t1.padStart(5, '0') + ':00+08:00', all_day: false });\n\n  return { status: 'OK', count: occurrences.length, occurrences };\n}\n\n// --- runner: read the tool inputs, expand, enforce the 16-occurrence quick-win cap ---\nconst REQ = $('When Executed by Another Workflow').first().json;\nconst res = expandDates(REQ);\nif (res.status === 'OK' && res.count > 16) {\n  return [{ json: { status: 'TOO_MANY', count: res.count,\n    human: 'That series is ' + res.count + ' sessions. I can book up to 16 at a time for now - book the first 16, choose a shorter run, or set the full series up in Google Calendar directly.' } }];\n}\nreturn [{ json: res }];\n"
+      }
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Expand Dates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

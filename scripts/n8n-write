@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Writes to the n8n public API: schema-clean PUT, plus activate/deactivate.
 #
-#   ./scripts/n8n-write put <id> <file>     import a workflow JSON
+#   ./scripts/n8n-write put <id> <file>      import a workflow JSON
+#   ./scripts/n8n-write create <file>        create a new workflow, prints its id
 #   ./scripts/n8n-write activate <id>        activate a workflow
 #   ./scripts/n8n-write deactivate <id>      deactivate a workflow
 #
@@ -25,9 +26,30 @@ set -a; . "$here/.env"; set +a
 : "${N8N_API_KEY:?N8N_API_KEY missing from .env}"
 
 cmd="${1:-}"; id="${2:-}"
-[ -n "$cmd" ] && [ -n "$id" ] || { echo "usage: n8n-write {put <id> <file>|activate <id>|deactivate <id>}" >&2; exit 1; }
+[ -n "$cmd" ] && [ -n "$id" ] || { echo "usage: n8n-write {put <id> <file>|create <file>|activate <id>|deactivate <id>}" >&2; exit 1; }
+
+# Prune a full export to the API-accepted body {name,nodes,connections,settings}.
+prune_body() {
+  python3 - "$1" <<'PY'
+import json, sys
+w = json.load(open(sys.argv[1]))
+ALLOWED = {"saveExecutionProgress","saveManualExecutions","saveDataErrorExecution",
+           "saveDataSuccessExecution","executionTimeout","errorWorkflow","timezone","executionOrder"}
+clean = {k: v for k, v in (w.get("settings") or {}).items() if k in ALLOWED} or {"executionOrder": "v1"}
+json.dump({"name": w["name"], "nodes": w["nodes"], "connections": w["connections"], "settings": clean}, sys.stdout)
+PY
+}
 
 case "$cmd" in
+  create)
+    file="$id"   # for create, the second argument is the file
+    [ -f "$file" ] || { echo "usage: n8n-write create <file>" >&2; exit 1; }
+    body="$(mktemp)"; trap 'rm -f "$body"' EXIT
+    prune_body "$file" > "$body"
+    curl -sS -X POST -H "X-N8N-API-KEY: $N8N_API_KEY" -H "Content-Type: application/json" \
+      --data @"$body" "$N8N_BASE_URL/api/v1/workflows" \
+      | python3 -c "import sys,json; w=json.load(sys.stdin); print('created', w.get('id'), '|', w.get('name'))"
+    ;;
   put)
     file="${3:-}"
     [ -f "$file" ] || { echo "usage: n8n-write put <id> <file>" >&2; exit 1; }
