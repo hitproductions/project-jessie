@@ -183,7 +183,8 @@ Slack DM → n8n → agent (Gemini 3.5 Flash Lite, temp 0.2) → Airtable + Goog
 | `Jessie — Move Booking` | `t7lwR2km4tfN8DbM` | the only way one is rescheduled |
 | `Jessie — Find Booking` | `yzirq12O227VTFp8` | shapes a day's events before the model sees them |
 | `Jessie — Room Availability` | `e7tBQB458nstrqei` | what is free, computed not reasoned |
-| `Jessie — Expand Series` | `hkx9PXcgW9nrzY2a` | computes the dates of a recurring booking (deterministic; the model does not do the date math) |
+| `Jessie — Expand Series` | `hkx9PXcgW9nrzY2a` | computes the dates of a recurring booking (deterministic; the model does not do the date math), for the pre-confirmation summary |
+| `Jessie — Book Series` | `UAwFoifgkfL1xNP2` | creates a whole recurring series server-side — expands the dates and loops Book Session per date, all-or-skip; the model calls it once |
 | `Jessie — Prune Executions` | `K2tPBykMwKcQGMub` | daily 04:00 cleanup so the DB does not fill |
 
 Airtable base `app8GQxEInqJi1NRP` · calendar `c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com`
