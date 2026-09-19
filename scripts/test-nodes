@@ -52,7 +52,7 @@ import json,sys,os
 t=sys.argv[1]
 want={"main.json":["Guard Probe"],"book.json":["Check Conflicts"],
       "cancel.json":["Check Ownership"],"find.json":["Shape Results"],
-      "move.json":["Resolve Booking"]}
+      "move.json":["Resolve Booking","Build Recipients"]}
 for f,names in want.items():
     w=json.load(open(os.path.join(t,f)))
     for n in w["nodes"]:
@@ -492,10 +492,10 @@ suite('Move authority — a coordinator may move within their department', ()=>{
     // Notifications, same rule as Cancel: a coordinator moving someone else's
     // booking notifies the booker (dev-redirected while building); the owner
     // moving their own does not.
-    ['coordinator move notifies the booker (dev-redirected)',{...b,title:'MUSICPROJ / X / AB',authority:'Dept Head',department:'Music',requester_name:'Howard Luistro'},
-      r=>r.notify===true&&r.notifyTo==='U08V3CKDGJF'&&/^\[DEV\] would notify/.test(r.notifyText||'')&&/moved by Howard Luistro/.test(r.notifyText||'')],
-    ['a relocation names the new room in the notice',{...b,title:'MUSICPROJ / X / AB',authority:'Dept Head',department:'Music',new_rooms:'Studio 7',requester_name:'Howard Luistro'},
-      r=>/moved to Studio 7 by/.test(r.notifyText||'')],
+    ['coordinator move flags a notification',{...b,title:'MUSICPROJ / X / AB',authority:'Dept Head',department:'Music',requester_name:'Howard Luistro'},
+      r=>r.notify===true&&r.bookerRef==='U999'&&r.engInitials==='AB'],
+    ['a relocation carries the new room in the notice',{...b,title:'MUSICPROJ / X / AB',authority:'Dept Head',department:'Music',new_rooms:'Studio 7',requester_name:'Howard Luistro'},
+      r=>r.roomNote===' to Studio 7'],
     ['owner move sends no notification',{...b,requester:'U999',title:'MUSICPROJ / X / AB'},r=>r.notify===false],
   ];
   for(const [label,req,ok] of cases){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};}
@@ -528,12 +528,45 @@ suite('Cancel authority — a coordinator may cancel within their department', (
     // Notifications: a coordinator cancelling someone else's booking notifies the
     // booker; DEV_REDIRECT routes it to the dev inbox while building. The owner
     // cancelling their own gets no notification.
-    ['coordinator cancel notifies the booker (dev-redirected)',{...b,title:'MUSICPROJ / X / AB',authority:'Dept Head',department:'Music',requester_name:'Howard Luistro'},
-      r=>r.notify===true&&r.notifyTo==='U08V3CKDGJF'&&/^\[DEV\] would notify/.test(r.notifyText||'')&&/cancelled by Howard Luistro/.test(r.notifyText||'')],
+    ['coordinator cancel flags a notification',{...b,title:'MUSICPROJ / X / AB',authority:'Dept Head',department:'Music',requester_name:'Howard Luistro'},
+      r=>r.notify===true&&r.bookerRef==='U999'&&r.engInitials==='AB'],
     ['owner cancel sends no notification',{...b,requester:'U999',title:'MUSICPROJ / X / AB',authority:'Standard',department:'Marketing'},r=>r.notify===false],
   ];
   for(const [label,req,ok] of cases){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};}
     check('ca',label,ok(r),r.verdict+' '+(r.reason||'')); }
+});
+
+// ── Notification recipients ──────────────────────────────────────────────────
+// Build Recipients composes the DMs sent on an authorized change: the booker
+// always, plus the assigned engineer (from Lookup Engineer) when distinct from
+// the booker and the actor. DEV_REDIRECT routes the `to` to the dev inbox while
+// building; the real name/id is named in the body. (Move's copy is tested; the
+// Cancel copy differs only in the verb and has no room note.)
+suite('Build Recipients — who gets a DM on an authorized change', ()=>{
+  const s=src('Build Recipients');
+  const run=(co,trig,eng)=>new Function('$',s)(name=>{
+    if(name==='Resolve Booking') return {first:()=>({json:co})};
+    if(name==='When Executed by Another Workflow') return {first:()=>({json:trig})};
+    if(name==='Lookup Engineer') return {first:()=>({json:eng})};
+    return {first:()=>({json:{}})};
+  }).map(i=>i.json);
+  const co={bookerRef:'U0TESTVENER',bookerName:'Vener Ariston',title:'X / Y / TL',roomNote:' to Studio 7'};
+  const trig={requester_name:'Howard Luistro',requester:'U08V3CKDGJF',booking_date:'2027-10-15'};
+  const engRow=id=>({fields:{'Slack User ID':id,'Name':'Tara Lim'}});
+
+  let r=run(co,trig,{});
+  check('nr','booker only when no engineer match',r.length===1&&/Vener Ariston \(U0TESTVENER\)/.test(r[0].text),JSON.stringify(r).slice(0,90));
+  check('nr','booker DM is dev-redirected',r[0].to==='U08V3CKDGJF'&&/^\[DEV\] would notify/.test(r[0].text));
+  check('nr','booker DM carries the room note',/was moved to Studio 7 by Howard Luistro/.test(r[0].text));
+
+  r=run(co,trig,engRow('U026N6E1R'));
+  check('nr','engineer added when distinct',r.length===2&&/Tara Lim \(U026N6E1R\)/.test(r[1].text)&&/you are assigned to/.test(r[1].text),JSON.stringify(r).slice(0,120));
+  check('nr','engineer DM is dev-redirected too',r[1].to==='U08V3CKDGJF');
+
+  r=run(co,trig,engRow('U0TESTVENER'));   // engineer IS the booker
+  check('nr','no duplicate when engineer is the booker',r.length===1);
+  r=run(co,trig,engRow('U08V3CKDGJF'));   // engineer IS the actor
+  check('nr','no self-notify when engineer is the actor',r.length===1);
 });
 
 console.log('\n'+(fail? fail+' failing, '+pass+' passing' : 'all '+pass+' checks pass'));
