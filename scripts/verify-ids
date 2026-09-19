@@ -23,6 +23,7 @@ expect = {
  "uVVYVB2M7kxpLleI":"Project Jessie v2","EUG3sGXkfsJSYIMz":"Jessie — Book Session",
  "bAyDw7udhmY0NL38":"Jessie — Cancel Booking","t7lwR2km4tfN8DbM":"Jessie — Move Booking",
  "yzirq12O227VTFp8":"Jessie — Find Booking","e7tBQB458nstrqei":"Jessie — Room Availability",
+ "hkx9PXcgW9nrzY2a":"Jessie — Expand Series","UAwFoifgkfL1xNP2":"Jessie — Book Series",
  "K2tPBykMwKcQGMub":"Jessie — Prune Executions"}
 print("workflow ids:")
 for wid, name in expect.items():

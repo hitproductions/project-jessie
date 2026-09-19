@@ -5,6 +5,7 @@
 #   ./scripts/n8n-write create <file>        create a new workflow, prints its id
 #   ./scripts/n8n-write activate <id>        activate a workflow
 #   ./scripts/n8n-write deactivate <id>      deactivate a workflow
+#   ./scripts/n8n-write delete <id>          delete a workflow (irreversible)
 #
 # Reads N8N_BASE_URL and N8N_API_KEY from ../.env and talks ONLY to that host.
 #
@@ -69,6 +70,11 @@ PY
   activate|deactivate)
     curl -sS -X POST -H "X-N8N-API-KEY: $N8N_API_KEY" \
       "$N8N_BASE_URL/api/v1/workflows/$id/$cmd" -o /dev/null -w "$cmd %{http_code}\n"
+    ;;
+  delete)
+    # Destructive and irreversible. Use only on your own throwaway workflows.
+    curl -sS -X DELETE -H "X-N8N-API-KEY: $N8N_API_KEY" \
+      "$N8N_BASE_URL/api/v1/workflows/$id" -o /dev/null -w "delete %{http_code}\n"
     ;;
   *)
     echo "usage: n8n-write {put <id> <file>|activate <id>|deactivate <id>}" >&2
