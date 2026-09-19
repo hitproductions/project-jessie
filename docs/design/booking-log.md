@@ -1,7 +1,24 @@
 # Design — Booking event log (Google Sheet)
 
-Status: **build-side scaffolded; blocked on config (Sheet + n8n credential)** · 2026-09-19
-Draft logic + tests: `workflows/drafts/logging/`.
+Status: **LIVE (BOOKED + CANCELLED verified end to end)** · 2026-09-19
+Draft logic + tests: `workflows/drafts/logging/`. Deployed in book-session-v32, cancel-booking-v10,
+move-booking-v9.
+
+## Live result (2026-09-19)
+
+Validated the Google Sheets node config on a throwaway first (typeVersion 4.5, `serviceAccount`
+auth, `documentId` by id, `sheetName` `gid=0`/`Log`, `autoMapInputData`), then wired it in. A live
+booking wrote a `BOOKED` row and a live cancel wrote a `CANCELLED` row — both `Log to Sheet` nodes
+`success`, and the return payloads were unchanged (`Return Booked` re-emits `Verify`; Cancel/Move log
+before the notify chain). MOVED uses the identical node + the offline-tested `MOVE` row-builder.
+
+**Note on timing:** `Log to Sheet` takes ~2.4–2.8 s (a real Sheets API round-trip), so `./scripts/
+health` will flag it as a >1 s node on booking/cancel/move turns — expected, and it's best-effort
+(`onError` continue), so it can never block or fail the mutation.
+
+Credential: `Google Sheets - Jessie Log` (`googleApi` id `DU75rLW4KHlVhcK1`), a service account
+(`jessie-booking-log@jessie-logging.iam.gserviceaccount.com`) with the Sheet shared to it — no human
+Google account involved. Sheet id `1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo`, tab `Log`.
 
 ## Goal
 
