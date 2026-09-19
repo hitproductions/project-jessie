@@ -19,6 +19,9 @@ Both are the same shape: *acting on something that isn't yours, which needs some
 
 ## Two models for consent
 
+> **Cross-department status:** pending a pre-launch team discussion — documented here in case we
+> adopt it, not scheduled for build. (M-Booth shared use, below, is being considered on its own.)
+
 ### 2a — Attested consent (synchronous, lightweight) — recommended first
 
 Coordinators already sort these out with the concerned parties out-of-band. So Jessie doesn't run
