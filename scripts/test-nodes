@@ -489,6 +489,14 @@ suite('Move authority — a coordinator may move within their department', ()=>{
       r=>r.verdict==='CLEAR'&&r.location==='Studio 7'&&/188dupcj6/.test((r.attendees&&r.attendees[0]&&r.attendees[0].email)||'')],
     ['an unknown new room is refused',{...b,requester:'U999',title:'MUSICPROJ / X / AB',new_rooms:'Studio 99'},r=>r.reason==='UNKNOWN_ROOM'],
     ['no room change keeps the original',{...b,requester:'U999',title:'MUSICPROJ / X / AB'},r=>r.verdict==='CLEAR'&&r.location===''],
+    // Notifications, same rule as Cancel: a coordinator moving someone else's
+    // booking notifies the booker (dev-redirected while building); the owner
+    // moving their own does not.
+    ['coordinator move notifies the booker (dev-redirected)',{...b,title:'MUSICPROJ / X / AB',authority:'Dept Head',department:'Music',requester_name:'Howard Luistro'},
+      r=>r.notify===true&&r.notifyTo==='U08V3CKDGJF'&&/^\[DEV\] would notify/.test(r.notifyText||'')&&/moved by Howard Luistro/.test(r.notifyText||'')],
+    ['a relocation names the new room in the notice',{...b,title:'MUSICPROJ / X / AB',authority:'Dept Head',department:'Music',new_rooms:'Studio 7',requester_name:'Howard Luistro'},
+      r=>/moved to Studio 7 by/.test(r.notifyText||'')],
+    ['owner move sends no notification',{...b,requester:'U999',title:'MUSICPROJ / X / AB'},r=>r.notify===false],
   ];
   for(const [label,req,ok] of cases){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};}
     check('ma',label,ok(r),r.verdict+' '+(r.reason||'')); }
@@ -517,6 +525,12 @@ suite('Cancel authority — a coordinator may cancel within their department', (
     ['howard is a test coordinator for his dept',{...b,requester:'U08V3CKDGJF',title:'POSTPROJ / Y / TL',authority:'Standard',department:'Audio Post'},r=>r.verdict==='CLEAR'],
     ['no dept stamp falls back to owner-only',{...b,title:'NODEPT / Z / QQ',authority:'Dept Head',department:'Music'},r=>r.reason==='NOT_YOURS'],
     ['the owner still cancels their own',{...b,requester:'U999',title:'MUSICPROJ / X / AB',authority:'Standard',department:'Marketing'},r=>r.verdict==='CLEAR'],
+    // Notifications: a coordinator cancelling someone else's booking notifies the
+    // booker; DEV_REDIRECT routes it to the dev inbox while building. The owner
+    // cancelling their own gets no notification.
+    ['coordinator cancel notifies the booker (dev-redirected)',{...b,title:'MUSICPROJ / X / AB',authority:'Dept Head',department:'Music',requester_name:'Howard Luistro'},
+      r=>r.notify===true&&r.notifyTo==='U08V3CKDGJF'&&/^\[DEV\] would notify/.test(r.notifyText||'')&&/cancelled by Howard Luistro/.test(r.notifyText||'')],
+    ['owner cancel sends no notification',{...b,requester:'U999',title:'MUSICPROJ / X / AB',authority:'Standard',department:'Marketing'},r=>r.notify===false],
   ];
   for(const [label,req,ok] of cases){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};}
     check('ca',label,ok(r),r.verdict+' '+(r.reason||'')); }
