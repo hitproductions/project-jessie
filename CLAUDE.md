@@ -318,10 +318,21 @@ Known contradictions in Rooms & Studios, and which field Jessie trusts:
 
 ## Before launch
 
-`YEAR_SHIFT` at the top of `Gate Context` and the `plus({ years: 1 })` in the system prompt
-are the QA year shift. **They must go to zero together.** Change one and the model and the
-guards will disagree about what day it is — which decides what "next Thursday" means and
-whether a date is in the past.
+Three switches flip for launch — do them together:
+
+1. **`YEAR_SHIFT`** at the top of `Gate Context` and the **`plus({ years: 1 })`** in the system
+   prompt are the QA year shift. **They must go to zero together.** Change one and the model and the
+   guards will disagree about what day it is — which decides what "next Thursday" means and whether a
+   date is in the past.
+2. **`DEV_REDIRECT`** in the `Build Recipients` node of **both** `Cancel Booking` and `Move Booking`.
+   It reroutes every authorized-change notification to a dev/QA inbox so real staff aren't pinged
+   while building; `ALLOW` beside it lists the ids that still get their own DMs (dev + the Sept-24 QA
+   testers). **Set `DEV_REDIRECT = ''` at launch** and the booker + assigned engineer are DM'd for
+   real (the `ALLOW` list then no longer matters). Booker id is the event `ref:`; the engineer is
+   resolved from the title initials via `Lookup Engineer`.
+3. **`TEST_COORD`** (the hard-coded Howard id) in `Check Ownership` / `Resolve Booking` — drop it once
+   a real Airtable authority tag exists for the dev/QA testers (the Monday item). It grants Howard
+   coordinator authority for weekend testing only.
 
 ## Waiting on other systems
 

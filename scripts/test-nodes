@@ -493,7 +493,7 @@ suite('Move authority — a coordinator may move within their department', ()=>{
     // booking notifies the booker (dev-redirected while building); the owner
     // moving their own does not.
     ['coordinator move flags a notification',{...b,title:'MUSICPROJ / X / AB',authority:'Dept Head',department:'Music',requester_name:'Howard Luistro'},
-      r=>r.notify===true&&r.bookerRef==='U999'&&r.engInitials==='AB'],
+      r=>r.notify===true&&r.bookerRef==='U999'&&r.engInitials==='AB'&&/\{Initials\} = "AB"/.test(r.engFilter||'')],
     ['a relocation carries the new room in the notice',{...b,title:'MUSICPROJ / X / AB',authority:'Dept Head',department:'Music',new_rooms:'Studio 7',requester_name:'Howard Luistro'},
       r=>r.roomNote===' to Studio 7'],
     ['owner move sends no notification',{...b,requester:'U999',title:'MUSICPROJ / X / AB'},r=>r.notify===false],
@@ -529,7 +529,7 @@ suite('Cancel authority — a coordinator may cancel within their department', (
     // booker; DEV_REDIRECT routes it to the dev inbox while building. The owner
     // cancelling their own gets no notification.
     ['coordinator cancel flags a notification',{...b,title:'MUSICPROJ / X / AB',authority:'Dept Head',department:'Music',requester_name:'Howard Luistro'},
-      r=>r.notify===true&&r.bookerRef==='U999'&&r.engInitials==='AB'],
+      r=>r.notify===true&&r.bookerRef==='U999'&&r.engInitials==='AB'&&/\{Initials\} = "AB"/.test(r.engFilter||'')&&/^OR\(/.test(r.engFilter||'')],
     ['owner cancel sends no notification',{...b,requester:'U999',title:'MUSICPROJ / X / AB',authority:'Standard',department:'Marketing'},r=>r.notify===false],
   ];
   for(const [label,req,ok] of cases){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};}
@@ -567,6 +567,12 @@ suite('Build Recipients — who gets a DM on an authorized change', ()=>{
   check('nr','no duplicate when engineer is the booker',r.length===1);
   r=run(co,trig,engRow('U08V3CKDGJF'));   // engineer IS the actor
   check('nr','no self-notify when engineer is the actor',r.length===1);
+
+  // QA allowlist: an allowlisted recipient (a Sept-24 tester) gets a real DM, no [DEV].
+  r=run({...co,bookerRef:'U098UFMKQHZ',bookerName:'Trish'},trig,{});
+  check('nr','an allowlisted booker gets a real DM',r.length===1&&r[0].to==='U098UFMKQHZ'&&!/\[DEV\]/.test(r[0].text),JSON.stringify(r[0]).slice(0,90));
+  r=run(co,trig,engRow('U0B4S0EKSAY'));  // engineer is allowlisted (Jess)
+  check('nr','an allowlisted engineer gets a real DM',r.length===2&&r[1].to==='U0B4S0EKSAY'&&!/\[DEV\]/.test(r[1].text));
 });
 
 console.log('\n'+(fail? fail+' failing, '+pass+' passing' : 'all '+pass+' checks pass'));
