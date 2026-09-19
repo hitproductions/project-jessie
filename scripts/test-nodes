@@ -462,6 +462,34 @@ suite('Resolve Booking — which booking is being moved', ()=>{
     check('rb',label,ok(r),r.verdict+' '+(r.reason||'')); }
 });
 
+// ── Move authority (Phase 1) ────────────────────────────────────────────────
+// A coordinator (Dept Head or Client Booking) may move a booking in their OWN
+// department; everyone else is still owner-only. Howard is a hard-coded test
+// coordinator for the weekend. Requires the event to carry a `Dept:` stamp.
+suite('Move authority — a coordinator may move within their department', ()=>{
+  const s=src('Resolve Booking');
+  const evD=(id,summary,ref,dept,t)=>({id,summary,status:'confirmed',
+    description:'Engineer: X | Booked by: Someone | ref: '+ref+(dept?(' | Dept: '+dept):'')+' | Tech requirements: None',
+    start:{dateTime:'2027-09-10T'+t+':00:00+08:00'},end:{dateTime:'2027-09-10T18:00:00+08:00'}});
+  const day={items:[evD('m1','MUSICPROJ / X / AB','U999','Music','14'),
+                    evD('p1','POSTPROJ / Y / TL','U999','Audio Post','15'),
+                    evD('n1','NODEPT / Z / QQ','U999','','16')]};
+  const run=req=>new Function('$','$input',s)(()=>({first:()=>({json:req})}),{first:()=>({json:day})})[0].json;
+  const b={requester:'U777',confirmed:true,booking_date:'2027-09-10',event_id:'',
+           new_start_iso:'2027-09-10T15:00:00+08:00',new_end_iso:'2027-09-10T18:00:00+08:00'};
+  const cases=[
+    ['dept head moves an in-dept booking',{...b,title:'MUSICPROJ / X / AB',authority:'Standard, Dept Head',department:'Music'},r=>r.verdict==='CLEAR'],
+    ['dept head cannot cross departments',{...b,title:'POSTPROJ / Y / TL',authority:'Standard, Dept Head',department:'Music'},r=>r.reason==='NOT_YOURS'],
+    ['client booking coordinator moves in-dept',{...b,title:'MUSICPROJ / X / AB',authority:'Client Booking',department:'Music'},r=>r.verdict==='CLEAR'],
+    ['a standard user cannot move others',{...b,title:'MUSICPROJ / X / AB',authority:'Standard',department:'Music'},r=>r.reason==='NOT_YOURS'],
+    ['howard is a test coordinator for his dept',{...b,requester:'U08V3CKDGJF',title:'POSTPROJ / Y / TL',authority:'Standard',department:'Audio Post'},r=>r.verdict==='CLEAR'],
+    ['no dept stamp falls back to owner-only',{...b,title:'NODEPT / Z / QQ',authority:'Dept Head',department:'Music'},r=>r.reason==='NOT_YOURS'],
+    ['the owner still moves their own',{...b,requester:'U999',title:'MUSICPROJ / X / AB',authority:'Standard',department:'Marketing'},r=>r.verdict==='CLEAR'],
+  ];
+  for(const [label,req,ok] of cases){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};}
+    check('ma',label,ok(r),r.verdict+' '+(r.reason||'')); }
+});
+
 console.log('\n'+(fail? fail+' failing, '+pass+' passing' : 'all '+pass+' checks pass'));
 process.exit(fail?1:0);
 JS

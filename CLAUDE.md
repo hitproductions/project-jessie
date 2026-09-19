@@ -36,7 +36,7 @@ else, unprompted:
 3. Check what is live and what it actually did:
 
    ```
-   ./scripts/test-nodes --live     # 114 checks + 27 gate scenarios, what is stored
+   ./scripts/test-nodes --live     # 121 checks + 27 gate scenarios, what is stored
    ./scripts/health                # per-node status and timing, what actually ran
    ./scripts/verify-ids            # workflow + bot ids still point where they should
    ```
@@ -148,7 +148,7 @@ knowledge accumulates.
 - **Run `./scripts/test-nodes` before shipping anything.** It runs every Code node that
   decides something — `Guard Probe`, `Check Conflicts`, `Check Ownership`, `Shape Results`,
   `Resolve Booking` — against a table of scenarios offline, then delegates to
-  `./scripts/test-gate` for `Gate Context`. 114 checks, plus 27 gate scenarios. `--live` tests what is actually
+  `./scripts/test-gate` for `Gate Context`. 121 checks, plus 27 gate scenarios. `--live` tests what is actually
   deployed; five explicit paths (main, book, cancel, find, move) test a candidate before
   importing it. Every one of those nodes shipped a bug this weekend that was caught by
   reading output by hand.
@@ -202,7 +202,7 @@ only script that writes to n8n.
 |---|---|
 | `./scripts/n8n list` · `pull <id> <file>` · `execs` · `exec <id>` | read workflows and executions from n8n |
 | `./scripts/n8n-write put <id> <file>` · `activate <id>` · `deactivate <id>` | **writes to n8n** — schema-clean import, and the Active toggle for a tool-schema reload |
-| `./scripts/test-nodes` · `--live` | 114 offline checks + 27 gate scenarios, on a candidate file or on what is deployed |
+| `./scripts/test-nodes` · `--live` | 121 offline checks + 27 gate scenarios, on a candidate file or on what is deployed |
 | `./scripts/test-gate` | the confirmation gate and date resolver on their own |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
 | `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
