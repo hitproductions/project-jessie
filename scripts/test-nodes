@@ -485,6 +485,10 @@ suite('Move authority — a coordinator may move within their department', ()=>{
     ['howard is a test coordinator for his dept',{...b,requester:'U08V3CKDGJF',title:'POSTPROJ / Y / TL',authority:'Standard',department:'Audio Post'},r=>r.verdict==='CLEAR'],
     ['no dept stamp falls back to owner-only',{...b,title:'NODEPT / Z / QQ',authority:'Dept Head',department:'Music'},r=>r.reason==='NOT_YOURS'],
     ['the owner still moves their own',{...b,requester:'U999',title:'MUSICPROJ / X / AB',authority:'Standard',department:'Marketing'},r=>r.verdict==='CLEAR'],
+    ['a room change relocates to the new room',{...b,requester:'U999',title:'MUSICPROJ / X / AB',new_rooms:'Studio 7'},
+      r=>r.verdict==='CLEAR'&&r.location==='Studio 7'&&/188dupcj6/.test((r.attendees&&r.attendees[0]&&r.attendees[0].email)||'')],
+    ['an unknown new room is refused',{...b,requester:'U999',title:'MUSICPROJ / X / AB',new_rooms:'Studio 99'},r=>r.reason==='UNKNOWN_ROOM'],
+    ['no room change keeps the original',{...b,requester:'U999',title:'MUSICPROJ / X / AB'},r=>r.verdict==='CLEAR'&&r.location===''],
   ];
   for(const [label,req,ok] of cases){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};}
     check('ma',label,ok(r),r.verdict+' '+(r.reason||'')); }
