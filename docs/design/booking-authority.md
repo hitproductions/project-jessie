@@ -68,11 +68,35 @@ department, and that Jessie informs the booker + engineer; Rule 1 otherwise stan
 5. **Phase 2** — cross-department **consent flow**: Jessie asks the other department's coordinator
    (yes/no) before proceeding, and informs the booker.
 
+## Finding — authority matches the *producing* department (2026-09-19)
+
+The Dept stamp on a booking is the **session's producing department** (Audio Post, Music,
+Localization, Video Post, Marketing), derived from the session type — never the booker's or the
+client's department (the prompt forbids inferring it from those). The within-department check is
+`booking.Dept === requester.Department`.
+
+Consequence: a coordinator only qualifies when their **Bookers Department is itself a producing
+department**. So the studio Dept Heads work (Regie/Audio Post, Mike/Music, Rudolf/Loc, Peemo/Video
+Post, Nicole/Marketing) and the two named producers whose home dept is a studio dept — **Letty
+(Music)** and **Jo Anne (Localization)**. But the **Sales & Accounts / BD Client-Booking people
+(Camy, Lea, Japs, …) never match any booking**, because no booking is ever stamped
+`Sales & Accounts` or `Business Development`. Their `Client Booking` tag is currently **inert** on
+every real booking.
+
+**Open decision:** should S&A/BD "Client Booking" people be able to coordinate the client sessions
+they book across studios? If yes, that is a model change — either make `Client Booking` a
+cross-department authority, or handle it through the Phase-2 consent flow. If no, the behavior is
+correct and they should not be described as coordinators for this feature.
+
 ## Parked / later
 
+- **Monday (Tel, before the 24 Sept QA):** add a real Airtable authority tag for the dev/QA
+  testers, then **drop the Howard `TEST_COORD` hard-code** and **narrow the Client-Booking rule**.
+  For QA specifically, give **Jess Barbosa** a `Dept Head` (or the new coordinator tag) in
+  **Marketing** so a tester can exercise the authorized-change path with real permissions (she is
+  the only tester in a producing department — see the finding above).
 - **Cross-department consent (Phase 2)** — also likely reusable for **M-Booth** standing-hold
-  concerns (Peemo, Nicole, etc. wanting their booth on a given day). Park together.
-- **Dedicated authority tag** (e.g. `HAIST Dev` for testers, and a precise coordinator tag) —
-  Tel to add in Airtable on Monday; then drop the Howard hard-code and narrow the Client-Booking rule.
+  concerns (Peemo, Nicole, etc. wanting their booth on a given day), and the S&A/BD question above.
+  Park together.
 - **Harden the Dept stamp** — currently the agent supplies `department`; consider deriving it
   deterministically from session type so a security-relevant field isn't model-supplied.
