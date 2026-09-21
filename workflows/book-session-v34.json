@@ -64,6 +64,9 @@
             },
             {
               "name": "department"
+            },
+            {
+              "name": "authority"
             }
           ]
         }
@@ -368,6 +371,106 @@
       "id": "bookret00001",
       "name": "Return Booked",
       "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decide Preempt - inlined from workflows/drafts/preempt/{decide,branch,logic}.js (offline-tested, 20/20).\nconst cc = $input.first().json || {};\nconst REQ = $('When Executed by Another Workflow').first().json || {};\nfunction normType(s){ return String(s==null?'':s).trim().toLowerCase().replace(/\\s+/g,' '); }\nfunction rankOf(m,t){ const n=m[normType(t)]; return Number.isFinite(n)?n:undefined; }\nfunction decidePreempt(rq,inc,m,opts){ const au=!!(opts&&opts.authorized); const a=rankOf(m,rq),b=rankOf(m,inc); const r=(a===undefined?0:a);\n  if(!au) return {preempt:false,reason:'NOT_AUTHORIZED',rq:r,inc:(b===undefined?null:b)};\n  if(b===undefined) return {preempt:false,reason:'INCUMBENT_RANK_UNKNOWN',rq:r,inc:null};\n  if(r>b) return {preempt:true,reason:'OUTRANKS',rq:r,inc:b};\n  return {preempt:false,reason:(r===b?'EQUAL_RANK':'LOWER_RANK'),rq:r,inc:b}; }\nfunction parseSType(x){ const m=String(x||'').match(/SType:\\s*([^\\n|]+)/i); return m?m[1].trim():null; }\nfunction parseRef(x){ const m=String(x||'').match(/ref:\\s*([A-Z0-9]+)/i); return m?m[1].trim():null; }\nfunction parseBookedBy(x){ const m=String(x||'').match(/Booked by:\\s*([^|\\n]+)/i); return m?m[1].trim():''; }\nfunction isAuth(a){ return /(dept head|client booking|haist dev)/i.test(String(a||'')); }\nfunction ranksFromRef(rd){ let ref={}; try{ ref=(rd&&typeof rd==='object')?rd:JSON.parse(rd||'{}'); }catch(_){ref={};} const raw=ref.preemptionRanks||{}; const m={}; for(const k in raw){ const n=Number(raw[k]); if(Number.isFinite(n)) m[normType(k)]=n; } return m; }\nconst eligible = cc && cc.reason==='ROOM_OCCUPIED' && Array.isArray(cc.conflicts) && cc.conflicts.length===1;\nif(!eligible) return [{ json:{ offer:false, reason:'NOT_ELIGIBLE' } }];\nconst inc = cc.conflicts[0] || {};\nconst approver = parseRef(inc.description);\nconst d = decidePreempt(REQ.session_type, parseSType(inc.description), ranksFromRef(REQ.reference_data), { authorized:isAuth(REQ.authority) });\nif(!d.preempt) return [{ json:{ offer:false, reason:d.reason } }];\nif(!approver) return [{ json:{ offer:false, reason:'NO_INCUMBENT_BOOKER' } }];\nconst reqPayload = JSON.stringify({ summary:REQ.summary, start_iso:REQ.start_iso, end_iso:REQ.end_iso, rooms:inc.room||REQ.rooms, description:REQ.description, session_type:REQ.session_type, client:REQ.client, department:REQ.department, engineer:REQ.engineer, bookingType:REQ.bookingType, all_day:REQ.all_day });\nconst open = { requester:parseRef(REQ.description)||'', requesterName:parseBookedBy(REQ.description), approver:approver, approverName:'', room:inc.room||REQ.rooms, reqStart:REQ.start_iso, reqEnd:REQ.end_iso, incumbentEventId:inc.id||'', incumbentTitle:inc.summary||'', reqType:REQ.session_type, reqPriority:d.rq, incPriority:d.inc, reqPayload:reqPayload, requesterDM:'', approverDM:'' };\nreturn [{ json:{ offer:true, reason:'OUTRANKS', open:open } }];\n"
+      },
+      "name": "Decide Preempt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "of1",
+              "leftValue": "={{ $json.offer }}",
+              "operator": {
+                "name": "filter.operator.true",
+                "operation": "true",
+                "type": "boolean",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "name": "Offer?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        900,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "nEHnCMMXS0am59Zy",
+          "mode": "id",
+          "cachedResultName": "Open Consent Request"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "requester": "={{ $json.open.requester }}",
+            "requesterName": "={{ $json.open.requesterName }}",
+            "approver": "={{ $json.open.approver }}",
+            "approverName": "={{ $json.open.approverName }}",
+            "room": "={{ $json.open.room }}",
+            "reqStart": "={{ $json.open.reqStart }}",
+            "reqEnd": "={{ $json.open.reqEnd }}",
+            "incumbentEventId": "={{ $json.open.incumbentEventId }}",
+            "incumbentTitle": "={{ $json.open.incumbentTitle }}",
+            "reqType": "={{ $json.open.reqType }}",
+            "requesterDM": "={{ $json.open.requesterDM }}",
+            "approverDM": "={{ $json.open.approverDM }}",
+            "reqPriority": "={{ $json.open.reqPriority }}",
+            "incPriority": "={{ $json.open.incPriority }}",
+            "reqPayload": "={{ $json.open.reqPayload }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "name": "Open Consent Request",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json || {};\nreturn [{ json: { status:'PREEMPT_PENDING', request_id: r.request_id || '',\n  human: r.message || 'I have asked the current holder of that room for their OK, and will confirm once they reply.' } }];\n"
+      },
+      "name": "Return Offer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        320
+      ]
     }
   ],
   "connections": {
@@ -394,7 +497,7 @@
         [
           {
             "index": 0,
-            "node": "Return Rejection",
+            "node": "Decide Preempt",
             "type": "main"
           }
         ]
@@ -496,6 +599,46 @@
         [
           {
             "node": "Return Booked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide Preempt": {
+      "main": [
+        [
+          {
+            "node": "Offer?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Offer?": {
+      "main": [
+        [
+          {
+            "node": "Open Consent Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open Consent Request": {
+      "main": [
+        [
+          {
+            "node": "Return Offer",
             "type": "main",
             "index": 0
           }
