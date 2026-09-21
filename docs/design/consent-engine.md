@@ -396,3 +396,24 @@ move — it reads them live.
 - **Add `Req Payload` (24th column)** to the Consent Requests tab (Howard — he can edit the Sheet).
 - **Update `Open Consent Request`** to accept the requester's Book payload and write it into
   `Req Payload` (mine — small change to the isolated, inactive workflow).
+
+- **2026-09-21 — #3 trigger logic built + tested (logic only, no live changes yet).**
+  `workflows/drafts/preempt/branch.js`, 15/15. At a `ROOM_OCCUPIED` conflict, `preemptAtConflict`
+  parses the incumbent's `SType`/`ref` off its event description, runs `decidePreempt`, and — when the
+  authorized requester strictly outranks a *readable* incumbent and the incumbent's booker is known —
+  returns the Open Consent Request context (approver = incumbent booker). Otherwise it falls through
+  to the normal refusal. **New live-data decision:** Book Session will stamp `SType: <session type>`
+  on the event description (additive, like `Dept:`/`Type:`), so future incumbents are rankable;
+  pre-stamp events carry no `SType` and are never preemptible (safe — `INCUMBENT_RANK_UNKNOWN`).
+
+### #3 remaining — the FIRST live-touching work (checkpoint + candidate + test-nodes + backup each)
+1. **Book Session (candidate):** add the `SType:` stamp on Create Event; at `ROOM_OCCUPIED`, run
+   `preemptAtConflict` (needs requester authority + `Preemption Rank` read + reqPayload passed from
+   main) → on offer, call `Open Consent Request` (executeWorkflow) and return its message; else the
+   normal refusal. Activate `Open Consent Request` once it's actually called (gotcha 0).
+2. **Move Booking (candidate):** the same preempt branch at its `ROOM_OCCUPIED` (`Check New Window`).
+3. **Main (candidate):** add the pending-row Sheets read into the parallel fan-out + the
+   `classifyInbound` router; consent-reply branch → consent gate (`resolveConsent`) → `Finalize
+   Consent`; normal branch unchanged (prove zero regression against the full `test-nodes` suite).
+4. **Build + create `Finalize Consent`** in n8n and wire it; validate end to end with a real approved
+   request on year-shifted dates. Then `MBOOTH` rides the same engine.
