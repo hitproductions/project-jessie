@@ -34,16 +34,29 @@ queried `recording_format` and returned exactly those five. Asked to book Studio
 7 for a 5.1 mix, she refused — "Studio 7 can only record in stereo". So the
 workaround holds; the underlying data is still wrong for a human reader.
 
+**Update 2026-09-21 (verified live):** Resolved. Studios 7 and 8 no longer carry `5.1 Mixing` in
+`Room Type`; no `5.1 Mixing` room has a stereo-only `Recording Format` anymore.
+
 **2. Studio 1 contradicts itself.** `Equipment` says "5.1 capable",
 `Recording Format` says `Stereo`. Jessie reports it as stereo. If that is wrong,
 it is an Airtable edit — nothing in the workflow needs to change.
+
+**Update 2026-09-21 (verified live):** Resolved. Studio 1 is Stereo throughout — `Recording Format`
+Stereo, no `5.1 Mixing` in Room Type, Equipment no longer claims 5.1.
 
 **3. Studio E — booth or not?** `Room Type` includes `Recording Booth`, but the
 `Vocal Booth` flag is not set. The flag covers Studio A, B and D only, and that
 is what Jessie answers from, so E is excluded.
 
+**Update 2026-09-21 (verified live):** Studio E still has `Recording Booth` in Room Type but no
+`Vocal Booth` flag (flag = A/B/D only). It's a video-post room, so exclusion is likely right —
+decide if the `Recording Booth` tag belongs. Low priority; no behavior impact.
+
 **4. `Studio 2 ` has a trailing space in `Room Name`.** Any exact-match query for
 "Studio 2" fails. It is only reachable by partial match.
+
+**Update 2026-09-21 (verified live):** `Room Name` now reads `Studio 2` with no trailing space —
+appears resolved (verify by eye, the character is invisible).
 
 **5. `Clients.Preferred Rooms` needs a companion field. Nothing gets deleted.**
 
@@ -104,6 +117,10 @@ which room she offers first and which the guards allow.
 
 Decide per session type whether the second list should be empty, or a genuinely
 different set of rooms.
+
+**Update 2026-09-21 (verified live):** Resolved. Tel's ranking changes gave every type a distinct
+Priority vs Last Resort (VO, Music Vocal Recording, Music Mixing, Celebrity Recording now have
+Studios 7/8 or 4/5/6 as genuine fallbacks; Event/Meeting/QC no longer duplicate).
 
 ---
 
