@@ -108,8 +108,3 @@ correct and they should not be described as coordinators for this feature.
   Park together.
 - **Harden the Dept stamp** — currently the agent supplies `department`; consider deriving it
   deterministically from session type so a security-relevant field isn't model-supplied.
-- **Cross-department consent (Phase 2)** — also likely reusable for **M-Booth** standing-hold
-  concerns (Peemo, Nicole, etc. wanting their booth on a given day), and the S&A/BD question above.
-  Park together.
-- **Harden the Dept stamp** — currently the agent supplies `department`; consider deriving it
-  deterministically from session type so a security-relevant field isn't model-supplied.
