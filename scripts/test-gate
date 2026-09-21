@@ -27,7 +27,8 @@ PY
 
 cat > "$tmp/run.js" <<'JS'
 const src = require('fs').readFileSync(process.argv[2], 'utf8');
-Date.now = () => Date.UTC(2026, 7, 30, 8, 20, 0);   // Sun 30 Aug 2026, 16:20 Manila
+const DEFAULT_NOW = Date.UTC(2026, 7, 30, 8, 20, 0); // Sun 30 Aug 2026, 16:20 Manila (Jessie: Sun 30 Aug 2027)
+Date.now = () => DEFAULT_NOW;
 const ME = 'U026N6E1R';
 const store = {};
 const run = (text, history) => {
@@ -115,10 +116,18 @@ const cases = [
    { resetNotice: /ALREADY BEEN CLEARED|JUST BEEN CLEARED/, epoch: '1788077500.1' }],
   ['reset through connector', 'reset *Sent using* <@U0AVDBNH1K4>', [],
    { resetNotice: /JUST BEEN CLEARED/, epoch: '1788077500.1' }],
+  // Mon-Wed is the one case where "next X" and "nearest upcoming X" diverge: with
+  // today = Mon 6 Sep 2027, "this Thursday" (Sep 9) is still ahead, so "next
+  // Thursday" is the FOLLOWING week (Sep 16) - Tara's rule, kept 2026-09-21. Locks
+  // that the resolver does not collapse to nearest-upcoming. The 5th tuple element
+  // overrides "today" for this case. See docs/design/date-resolution.md.
+  ['next on a Monday is the following week', 'book studio 7 next thursday', [],
+   { dateNotice: /Thursday, 16 September 2027/ }, Date.UTC(2026, 8, 6, 8, 20, 0)],
 ];
 
 let failed = 0;
-for (const [label, text, hist, want] of cases) {
+for (const [label, text, hist, want, nowUTC] of cases) {
+  Date.now = () => (nowUTC != null ? nowUTC : DEFAULT_NOW);
   let r;
   try { r = run(text, hist); }
   catch (e) { console.log('THREW  ' + label + ' :: ' + e.message); failed++; continue; }
