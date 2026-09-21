@@ -1,7 +1,17 @@
 # M-Booth Shared-Use Approval — Design
 
-Status: **design, not built.** Architecture chosen (Howard, 8 Sept): event-driven with an
-Airtable pending store — no n8n Wait nodes, nothing parked in memory, restart-safe.
+> **Superseded 2026-09-21 by [consent-engine.md](consent-engine.md)** (with
+> [mbooth-approval.md](mbooth-approval.md) as the M-Booth-specific slice). This 8-Sept design's
+> **core idea still holds** — event-driven, Airtable pending store, no Wait nodes, restart-safe — but
+> M-Booth is now one caller (`Kind = MBOOTH`) of a single shared engine, so the specifics here are
+> out of date: correspondence is via **Jessie DM** (not a channel), the log channel is
+> **`#jessie-approvals`** (shared, back-end only — not a separate `#m-booth-approvals`), and the
+> router keys on a pending `Consent Requests` row rather than a channel Slack Trigger. Kept for the
+> rule set and Tel's handoff detail; read consent-engine.md for the current architecture.
+
+Status: **superseded — see consent-engine.md** · design, not built. Architecture chosen (Howard,
+8 Sept): event-driven with an Airtable pending store — no n8n Wait nodes, nothing parked in memory,
+restart-safe.
 
 This is the deterministic (node) layer. The system-prompt section Tel drafted is its
 conversational companion; the guarantees live here in the nodes, not in the prompt.
