@@ -93,8 +93,8 @@ correct and they should not be described as coordinators for this feature.
 - **`HAIST Dev` — full authority tier (decided 2026-09-21, code deployed cancel-v11/move-v10).**
   A Bookers `Authority` tag that **bypasses the owner check AND the department scope** — a holder
   moves/cancels *any* booking, *any* department (`isHaistDev` in `Check Ownership` / `Resolve
-  Booking`). For the **dev team: Howard, Tel, Genzo** (Tara is strategic lead, not dev — QA-style
-  instead: on the notification ALLOW list, real Standard authority, no HAIST Dev). Notifications
+  Booking`). For the **dev team: Howard, Tel, Genzo**. Tara, the strategic lead (not a dev), is set
+  up QA-style: on the notification ALLOW list with her real Standard authority. Notifications
   still fire for a HAIST Dev's changes (`notify = !owner && (coordInDept || isHaistDev)`). **Airtable
   step (Tel):** add the `HAIST Dev` choice to `Authority`, tag **Howard, Tel, Genzo**. Once live,
   **drop `TEST_COORD`** (HAIST Dev is broader). God-mode — review at launch (keep for devs or pull);

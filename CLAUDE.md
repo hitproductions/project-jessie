@@ -335,8 +335,8 @@ Three switches flip for launch — do them together:
 4. **`HAIST Dev`** authority (Bookers `Authority` tag) — **god-mode**: bypasses the owner check and
    the department scope, so a holder can move/cancel *any* booking in *any* department. Dev team
    only: **Howard, Tel, Genzo**. Before/after launch, **decide: keep for devs or pull.** Enforced in
-   `Check Ownership` / `Resolve Booking` via `isHaistDev`. (Tara is on the notification ALLOW list
-   but has **no** HAIST Dev — she tests QA-style with her real Standard authority.)
+   `Check Ownership` / `Resolve Booking` via `isHaistDev`. (Tara, the strategic lead rather than a
+   dev, is set up QA-style: on the notification ALLOW list with her real Standard authority.)
 
 Notification routing during dev (not a launch flip, but related): `Build Recipients` in Cancel/Move
 has `DEV_REDIRECT` (reroute to Howard) and `ALLOW` (ids that get their own real DM). `ALLOW` applies
