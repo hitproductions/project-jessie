@@ -55,8 +55,8 @@ loser is a harmless no-op:
    `<name>`"* / *"`<name>` already said yes."* Jessie records **who attested** and finalizes. This is
    the outage-proof fast path (a normal booking turn, no waiting), and the manual recovery when a
    live reply was dropped.
-2. **The incumbent consents** — the incumbent/holder replies `yes` to Jessie's request in the
-   approvals channel. The async path; self-heals on Slack retry.
+2. **The incumbent consents** — the incumbent/holder replies `yes` to Jessie's request **in their
+   own DM with Jessie**. The async path; self-heals on Slack retry.
 
 Both write to the **same PENDING row**. `resolveConsent` is deterministic (explicit word, never
 model-judged). The finalize is a **compare-and-set**: it acts only if the row is still `PENDING`,
@@ -90,7 +90,8 @@ One row per request. Serves both callers via a `Kind` field.
 | `Incumbent New Start` · `Incumbent New End` | the agreed relocation slot for the incumbent (PREEMPT; filled when agreed) |
 | `Req Priority` · `Inc Priority` | the two session-type ranks at request time (audit; why preemption was allowed) |
 | `Deadline` | computed at request time (earlier of now+window and start−lead) |
-| `Channel` · `Thread TS` | where the request was posted, to correlate a reply |
+| `Requester DM` · `Approver DM` | the DM channel ids where each side is corresponded (replies arrive here) |
+| `Log Thread TS` | the `#approvals` back-end mirror post, for audit/coordination (not where people reply) |
 | `Resolved Via` | `reply` / `attestation` / `airtable` (audit) |
 | `Attested By` | who attested, when the fast path was used |
 | `Decided By` · `Decided At` | audit |
@@ -118,20 +119,26 @@ One row per request. Serves both callers via a `Kind` field.
 
 ## The preemption flow (PREEMPT), end to end
 
-1. Requester asks for a room that is occupied. `Check New Window` today returns `ROOM_OCCUPIED`.
-   **New branch:** if the requester's **session-type rank outranks the incumbent's** (data — see
-   below) *and* the requester is authorized, Jessie does **not** hard-refuse. Instead she opens a
-   consent request.
-2. Jessie DMs / posts to the approver (the incumbent's booker, resolved from the event `ref:`):
+1. Requester asks for a room that is occupied. `Check New Window` returns `ROOM_OCCUPIED` — and
+   **that guard is never touched.** The new branch does not let a booking through an occupied room;
+   it just, when the requester's **session-type rank outranks the incumbent's** (data — see below)
+   *and* the requester is authorized, offers the consent path **instead of a bare refusal**.
+2. Jessie DMs the approver (the incumbent's booker, resolved from the event `ref:`):
    *"`<Requester>` needs `<Room>` on `<slot>` for a higher-priority `<session type>`. You hold it
    for `<incumbent title>`. Are you OK to move? If yes, what time works for your session?"* Writes
    the PENDING row. **No calendar change yet** (no tentative hold — that would falsely occupy the
    slot and fight Rule 1).
-3. Approver consents — by reply, by attestation, or by Airtable edit — and the relocation slot is
-   agreed **through that DM conversation** (Jessie does not pick it unilaterally; Howard's rule).
-4. Finalize, **all-or-nothing**: re-check the incumbent's new slot is free → **move the incumbent
-   there** → re-check the contested room is now free → **place the requester**. If any step fails,
-   nothing changes and the row goes `FAILED` (the incumbent is never left homeless).
+3. Approver consents — by their DM reply, by the requester's attestation, or (break-glass) by an
+   Airtable edit — and the relocation slot is agreed **through that DM conversation** (Jessie does
+   not pick it unilaterally; Howard's rule).
+4. Finalize — **exactly a normal edit, clearing the room first, and it never double-books**
+   (Howard's rule 2026-09-21). It reuses the existing, live authorized **Move Booking** to relocate
+   the incumbent to the agreed slot (which frees the contested room the normal way), then a normal
+   **Book Session** places the requester into the now-genuinely-empty room. The double-book guard
+   stays exactly as-is because by the time the requester is booked the room really is free. Ordered
+   and all-or-nothing: if the incumbent's move fails, nothing else happens; if the requester's
+   booking then fails, the row goes `FAILED` and the incumbent has still only been moved to the slot
+   they agreed to — never left homeless, never a double-book at any instant.
 5. Notify: the incumbent (moved), the requester (**confirmed consent given + booked** — Howard's
    two-way notification), and the affected dept's coordinator. Reuses the Phase-1 sender.
 
@@ -150,26 +157,44 @@ scaffolded and unit-tested in [`workflows/drafts/mbooth/`](../../workflows/draft
 green as of 2026-09-21). Generalize the pending table from `M-Booth Approvals` to `Consent Requests`
 with the `Kind` field so both callers share one router and one sweep.
 
-## Every-message-path safety (the router)
+## Where people are corresponded — Jessie DM (decided 2026-09-21)
 
-The only new code on the path every message hits is the reply-router — kept deterministic and
-**fail-open** (already written and tested for M-Booth; generalize it):
+**All human correspondence happens in the person's own Jessie DM** — the requester attests in their
+DM, and the incumbent/holder is asked and replies in *their* DM. Nobody has to watch a separate
+place. Howard's call: users deal only with Jessie.
 
-- A message is a consent reply **only if** it is in the dedicated approvals channel **and** matches a
-  PENDING row **and** is from that row's approver — else it is a `normal` message and flows down
-  today's pipeline **byte-for-byte unchanged**. Own-bot messages ignored.
-- A dedicated channel (e.g. `#approvals`, threaded) is what keeps the router a channel-id equality
-  check rather than fuzzy matching — normal bookings (DM) and consent replies (channel) are
-  physically different message populations. Proven by running the full `test-nodes` suite against the
-  ELSE branch (zero regression) before any canary.
+The `#approvals` channel is **back-end only** — a restricted audit/coordination mirror where the
+relevant coordinators can see a request that spans people/departments, and a durable log. It is
+**not** the interaction surface, and people who aren't involved never see it. (This replaces the
+earlier plan of conducting replies *in* the channel.)
 
-## Build order — target: live **before launch (25 Sep)**
+### The router, now that replies arrive in DMs
 
-Howard's call 2026-09-21: build ASAP, pre-launch. Sequenced so the highest-value, lowest-risk pieces
-land first and each step is independently shippable — if the calendar tightens, we stop at whatever
-step is done and it's still coherent. Every step: build on a **candidate/canary** copy, run the full
-`test-nodes` suite against the unchanged ELSE branch (zero regression) + offline tests, snapshot with
-`backup-live` before import, `n8n-write put` then pull to confirm stored, `health` to confirm ran.
+The only new code on the every-message path is the reply-router — deterministic and **fail-open**.
+Because replies now come by DM (not a dedicated channel), it can't route by channel-id; instead it
+routes by **pending-row state**, which is just as deterministic:
+
+- A DM is a consent reply **only if** the sender has a **PENDING `Consent Requests` row awaiting
+  them** (they are its `Approver`, or its `Requester` on the attestation path). Otherwise it's a
+  `normal` message and flows down today's pipeline **byte-for-byte unchanged**. Own-bot messages
+  ignored.
+- **The one edge case** the old channel design avoided for free: a person who has a pending consent
+  *and* is mid-booking in the same DM. Handled by (a) the consent DM asking for an explicit, clearly
+  worded reply, and (b) if a reply is ambiguous, Jessie asks to clarify rather than guessing — never
+  model-judged silently. Rare, and it degrades to a clarifying question, never a wrong action.
+- Proven by running the full `test-nodes` suite against the ELSE branch (zero regression) before any
+  canary. Generalize the tested M-Booth router from a channel-id check to a pending-row check.
+
+## Build order — target: **major dev done by 23 Sep**, polish headroom to 5 Oct, **launch 12 Oct**
+
+Howard's call 2026-09-21: build ASAP. Per the amended sprint the dev freeze is **23 September**
+(24 Sep = QA round 2, 25 Sep = address QA), with back-end polish headroom until **5 October** and
+launch on **12 October**. So the full feature — including the relocation finalize — is comfortably in
+scope, because the finalize no longer touches the double-book guard (see below). Sequenced so the
+highest-value, lowest-risk pieces land first and each step is independently shippable. Every step:
+build on a **candidate/canary** copy, run the full `test-nodes` suite against the unchanged ELSE
+branch (zero regression) + offline tests, snapshot with `backup-live` before import, `n8n-write put`
+then pull to confirm stored, `health` to confirm ran.
 
 - **Step 0 — foundations, zero live-path risk (in progress now):** Tel enters the **session-type
   ranking** in Airtable (inert until read — see spec below); priority-classification pure function
@@ -183,16 +208,19 @@ step is done and it's still coherent. Every step: build on a **candidate/canary*
   M-Booth router — the one new component on the every-message path, fail-open).
 - **Step 4 — sweep** (scheduled ~10 min): expire past deadline; **nudge** aging PENDING rows by
   re-posting the ask (extra hardening for a dropped reply).
-- **Step 5 — PREEMPT finalize:** the all-or-nothing move-incumbent-then-place-requester
-  choreography + the `ROOM_OCCUPIED` priority branch.
+- **Step 5 — PREEMPT finalize:** relocate the incumbent with the existing authorized **Move Booking**
+  (frees the room), then a normal **Book Session** — ordered, all-or-nothing, **never touches the
+  double-book guard** (the room is genuinely free before the requester is booked).
 - **Step 6 — Airtable-direct break-glass:** sweep reads a human-set `Status` and finalizes.
 - **Step 7 — prompt sections, offline tests, canary pass, careful live merge.**
 
-**Honest risk note:** Steps 2 is genuinely pre-launch-feasible and low-risk. Steps 3–5 (the async
-router + sweep + the two-booking relocation choreography) are the materially bigger, higher-risk part,
-landing on the every-message path and the `ROOM_OCCUPIED` guard during launch week. If all of it
-can't be made solid by the 25th, ship Step 2 (+ M-Booth attestation) and finish 3–5 right after —
-the design is the same either way, so nothing is thrown away.
+**Risk note (lower than before, now that the guard is untouched):** Step 2 is low-risk. The bigger
+part is Step 3 (the router now lives on the every-message path) and Step 5 — but Step 5 reuses the
+live, tested Move + Book rather than modifying `ROOM_OCCUPIED`, so its risk is orchestration (order,
+all-or-nothing, failure handling), not a new exception to the one guard that prevents double-booking.
+The 23 Sep → 5 Oct window is enough for all of it. If anything slips, the fallback order still holds:
+ship Step 2 (+ M-Booth attestation) first and finish 3–5 in the polish window — same design, nothing
+wasted.
 
 ## Airtable spec — session-type priority ranking (for Tel)
 
@@ -248,7 +276,8 @@ with your approval, since it's inert until the preemption branch reads it).
 - **Approver identity** for PREEMPT — incumbent's booker (`ref:`) and/or that dept's coordinator?
 - **Relocation choreography confirm** — all-or-nothing move-then-place, incumbent's new slot agreed
   in the DM (per Howard 2026-09-21).
-- **Approvals channel** — create `#approvals`, invite Jessie, give the channel id.
+- **Approvals channel** — create `#approvals` (back-end audit/coordination log only, restricted to
+  relevant coordinators — not the interaction surface), invite Jessie, give the channel id.
 - **M-Booth specifics** — shared-use booth set + each holder's Slack id; how "held" is detected
   (standing calendar event vs static map); window/timeout rules; no-response policy.
 - **Timeout / no-response policy** — expire silently vs notify the requester.

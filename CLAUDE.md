@@ -46,7 +46,7 @@ else, unprompted:
 
 Then orient them, in plain language, drawing on *Where things stand* below:
 
-- what Jessie is, and that launch is **25 September 2026**
+- what Jessie is, and that launch is **12 October 2026** (dev freeze 23 Sep)
 - the live versions, and whether anything is failing (`./scripts/health`)
 - what changed since the last commit (`git log`)
 - the biggest open risk (the outages — unsolved, see `OUTAGES.md`) and the
@@ -64,9 +64,21 @@ known.
 
 ## Where things stand
 
-**Launch is 25 September 2026.** Jessie is live and in daily use. A second bot,
-Posty (release announcements — Google Sheets and Slack, no Airtable), runs on the
-same n8n instance.
+**Launch is 12 October 2026** (amended sprint, 2026-09-21 — was 25 Sep). Jessie is
+live and in daily use. A second bot, Posty (release announcements — Google Sheets
+and Slack, no Airtable), runs on the same n8n instance.
+
+**The amended sprint milestones:**
+- **23 Sep** — major dev freeze (end of the dev sprint).
+- **24 Sep** — QA round 2 (Trish, Camy, Jess).
+- **25 Sep** — address QA round-2 concerns (Howard, Tel).
+- **28 Sep** — finalize the Living Doc.
+- **29 Sep–2 Oct** — produce the End User SOP (Kristine, Camy).
+- **5 Oct** — pre-launch: confirm all QA issues resolved or documented as known
+  limitations. This is the end of the back-end polish headroom.
+- **7 Oct** — HAIST monthly meeting 3. **8 Oct** — SOP finalized; async
+  deliverables confirmed landed (Drew). **9 Oct** — cross-department orientation.
+- **12 Oct** — launch: ready-to-use for selected departments / key persons.
 
 **Working, and proven live:** the six Jessie sub-workflows and the main workflow are
 all active and green. The confirmation gate, the ownership refusals (`NOT_YOURS`),
@@ -188,7 +200,7 @@ Slack DM → n8n → agent (Gemini 3.5 Flash Lite, temp 0.2) → Airtable + Goog
 | `Jessie — Prune Executions` | `K2tPBykMwKcQGMub` | daily 04:00 cleanup so the DB does not fill |
 
 Airtable base `app8GQxEInqJi1NRP` · calendar `c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com`
-· launch 2026-09-25.
+· launch 2026-10-12 (dev freeze 2026-09-23).
 
 Versions in `workflows/` are a local convention, not n8n's. The live build is whatever was
 last imported and confirmed — check with `./scripts/n8n pull` rather than assuming.

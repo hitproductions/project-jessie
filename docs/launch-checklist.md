@@ -1,6 +1,6 @@
 # Launch checklist — QA/dev switches to flip for go-live
 
-Launch: **25 September 2026**. This is the authoritative list of every QA/dev scaffold that must be
+Launch: **12 October 2026** (amended 2026-09-21; dev freeze 23 Sep). This is the authoritative list of every QA/dev scaffold that must be
 turned off (or decided) before Jessie serves real bookings. Verified against the **live** workflows
 on 2026-09-21 by grepping each for the markers below — nothing else carries them (Book Session,
 Find, Room Availability, Expand Series, Book Series, Prune are clean).

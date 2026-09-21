@@ -1,7 +1,7 @@
 # Project Jessie
 
 Slack bot that books studio time for Hit Productions, built in n8n. A second bot,
-Posty, runs on the same instance. Launch: **25 September 2026**.
+Posty, runs on the same instance. Launch: **12 October 2026** (dev freeze 23 Sep).
 
 ## Start here
 

@@ -167,7 +167,7 @@ waiting on Slack.
 A WAF **skip** rule on the webhook paths for `signal.hitpromanila.net`, so no bot,
 reputation or challenge logic is applied to them. Slack's dispatcher can never solve a
 challenge, so any rule that can challenge that path will eventually take the bots down
-again. This needs doing before 25 September regardless of whether it is down today.
+again. This needs doing before launch (12 October) regardless of whether it is down today.
 
 ## The measured outages — 15 and 16 September
 

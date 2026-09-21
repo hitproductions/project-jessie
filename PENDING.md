@@ -403,7 +403,7 @@ What to ask for, in this order:
 2. **Filter Security → Events to `signal.hitpromanila.net` for 21:00–22:00 UTC on
    15 September** — a measured outage hour. Slack's blocked requests should be there.
 3. **The fix: a WAF skip rule on `/webhook/*` for that hostname**, exempting it from bot,
-   reputation and challenge logic. Needed before 25 September regardless of what the
+   reputation and challenge logic. Needed before launch (12 October) regardless of what the
    lookups say — any rule that can issue a challenge on that path will take both bots
    down again, and **no automated caller can ever solve a challenge**.
 4. While they are in there: allow the GitHub Actions ranges, or include the API path in

@@ -1,5 +1,13 @@
 # Design — M-Booth shared-use approval (live async consent)
 
+> **Superseded in part (2026-09-21) by [consent-engine.md](consent-engine.md).** M-Booth is now one
+> caller of a single shared consent engine. The **interaction model changed**: correspondence is via
+> **Jessie DM**, not the `#m-booth-approvals`/`#approvals` channel (which is a back-end audit log
+> only), and the router keys on a pending `Consent Requests` row rather than channel-id. The **async
+> skeleton below still holds** — Airtable pending row, request/reply/sweep as short independent
+> executions, deadline math, fail-open router — and the drafts in `workflows/drafts/mbooth/` remain
+> valid (16/16). Schedule is the amended sprint (dev freeze 23 Sep, launch 12 Oct), not "post-launch."
+
 Status: **in build — basics scaffolded** · 2026-09-19 · Owner: Howard
 Relates to [booking-authority-phase2.md](booking-authority-phase2.md) (this is the 2b / live-consent
 instance of that pattern). Draft logic + tests: `workflows/drafts/mbooth/`.

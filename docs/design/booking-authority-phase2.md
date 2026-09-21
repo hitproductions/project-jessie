@@ -1,6 +1,12 @@
 # Design — Booking authority Phase 2 (cross-department) + M-Booth shared use
 
-Status: **draft for discussion** · 2026-09-19 · Owner: Howard · Builds on
+> **Superseded 2026-09-21 by [consent-engine.md](consent-engine.md).** The 2a-vs-2b fork below is
+> resolved: one outage-resilient async engine, resolved via requester-attestation OR incumbent
+> consent (first wins) with Airtable-direct as backup, all corresponded via Jessie DM, priority by a
+> session-type ranking, and relocation done as a normal Move (never touching the double-book guard).
+> Kept for the problem framing and the reasoning; read consent-engine.md for the current design.
+
+Status: **superseded — see consent-engine.md** · 2026-09-19 · Owner: Howard · Builds on
 [booking-authority.md](booking-authority.md) (Phase 1, done)
 
 ## Problem
