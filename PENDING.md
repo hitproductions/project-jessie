@@ -81,6 +81,11 @@ go.
 *What it unlocks:* Jessie can propose a room again instead of always asking.
 Until then, always-ask is correct and is what she does.
 
+**Update 2026-09-21:** the `Preferred Room Names` lookup now exists and the Clients tool returns it
+(verified: Dhang Santiago → Studio F, Studio 8); the prompt directs Jessie to lead with it. The data
+unlock is done, but she does not yet *reliably* propose the preferred room (prompt-level behavior) —
+reliable proposal would need deterministic enforcement. Tracked as a soft follow-up.
+
 **6. A client's Technical Requirements points at a field Jessie cannot read.**
 
 Jem Lim's `Technical Requirements` reads:
@@ -426,6 +431,24 @@ Do that as soon as the Cloudflare rule in item 21 is fixed — a WAF skip on `/w
 plus API access for the runner, or an allowlist for GitHub's ranges. Until then, either
 run `./scripts/backup-live` from the VM (not challenged there) or take a manual snapshot
 before any risky change. See `OUTAGES.md` for the captured challenge response.
+
+**23. After a `ROOM_OCCUPIED` rejection, Jessie re-offers the identical doomed move.**
+Found 2026-09-21 reviewing a live move (execs `9962`, `9971`): Move Booking returned
+`REJECTED / ROOM_OCCUPIED` (Studio 1 taken by `NET-PUSO / JC` in the target window),
+Jessie relayed it correctly — but on the next confirmation it re-presented the *same*
+"Confirm to move" summary and hit the exact same wall, twice. The first rejection's own
+guidance ("offer another time") was ignored because nothing carries the just-failed slot
+across turns. Harmless (the original booking is never touched, `ROOM_OCCUPIED` holds every
+time), but it wastes turns and reads as a loop.
+
+This is our own behavior to fix, not a wait on another system — parked here so it isn't
+lost. Same root as the CLAUDE.md "Not done" note that availability isn't remembered across
+turns. Likely fix: after a `ROOM_OCCUPIED` (or availability) refusal, have Guard Probe /
+the move summary refuse to re-present an unchanged room+window and instead force a
+time/room change — deterministic, in the sub-workflow or Guard Probe, not the prompt. Not
+started; low priority vs. launch items but a clear UX win. Related to the priority-preempt
+consent work in `docs/design/booking-authority-phase2.md` (the "proper" answer to an
+occupied higher-priority slot is to broker the incumbent's move, not just refuse).
 
 ---
 
