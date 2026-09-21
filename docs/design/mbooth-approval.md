@@ -29,7 +29,8 @@ Two things make it *simpler* than the `PREEMPT` caller:
 
 ## On the shared engine — how M-Booth maps onto it
 
-- **Table:** the shared `Consent Requests` table with `Kind = MBOOTH`. Booth requests use `Approver`
+- **Store:** the shared `Consent Requests` **Google Sheet** (a tab in the Jessie Log spreadsheet, not
+  Airtable) with `Kind = MBOOTH`. Booth requests use `Approver`
   (= the booth holder), `Room`/`Booth`, `Req Start`/`Req End`, `Title`/`Department`/`Engineer`,
   `Deadline`. The incumbent/relocation fields stay empty (there's no booking to move).
 - **Correspondence:** the holder is asked and replies **in their Jessie DM**; the requester can also
