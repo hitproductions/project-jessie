@@ -184,6 +184,13 @@ routes by **pending-row state**, which is just as deterministic:
   *and* is mid-booking in the same DM. Handled by (a) the consent DM asking for an explicit, clearly
   worded reply, and (b) if a reply is ambiguous, Jessie asks to clarify rather than guessing — never
   model-judged silently. Rare, and it degrades to a clarifying question, never a wrong action.
+- **Latency — the pending-row read MUST go in the existing parallel Airtable fan-out** at the top of
+  the turn (alongside `Get Booker` / `All Rooms` / `All Session Types`, which already run
+  concurrently ~1s). It runs on every message, but overlapping the reads that already happen makes
+  its wall-clock cost ~0 — the only cost is one API call, not turn time. Do **not** wire it as a
+  serial step before the agent. Query is server-side filtered (`status = PENDING AND
+  (approver = sender OR requester = sender)`), almost always zero rows. Fail-open: a slow/errored
+  read → treat as no pending row → normal message, so it can never block or break a booking.
 - Proven by running the full `test-nodes` suite against the ELSE branch (zero regression) before any
   canary. Generalize the tested M-Booth router from a channel-id check to a pending-row check.
 
@@ -278,9 +285,9 @@ with your approval, since it's inert until the preemption branch reads it).
 - **Approver identity** for PREEMPT — incumbent's booker (`ref:`) and/or that dept's coordinator?
 - **Relocation choreography confirm** — all-or-nothing move-then-place, incumbent's new slot agreed
   in the DM (per Howard 2026-09-21).
-- **Approvals channel — DONE.** `#jessie-approvals` created 2026-09-21, id **`C0C34UMFXGD`**
-  (view/audit feed only — Jessie posts here, nobody replies here, not used for routing). Still to do:
-  invite Jessie to it.
+- **Approvals channel — DONE.** `#jessie-approvals` created 2026-09-21, id **`C0C34UMFXGD`**,
+  **Jessie invited** — view/audit feed only (Jessie posts here, nobody replies here, not used for
+  routing). Fully set.
 - **M-Booth specifics** — shared-use booth set + each holder's Slack id; how "held" is detected
   (standing calendar event vs static map); window/timeout rules; no-response policy.
 - **Timeout / no-response policy** — expire silently vs notify the requester.
