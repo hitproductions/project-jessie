@@ -308,10 +308,22 @@ gaps are deliberate):
 
 These are a *starting point only* — the operational judgment is Tel's. The one rule the code relies
 on: **only a strict outrank opens preemption; equal or lower is refused as it is today
-(`ROOM_OCCUPIED`).** So two rank-60 bookings can never bump each other, which is the safe default.
+(`ROOM_OCCUPIED`).** So two equal-rank bookings can never bump each other, which is the safe default.
 
-I have **not** created this field — it's a spec for Tel to add (or say the word and I'll create it,
-with your approval, since it's inert until the preemption branch reads it).
+**As actually set by Tel, 2026-09-21 (LIVE in Airtable, field `fldoLFpIKDG1JCrFt`; provisional —
+Howard to polish ~22 Sep):**
+
+| Rank | Session types |
+|---|---|
+| 100 | Celebrity Recording |
+| 90 | Band Recording |
+| 50 | everything else (QC, Post Mixing, Localization Editing/Mixing/Atmos Mixing, Event, Music Vocal Recording, Meeting, Localization Dubbing, Music Mixing, VO Recording) |
+
+Consequence today: **only Celebrity and Band Recording can preempt anything**; all others are equal
+(no mutual preemption). Accepted as the starting policy so we can build. **Howard's intent for the
+polish pass:** Celebrity is the objective top priority, *especially for Studios F and C*; Music Vocal
+Recording to be raised above the 50 floor later. Nothing in the engine changes when these numbers
+move — it reads them live.
 
 ## Inputs still needed (Howard ⇄ Tel — Tel = she/her)
 
