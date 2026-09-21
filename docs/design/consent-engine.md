@@ -333,7 +333,9 @@ move — it reads them live.
   `Consent Requests` + header row in the existing Jessie Log spreadsheet
   (`1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo`, already shared to the `jessie-booking-log` service
   account — reuse credential `DU75rLW4KHlVhcK1`). Chosen because the team can edit a Sheet but not
-  Airtable, and it reuses the live booking-log integration. To do: create the tab + header.
+  Airtable, and it reuses the live booking-log integration. **DONE 2026-09-21** — tab created with the
+  23-column header verified via the Drive connector (`Decided By` dropped; `Attested By` +
+  `Resolved Via` cover who/how).
 - **Consent model — DECIDED 2026-09-21:** requester-attestation OR incumbent-consent, first resolver
   wins; Sheet-direct edit is backup-only when both Slack paths fail; two-way notify on the incumbent's
   yes. Howard may refine exact wording after the Tel discussion, but the shape is fixed and built to.
