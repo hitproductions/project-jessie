@@ -127,9 +127,14 @@ different set of rooms.
 Priority vs Last Resort (VO, Music Vocal Recording, Music Mixing, Celebrity Recording now have
 Studios 7/8 or 4/5/6 as genuine fallbacks; Event/Meeting/QC no longer duplicate).
 
----
-
-## Slack app
+**24. Add a `Preemption Rank` field to `Session Types` (for the consent/preemption feature).**
+Raised 2026-09-21. The consent engine ([consent-engine.md](docs/design/consent-engine.md)) needs a
+deterministic way to know one session type outranks another (e.g. Celebrity Recording > VO) before it
+may offer to preempt an occupied room. Add a Number field `Preemption Rank` on `Session Types`
+(`tblxEvRNPneUhQxUv`), higher = outranks, blank = 0 = never preempts. Tel (she) sets the values — a
+suggested starting table is in the design doc. **Inert until the preemption branch reads it**, so it
+can be added any time with zero effect on the live bot. Not created yet (spec only) per Howard's "write
+the spec" instruction.
 
 **8. Does the bot have `reactions:write`?**
 
