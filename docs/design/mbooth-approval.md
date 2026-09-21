@@ -59,7 +59,8 @@ M-Booth adds no new infrastructure — it rides Steps 1/3/4 of the engine. Its o
 1. **Shared-use booth set** and each booth's **holder/approver** (M2→Peemo, M6→Nicole, M7→BD —
    confirm), and whether **M2/M6 are active**.
 2. The approver **Slack IDs**.
-3. `#jessie-approvals` created + Jessie invited (shared with `PREEMPT`; back-end log only) — its id.
+3. `#jessie-approvals` **DONE** — created 2026-09-21, id `C0C34UMFXGD` (shared with `PREEMPT`;
+   view/audit feed only). Still to do: invite Jessie to it.
 4. How **"held"** is detected — a standing calendar event on the booth (+ its title keywords) vs a
    static map.
 5. The **window / timeout rules** (replaces the `computeDeadline` placeholders) and the

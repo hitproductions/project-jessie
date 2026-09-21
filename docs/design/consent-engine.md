@@ -163,10 +163,12 @@ with the `Kind` field so both callers share one router and one sweep.
 DM, and the incumbent/holder is asked and replies in *their* DM. Nobody has to watch a separate
 place. Howard's call: users deal only with Jessie.
 
-The `#jessie-approvals` channel is **back-end only** — a restricted audit/coordination mirror where the
-relevant coordinators can see a request that spans people/departments, and a durable log. It is
-**not** the interaction surface, and people who aren't involved never see it. (This replaces the
-earlier plan of conducting replies *in* the channel.)
+The `#jessie-approvals` channel (**`C0C34UMFXGD`**, created 2026-09-21) is a **view/audit feed only**
+— a restricted mirror where relevant coordinators can see requests/approvals that span
+people/departments at a glance without opening Airtable. Jessie *posts* each request and its outcome
+there; **nobody replies there** (correspondence is DM) and it is **not** used for routing (the router
+keys on the pending row). The durable record is still the Airtable `Consent Requests` table; this
+channel is the human-readable convenience view on top of it. People who aren't involved never see it.
 
 ### The router, now that replies arrive in DMs
 
@@ -276,8 +278,9 @@ with your approval, since it's inert until the preemption branch reads it).
 - **Approver identity** for PREEMPT — incumbent's booker (`ref:`) and/or that dept's coordinator?
 - **Relocation choreography confirm** — all-or-nothing move-then-place, incumbent's new slot agreed
   in the DM (per Howard 2026-09-21).
-- **Approvals channel** — create `#jessie-approvals` (back-end audit/coordination log only, restricted
-  to relevant coordinators — not the interaction surface), invite Jessie, give the channel id.
+- **Approvals channel — DONE.** `#jessie-approvals` created 2026-09-21, id **`C0C34UMFXGD`**
+  (view/audit feed only — Jessie posts here, nobody replies here, not used for routing). Still to do:
+  invite Jessie to it.
 - **M-Booth specifics** — shared-use booth set + each holder's Slack id; how "held" is detected
   (standing calendar event vs static map); window/timeout rules; no-response policy.
 - **Timeout / no-response policy** — expire silently vs notify the requester.
