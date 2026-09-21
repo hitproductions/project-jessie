@@ -485,6 +485,7 @@ suite('Move authority — a coordinator may move within their department', ()=>{
     ['howard is a test coordinator for his dept',{...b,requester:'U08V3CKDGJF',title:'POSTPROJ / Y / TL',authority:'Standard',department:'Audio Post'},r=>r.verdict==='CLEAR'],
     ['no dept stamp falls back to owner-only',{...b,title:'NODEPT / Z / QQ',authority:'Dept Head',department:'Music'},r=>r.reason==='NOT_YOURS'],
     ['the owner still moves their own',{...b,requester:'U999',title:'MUSICPROJ / X / AB',authority:'Standard',department:'Marketing'},r=>r.verdict==='CLEAR'],
+    ['a HAIST Dev moves any booking, any department',{...b,title:'MUSICPROJ / X / AB',authority:'Standard, HAIST Dev',department:'Marketing'},r=>r.verdict==='CLEAR'&&r.notify===true],
     ['a room change relocates to the new room',{...b,requester:'U999',title:'MUSICPROJ / X / AB',new_rooms:'Studio 7'},
       r=>r.verdict==='CLEAR'&&r.location==='Studio 7'&&/188dupcj6/.test((r.attendees&&r.attendees[0]&&r.attendees[0].email)||'')],
     ['an unknown new room is refused',{...b,requester:'U999',title:'MUSICPROJ / X / AB',new_rooms:'Studio 99'},r=>r.reason==='UNKNOWN_ROOM'],
@@ -525,6 +526,7 @@ suite('Cancel authority — a coordinator may cancel within their department', (
     ['howard is a test coordinator for his dept',{...b,requester:'U08V3CKDGJF',title:'POSTPROJ / Y / TL',authority:'Standard',department:'Audio Post'},r=>r.verdict==='CLEAR'],
     ['no dept stamp falls back to owner-only',{...b,title:'NODEPT / Z / QQ',authority:'Dept Head',department:'Music'},r=>r.reason==='NOT_YOURS'],
     ['the owner still cancels their own',{...b,requester:'U999',title:'MUSICPROJ / X / AB',authority:'Standard',department:'Marketing'},r=>r.verdict==='CLEAR'],
+    ['a HAIST Dev cancels any booking, any department',{...b,title:'MUSICPROJ / X / AB',authority:'HAIST Dev',department:'Marketing'},r=>r.verdict==='CLEAR'&&r.notify===true],
     // Notifications: a coordinator cancelling someone else's booking notifies the
     // booker; DEV_REDIRECT routes it to the dev inbox while building. The owner
     // cancelling their own gets no notification.
@@ -571,8 +573,11 @@ suite('Build Recipients — who gets a DM on an authorized change', ()=>{
   // QA allowlist: an allowlisted recipient (a Sept-24 tester) gets a real DM, no [DEV].
   r=run({...co,bookerRef:'U098UFMKQHZ',bookerName:'Trish'},trig,{});
   check('nr','an allowlisted booker gets a real DM',r.length===1&&r[0].to==='U098UFMKQHZ'&&!/\[DEV\]/.test(r[0].text),JSON.stringify(r[0]).slice(0,90));
-  r=run(co,trig,engRow('U0B4S0EKSAY'));  // engineer is allowlisted (Jess)
-  check('nr','an allowlisted engineer gets a real DM',r.length===2&&r[1].to==='U0B4S0EKSAY'&&!/\[DEV\]/.test(r[1].text));
+  // Booker-only rule: an allowlisted person is DM'd for real ONLY as the booker. As the
+  // engineer they are still redirected (honorAllow=false), so a tester isn't pinged for a
+  // test booking made FOR them where they're only the engineer.
+  r=run({...co,bookerRef:'U098UFMKQHZ',bookerName:'Trish'},trig,engRow('U026N6E1R'));  // engineer Tara, on ALLOW
+  check('nr','an allowlisted engineer is still redirected (booker-only)',r.length===2&&r[1].to==='U08V3CKDGJF'&&/^\[DEV\] would notify Tara Lim/.test(r[1].text),JSON.stringify(r[1]).slice(0,90));
 });
 
 console.log('\n'+(fail? fail+' failing, '+pass+' passing' : 'all '+pass+' checks pass'));
