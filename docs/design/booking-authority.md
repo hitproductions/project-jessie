@@ -100,7 +100,7 @@ correct and they should not be described as coordinators for this feature.
   **drop `TEST_COORD`** (HAIST Dev is broader). God-mode — review at launch (keep for devs or pull);
   see CLAUDE.md *Before launch*.
 - **Notification routing is booker-only in dev.** `Build Recipients` `ALLOW` = ids that get their
-  own real DM instead of the `DEV_REDIRECT` simulation — now Howard, Trish, Camy, Jess, Tel, Tara.
+  own real DM instead of the `DEV_REDIRECT` simulation — now Howard, Trish, Camy, Jess, Tel, Tara, Genzo.
   It applies to the **booker only**; the engineer notice always redirects while `DEV_REDIRECT` is
   set, so a tester is DM'd only for bookings they made, not test bookings made *for* them.
 - **Cross-department consent (Phase 2)** — also likely reusable for **M-Booth** standing-hold
