@@ -102,9 +102,12 @@ One row per request; header row = these columns in order. Serves both callers vi
 | `Deadline` | computed at request time (earlier of now+window and start−lead) |
 | `Requester DM` · `Approver DM` | the DM channel ids where each side is corresponded (replies arrive here) |
 | `Log Thread TS` | the `#jessie-approvals` back-end mirror post, for audit/coordination (not where people reply) |
-| `Resolved Via` | `reply` / `attestation` / `sheet` (audit) |
+| `Resolved Via` | `reply` / `attestation` / `sheet` (audit — also records the decider) |
 | `Attested By` | who attested, when the fast path was used |
-| `Decided By` · `Decided At` | audit |
+| `Decided At` | timestamp of resolution (audit) |
+
+(23 columns as built 2026-09-21 — `Decided By` was dropped since `Attested By` + `Resolved Via`
+already capture who/how.)
 
 **Sheets specifics vs the Airtable plan:**
 - **Reads** (router + sweep) use the Google Sheets *read* op and filter in a Code node — the table is
@@ -355,3 +358,13 @@ move — it reads them live.
 - **M-Booth specifics** — shared-use booth set + each holder's Slack id; how "held" is detected
   (standing calendar event vs static map); window/timeout rules; no-response policy.
 - **Timeout / no-response policy** — expire silently vs notify the requester.
+
+## Build progress
+
+- **2026-09-21 — `Open Consent Request` built** (workflow id `nEHnCMMXS0am59Zy`, **inactive, not
+  wired** — touches nothing live). Writes the PENDING row + DMs the incumbent + posts the audit line.
+  Logic offline-tested (`workflows/drafts/consent/open-request.js`, 15/15); repo file
+  `workflows/open-consent-request-v1.json`; created in n8n and verified by pull (Sheets tab
+  `gid=431550013`, log credential, Slack v2.2 best-effort). Not activated yet — it's only callable
+  once Book/Move are wired to invoke it (then activate per gotcha 0). Engine core logic:
+  `workflows/drafts/consent/logic.js` (21/21).
