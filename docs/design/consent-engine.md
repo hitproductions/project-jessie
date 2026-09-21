@@ -126,16 +126,23 @@ One row per request. Serves both callers via a `Kind` field.
    **Authorized requester** = the same set as the Rule-1 move exception, verified live in
    `Resolve Booking`: Bookers `Authority` of **`Dept Head`** or **`Client Booking`**, or **`HAIST
    Dev`** (a Standard user only ever gets the plain `ROOM_OCCUPIED` refusal). **Department scope for
-   preemption (decided 2026-09-21):** unlike a plain authorized move (own-department only), a
-   coordinator may preempt a booking in **another** department — because the incumbent booker's
-   **consent is what authorizes the cross-department action**. No consent → nothing moves; the
-   department boundary is bridged only by the affected owner's own yes. HAIST Dev keeps its existing
-   cross-dept reach.
+   preemption (PROPOSED — awaiting Howard's yes/no):** unlike a plain authorized move (own-department
+   only), a coordinator *may* preempt a booking in **another** department — because the incumbent
+   booker's **consent is what authorizes the cross-department action**. No consent → nothing moves.
+   If NO, cross-dept preemption stays HAIST-Dev-only. HAIST Dev keeps its existing cross-dept reach
+   either way. See the open note under step 2.
 2. Jessie DMs the approver (the incumbent's booker, resolved from the event `ref:`):
    *"`<Requester>` needs `<Room>` on `<slot>` for a higher-priority `<session type>`. You hold it
    for `<incumbent title>`. Are you OK to move? If yes, what time works for your session?"* Writes
    the PENDING row. **No calendar change yet** (no tentative hold — that would falsely occupy the
    slot and fight Rule 1).
+
+   > **Open (awaiting Howard's yes/no):** the cross-department scope above is *proposed*, not yet
+   > confirmed. Recommendation YES — a coordinator may preempt across departments gated on the
+   > incumbent's consent (otherwise the celeb-over-VO case, requested by Ms. Letty / S&A who are
+   > coordinators not HAIST Dev, would be impossible for them). NO keeps cross-dept HAIST-Dev-only.
+   > **Parked idea (not for now):** letting a *non-coordinator* preempt purely on higher priority, to
+   > save the dept head work — moot today since the real high-priority requesters are coordinators.
 3. Approver consents — by their DM reply, by the requester's attestation, or (break-glass) by an
    Airtable edit — and the relocation slot is agreed **through that DM conversation** (Jessie does
    not pick it unilaterally; Howard's rule).
@@ -295,8 +302,9 @@ with your approval, since it's inert until the preemption branch reads it).
   fall back to that department's coordinator if the booker doesn't respond by the deadline. Start
   with booker-only; build the escalation after.
 - **Authorized-to-preempt — DECIDED 2026-09-21:** Dept Head / Client Booking / HAIST Dev only
-  (verified against live `Resolve Booking`); cross-department is allowed for these roles *because*
-  the incumbent's consent authorizes it (see the preemption flow). Standard users cannot preempt.
+  (verified against live `Resolve Booking`); Standard users cannot preempt. **Open:** whether those
+  coordinators may reach *cross-department* (gated on consent) — awaiting Howard's yes/no; rec YES.
+  **Parked:** widening to non-coordinators on priority alone (moot today).
 - **Relocation choreography confirm** — all-or-nothing move-then-place, incumbent's new slot agreed
   in the DM (per Howard 2026-09-21).
 - **Approvals channel — DONE.** `#jessie-approvals` created 2026-09-21, id **`C0C34UMFXGD`**,
