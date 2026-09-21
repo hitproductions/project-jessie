@@ -105,9 +105,12 @@ One row per request; header row = these columns in order. Serves both callers vi
 | `Resolved Via` | `reply` / `attestation` / `sheet` (audit — also records the decider) |
 | `Attested By` | who attested, when the fast path was used |
 | `Decided At` | timestamp of resolution (audit) |
+| `Req Payload` | **(added 2026-09-21, 24th column)** JSON of the requester's original Book Session inputs (summary, session_type, client, engineer, description, department, all_day…), written at Open time. Finalize needs it to place the requester after freeing the room; the row can't hold those field-by-field. |
 
-(23 columns as built 2026-09-21 — `Decided By` was dropped since `Attested By` + `Resolved Via`
-already capture who/how.)
+(24 columns. `Decided By` was dropped since `Attested By` + `Resolved Via` capture who/how; `Req
+Payload` was added when building Finalize surfaced that the requester's booking details must survive
+to finalize-time. **The tab needs `Req Payload` appended as a 24th header**, and `Open Consent
+Request` updated to write it.)
 
 **Sheets specifics vs the Airtable plan:**
 - **Reads** (router + sweep) use the Google Sheets *read* op and filter in a Code node — the table is
@@ -368,3 +371,28 @@ move — it reads them live.
   `gid=431550013`, log credential, Slack v2.2 best-effort). Not activated yet — it's only callable
   once Book/Move are wired to invoke it (then activate per gotcha 0). Engine core logic:
   `workflows/drafts/consent/logic.js` (21/21).
+
+- **2026-09-21 — `Finalize Consent` core built + tested (logic only; n8n assembly deferred to
+  wiring).** `workflows/drafts/consent/finalize.js`, 28/28 offline. Reuses the LIVE sub-workflows:
+  - **Relocate the incumbent via `Move Booking`, invoked AS the incumbent** (`requester` = incumbent
+    booker id) → `owner===true`, so `NOT_YOURS` never triggers and **no guard is modified**;
+    `confirmed:true` (consent). Move keeps the contested room, new agreed time — freeing the req slot.
+  - **Place the requester via `Book Session`** (`confirmed:true`, `room_override:true`) into the
+    now-free room — a normal booking; the double-book guard is untouched because the room really is
+    free by then.
+  - **All-or-nothing, move-first:** `classifyMove` (`MOVED`/`PARTIAL`/`REJECTED`) gates whether the
+    requester is placed; a `PARTIAL` (Move's replacement-made-but-original-not-deleted) or `REJECTED`
+    stops before booking, marks the row `FAILED`, and tells the requester nothing changed. If Move
+    succeeds but Book then fails, the incumbent is only ever at the slot they agreed to — never
+    homeless, never a double-book.
+  - Row goes `DONE` (Sheets update matched on `Request ID`) with `Resolved Via`/`Decided At`;
+    notifies incumbent (moved) + requester (booked), or requester (failed) with the honest reason.
+  - **Deferred to increment #3 (wiring):** the n8n workflow assembly + create. Two reasons — it needs
+    the new `Req Payload` column to exist, and its `executeWorkflow` input-passing can only be
+    validated by a real approved request, not a pull. Building it blind/inactive now would be false
+    assurance.
+
+### Follow-ups this surfaced
+- **Add `Req Payload` (24th column)** to the Consent Requests tab (Howard — he can edit the Sheet).
+- **Update `Open Consent Request`** to accept the requester's Book payload and write it into
+  `Req Payload` (mine — small change to the isolated, inactive workflow).

@@ -48,6 +48,9 @@
             {
               "name": "incPriority",
               "type": "number"
+            },
+            {
+              "name": "reqPayload"
             }
           ]
         }
@@ -62,7 +65,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Inlined from workflows/drafts/consent/open-request.js (offline-tested). See consent-engine.md.\nconst c = $('When Executed by Another Workflow').first().json || {};\nfunction computeDeadline(now,start,cfg){const n=new Date(now).getTime();const s=new Date(start).getTime();const w=(cfg&&cfg.maxWindowH?cfg.maxWindowH:24)*3600*1000;const l=(cfg&&cfg.minLeadMin?cfg.minLeadMin:60)*60*1000;return new Date(Math.max(n,Math.min(n+w,s-l))).toISOString();}\nconst now = new Date().toISOString();\nconst stamp = now.replace(/[-:T.]/g,'').slice(0,14);\nconst id = stamp + '-' + String(c.requester||'unknown');\nconst deadline = computeDeadline(now, c.reqStart, {maxWindowH:24, minLeadMin:60});\nreturn [{ json: {\n  'Request ID': id, 'Status': 'PENDING', 'Kind': 'PREEMPT',\n  'Requester': c.requester||'', 'Requester Name': c.requesterName||'',\n  'Approver': c.approver||'', 'Approver Name': c.approverName||'',\n  'Room/Booth': c.room||'', 'Req Start': c.reqStart||'', 'Req End': c.reqEnd||'',\n  'Incumbent Event Id': c.incumbentEventId||'', 'Incumbent Title': c.incumbentTitle||'',\n  'Incumbent New Start': '', 'Incumbent New End': '',\n  'Req Priority': (c.reqPriority==null?'':c.reqPriority), 'Inc Priority': (c.incPriority==null?'':c.incPriority),\n  'Deadline': deadline,\n  'Requester DM': c.requesterDM||'', 'Approver DM': c.approverDM||'',\n  'Log Thread TS': '', 'Resolved Via': '', 'Attested By': '', 'Decided At': ''\n}}];\n"
+        "jsCode": "// Inlined from workflows/drafts/consent/open-request.js (offline-tested). See consent-engine.md.\nconst c = $('When Executed by Another Workflow').first().json || {};\nfunction computeDeadline(now,start,cfg){const n=new Date(now).getTime();const s=new Date(start).getTime();const w=(cfg&&cfg.maxWindowH?cfg.maxWindowH:24)*3600*1000;const l=(cfg&&cfg.minLeadMin?cfg.minLeadMin:60)*60*1000;return new Date(Math.max(n,Math.min(n+w,s-l))).toISOString();}\nconst now = new Date().toISOString();\nconst stamp = now.replace(/[-:T.]/g,'').slice(0,14);\nconst id = stamp + '-' + String(c.requester||'unknown');\nconst deadline = computeDeadline(now, c.reqStart, {maxWindowH:24, minLeadMin:60});\nreturn [{ json: {\n  'Request ID': id, 'Status': 'PENDING', 'Kind': 'PREEMPT',\n  'Requester': c.requester||'', 'Requester Name': c.requesterName||'',\n  'Approver': c.approver||'', 'Approver Name': c.approverName||'',\n  'Room/Booth': c.room||'', 'Req Start': c.reqStart||'', 'Req End': c.reqEnd||'',\n  'Incumbent Event Id': c.incumbentEventId||'', 'Incumbent Title': c.incumbentTitle||'',\n  'Incumbent New Start': '', 'Incumbent New End': '',\n  'Req Priority': (c.reqPriority==null?'':c.reqPriority), 'Inc Priority': (c.incPriority==null?'':c.incPriority),\n  'Deadline': deadline,\n  'Requester DM': c.requesterDM||'', 'Approver DM': c.approverDM||'',\n  'Log Thread TS': '', 'Resolved Via': '', 'Attested By': '', 'Decided At': '',\n  'Req Payload': (c.reqPayload==null?'':(typeof c.reqPayload==='string'?c.reqPayload:JSON.stringify(c.reqPayload)))\n}}];\n"
       },
       "name": "Build Request",
       "type": "n8n-nodes-base.code",

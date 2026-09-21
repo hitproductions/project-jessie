@@ -6,13 +6,14 @@ const ok = (label, cond, detail) => { if (cond) { pass++; console.log('  ok    '
 
 const now = '2027-10-20T09:00:00+08:00';
 const cfg = { maxWindowH: 24, minLeadMin: 60 };
+const reqPayload = { summary: 'CELEB / Ms. Letty / HL', session_type: 'Celebrity Recording', description: 'ref: ULETTY' };
 const c = {
   requester: 'ULETTY', requesterName: 'Ms. Letty',
   approver: 'UJC', approverName: 'JC',
   room: 'Studio F', reqStart: '2027-10-22T14:00:00+08:00', reqEnd: '2027-10-22T17:00:00+08:00',
   incumbentEventId: 'evt123', incumbentTitle: 'NET-PUSO / JC',
   reqType: 'Celebrity Recording', reqPriority: 100, incPriority: 50,
-  requesterDM: 'D_LETTY', approverDM: 'D_JC',
+  requesterDM: 'D_LETTY', approverDM: 'D_JC', reqPayload: reqPayload,
 };
 
 console.log('requestId');
@@ -28,6 +29,7 @@ ok('Approver is the incumbent booker', row['Approver'] === 'UJC' && row['Approve
 ok('priorities carried', row['Req Priority'] === 100 && row['Inc Priority'] === 50);
 ok('incumbent new slot blank at open', row['Incumbent New Start'] === '' && row['Incumbent New End'] === '');
 ok('resolution fields blank at open', row['Resolved Via'] === '' && row['Attested By'] === '' && row['Decided At'] === '');
+ok('Req Payload stored as JSON string', typeof row['Req Payload'] === 'string' && JSON.parse(row['Req Payload']).session_type === 'Celebrity Recording');
 ok('Request ID matches helper', row['Request ID'] === id && id === '20271020010000-ULETTY');
 ok('Deadline set (capped by window: now+24h < start-1h)', row['Deadline'] === deadline && deadline === new Date('2027-10-21T09:00:00+08:00').toISOString());
 

@@ -12,6 +12,7 @@ const COLUMNS = [
   'Room/Booth', 'Req Start', 'Req End', 'Incumbent Event Id', 'Incumbent Title',
   'Incumbent New Start', 'Incumbent New End', 'Req Priority', 'Inc Priority', 'Deadline',
   'Requester DM', 'Approver DM', 'Log Thread TS', 'Resolved Via', 'Attested By', 'Decided At',
+  'Req Payload',
 ];
 
 function requestId(now, requester) {
@@ -52,6 +53,8 @@ function buildRow(c, now, cfg) {
     'Resolved Via': '',
     'Attested By': '',
     'Decided At': '',
+    // the requester's original Book Session inputs, so Finalize can place them after freeing the room
+    'Req Payload': c.reqPayload == null ? '' : (typeof c.reqPayload === 'string' ? c.reqPayload : JSON.stringify(c.reqPayload)),
   };
   return { id, deadline, row };
 }
