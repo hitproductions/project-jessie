@@ -122,7 +122,15 @@ One row per request. Serves both callers via a `Kind` field.
 1. Requester asks for a room that is occupied. `Check New Window` returns `ROOM_OCCUPIED` — and
    **that guard is never touched.** The new branch does not let a booking through an occupied room;
    it just, when the requester's **session-type rank outranks the incumbent's** (data — see below)
-   *and* the requester is authorized, offers the consent path **instead of a bare refusal**.
+   *and* the requester is **authorized**, offers the consent path **instead of a bare refusal**.
+   **Authorized requester** = the same set as the Rule-1 move exception, verified live in
+   `Resolve Booking`: Bookers `Authority` of **`Dept Head`** or **`Client Booking`**, or **`HAIST
+   Dev`** (a Standard user only ever gets the plain `ROOM_OCCUPIED` refusal). **Department scope for
+   preemption (decided 2026-09-21):** unlike a plain authorized move (own-department only), a
+   coordinator may preempt a booking in **another** department — because the incumbent booker's
+   **consent is what authorizes the cross-department action**. No consent → nothing moves; the
+   department boundary is bridged only by the affected owner's own yes. HAIST Dev keeps its existing
+   cross-dept reach.
 2. Jessie DMs the approver (the incumbent's booker, resolved from the event `ref:`):
    *"`<Requester>` needs `<Room>` on `<slot>` for a higher-priority `<session type>`. You hold it
    for `<incumbent title>`. Are you OK to move? If yes, what time works for your session?"* Writes
@@ -282,7 +290,13 @@ with your approval, since it's inert until the preemption branch reads it).
 - **Consent model — DECIDED 2026-09-21:** requester-attestation OR incumbent-consent, first resolver
   wins; Airtable-direct is backup-only when both Slack paths fail; two-way notify on the incumbent's
   yes. Howard may refine exact wording after the Tel discussion, but the shape is fixed and built to.
-- **Approver identity** for PREEMPT — incumbent's booker (`ref:`) and/or that dept's coordinator?
+- **Approver identity for PREEMPT — DECIDED 2026-09-21: the incumbent's booker** (resolved from the
+  event `ref:`). **TODO (definitely, later):** add the "either" escalation — ask the booker first,
+  fall back to that department's coordinator if the booker doesn't respond by the deadline. Start
+  with booker-only; build the escalation after.
+- **Authorized-to-preempt — DECIDED 2026-09-21:** Dept Head / Client Booking / HAIST Dev only
+  (verified against live `Resolve Booking`); cross-department is allowed for these roles *because*
+  the incumbent's consent authorizes it (see the preemption flow). Standard users cannot preempt.
 - **Relocation choreography confirm** — all-or-nothing move-then-place, incumbent's new slot agreed
   in the DM (per Howard 2026-09-21).
 - **Approvals channel — DONE.** `#jessie-approvals` created 2026-09-21, id **`C0C34UMFXGD`**,
