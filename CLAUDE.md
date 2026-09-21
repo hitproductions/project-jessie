@@ -333,9 +333,10 @@ Three switches flip for launch — do them together:
 3. **`TEST_COORD`** (the hard-coded Howard id) in `Check Ownership` / `Resolve Booking` — drop it once
    the `HAIST Dev` Airtable tag is live on Howard (it's strictly broader). Weekend hard-code only.
 4. **`HAIST Dev`** authority (Bookers `Authority` tag) — **god-mode**: bypasses the owner check and
-   the department scope, so a holder can move/cancel *any* booking in *any* department. It's a
-   dev/QA testing tier (dev team: Howard, Tara, Tel, Genzo). Before/after launch, **decide: keep for
-   devs or pull.** Enforced in `Check Ownership` / `Resolve Booking` via `isHaistDev`.
+   the department scope, so a holder can move/cancel *any* booking in *any* department. Dev team
+   only: **Howard, Tel, Genzo**. Before/after launch, **decide: keep for devs or pull.** Enforced in
+   `Check Ownership` / `Resolve Booking` via `isHaistDev`. (Tara is on the notification ALLOW list
+   but has **no** HAIST Dev — she tests QA-style with her real Standard authority.)
 
 Notification routing during dev (not a launch flip, but related): `Build Recipients` in Cancel/Move
 has `DEV_REDIRECT` (reroute to Howard) and `ALLOW` (ids that get their own real DM). `ALLOW` applies

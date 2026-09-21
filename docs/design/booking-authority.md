@@ -93,10 +93,12 @@ correct and they should not be described as coordinators for this feature.
 - **`HAIST Dev` — full authority tier (decided 2026-09-21, code deployed cancel-v11/move-v10).**
   A Bookers `Authority` tag that **bypasses the owner check AND the department scope** — a holder
   moves/cancels *any* booking, *any* department (`isHaistDev` in `Check Ownership` / `Resolve
-  Booking`). For the **dev team: Howard, Tara, Tel, Genzo**. Notifications still fire for their
-  changes (`notify = !owner && (coordInDept || isHaistDev)`). **Airtable step (Tel):** add the
-  `HAIST Dev` choice to `Authority`, tag those four. Once live, **drop `TEST_COORD`** (HAIST Dev is
-  broader). It is god-mode — review at launch (keep for devs or pull); see CLAUDE.md *Before launch*.
+  Booking`). For the **dev team: Howard, Tel, Genzo** (Tara is strategic lead, not dev — QA-style
+  instead: on the notification ALLOW list, real Standard authority, no HAIST Dev). Notifications
+  still fire for a HAIST Dev's changes (`notify = !owner && (coordInDept || isHaistDev)`). **Airtable
+  step (Tel):** add the `HAIST Dev` choice to `Authority`, tag **Howard, Tel, Genzo**. Once live,
+  **drop `TEST_COORD`** (HAIST Dev is broader). God-mode — review at launch (keep for devs or pull);
+  see CLAUDE.md *Before launch*.
 - **Notification routing is booker-only in dev.** `Build Recipients` `ALLOW` = ids that get their
   own real DM instead of the `DEV_REDIRECT` simulation — now Howard, Trish, Camy, Jess, Tel, Tara.
   It applies to the **booker only**; the engineer notice always redirects while `DEV_REDIRECT` is
