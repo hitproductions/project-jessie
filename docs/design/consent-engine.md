@@ -91,7 +91,7 @@ One row per request. Serves both callers via a `Kind` field.
 | `Req Priority` · `Inc Priority` | the two session-type ranks at request time (audit; why preemption was allowed) |
 | `Deadline` | computed at request time (earlier of now+window and start−lead) |
 | `Requester DM` · `Approver DM` | the DM channel ids where each side is corresponded (replies arrive here) |
-| `Log Thread TS` | the `#approvals` back-end mirror post, for audit/coordination (not where people reply) |
+| `Log Thread TS` | the `#jessie-approvals` back-end mirror post, for audit/coordination (not where people reply) |
 | `Resolved Via` | `reply` / `attestation` / `airtable` (audit) |
 | `Attested By` | who attested, when the fast path was used |
 | `Decided By` · `Decided At` | audit |
@@ -163,7 +163,7 @@ with the `Kind` field so both callers share one router and one sweep.
 DM, and the incumbent/holder is asked and replies in *their* DM. Nobody has to watch a separate
 place. Howard's call: users deal only with Jessie.
 
-The `#approvals` channel is **back-end only** — a restricted audit/coordination mirror where the
+The `#jessie-approvals` channel is **back-end only** — a restricted audit/coordination mirror where the
 relevant coordinators can see a request that spans people/departments, and a durable log. It is
 **not** the interaction surface, and people who aren't involved never see it. (This replaces the
 earlier plan of conducting replies *in* the channel.)
@@ -276,8 +276,8 @@ with your approval, since it's inert until the preemption branch reads it).
 - **Approver identity** for PREEMPT — incumbent's booker (`ref:`) and/or that dept's coordinator?
 - **Relocation choreography confirm** — all-or-nothing move-then-place, incumbent's new slot agreed
   in the DM (per Howard 2026-09-21).
-- **Approvals channel** — create `#approvals` (back-end audit/coordination log only, restricted to
-  relevant coordinators — not the interaction surface), invite Jessie, give the channel id.
+- **Approvals channel** — create `#jessie-approvals` (back-end audit/coordination log only, restricted
+  to relevant coordinators — not the interaction surface), invite Jessie, give the channel id.
 - **M-Booth specifics** — shared-use booth set + each holder's Slack id; how "held" is detected
   (standing calendar event vs static map); window/timeout rules; no-response policy.
 - **Timeout / no-response policy** — expire silently vs notify the requester.

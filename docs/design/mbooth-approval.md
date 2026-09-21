@@ -2,7 +2,7 @@
 
 > **Superseded in part (2026-09-21) by [consent-engine.md](consent-engine.md).** M-Booth is now one
 > caller of a single shared consent engine. The **interaction model changed**: correspondence is via
-> **Jessie DM**, not the `#m-booth-approvals`/`#approvals` channel (which is a back-end audit log
+> **Jessie DM**, not the `#m-booth-approvals`/`#jessie-approvals` channel (which is a back-end audit log
 > only), and the router keys on a pending `Consent Requests` row rather than channel-id. The **async
 > skeleton below still holds** — Airtable pending row, request/reply/sweep as short independent
 > executions, deadline math, fail-open router — and the drafts in `workflows/drafts/mbooth/` remain
