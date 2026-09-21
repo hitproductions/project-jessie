@@ -429,6 +429,10 @@ the task runner), for whoever has shell access to the box.
   Closing it properly means remembering availability across turns in static data.
 - She sometimes asks for a date already given, and has invented a justification for a room
   choice. Both are free-text failures with nothing binding them to a source.
+- **Preferred-room proposal is wired but not reliable.** The Clients tool returns `Preferred Room
+  Names` and the prompt directs Jessie to lead with the client's preferred room, but she often still
+  proposes from the generic ranking (a prompt-level behavior). Decision 2026-09-21: leave best-effort;
+  make it deterministic later. The data unlock is done; the guards keep bookings correct regardless.
 - **The model corrupts strings it is copying.** Three times in ~60 turns on 2026-08-30:
   "Tara Lim" → "Tara Inf", and "REASON1" → "REazon1" twice. The summary line and the title
   resolution are now defended, but nothing stops it happening somewhere new.
