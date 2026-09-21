@@ -51,11 +51,13 @@ Camy's `Client Booking` tag does not change this today. (See `docs/design/bookin
    Trish/Camy's Audio Post booking by **Howard**.
 3. **Expect:** the tester (the booker) receives a real DM telling them who changed their booking.
 
-### 4. Notified as the assigned engineer — optional
-1. Someone books a session titled `… / <Client> / <tester initials>` (TR, CC, or JB) so the tester
-   is the *engineer*, owned by someone else.
-2. A coordinator in that department moves/cancels it.
-3. **Expect:** the tester gets the *engineer* DM ("the session … you are assigned to … was …").
+### 4. Engineer notice — simulated to Howard in dev (by design)
+During dev/QA the **engineer** notice always routes to Howard as `[DEV] would notify <name>…`, even
+for an allowlisted tester — the ALLOW list applies to the **booker only**, so a tester is DM'd for
+real only for bookings *they made*, not ones made *for* them where they're just the engineer. So
+when a booking with a tester's initials as engineer is changed, expect the engineer line to appear
+in **Howard's** DM as `[DEV]`, not the tester's. (At launch, `DEV_REDIRECT=''` restores real engineer
+DMs.)
 
 ### 5. No notification on a self-change — control case
 1. A tester moves/cancels their **own** booking.

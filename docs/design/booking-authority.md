@@ -90,11 +90,22 @@ correct and they should not be described as coordinators for this feature.
 
 ## Parked / later
 
-- **Monday (Tel, before the 24 Sept QA):** add a real Airtable authority tag for the dev/QA
-  testers, then **drop the Howard `TEST_COORD` hard-code** and **narrow the Client-Booking rule**.
-  For QA specifically, give **Jess Barbosa** a `Dept Head` (or the new coordinator tag) in
-  **Marketing** so a tester can exercise the authorized-change path with real permissions (she is
-  the only tester in a producing department — see the finding above).
+- **`HAIST Dev` — full authority tier (decided 2026-09-21, code deployed cancel-v11/move-v10).**
+  A Bookers `Authority` tag that **bypasses the owner check AND the department scope** — a holder
+  moves/cancels *any* booking, *any* department (`isHaistDev` in `Check Ownership` / `Resolve
+  Booking`). For the **dev team: Howard, Tara, Tel, Genzo**. Notifications still fire for their
+  changes (`notify = !owner && (coordInDept || isHaistDev)`). **Airtable step (Tel):** add the
+  `HAIST Dev` choice to `Authority`, tag those four. Once live, **drop `TEST_COORD`** (HAIST Dev is
+  broader). It is god-mode — review at launch (keep for devs or pull); see CLAUDE.md *Before launch*.
+- **Notification routing is booker-only in dev.** `Build Recipients` `ALLOW` = ids that get their
+  own real DM instead of the `DEV_REDIRECT` simulation — now Howard, Trish, Camy, Jess, Tel, Tara.
+  It applies to the **booker only**; the engineer notice always redirects while `DEV_REDIRECT` is
+  set, so a tester is DM'd only for bookings they made, not test bookings made *for* them.
+- **Cross-department consent (Phase 2)** — also likely reusable for **M-Booth** standing-hold
+  concerns (Peemo, Nicole, etc. wanting their booth on a given day), and the S&A/BD question above.
+  Park together.
+- **Harden the Dept stamp** — currently the agent supplies `department`; consider deriving it
+  deterministically from session type so a security-relevant field isn't model-supplied.
 - **Cross-department consent (Phase 2)** — also likely reusable for **M-Booth** standing-hold
   concerns (Peemo, Nicole, etc. wanting their booth on a given day), and the S&A/BD question above.
   Park together.

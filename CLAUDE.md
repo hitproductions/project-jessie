@@ -331,8 +331,17 @@ Three switches flip for launch — do them together:
    real (the `ALLOW` list then no longer matters). Booker id is the event `ref:`; the engineer is
    resolved from the title initials via `Lookup Engineer`.
 3. **`TEST_COORD`** (the hard-coded Howard id) in `Check Ownership` / `Resolve Booking` — drop it once
-   a real Airtable authority tag exists for the dev/QA testers (the Monday item). It grants Howard
-   coordinator authority for weekend testing only.
+   the `HAIST Dev` Airtable tag is live on Howard (it's strictly broader). Weekend hard-code only.
+4. **`HAIST Dev`** authority (Bookers `Authority` tag) — **god-mode**: bypasses the owner check and
+   the department scope, so a holder can move/cancel *any* booking in *any* department. It's a
+   dev/QA testing tier (dev team: Howard, Tara, Tel, Genzo). Before/after launch, **decide: keep for
+   devs or pull.** Enforced in `Check Ownership` / `Resolve Booking` via `isHaistDev`.
+
+Notification routing during dev (not a launch flip, but related): `Build Recipients` in Cancel/Move
+has `DEV_REDIRECT` (reroute to Howard) and `ALLOW` (ids that get their own real DM). `ALLOW` applies
+to the **booker only** — the engineer notice always redirects while `DEV_REDIRECT` is set, so a
+tester is pinged only for bookings they made. `DEV_REDIRECT=''` at launch restores real DMs to
+booker + engineer.
 
 ## Waiting on other systems
 
