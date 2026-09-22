@@ -68,37 +68,50 @@ M-Booth adds no new infrastructure — it rides Steps 1/3/4 of the engine. Its o
 4. **Prompt section** + offline tests + canary. Same pre-launch window as the engine (dev freeze
    23 Sep, polish to 5 Oct, launch 12 Oct).
 
-## Booth set + holders — CONFIRMED 2026-09-22 (Howard)
+## Which booths + how "held" is detected — GENERALIZED 2026-09-23 (Howard, approach A)
 
-Only two booths carry a standing recurring hold right now (**M7 dropped**). Holder Slack ids from the
-Bookers table:
+**No hard-coded booth list.** Any room named `M<n>` is an M-booth; **any RECURRING event on it is a
+standing hold**; the holder is read off the hold's own **`ref:<slack id>` tag** in the event description
+(the same convention Jessie stamps on its bookings and preemption reads off the incumbent). New or other
+booths need no code change — just a `ref:` on their recurring hold.
 
-| Booth | Holder | Slack ID | Standing-hold event title |
-|---|---|---|---|
-| **M2** | Peemo Morato (Head of Video Post) | `UPPEY3F4G` | `M2 - Peemo` |
-| **M6** | Nicole Miller (Head of Marketing) | `U06CTHTUS1Y` | `M6 - Marketing` |
+Verified on the live calendar 2026-09-23 — the M-booth holds are inconsistent, which is exactly why we
+key off `ref:` rather than titles or the map:
 
-## How "held" is detected — CONFIRMED
+| Booth | Hold title | Recurring? | Marked | Holder → Slack ID |
+|---|---|---|---|---|
+| M1 | `M1 - Rico` | ✅ | Busy | Rico Gonzales → `U026LMLM4` |
+| M2 | `M2 - Peemo` | ✅ | Free | Peemo Morato → `UPPEY3F4G` |
+| M3 | `M3 - Trish` | ❌ one-off | Busy | (not a hold — one-off) |
+| M4 | `M4 - Tel` | ✅ | Busy | Tel → `U098UFLG70B` |
+| M6 | `M6 - Marketing` | ✅ | Free | Nicole Miller → `U06CTHTUS1Y` |
 
-The standing holds are real recurring calendar events, and both share two robust signals (verified on
-the live calendar 2026-09-22):
+Note the split that killed the map idea: holds are Busy *and* Free (so **not** transparency-based);
+titles are sometimes a person, sometimes a department (**"M6 - Marketing" is Nicole**); creators are
+sometimes the holder, sometimes a shared account. Only a `ref:` on the hold is reliable.
 
-- **`recurringEventId` present** — the hold is a daily recurring event (M2 as an all-day `date` event;
-  M6 as a 24h `dateTime` event — different shapes, both recurring).
-- **`transparency: "transparent"` / `availability: FREE`** — a *soft* hold that shows on the calendar
-  but is marked Free, not Busy. A real booking is opaque (Busy) and non-recurring.
-- Title pattern **`M<n> - <holder>`** as a corroborating fallback.
+`decideMBooth` (tested, `mbooth/logic.js`) at the `ROOM_OCCUPIED` point returns:
+- **`open_mbooth`** — non-holder wants a held booth → consent request to the hold's `ref:` holder.
+- **`room_taken`** — a *real* (non-recurring) booking also overlaps → ordinary first-come, normal refuse.
+- **`unidentified_holder`** — a recurring hold with **no `ref:` tag** → can't route it → falls through to
+  the normal refuse (safe: an untagged booth behaves exactly like today until someone tags its hold).
+- **`book_as_holder`** — requester IS the hold owner → (currently falls through; own-booth booking TODO).
+- **`none`** — not an M-booth / not a recurring hold → normal path.
 
-So the detection (in Book Session, at the `ROOM_OCCUPIED` point): among the overlapping events on the
-booth, a conflict is the **standing hold** iff `transparent && recurring` (or the title matches). Then
-`decideMBooth` (tested) returns:
-- **`open_mbooth`** — non-holder wants a held booth → open a consent request to the holder.
-- **`book_as_holder`** — the requester IS the holder → just book (skip the courtesy hold; the holder
-  owns the booth). *(Fixes a current gap: today the transparent hold registers as a plain
-  `ROOM_OCCUPIED`, so even the holder can't book their own booth through Jessie — Check Conflicts does
-  not filter by transparency.)*
-- **`room_taken`** — a *real* (opaque) booking also overlaps → ordinary first-come clash, normal refuse.
-- **`none`** — not a shared booth / not a hold → falls through to the normal path.
+### ONE-TIME SETUP (needs calendar write — Howard, or grant Claude write access)
+
+Add `ref: <slack id>` to the **description** of each recurring M-booth hold (a new line is fine; the
+`M<n> - <name>` title stays). This is what makes the feature work post-launch:
+
+```
+M1 - Rico       → add "ref: U026LMLM4"   (Rico Gonzales)
+M2 - Peemo      → add "ref: UPPEY3F4G"   (Peemo Morato)
+M4 - Tel        → add "ref: U098UFLG70B" (Tel)
+M6 - Marketing  → add "ref: U06CTHTUS1Y" (Nicole Miller)
+```
+
+(M3/M5/M7/M8 when/if they carry a recurring hold — same pattern, holder's Slack ID from the Bookers
+table's `Slack User ID` field.) Until a hold is tagged, requests for that booth just refuse normally.
 
 `#jessie-approvals` is `C0C34UMFXGD` (shared with `PREEMPT`; view/audit feed only). Fully set.
 
@@ -112,13 +125,17 @@ deadline tiers, timeout policy — is confirmed above):
 
 ## Build status (2026-09-23)
 
-Deterministic core offline-tested (`workflows/drafts/mbooth/logic.js`, 39/39). **Three of the four
+Deterministic core offline-tested (`workflows/drafts/mbooth/logic.js`, 36/36). **Three of the four
 wiring stages are LIVE + component-verified:**
 
-1. ✅ **Shared-use detection — LIVE (Book Session v37/v38).** Check Conflicts now enriches each conflict
-   with `transparent` + `recurring`; Decide Preempt runs `decideMBooth` before the preempt eligibility.
-   At a `ROOM_OCCUPIED` on M2/M6, a standing hold (`transparent && recurring`, title fallback) →
-   `open_mbooth` for a non-holder, `room_taken` if a real booking also overlaps, else falls through.
+1. ✅ **Detection — LIVE (Book Session v39), GENERALIZED.** Check Conflicts enriches each conflict with
+   `recurring` (+ `transparent`); Decide Preempt runs `decideMBooth` before preempt eligibility. At a
+   `ROOM_OCCUPIED` on **any `M<n>` booth**, a **recurring** conflict is a hold and the holder is read off
+   its `ref:` tag → `open_mbooth` for a non-holder, `room_taken` if a one-off booking also overlaps,
+   `unidentified_holder`/`none` fall through. No hard-coded booth list. Book Session v39's Check Conflicts
+   also skips a `recurring` hold when `room_override` is set, so the consented placement books despite it.
+   Verified on the live node: M4 held by Tel (ref-tagged) → open MBOOTH to Tel; untagged hold → falls
+   through; non-M-booth → normal.
    Verified against the live node: a held-M2 request by a non-holder returns `offer:MBOOTH, approver=Peemo`.
 2. ✅ **`MBOOTH` request — LIVE (Open v6).** Open takes a `kind` input (default PREEMPT); Build Request
    writes `Kind`; Build Messages has booth wording ("… your standing booth, OK to let them use it?").
