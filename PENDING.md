@@ -185,12 +185,10 @@ booking through Jessie created an event whose `creator.email` is `calendar@hitpr
 `health`, `verify-ids`, `test-nodes --live` all green. Google Workspace prerequisites done by
 Howard + Sir Pao (write on KDC, resource booking, account rename in Admin console).
 
-**One thing left to confirm (guards against a silent ~7-day break):** the OAuth consent screen
-behind this credential must NOT be in "Testing" mode — a testing-mode refresh token expires in
-~7 days and would kill Jessie's calendar auth, looking just like the outages. The reconnect
-succeeded without any OAuth-consent change, which strongly implies the app is **Internal** (safe,
-no expiry). Confirm in Google Cloud Console → OAuth consent screen that it's **Internal** or
-**In production**, not **Testing**. If it turns out to be Testing, have Sir Pao set it Internal.
+**Token-expiry risk checked and cleared 2026-09-22.** Confirmed the OAuth app (Google Cloud
+project "JESSIE" → Google Auth Platform → Audience) is **User type: Internal**. Internal apps
+have no "Testing" mode and no ~7-day refresh-token expiry, so there is no silent-break risk from
+this. Do NOT click "Make external" — that would move it out of the safe state.
 
 Original problem (for the record):
 
