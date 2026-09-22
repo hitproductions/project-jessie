@@ -68,18 +68,47 @@ M-Booth adds no new infrastructure — it rides Steps 1/3/4 of the engine. Its o
 4. **Prompt section** + offline tests + canary. Same pre-launch window as the engine (dev freeze
    23 Sep, polish to 5 Oct, launch 12 Oct).
 
-## Inputs needed from the team
+## Booth set + holders — CONFIRMED 2026-09-22 (Howard)
 
-1. **Shared-use booth set** and each booth's **holder/approver** (M2→Peemo, M6→Nicole, M7→BD —
-   confirm), and whether **M2/M6 are active**.
-2. The approver **Slack IDs**.
-3. `#jessie-approvals` **DONE** — created 2026-09-21, id `C0C34UMFXGD`, Jessie invited (shared with
-   `PREEMPT`; view/audit feed only). Fully set.
-4. How **"held"** is detected — a standing calendar event on the booth (+ its title keywords) vs a
-   static map.
-5. ~~The **window / timeout rules** and the **no-response policy**.~~ **DONE — confirmed by Howard
-   2026-09-22** (see the deadline tiers + timeout policy above; built + tested in the draft).
-6. **Approval rule** — booth owner approves their own booth (proposed) vs any-of-N.
+Only two booths carry a standing recurring hold right now (**M7 dropped**). Holder Slack ids from the
+Bookers table:
+
+| Booth | Holder | Slack ID | Standing-hold event title |
+|---|---|---|---|
+| **M2** | Peemo Morato (Head of Video Post) | `UPPEY3F4G` | `M2 - Peemo` |
+| **M6** | Nicole Miller (Head of Marketing) | `U06CTHTUS1Y` | `M6 - Marketing` |
+
+## How "held" is detected — CONFIRMED
+
+The standing holds are real recurring calendar events, and both share two robust signals (verified on
+the live calendar 2026-09-22):
+
+- **`recurringEventId` present** — the hold is a daily recurring event (M2 as an all-day `date` event;
+  M6 as a 24h `dateTime` event — different shapes, both recurring).
+- **`transparency: "transparent"` / `availability: FREE`** — a *soft* hold that shows on the calendar
+  but is marked Free, not Busy. A real booking is opaque (Busy) and non-recurring.
+- Title pattern **`M<n> - <holder>`** as a corroborating fallback.
+
+So the detection (in Book Session, at the `ROOM_OCCUPIED` point): among the overlapping events on the
+booth, a conflict is the **standing hold** iff `transparent && recurring` (or the title matches). Then
+`decideMBooth` (tested) returns:
+- **`open_mbooth`** — non-holder wants a held booth → open a consent request to the holder.
+- **`book_as_holder`** — the requester IS the holder → just book (skip the courtesy hold; the holder
+  owns the booth). *(Fixes a current gap: today the transparent hold registers as a plain
+  `ROOM_OCCUPIED`, so even the holder can't book their own booth through Jessie — Check Conflicts does
+  not filter by transparency.)*
+- **`room_taken`** — a *real* (opaque) booking also overlaps → ordinary first-come clash, normal refuse.
+- **`none`** — not a shared booth / not a hold → falls through to the normal path.
+
+`#jessie-approvals` is `C0C34UMFXGD` (shared with `PREEMPT`; view/audit feed only). Fully set.
+
+## Still open for the team
+
+Only one design question remains (everything else — booth set, holders, Slack ids, held-detection,
+deadline tiers, timeout policy — is confirmed above):
+
+- **Approval rule** — the booth owner approves their own booth (proposed default), vs any-of-N. Wiring
+  assumes owner-approves-own-booth unless told otherwise.
 
 ## Build status (2026-09-22)
 

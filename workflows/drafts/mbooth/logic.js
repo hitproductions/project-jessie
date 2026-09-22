@@ -24,10 +24,11 @@ function resolveConsent(text) {
 // normal Book Session. Holder Slack ids are PLACEHOLDERS pending Tel's confirmation (historically
 // M2→Peemo, M6→Nicole, M7→BD; confirm which are active + real ids). The functions take the map so the
 // live node can inject the confirmed one without a code change.
+// Confirmed 2026-09-22 (Howard): only M2 and M6 carry a standing recurring hold right now (M7 dropped).
+// Holder Slack ids from the Bookers table. Booth "M6 - Marketing" is Nicole (Head of Marketing).
 const BOOTH_HOLDERS = {
-  M2: { holder: 'UPEEMO_PLACEHOLDER', name: 'Peemo' },
-  M6: { holder: 'UNICOLE_PLACEHOLDER', name: 'Nicole' },
-  M7: { holder: 'UBD_PLACEHOLDER', name: 'BD' },
+  M2: { holder: 'UPPEY3F4G', name: 'Peemo' },   // Peemo Morato (PM), Head of Video Post
+  M6: { holder: 'U06CTHTUS1Y', name: 'Nicole' }, // Nicole Miller (NM), Head of Marketing ("M6 - Marketing")
 };
 function normBooth(room) { return String(room == null ? '' : room).trim().toUpperCase(); }
 function isSharedBooth(room, map) { return Object.prototype.hasOwnProperty.call(map || BOOTH_HOLDERS, normBooth(room)); }
@@ -47,6 +48,43 @@ function holdCoversSlot(holdEvents, startISO, endISO) {
     if (overlaps(startISO, endISO, h.start, h.end)) return true;
   }
   return false;
+}
+
+// ── 2b. Identify the standing hold, and decide the M-Booth branch ────────────
+// A conflict is the standing hold when it is BOTH transparent (a soft "Free" event) AND recurring —
+// the two signals both live holds share (M2-Peemo, M6-Marketing) — with the "M<n> - " title as a
+// corroborating fallback. A real booking is opaque + non-recurring and is an ordinary first-come clash.
+function parseRefId(desc) { const m = String(desc || '').match(/ref:\s*([A-Z0-9]+)/i); return m ? m[1].trim() : ''; }
+function isStandingHold(c) {
+  if (!c) return false;
+  if (c.transparent && c.recurring) return true;
+  return /^\s*M\d+\s*-\s*/i.test(String(c.summary || '')); // "M2 - Peemo" / "M6 - Marketing"
+}
+
+// Decide the M-Booth branch at a ROOM_OCCUPIED. cc = enriched Check Conflicts output (each conflict
+// carries {room, summary, id, description, transparent, recurring}). Returns one of:
+//   none          → not an M-Booth case; fall through to normal preempt/refuse
+//   book_as_holder→ the requester IS the booth holder → just book (skip the courtesy hold)
+//   room_taken    → a real (non-hold) booking also overlaps → ordinary first-come clash, refuse
+//   open_mbooth   → open a consent request to the booth holder
+function decideMBooth(cc, REQ, map) {
+  const M = map || BOOTH_HOLDERS;
+  const room = normBooth(REQ && REQ.rooms);
+  if (!isSharedBooth(room, M)) return { action: 'none', why: 'not a shared booth' };
+  if (!cc || cc.reason !== 'ROOM_OCCUPIED' || !Array.isArray(cc.conflicts) || !cc.conflicts.length) {
+    return { action: 'none', why: 'no room conflict' };
+  }
+  const holds = cc.conflicts.filter(isStandingHold);
+  const nonHolds = cc.conflicts.filter(c => !isStandingHold(c));
+  if (!holds.length) return { action: 'none', why: 'conflict is not the standing hold' };
+  if (nonHolds.length) return { action: 'room_taken', why: 'a real booking also overlaps that slot' };
+  const holder = holderOf(room, M);
+  const requester = parseRefId(REQ && REQ.description);
+  if (requester && holder && requester === holder.holder) {
+    return { action: 'book_as_holder', why: 'requester is the booth holder' };
+  }
+  return { action: 'open_mbooth', approver: holder.holder, approverName: holder.name, booth: room,
+    why: 'open consent to the booth holder' };
 }
 
 // ── 3. Deadline tiers (request execution) — CONFIRMED by Howard 2026-09-22 ────
@@ -99,5 +137,6 @@ function sweepAction(row, nowISO) {
 module.exports = {
   resolveConsent,
   BOOTH_HOLDERS, normBooth, isSharedBooth, holderOf, overlaps, holdCoversSlot,
+  parseRefId, isStandingHold, decideMBooth,
   computeDeadline, sweepAction,
 };
