@@ -1,0 +1,877 @@
+{
+  "name": "Finalize Consent",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "row"
+            },
+            {
+              "name": "resolvedVia"
+            },
+            {
+              "name": "attestedBy"
+            }
+          ]
+        }
+      },
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Finalize Plan - inlined from workflows/drafts/consent/finalize.js (33/33). Computes everything the\n// branches need so downstream nodes only reference $('Plan').\nconst IN = $('When Executed by Another Workflow').first().json || {};\nfunction safeParse(s){ if(s&&typeof s==='object') return s; try{ return JSON.parse(s||''); }catch(_){ return null; } }\nfunction dateOf(iso){ try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(iso)); }catch(_){ return ''; } }\nconst row = safeParse(IN.row) || {};\nconst now = new Date().toISOString();\nfunction fail(reason){ return [{ json: { ok:false, reason:reason, rowFail:{ 'Request ID':row['Request ID'], 'Status':'FAILED', 'Resolved Via':reason, 'Decided At':now }, notifyReq:'Sorry - that request could not be completed ('+reason+'). Nothing was changed.', requester:row['Requester']||'' } }]; }\nconst status=String(row['Status']||'').toUpperCase();\nif(['DONE','REJECTED','EXPIRED','FAILED'].indexOf(status)!==-1) return fail('ALREADY_'+status);\nif(!row['Req Start']||!row['Req End']||!row['Room/Booth']) return fail('MISSING_REQ_SLOT');\nconst req=safeParse(row['Req Payload']); if(!req) return fail('BAD_REQ_PAYLOAD');\nconst kind=String(row['Kind']||'').toUpperCase();\nif(kind==='PREEMPT'){ if(!row['Incumbent New Start']||!row['Incumbent New End']) return fail('NO_RELOCATION_SLOT'); if(!row['Incumbent Event Id']&&!row['Incumbent Title']) return fail('NO_INCUMBENT'); }\n// relocate the incumbent, invoked AS the incumbent (owner=true), confirmed=consent\nconst movePayload={ title:row['Incumbent Title']||'', event_id:row['Incumbent Event Id']||'', booking_date:dateOf(row['Req Start']), new_start_iso:row['Incumbent New Start']||'', new_end_iso:row['Incumbent New End']||'', new_rooms:row['Room/Booth']||'', requester:row['Approver']||'', requester_name:row['Approver Name']||'', confirmed:true, authority:'', department:'' };\n// place the requester: move their booking (kind:move) or a fresh book\nconst placeTarget=(req&&req.kind==='move')?'move':'book';\nconst placePayload = placeTarget==='move'\n  ? { title:req.title||row['Incumbent Title']||'', event_id:req.event_id||'', booking_date:req.booking_date||'', new_start_iso:req.new_start_iso||row['Req Start'], new_end_iso:req.new_end_iso||row['Req End'], new_rooms:req.new_rooms||row['Room/Booth']||'', requester:req.requester||row['Requester']||'', requester_name:req.requester_name||row['Requester Name']||'', confirmed:true, authority:'', department:'' }\n  : Object.assign({}, req, { confirmed:true, room_override:true, rooms:req.rooms||row['Room/Booth']||'', start_iso:req.start_iso||row['Req Start'], end_iso:req.end_iso||row['Req End'] });\nconst rowDone={ 'Request ID':row['Request ID'], 'Status':'DONE', 'Resolved Via':IN.resolvedVia||'', 'Attested By':IN.attestedBy||'', 'Decided At':now };\nconst rowFailMove={ 'Request ID':row['Request ID'], 'Status':'FAILED', 'Resolved Via':'MOVE_FAILED', 'Decided At':now };\nconst rowFailPlace={ 'Request ID':row['Request ID'], 'Status':'FAILED', 'Resolved Via':'PLACE_FAILED', 'Decided At':now };\nconst notifyIncumbent='Heads up - your \"'+row['Incumbent Title']+'\" was moved to make room for a higher-priority session in '+row['Room/Booth']+\", as you OK'd. It's now at the time we agreed. Thanks!\";\nconst notifyReqOK='Done - '+row['Room/Booth']+' is yours for the requested time. '+row['Approver Name']+' moved their session to make way.';\nconst notifyReqMoveFail=\"Couldn't free \"+row['Room/Booth']+' - '+row['Approver Name']+\"'s session couldn't be moved to the agreed slot, so nothing changed. Want to try another time or room?\";\nconst notifyReqPlaceFail=row['Approver Name']+\"'s session was moved, but I couldn't place your booking in \"+row['Room/Booth']+' just now. Nothing is double-booked. Please try again.';\nreturn [{ json: { ok:true, kind:kind, placeTarget:placeTarget, movePayload:movePayload, placePayload:placePayload, rowDone:rowDone, rowFailMove:rowFailMove, rowFailPlace:rowFailPlace, notifyIncumbent:notifyIncumbent, notifyReqOK:notifyReqOK, notifyReqMoveFail:notifyReqMoveFail, notifyReqPlaceFail:notifyReqPlaceFail, approver:row['Approver']||'', requester:row['Requester']||'' } }];\n"
+      },
+      "name": "Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "name": "filter.operator.true",
+                "operation": "true",
+                "type": "boolean",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "name": "Plan OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { status:'FAILED', reason: $('Plan').first().json.reason, human: $('Plan').first().json.notifyReq || 'The request could not be completed.' } }];"
+      },
+      "name": "Return Fail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "t7lwR2km4tfN8DbM",
+          "mode": "id",
+          "cachedResultName": "Jessie - Move Booking"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title": "={{ $('Plan').first().json.movePayload.title }}",
+            "event_id": "={{ $('Plan').first().json.movePayload.event_id }}",
+            "booking_date": "={{ $('Plan').first().json.movePayload.booking_date }}",
+            "new_start_iso": "={{ $('Plan').first().json.movePayload.new_start_iso }}",
+            "new_end_iso": "={{ $('Plan').first().json.movePayload.new_end_iso }}",
+            "new_rooms": "={{ $('Plan').first().json.movePayload.new_rooms }}",
+            "requester": "={{ $('Plan').first().json.movePayload.requester }}",
+            "requester_name": "={{ $('Plan').first().json.movePayload.requester_name }}",
+            "confirmed": "={{ true }}",
+            "authority": "",
+            "department": ""
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "name": "Move Incumbent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "name": "filter.operator.equals",
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "MOVED"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "name": "Moved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=431550013",
+          "cachedResultName": "Consent Requests"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "Request ID"
+          ],
+          "value": {},
+          "schema": []
+        },
+        "options": {}
+      },
+      "name": "Mark Failed Move",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        -220
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Plan').first().json.requester }}"
+        },
+        "text": "={{ $('Plan').first().json.notifyReqMoveFail }}",
+        "otherOptions": {}
+      },
+      "name": "Notify Move Fail",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        -220
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { status:'FAILED', reason:'MOVE_FAILED', human: $('Plan').first().json.notifyReqMoveFail } }];"
+      },
+      "name": "Return Move Fail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        -220
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('Plan').first().json.placeTarget }}",
+              "operator": {
+                "name": "filter.operator.equals",
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "move"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "name": "Place Kind?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "t7lwR2km4tfN8DbM",
+          "mode": "id",
+          "cachedResultName": "Jessie - Move Booking"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title": "={{ $('Plan').first().json.placePayload.title }}",
+            "event_id": "={{ $('Plan').first().json.placePayload.event_id }}",
+            "booking_date": "={{ $('Plan').first().json.placePayload.booking_date }}",
+            "new_start_iso": "={{ $('Plan').first().json.placePayload.new_start_iso }}",
+            "new_end_iso": "={{ $('Plan').first().json.placePayload.new_end_iso }}",
+            "new_rooms": "={{ $('Plan').first().json.placePayload.new_rooms }}",
+            "requester": "={{ $('Plan').first().json.placePayload.requester }}",
+            "requester_name": "={{ $('Plan').first().json.placePayload.requester_name }}",
+            "confirmed": "={{ true }}",
+            "authority": "",
+            "department": ""
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "name": "Move Requester",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "EUG3sGXkfsJSYIMz",
+          "mode": "id",
+          "cachedResultName": "Jessie - Book Session"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "summary": "={{ $('Plan').first().json.placePayload.summary }}",
+            "start_iso": "={{ $('Plan').first().json.placePayload.start_iso }}",
+            "end_iso": "={{ $('Plan').first().json.placePayload.end_iso }}",
+            "rooms": "={{ $('Plan').first().json.placePayload.rooms }}",
+            "description": "={{ $('Plan').first().json.placePayload.description }}",
+            "session_type": "={{ $('Plan').first().json.placePayload.session_type }}",
+            "client": "={{ $('Plan').first().json.placePayload.client }}",
+            "department": "={{ $('Plan').first().json.placePayload.department }}",
+            "engineer": "={{ $('Plan').first().json.placePayload.engineer }}",
+            "bookingType": "={{ $('Plan').first().json.placePayload.bookingType }}",
+            "confirmed": "={{ true }}",
+            "room_override": "={{ true }}",
+            "all_day": "={{ $('Plan').first().json.placePayload.all_day }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "name": "Book Requester",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "name": "filter.operator.equals",
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "MOVED"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "name": "Placed Move?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1540,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "name": "filter.operator.equals",
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "BOOKED"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "name": "Placed Book?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1540,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Plan').first().json.rowDone }];"
+      },
+      "name": "Done Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=431550013",
+          "cachedResultName": "Consent Requests"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "Request ID"
+          ],
+          "value": {},
+          "schema": []
+        },
+        "options": {}
+      },
+      "name": "Mark Done",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1980,
+        0
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Plan').first().json.approver }}"
+        },
+        "text": "={{ $('Plan').first().json.notifyIncumbent }}",
+        "otherOptions": {}
+      },
+      "name": "Notify Incumbent",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        2200,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Plan').first().json.requester }}"
+        },
+        "text": "={{ $('Plan').first().json.notifyReqOK }}",
+        "otherOptions": {}
+      },
+      "name": "Notify Requester OK",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        2420,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { status:'DONE', human: $('Plan').first().json.notifyReqOK } }];"
+      },
+      "name": "Return Done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Plan').first().json.rowFailPlace }];"
+      },
+      "name": "Fail Place Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=431550013",
+          "cachedResultName": "Consent Requests"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "Request ID"
+          ],
+          "value": {},
+          "schema": []
+        },
+        "options": {}
+      },
+      "name": "Mark Failed Place",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1980,
+        240
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Plan').first().json.requester }}"
+        },
+        "text": "={{ $('Plan').first().json.notifyReqPlaceFail }}",
+        "otherOptions": {}
+      },
+      "name": "Notify Place Fail",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        2200,
+        240
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { status:'FAILED', reason:'PLACE_FAILED', human: $('Plan').first().json.notifyReqPlaceFail } }];"
+      },
+      "name": "Return Place Fail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Finalize Consent\nOn an APPROVED consent request: relocate the incumbent via Move Booking (as the incumbent, owner=true), then PLACE the requester - by Move (move-preempt) or Book (book-preempt), per placeTarget. All-or-nothing move-first. Marks the Consent Requests row DONE/FAILED and notifies both. Logic mirrors workflows/drafts/consent/finalize.js (33/33). executeWorkflow/Sheets-update wiring validates at the coordinated live QA. Inactive until wired.",
+        "height": 300,
+        "width": 460
+      },
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -360
+      ]
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan": {
+      "main": [
+        [
+          {
+            "node": "Plan OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan OK?": {
+      "main": [
+        [
+          {
+            "node": "Move Incumbent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Fail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move Incumbent": {
+      "main": [
+        [
+          {
+            "node": "Moved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Moved?": {
+      "main": [
+        [
+          {
+            "node": "Place Kind?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark Failed Move",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Failed Move": {
+      "main": [
+        [
+          {
+            "node": "Notify Move Fail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Move Fail": {
+      "main": [
+        [
+          {
+            "node": "Return Move Fail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Place Kind?": {
+      "main": [
+        [
+          {
+            "node": "Move Requester",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Book Requester",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move Requester": {
+      "main": [
+        [
+          {
+            "node": "Placed Move?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book Requester": {
+      "main": [
+        [
+          {
+            "node": "Placed Book?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Placed Move?": {
+      "main": [
+        [
+          {
+            "node": "Done Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail Place Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Placed Book?": {
+      "main": [
+        [
+          {
+            "node": "Done Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail Place Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Done Row": {
+      "main": [
+        [
+          {
+            "node": "Mark Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Done": {
+      "main": [
+        [
+          {
+            "node": "Notify Incumbent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Incumbent": {
+      "main": [
+        [
+          {
+            "node": "Notify Requester OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Requester OK": {
+      "main": [
+        [
+          {
+            "node": "Return Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fail Place Row": {
+      "main": [
+        [
+          {
+            "node": "Mark Failed Place",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Failed Place": {
+      "main": [
+        [
+          {
+            "node": "Notify Place Fail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Place Fail": {
+      "main": [
+        [
+          {
+            "node": "Return Place Fail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
