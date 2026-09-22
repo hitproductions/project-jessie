@@ -1,5 +1,14 @@
 # M-Room shared-use approval — build handoff
 
+> **SUPERSEDED 2026-09-22 — do not build this version.** M-Booth shared use is now the `MBOOTH`
+> caller of the shared **consent engine** (`docs/design/consent-engine.md`), specced in
+> `docs/design/mbooth-approval.md`, with logic in `workflows/drafts/mbooth/`. The **Wait-node +
+> Approve/Decline-link** mechanism below is replaced by DM reply + a **scheduled Sweep** — a long Wait
+> is exactly the outage-fragile thing the engine redesigned away from (a Cloudflare edge outage could
+> drop it). What carried over intact: the **deadline tiers** (same-day 3h · day-before 10:00 Manila ·
+> 2+ days 24h, capped at start) and **timeout = book** — both now confirmed and tested in
+> `workflows/drafts/mbooth/logic.js`. Kept for history only.
+
 Two new sub-workflows implement the timed approval window that a Slack agent turn can't
 hold open. Nothing here has touched the live n8n — these are import-and-review drafts.
 
