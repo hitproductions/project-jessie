@@ -182,7 +182,10 @@ was reconnected as `calendar@hitproductions.net` (display name "Jessie Calendar 
 workflow edits, no re-import — `verify-ids` still green. Confirmed end to end: a SWITCHTEST
 booking through Jessie created an event whose `creator.email` is `calendar@hitproductions.net`
 (UI "Created by: Jessie Calendar Bot"), with Booked by / ref / engineer / room all intact;
-`health`, `verify-ids`, `test-nodes --live` all green. Google Workspace prerequisites done by
+`health`, `verify-ids`, `test-nodes --live` all green. **Both paths verified live under the new
+credential:** a full book→cancel cycle through Jessie (execs 10181 book / 10187 cancel,
+`claimProbe` booked + cancelled confirmed) — so Cancel Booking's `Delete Event` + calendar
+`httpRequest` reads work as `calendar@` too, and the event was confirmed removed from KDC. Google Workspace prerequisites done by
 Howard + Sir Pao (write on KDC, resource booking, account rename in Admin console).
 
 **Token-expiry risk checked and cleared 2026-09-22.** Confirmed the OAuth app (Google Cloud
