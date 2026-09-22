@@ -110,22 +110,36 @@ deadline tiers, timeout policy — is confirmed above):
 - **Approval rule** — the booth owner approves their own booth (proposed default), vs any-of-N. Wiring
   assumes owner-approves-own-booth unless told otherwise.
 
-## Build status (2026-09-22)
+## Build status (2026-09-23)
 
-Deterministic core BUILT + offline-tested (`workflows/drafts/mbooth/logic.js`, 29/29): the confirmed
-deadline tiers, `sweepAction` (MBOOTH-book / PREEMPT-expire on timeout), the shared-booth→holder map
-(placeholder ids), hold-overlap detection, and the consent gate. Still to WIRE (a coordinated import
-like the PREEMPT deploy, and holding until the working PREEMPT flow's testing settles):
-1. **Shared-use detection** in Book Session — booth in {M2,M6,M7} + `holdCoversSlot` → open an `MBOOTH`
-   request instead of booking. Needs Tel's confirmed booth set + holder Slack ids + how "held" is
-   detected (standing calendar event + title keyword, vs the static map).
-2. **`MBOOTH` request** — an Open-Consent-Request variant: `Kind=MBOOTH`, `Approver`=booth holder,
-   relocation fields empty, the booth's own Book payload in `Req Payload`. (Reuses the DEV_REDIRECT
-   test gate.)
-3. **Approve→finalize router path** — the one genuinely new wiring vs PREEMPT: a holder `yes` on an
-   `MBOOTH` row calls Finalize (place-only Book) **directly** — there's no move-hook because nothing
-   relocates.
-4. **The Sweep** — a scheduled workflow (~10 min) running `sweepAction` over PENDING rows: MBOOTH
-   past-deadline → Finalize (book); PREEMPT past-deadline → mark EXPIRED + notify. Schedule-triggered,
-   so it fires even during a Cloudflare edge outage. Shared by both callers (also closes the "a
-   preemption hangs forever if the incumbent never replies" gap).
+Deterministic core offline-tested (`workflows/drafts/mbooth/logic.js`, 39/39). **Three of the four
+wiring stages are LIVE + component-verified:**
+
+1. ✅ **Shared-use detection — LIVE (Book Session v37/v38).** Check Conflicts now enriches each conflict
+   with `transparent` + `recurring`; Decide Preempt runs `decideMBooth` before the preempt eligibility.
+   At a `ROOM_OCCUPIED` on M2/M6, a standing hold (`transparent && recurring`, title fallback) →
+   `open_mbooth` for a non-holder, `room_taken` if a real booking also overlaps, else falls through.
+   Verified against the live node: a held-M2 request by a non-holder returns `offer:MBOOTH, approver=Peemo`.
+2. ✅ **`MBOOTH` request — LIVE (Open v6).** Open takes a `kind` input (default PREEMPT); Build Request
+   writes `Kind`; Build Messages has booth wording ("… your standing booth, OK to let them use it?").
+   Book Session's Decide Preempt builds the MBOOTH `open` object (approver=holder, relocation fields
+   empty, the booth's Book payload in `Req Payload`). Reuses the DEV_REDIRECT gate (still Howard-only).
+3. ✅ **Approve→finalize router path — LIVE (main v149).** Consent Router is Kind-aware: an MBOOTH row +
+   holder `yes` → branch `mbooth-book`; a new `MBooth Book?` IF routes it to `Call Finalize MBOOTH`
+   (place-only Book). Book Session v38 lets that placement **bypass the permanent hold** — Check
+   Conflicts skips a `transparent && recurring` hold when `room_override` is set, so the consented
+   booking isn't blocked by the very hold the holder just approved. Normal path verified unbroken.
+4. ⏳ **The Sweep — NOT built yet.** Scheduled workflow (~10 min) running `sweepAction` over PENDING
+   rows: MBOOTH past-deadline → Finalize (book, per timeout=book); PREEMPT past-deadline → EXPIRED +
+   notify. Schedule-triggered → fires even during a Cloudflare edge outage. Shared by both callers
+   (also closes the "a preemption hangs forever if the incumbent never replies" gap). Without it, the
+   holder-**replies** path works; only the **no-response → book** timeout is missing.
+
+**Live end-to-end test is blocked on a data gap:** the real M2/M6 standing holds are 2026 near-term
+recurring events whose recurrence does NOT reach the year-shifted QA dates (2027), so M-booth stays
+dormant in QA (M2/M6 just book normally there). To test the flow live, seed a `transparent && recurring`
+"M2 - Peemo" event on a 2027 QA date (needs calendar write access — the connector is read-only here),
+or test post-launch with `YEAR_SHIFT=0` on a real near-term date where the hold exists.
+
+**Cosmetic follow-up:** Finalize's requester/holder notices are PREEMPT-worded ("… moved their session
+to make way") — for an MBOOTH placement nothing moved, so make those notices Kind-aware.
