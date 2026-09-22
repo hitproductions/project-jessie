@@ -4,9 +4,10 @@ Status: **exploration (post-launch)** · Started 2026-09-22 · Owner: Tel
 
 ## Idea
 
-Use **Envoy Rooms** (door tablet / mobile / Google Calendar) as a second way to book studios,
-alongside Jessie, without a direct Jessie ↔ Envoy integration. Both would sit on the same Google
-Calendar **room resources**, which become the shared source of truth for what's booked.
+Use **Envoy Rooms** (door tablet / mobile / Google Calendar) as a **visibility layer** for studio
+bookings — the tablets and Envoy views show what's booked. **Bookings are made only through Jessie**
+(and, for launch, on our calendar); Envoy is not a second booking front-end. It works without a direct
+Jessie ↔ Envoy integration because both sit on the same Google Calendar **room resources**.
 
 ## Why it can work — the mechanism
 
@@ -27,35 +28,19 @@ the bridge.
 - **IT holds Google Workspace super-admin.** Envoy's setup (a service-account grant, or per-room
   calendar sharing) is therefore an **IT request**, not something the Jessie dev team can do alone.
   (Same team that owns the Cloudflare account for `signal.hitpromanila.net`.)
+- **Envoy is connected to these resource calendars, and Jessie → Envoy visibility is validated.** A
+  Jessie test booking ("TEST JESSIE ENVOY", Studio 7, 23 Sep 2027 10:00–18:00) was confirmed sitting
+  on Studio 7's resource calendar with the room accepted — the exact surface Envoy reads — so **a
+  Jessie booking is visible in Envoy now** (view it in Envoy on the 2027 date, not tomorrow).
 
-## Two directions — and they are not symmetric
+## Jessie → Envoy visibility — validated
 
-**Jessie → Envoy: works today.** Jessie invites the room resource on every event, so her bookings
-appear on the resource calendars → Envoy sees them. ✅
+**Jessie → Envoy: works — validated 2026-09-22.** Jessie invites the room resource on every event, so
+her bookings appear on the resource calendars, which is exactly what Envoy reads. Confirmed live with
+the Studio 7 test booking above (on the resource calendar, room accepted). ✅
 
-**Envoy → Jessie: does NOT work as-is.** ❌ An Envoy booking lands on the room's resource calendar,
-but Jessie's availability logic reads a *different* calendar:
-
-- `Book Session` → **Check Conflicts** and the whole **Room Availability** workflow query events from
-  **only** the group calendar `c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com`. Neither reads
-  the resource calendars.
-- So Jessie would be **blind to an Envoy reservation and could double-book over it.**
-
-**Do not roll Envoy out for live booking on shared rooms until the Jessie read-side is switched
-(below) and QA'd.** Until then Envoy is safe only as read-only visibility of Jessie's bookings.
-
-## The Jessie change that makes it two-way safe
-
-Point Jessie's availability reads at the **room resource calendars** instead of the group calendar.
-Because Jessie's own bookings are *also* on the resource calendars (she invites the resource), reading
-there means she sees **everything** — her own bookings and Envoy's — in one place.
-
-- Scope: **2 places** — `Check Conflicts` (in `Book Session`) and the `Room Availability` workflow.
-- Preferred form: a Google **freebusy** query across the resource calendars — returns each room's busy
-  blocks regardless of who booked it, matching the build's "compute availability, don't reason about
-  it" principle.
-- Must be QA'd: availability and double-booking are load-bearing guarantees. This is a **post-launch**
-  change (launch is 2026-10-12, dev freeze 2026-09-23).
+Because **bookings are made only through Jessie**, Envoy stays a read-only view of what Jessie has
+booked — so there's no reverse-direction sync to design around.
 
 ## Process to connect Envoy (for IT)
 
@@ -67,9 +52,8 @@ there means she sees **everything** — her own bookings and Envoy's — in one 
    people" → **Make changes to events**). Least-privilege = the sharing route.
 5. **Connect in Envoy dashboard** — Rooms → Google Calendar → authenticate → select the rooms to pair
    with the location → Assign → Save.
-6. **Scoped pilot** — connect ONE low-traffic room, make a test booking in Envoy on a **2027 (QA)
-   date**, confirm it appears on that room's resource calendar. Do not book real shared rooms in Envoy
-   until the Jessie read-side change lands.
+6. **Confirm visibility** — open a connected room in Envoy and check that a Jessie booking shows on
+   the correct date (mind the 2027 QA year-shift). Envoy is display-only; bookings stay in Jessie.
 
 ## Room → resource calendar map
 
@@ -110,10 +94,6 @@ From `Book Session` → Create Event (the live attendee map). Studio 1 uses the 
 
 - Confirm the Envoy Rooms subscription (step 3).
 - Decide auth method with IT: super-admin service account vs per-room sharing (step 4).
-- Watch the write-contention question in the pilot: both Jessie and Envoy write to the same resource
-  calendars — Google's resource auto-accept/decline should handle conflicts, but confirm behavior.
-- Build + QA the Jessie read-side switch (Check Conflicts + Room Availability → resource calendars /
-  freebusy) before any shared-room rollout.
 
 ## Sources
 
