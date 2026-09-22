@@ -2,6 +2,15 @@
 // priority booking wants an occupied room, writes a PENDING row to the Consent Requests sheet,
 // DMs the incumbent, and posts an audit line to #jessie-approvals. Pure functions, offline-tested.
 // Draft — see docs/design/consent-engine.md. Reuses computeDeadline from ./logic.
+//
+// TEST GATE (live node only, not in this pure-logic draft — mirrors Cancel/Move's DEV_REDIRECT):
+// the LIVE Build Request node wraps the stored Approver and Requester in route(id) = HAIST-dev? id :
+// DEV_REDIRECT (Howard), so during testing no real non-dev person is DM'd — every consent recipient
+// reroutes to Howard, and HAIST devs (Howard/Tel/Genzo) still get theirs. All downstream DMs read the
+// row's Approver/Requester, so routing them once covers Open, Finalize, and the main router. The tail
+// hook matches on Incumbent Event Id (not Approver), so the REAL booking is still moved/placed. Set
+// DEV_REDIRECT='' at launch to restore real DMs. Kept out of the draft (like Cancel/Move) because it
+// is deploy-time config, not booking logic.
 const { computeDeadline } = require('./logic');
 
 // The Consent Requests sheet header, in order. buildRow emits an object keyed by these names so the

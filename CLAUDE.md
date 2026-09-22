@@ -342,6 +342,12 @@ Three switches flip for launch — do them together:
    testers). **Set `DEV_REDIRECT = ''` at launch** and the booker + assigned engineer are DM'd for
    real (the `ALLOW` list then no longer matters). Booker id is the event `ref:`; the engineer is
    resolved from the title initials via `Lookup Engineer`.
+   - **Consent engine has its OWN `DEV_REDIRECT`** in `Open Consent Request` → `Build Request` (added
+     2026-09-22). It routes the row's `Approver` and `Requester` — which every consent DM downstream
+     (Open, Finalize, main router) reads — to Howard unless the recipient is a HAIST dev
+     (`ALLOW = Howard, Tel, Genzo`; narrower than Cancel/Move's list, on purpose). So no real non-dev
+     is DM'd during testing. **Set its `DEV_REDIRECT = ''` at launch too.** The tail hook matches on
+     `Incumbent Event Id`, not `Approver`, so the real booking is still the one moved/placed.
 3. **`TEST_COORD`** (the hard-coded Howard id) in `Check Ownership` / `Resolve Booking` — drop it once
    the `HAIST Dev` Airtable tag is live on Howard (it's strictly broader). Weekend hard-code only.
 4. **`HAIST Dev`** authority (Bookers `Authority` tag) — **god-mode**: bypasses the owner check and

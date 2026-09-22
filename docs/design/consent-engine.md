@@ -472,3 +472,14 @@ move — it reads them live.
   DMs the incumbent tester while requester updates stay with Howard. Consent DMs are NOT behind the
   Cancel/Move `DEV_REDIRECT`, so QA will really ping the incumbent tester (intended) — just don't seed a
   non-participant's id.
+
+- **2026-09-22 (later) — TEST GATE so testing never DMs a real non-dev (Howard).** `Open Consent
+  Request` → `Build Request` (v4) wraps the row's `Approver` and `Requester` in
+  `route(id) = ALLOW.includes(id) ? id : DEV_REDIRECT` with `DEV_REDIRECT='U08V3CKDGJF'` and
+  `ALLOW=[Howard, Tel, Genzo]` (HAIST devs only — deliberately narrower than Cancel/Move's list). Every
+  consent DM downstream reads the row's Approver/Requester (Open `DM Incumbent` repointed at the routed
+  row Approver; Finalize `Notify *`; main `Notify Requester`/`Reply Incumbent`), so routing those two
+  fields once gates all of them. The tail hook matches on `Incumbent Event Id`, not `Approver`, so the
+  real booking is still moved/placed; Finalize moves it as the routed Approver (Howard) via HAIST-dev
+  god-mode. **Launch flip: set this `DEV_REDIRECT=''`** (now in CLAUDE.md Before-launch #2). Caveat: an
+  incumbent owned by a dev (Tel/Genzo) still gets a real DM — narrow ALLOW to just Howard for pure-solo.
