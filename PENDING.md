@@ -175,7 +175,24 @@ acceptable answer for the existing calendar? If not, the descriptions of
 existing events need a `ref:` added, which is a bulk edit against the calendar
 and needs someone to map each booking to a Slack user id first.
 
-**25. Every booking is stamped "Created by: Howard Luistro", and the invite emails go to Howard.**
+**25. Every booking is stamped "Created by: Howard Luistro", and the invite emails go to Howard.** — RESOLVED 2026-09-22.
+
+Switched live 2026-09-22: the "Google Calendar account" credential (`6D1r3kaq6KaFdL0a`)
+was reconnected as `calendar@hitproductions.net` (display name "Jessie Calendar Bot"). No
+workflow edits, no re-import — `verify-ids` still green. Confirmed end to end: a SWITCHTEST
+booking through Jessie created an event whose `creator.email` is `calendar@hitproductions.net`
+(UI "Created by: Jessie Calendar Bot"), with Booked by / ref / engineer / room all intact;
+`health`, `verify-ids`, `test-nodes --live` all green. Google Workspace prerequisites done by
+Howard + Sir Pao (write on KDC, resource booking, account rename in Admin console).
+
+**One thing left to confirm (guards against a silent ~7-day break):** the OAuth consent screen
+behind this credential must NOT be in "Testing" mode — a testing-mode refresh token expires in
+~7 days and would kill Jessie's calendar auth, looking just like the outages. The reconnect
+succeeded without any OAuth-consent change, which strongly implies the app is **Internal** (safe,
+no expiry). Confirm in Google Cloud Console → OAuth consent screen that it's **Internal** or
+**In production**, not **Testing**. If it turns out to be Testing, have Sir Pao set it Internal.
+
+Original problem (for the record):
 
 The calendar OAuth credential in n8n (`googleCalendarOAuth2Api`, id `6D1r3kaq6KaFdL0a`,
 "Google Calendar account") is authenticated as `howard@hitproductions.net`, so Google stamps
