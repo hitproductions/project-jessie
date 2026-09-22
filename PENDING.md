@@ -494,7 +494,7 @@ started; low priority vs. launch items but a clear UX win. Related to the priori
 consent work in `docs/design/booking-authority-phase2.md` (the "proper" answer to an
 occupied higher-priority slot is to broker the incumbent's move, not just refuse).
 
-**24. The agent can fabricate a preemption ("I've asked the current holder to move") without
+**26. The agent can fabricate a preemption ("I've asked the current holder to move") without
 calling Book Session.** Found 2026-09-22 in consent-engine live QA (main exec `10293`): a
 Celebrity Recording request into an occupied Studio F made the agent call *Room Availability*,
 see the room busy, and then reply "Studio F is held by INCUMBENT… I've asked the current holder
@@ -507,7 +507,7 @@ reply is replaced unless an `Open Consent Request` tool call appears in this tur
 `intermediateSteps` with success. Same enforcement pattern as the existing claim check. Not
 started.
 
-**25. The agent sometimes double-calls Book Session, opening duplicate consent requests.**
+**27. The agent sometimes double-calls Book Session, opening duplicate consent requests.**
 Found 2026-09-22 (Book Session execs `10306`+`10307`, both `Return Offer` → Open execs
 `10308`+`10309`): one confirmed Celebrity request produced two identical preemptions, DMing the
 incumbent twice. No data corruption here only because both Opens generated the same timestamp
@@ -517,6 +517,25 @@ would hit `ROOM_OCCUPIED`/`NOT_ELIGIBLE` (no double-book — the guard holds —
 "couldn't place" message). Fix options: make `Open Consent Request` idempotent (skip if a PENDING
 row already exists for the same requester+room+window+incumbent), and/or make the incumbent DM
 `executeOnce`. Not started; low risk given the double-book guard, but it spams the incumbent.
+**Also observed 2026-09-22:** the stray second placement surfaced a contradictory "the booking did
+not go through" **after** the requester had already been told "Done - Studio F is yours" — so this
+isn't only incumbent spam, it can confuse the requester with a false failure. Bumps the priority.
+
+**28. Booking over your OWN booking opens a self-consent instead of "you already have this."**
+Raised by Howard 2026-09-22. The preempt branch (`decide.js`/`branch.js`) never checks whether the
+incumbent's booker (`approver`, from the event `ref:`) is the same person as the requester. So when an
+authorized user books a higher-priority session over their *own* existing booking, Jessie opens a
+consent request and DMs *them* asking permission to move their own session — you consent to yourself.
+It works (no double-book), but it's the wrong interaction: it should recognize the booking is yours and
+either say "you already have <title> in <room> at <time> — want to move it?" or just fall through to the
+normal `ROOM_OCCUPIED` refusal (which already names your own booking). Fix (small, our code): in Decide
+Preempt, if `approver === requester` return `offer:false, reason:'SELF_BOOKING'` so it takes the normal
+refusal path — never a self-consent. **Note this also means solo preemption testing is impossible once
+the guard is in** (you can only ever book over your own bookings), which is fine: real preemption QA
+needs a second person owning the incumbent booking. This is a genuine post-launch fix, not a test-only
+artifact. Only reason it opens for Howard today is his HAIST Dev authority makes him an authorized
+preempter; a Standard user booking over their own booking already just gets the plain "room's taken"
+refusal (`NOT_AUTHORIZED` → no preempt). Not started.
 
 ---
 

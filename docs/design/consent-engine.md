@@ -447,7 +447,7 @@ move — it reads them live.
      was mis-classified as a failure — row wrongly marked FAILED, requester told "couldn't place" when
      the calendar event had in fact been created. `classifyBook` in `finalize.js` fixed to match too.
 
-  **Two agent-level findings opened (PENDING 24, 25):** the agent can *fabricate* a preemption offer
+  **Two agent-level findings opened (PENDING 26, 27):** the agent can *fabricate* a preemption offer
   without calling Book Session (no row written), and can double-call Book Session (duplicate consent
   requests / double incumbent DM). Neither risks a double-book (the guards hold); both are follow-ups.
 
