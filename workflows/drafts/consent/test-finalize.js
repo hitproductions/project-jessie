@@ -20,7 +20,7 @@ console.log('finalizePlan');
 ok('valid APPROVED PREEMPT row -> ok', F.finalizePlan(baseRow).ok === true);
 ok('parses Req Payload', F.finalizePlan(baseRow).req.session_type === 'Celebrity Recording');
 ok('already DONE -> not actionable', F.finalizePlan(Object.assign({}, baseRow, { 'Status': 'DONE' })).reason === 'ALREADY_DONE');
-ok('missing relocation slot -> refuse', F.finalizePlan(Object.assign({}, baseRow, { 'Incumbent New Start': '' })).reason === 'NO_RELOCATION_SLOT');
+ok('place-only: no relocation slot needed -> still ok', F.finalizePlan(Object.assign({}, baseRow, { 'Incumbent New Start': '' })).ok === true);
 ok('bad Req Payload -> refuse', F.finalizePlan(Object.assign({}, baseRow, { 'Req Payload': '{not json' })).reason === 'BAD_REQ_PAYLOAD');
 ok('missing req slot -> refuse', F.finalizePlan(Object.assign({}, baseRow, { 'Req Start': '' })).reason === 'MISSING_REQ_SLOT');
 

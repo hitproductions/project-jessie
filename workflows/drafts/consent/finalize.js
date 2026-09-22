@@ -25,6 +25,9 @@ function dateOf(iso) {
 }
 
 // Validate the row is actionable and gather what finalize needs. Returns {ok, reason?, kind, req?}.
+// Place-only: Finalize is triggered by the Move-Booking tail hook AFTER the incumbent has already
+// moved their own booking (freeing the room). So it only validates that we can place the requester —
+// it no longer relocates the incumbent, and needs no relocation slot on the row.
 function finalizePlan(row) {
   if (!row) return { ok: false, reason: 'NO_ROW' };
   const status = String(row['Status'] || '').toUpperCase();
@@ -33,10 +36,6 @@ function finalizePlan(row) {
   const req = safeParse(row['Req Payload']);
   if (!req) return { ok: false, reason: 'BAD_REQ_PAYLOAD' };
   const kind = String(row['Kind'] || '').toUpperCase();
-  if (kind === 'PREEMPT') {
-    if (!row['Incumbent New Start'] || !row['Incumbent New End']) return { ok: false, reason: 'NO_RELOCATION_SLOT' };
-    if (!row['Incumbent Event Id'] && !row['Incumbent Title']) return { ok: false, reason: 'NO_INCUMBENT' };
-  }
   return { ok: true, kind: kind, req: req };
 }
 
@@ -120,10 +119,11 @@ function rowFailed(row, reason, now) {
   };
 }
 
-// Notification messages.
+// Notification messages. (Place-only: the incumbent already moved their own booking via the normal
+// move flow, so this is a brief thank-you/confirmation, not a "I moved it for you" note.)
 function notifyIncumbentMoved(row) {
-  return `Heads up — your "${row['Incumbent Title']}" was moved to make room for a higher-priority `
-    + `session in ${row['Room/Booth']}, as you OK'd. It's now at the time we agreed. Thanks!`;
+  return `Thanks for moving your "${row['Incumbent Title']}" — ${row['Room/Booth']} is now with `
+    + `${row['Requester Name'] || 'the higher-priority booking'} for that slot. Appreciate it!`;
 }
 function notifyRequesterBooked(row) {
   return `Done — ${row['Room/Booth']} is yours for the requested time. ${row['Approver Name']} moved `
