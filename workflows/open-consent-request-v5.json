@@ -1,0 +1,641 @@
+{
+  "updatedAt": "2026-09-22T15:32:41.464Z",
+  "createdAt": "2026-09-21T09:58:48.005Z",
+  "id": "nEHnCMMXS0am59Zy",
+  "name": "Open Consent Request",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "requester"
+            },
+            {
+              "name": "requesterName"
+            },
+            {
+              "name": "approver"
+            },
+            {
+              "name": "approverName"
+            },
+            {
+              "name": "room"
+            },
+            {
+              "name": "reqStart"
+            },
+            {
+              "name": "reqEnd"
+            },
+            {
+              "name": "incumbentEventId"
+            },
+            {
+              "name": "incumbentTitle"
+            },
+            {
+              "name": "reqType"
+            },
+            {
+              "name": "requesterDM"
+            },
+            {
+              "name": "approverDM"
+            },
+            {
+              "name": "reqPriority",
+              "type": "number"
+            },
+            {
+              "name": "incPriority",
+              "type": "number"
+            },
+            {
+              "name": "reqPayload"
+            }
+          ]
+        }
+      },
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "86f2702b-fcb4-4501-9525-d4f2ced379a8"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Inlined from workflows/drafts/consent/open-request.js (offline-tested). See consent-engine.md.\nconst c = $('When Executed by Another Workflow').first().json || {};\nfunction computeDeadline(now,start,cfg){const n=new Date(now).getTime();const s=new Date(start).getTime();const w=(cfg&&cfg.maxWindowH?cfg.maxWindowH:24)*3600*1000;const l=(cfg&&cfg.minLeadMin?cfg.minLeadMin:60)*60*1000;return new Date(Math.max(n,Math.min(n+w,s-l))).toISOString();}\n// TEST GATE (mirrors Cancel/Move DEV_REDIRECT): don't ping real non-dev people during\n// testing. Every consent recipient (Approver/Requester stored on the row, which all the\n// downstream DMs read) is rerouted to Howard UNLESS they are a HAIST dev. Set DEV_REDIRECT=''\n// at launch to restore real DMs. The tail hook matches on Incumbent Event Id, not Approver,\n// so the REAL booking is still the one moved/placed.\nconst DEV_REDIRECT = 'U08V3CKDGJF';                        // '' at launch\nconst ALLOW = ['U08V3CKDGJF']; // pure-solo: Howard only, until confirmed working (add Tel U098UFLG70B, Genzo U045A3VQER3 back after)\nconst route = (id) => (!DEV_REDIRECT || ALLOW.indexOf(String(id)) !== -1) ? id : DEV_REDIRECT;\nconst now = new Date().toISOString();\nconst stamp = now.replace(/[-:T.]/g,'').slice(0,14);\nconst id = stamp + '-' + String(c.requester||'unknown');\nconst deadline = computeDeadline(now, c.reqStart, {maxWindowH:24, minLeadMin:60});\nreturn [{ json: {\n  'Request ID': id, 'Status': 'PENDING', 'Kind': 'PREEMPT',\n  'Requester': route(c.requester||''), 'Requester Name': c.requesterName||'',\n  'Approver': route(c.approver||''), 'Approver Name': c.approverName||'',\n  'Room/Booth': c.room||'', 'Req Start': c.reqStart||'', 'Req End': c.reqEnd||'',\n  'Incumbent Event Id': c.incumbentEventId||'', 'Incumbent Title': c.incumbentTitle||'',\n  'Incumbent New Start': '', 'Incumbent New End': '',\n  'Req Priority': (c.reqPriority==null?'':c.reqPriority), 'Inc Priority': (c.incPriority==null?'':c.incPriority),\n  'Deadline': deadline,\n  'Requester DM': c.requesterDM||'', 'Approver DM': c.approverDM||'',\n  'Log Thread TS': '', 'Resolved Via': '', 'Attested By': '', 'Decided At': '',\n  'Req Payload': (c.reqPayload==null?'':(typeof c.reqPayload==='string'?c.reqPayload:JSON.stringify(c.reqPayload)))\n}}];\n"
+      },
+      "name": "Build Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "2aa2cfa3-1a77-438b-afea-58fcba79ed2d"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "431550013",
+          "cachedResultName": "Consent Requests"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "name": "Write Pending Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        440,
+        0
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      },
+      "id": "3ceff7b6-b8f0-4d21-ab37-5e6acc2074ab"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Inlined from workflows/drafts/consent/open-request.js (offline-tested).\nconst c = $('When Executed by Another Workflow').first().json || {};\nconst R = $('Build Request').first().json || {};\nfunction whenPhrase(s,e){try{const o={timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'};const a=new Date(s).toLocaleString('en-US',o);const b=e?new Date(e).toLocaleTimeString('en-US',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'}):'';return b?(a+'\u2013'+b):a;}catch(_){return String(s||'');}}\nconst when = c.reqStart ? whenPhrase(c.reqStart, c.reqEnd) : 'the requested time';\nconst incumbentDM = `Hi ${c.approverName||'there'} \u2014 ${c.requesterName||'someone'} needs ${c.room} on ${when} for a higher-priority ${c.reqType||'session'}, which would mean moving your \"${c.incumbentTitle}\". Are you OK to move it? If yes, just tell me what time works for your session and I'll sort it out. Reply here with yes or no.`;\nconst requesterReply = `${c.room} is held by \"${c.incumbentTitle}\" (${c.approverName}) at ${when}. Your ${c.reqType||'session'} outranks it, so I've asked ${c.approverName} to move \u2014 I'll confirm once they reply. If you've already cleared it with them, reply \"cleared with ${c.approverName}\".`;\nconst approvalsLog = `[PREEMPT] ${R['Request ID']} \u2014 PENDING\\n${c.requesterName} wants ${c.room} (${when}) for ${c.reqType} (rank ${R['Req Priority']}) over \"${c.incumbentTitle}\" / ${c.approverName} (rank ${R['Inc Priority']}).\\nAsked ${c.approverName} by DM. Deadline ${R['Deadline']}.`;\nreturn [{ json: { incumbentDM, requesterReply, approvalsLog, approver: c.approver||'', approverDM: c.approverDM||'' } }];\n"
+      },
+      "name": "Build Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "02b12533-6213-4e72-9098-25ff8f9b474e"
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Build Request').first().json['Approver'] }}"
+        },
+        "text": "={{ $('Build Messages').first().json.incumbentDM }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "name": "DM Incumbent",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "id": "2dad4223-8d33-4414-abc3-507cf50c966d",
+      "webhookId": "7d4a8cd6-f16c-4474-bd70-405fb828fcdf"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "C0C34UMFXGD"
+        },
+        "text": "={{ $('Build Messages').first().json.approvalsLog }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "name": "Post to Approvals",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "id": "ee28246e-d581-4aa0-8932-d3be278cbc63",
+      "webhookId": "249a49ef-1ad6-4be0-b669-c5c9af6c8500"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  status: 'PENDING',\n  request_id: $('Build Request').first().json['Request ID'],\n  message: $('Build Messages').first().json.requesterReply\n}}];\n"
+      },
+      "name": "Return",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "id": "625d1e1d-a839-4564-82ca-6fe2edea5e48"
+    },
+    {
+      "parameters": {
+        "content": "## Open Consent Request\nWrites a PENDING row to the Consent Requests sheet tab, DMs the incumbent booker (Approver) to ask consent, and posts an audit line to #jessie-approvals (C0C34UMFXGD). Called by Book/Move at the ROOM_OCCUPIED+outrank point. Row write must succeed (fails loud); the two Slack posts are best-effort (onError continue). Logic mirrors workflows/drafts/consent/open-request.js (offline-tested). NOTE: set the real Consent Requests gid on Write Pending Row before wiring.",
+        "height": 260,
+        "width": 420
+      },
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        440,
+        -320
+      ],
+      "id": "6acf054f-0aef-4f1f-a940-692a94bb8c30"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Build Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Request": {
+      "main": [
+        [
+          {
+            "node": "Write Pending Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Pending Row": {
+      "main": [
+        [
+          {
+            "node": "Build Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Messages": {
+      "main": [
+        [
+          {
+            "node": "DM Incumbent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DM Incumbent": {
+      "main": [
+        [
+          {
+            "node": "Post to Approvals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Approvals": {
+      "main": [
+        [
+          {
+            "node": "Return",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "c465f345-1ea5-4cb6-9b19-60dd96d474bc",
+  "activeVersionId": "c465f345-1ea5-4cb6-9b19-60dd96d474bc",
+  "versionCounter": 6,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-09-21T09:58:48.016Z",
+      "createdAt": "2026-09-21T09:58:48.016Z",
+      "role": "workflow:owner",
+      "workflowId": "nEHnCMMXS0am59Zy",
+      "projectId": "518sXYqvqTl1cuns",
+      "project": {
+        "updatedAt": "2026-07-30T08:01:27.418Z",
+        "createdAt": "2026-06-16T08:07:47.559Z",
+        "id": "518sXYqvqTl1cuns",
+        "name": "Howard Luistro <howard@hitproductions.net>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "146478c9-471a-4651-8e62-0216984196e9"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-09-22T15:32:41.468Z",
+    "createdAt": "2026-09-22T15:32:41.468Z",
+    "versionId": "c465f345-1ea5-4cb6-9b19-60dd96d474bc",
+    "workflowId": "nEHnCMMXS0am59Zy",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "requester"
+              },
+              {
+                "name": "requesterName"
+              },
+              {
+                "name": "approver"
+              },
+              {
+                "name": "approverName"
+              },
+              {
+                "name": "room"
+              },
+              {
+                "name": "reqStart"
+              },
+              {
+                "name": "reqEnd"
+              },
+              {
+                "name": "incumbentEventId"
+              },
+              {
+                "name": "incumbentTitle"
+              },
+              {
+                "name": "reqType"
+              },
+              {
+                "name": "requesterDM"
+              },
+              {
+                "name": "approverDM"
+              },
+              {
+                "name": "reqPriority",
+                "type": "number"
+              },
+              {
+                "name": "incPriority",
+                "type": "number"
+              },
+              {
+                "name": "reqPayload"
+              }
+            ]
+          }
+        },
+        "name": "When Executed by Another Workflow",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          0
+        ],
+        "id": "86f2702b-fcb4-4501-9525-d4f2ced379a8"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Inlined from workflows/drafts/consent/open-request.js (offline-tested). See consent-engine.md.\nconst c = $('When Executed by Another Workflow').first().json || {};\nfunction computeDeadline(now,start,cfg){const n=new Date(now).getTime();const s=new Date(start).getTime();const w=(cfg&&cfg.maxWindowH?cfg.maxWindowH:24)*3600*1000;const l=(cfg&&cfg.minLeadMin?cfg.minLeadMin:60)*60*1000;return new Date(Math.max(n,Math.min(n+w,s-l))).toISOString();}\n// TEST GATE (mirrors Cancel/Move DEV_REDIRECT): don't ping real non-dev people during\n// testing. Every consent recipient (Approver/Requester stored on the row, which all the\n// downstream DMs read) is rerouted to Howard UNLESS they are a HAIST dev. Set DEV_REDIRECT=''\n// at launch to restore real DMs. The tail hook matches on Incumbent Event Id, not Approver,\n// so the REAL booking is still the one moved/placed.\nconst DEV_REDIRECT = 'U08V3CKDGJF';                        // '' at launch\nconst ALLOW = ['U08V3CKDGJF','U098UFLG70B','U045A3VQER3']; // HAIST devs: Howard, Tel, Genzo\nconst route = (id) => (!DEV_REDIRECT || ALLOW.indexOf(String(id)) !== -1) ? id : DEV_REDIRECT;\nconst now = new Date().toISOString();\nconst stamp = now.replace(/[-:T.]/g,'').slice(0,14);\nconst id = stamp + '-' + String(c.requester||'unknown');\nconst deadline = computeDeadline(now, c.reqStart, {maxWindowH:24, minLeadMin:60});\nreturn [{ json: {\n  'Request ID': id, 'Status': 'PENDING', 'Kind': 'PREEMPT',\n  'Requester': route(c.requester||''), 'Requester Name': c.requesterName||'',\n  'Approver': route(c.approver||''), 'Approver Name': c.approverName||'',\n  'Room/Booth': c.room||'', 'Req Start': c.reqStart||'', 'Req End': c.reqEnd||'',\n  'Incumbent Event Id': c.incumbentEventId||'', 'Incumbent Title': c.incumbentTitle||'',\n  'Incumbent New Start': '', 'Incumbent New End': '',\n  'Req Priority': (c.reqPriority==null?'':c.reqPriority), 'Inc Priority': (c.incPriority==null?'':c.incPriority),\n  'Deadline': deadline,\n  'Requester DM': c.requesterDM||'', 'Approver DM': c.approverDM||'',\n  'Log Thread TS': '', 'Resolved Via': '', 'Attested By': '', 'Decided At': '',\n  'Req Payload': (c.reqPayload==null?'':(typeof c.reqPayload==='string'?c.reqPayload:JSON.stringify(c.reqPayload)))\n}}];\n"
+        },
+        "name": "Build Request",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          220,
+          0
+        ],
+        "id": "2aa2cfa3-1a77-438b-afea-58fcba79ed2d"
+      },
+      {
+        "parameters": {
+          "authentication": "serviceAccount",
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "list",
+            "value": "431550013",
+            "cachedResultName": "Consent Requests"
+          },
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "value": {},
+            "matchingColumns": [],
+            "schema": []
+          },
+          "options": {}
+        },
+        "name": "Write Pending Row",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          440,
+          0
+        ],
+        "credentials": {
+          "googleApi": {
+            "id": "DU75rLW4KHlVhcK1",
+            "name": "Google Sheets - Jessie Log"
+          }
+        },
+        "id": "3ceff7b6-b8f0-4d21-ab37-5e6acc2074ab"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Inlined from workflows/drafts/consent/open-request.js (offline-tested).\nconst c = $('When Executed by Another Workflow').first().json || {};\nconst R = $('Build Request').first().json || {};\nfunction whenPhrase(s,e){try{const o={timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'};const a=new Date(s).toLocaleString('en-US',o);const b=e?new Date(e).toLocaleTimeString('en-US',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'}):'';return b?(a+'\u2013'+b):a;}catch(_){return String(s||'');}}\nconst when = c.reqStart ? whenPhrase(c.reqStart, c.reqEnd) : 'the requested time';\nconst incumbentDM = `Hi ${c.approverName||'there'} \u2014 ${c.requesterName||'someone'} needs ${c.room} on ${when} for a higher-priority ${c.reqType||'session'}, which would mean moving your \"${c.incumbentTitle}\". Are you OK to move it? If yes, just tell me what time works for your session and I'll sort it out. Reply here with yes or no.`;\nconst requesterReply = `${c.room} is held by \"${c.incumbentTitle}\" (${c.approverName}) at ${when}. Your ${c.reqType||'session'} outranks it, so I've asked ${c.approverName} to move \u2014 I'll confirm once they reply. If you've already cleared it with them, reply \"cleared with ${c.approverName}\".`;\nconst approvalsLog = `[PREEMPT] ${R['Request ID']} \u2014 PENDING\\n${c.requesterName} wants ${c.room} (${when}) for ${c.reqType} (rank ${R['Req Priority']}) over \"${c.incumbentTitle}\" / ${c.approverName} (rank ${R['Inc Priority']}).\\nAsked ${c.approverName} by DM. Deadline ${R['Deadline']}.`;\nreturn [{ json: { incumbentDM, requesterReply, approvalsLog, approver: c.approver||'', approverDM: c.approverDM||'' } }];\n"
+        },
+        "name": "Build Messages",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          660,
+          0
+        ],
+        "id": "02b12533-6213-4e72-9098-25ff8f9b474e"
+      },
+      {
+        "parameters": {
+          "select": "user",
+          "user": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $('Build Request').first().json['Approver'] }}"
+          },
+          "text": "={{ $('Build Messages').first().json.incumbentDM }}",
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          }
+        },
+        "name": "DM Incumbent",
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.2,
+        "position": [
+          880,
+          0
+        ],
+        "onError": "continueRegularOutput",
+        "credentials": {
+          "slackApi": {
+            "id": "EcX8szEJrOLYLUfl",
+            "name": "Jessie Slack (signed)"
+          }
+        },
+        "id": "2dad4223-8d33-4414-abc3-507cf50c966d",
+        "webhookId": "7d4a8cd6-f16c-4474-bd70-405fb828fcdf"
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "C0C34UMFXGD"
+          },
+          "text": "={{ $('Build Messages').first().json.approvalsLog }}",
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          }
+        },
+        "name": "Post to Approvals",
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.2,
+        "position": [
+          1100,
+          0
+        ],
+        "onError": "continueRegularOutput",
+        "credentials": {
+          "slackApi": {
+            "id": "EcX8szEJrOLYLUfl",
+            "name": "Jessie Slack (signed)"
+          }
+        },
+        "id": "ee28246e-d581-4aa0-8932-d3be278cbc63",
+        "webhookId": "249a49ef-1ad6-4be0-b669-c5c9af6c8500"
+      },
+      {
+        "parameters": {
+          "jsCode": "return [{ json: {\n  status: 'PENDING',\n  request_id: $('Build Request').first().json['Request ID'],\n  message: $('Build Messages').first().json.requesterReply\n}}];\n"
+        },
+        "name": "Return",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1320,
+          0
+        ],
+        "id": "625d1e1d-a839-4564-82ca-6fe2edea5e48"
+      },
+      {
+        "parameters": {
+          "content": "## Open Consent Request\nWrites a PENDING row to the Consent Requests sheet tab, DMs the incumbent booker (Approver) to ask consent, and posts an audit line to #jessie-approvals (C0C34UMFXGD). Called by Book/Move at the ROOM_OCCUPIED+outrank point. Row write must succeed (fails loud); the two Slack posts are best-effort (onError continue). Logic mirrors workflows/drafts/consent/open-request.js (offline-tested). NOTE: set the real Consent Requests gid on Write Pending Row before wiring.",
+          "height": 260,
+          "width": 420
+        },
+        "name": "About",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          440,
+          -320
+        ],
+        "id": "6acf054f-0aef-4f1f-a940-692a94bb8c30"
+      }
+    ],
+    "connections": {
+      "When Executed by Another Workflow": {
+        "main": [
+          [
+            {
+              "node": "Build Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Request": {
+        "main": [
+          [
+            {
+              "node": "Write Pending Row",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Write Pending Row": {
+        "main": [
+          [
+            {
+              "node": "Build Messages",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Messages": {
+        "main": [
+          [
+            {
+              "node": "DM Incumbent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "DM Incumbent": {
+        "main": [
+          [
+            {
+              "node": "Post to Approvals",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Post to Approvals": {
+        "main": [
+          [
+            {
+              "node": "Return",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Howard Luistro",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-22T15:32:41.604Z",
+        "id": 1017,
+        "workflowId": "nEHnCMMXS0am59Zy",
+        "versionId": "c465f345-1ea5-4cb6-9b19-60dd96d474bc",
+        "event": "activated",
+        "userId": "146478c9-471a-4651-8e62-0216984196e9"
+      },
+      {
+        "createdAt": "2026-09-22T15:32:41.575Z",
+        "id": 1016,
+        "workflowId": "nEHnCMMXS0am59Zy",
+        "versionId": "c465f345-1ea5-4cb6-9b19-60dd96d474bc",
+        "event": "deactivated",
+        "userId": "146478c9-471a-4651-8e62-0216984196e9"
+      }
+    ]
+  }
+}
