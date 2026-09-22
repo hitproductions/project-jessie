@@ -28,7 +28,11 @@ function decide(cc, REQ) {
   // (MISSING_DETAILS, ROOM_UNSUITABLE, multi-room clash, …) falls straight through to the
   // normal refusal. Folded in here so the branch needs only one IF downstream.
   const eligible = cc && cc.reason === 'ROOM_OCCUPIED' && Array.isArray(cc.conflicts) && cc.conflicts.length === 1;
-  if (!eligible) return { offer: false, reason: 'NOT_ELIGIBLE' };
+  // Not preemptible → pass the ORIGINAL Check Conflicts rejection through unchanged (its verdict/
+  // reason/human/conflicts) so Return Rejection relays the right message: NOT_CONFIRMED → "present the
+  // summary", an occupied-but-not-preemptible room → "that room's taken", etc. Before this, every
+  // non-offer collapsed to a bare NOT_ELIGIBLE and Return Rejection said only "the booking failed".
+  if (!eligible) return Object.assign({}, cc, { offer: false, preemptReason: 'NOT_ELIGIBLE' });
   const inc = (cc && cc.conflicts && cc.conflicts[0]) || {};
   const reqPayload = JSON.stringify({
     summary: REQ.summary, start_iso: REQ.start_iso, end_iso: REQ.end_iso,
@@ -39,7 +43,7 @@ function decide(cc, REQ) {
     // requester's Book Session server-side; without it Book rejects NO_REFERENCE_DATA.
     reference_data: REQ.reference_data,
   });
-  return preemptAtConflict({
+  const r = preemptAtConflict({
     requesterAuthorized: isAuthorized(REQ.authority),
     requesterType: REQ.session_type,
     requester: parseRefId(REQ.description),
@@ -51,6 +55,11 @@ function decide(cc, REQ) {
     incumbentDescription: inc.description,
     rankMap: ranksFromRef(REQ.reference_data),
   });
+  // A ROOM_OCCUPIED that can't be preempted (not authorized, incumbent rank unknown, equal/lower
+  // rank, no incumbent booker) is still just "that room is taken" — pass the ROOM_OCCUPIED rejection
+  // through so the user gets the real message, not a bare "booking failed".
+  if (!r.offer) return Object.assign({}, cc, { offer: false, preemptReason: r.reason });
+  return r;
 }
 
 module.exports = { parseBookedBy, parseRefId, isAuthorized, ranksFromRef, decide };

@@ -43,8 +43,20 @@ ok('equal/lower rank -> no offer', decide(cc, Object.assign({}, REQ, { session_t
 ok('no ranks in reference_data -> no offer (unknown)', decide(cc, Object.assign({}, REQ, { reference_data: '{}' })).offer === false);
 const ccNoSType = { verdict: 'REJECTED', reason: 'ROOM_OCCUPIED', conflicts: [{ room: 'Studio F', summary: 'X', id: 'e', description: 'ref: UJC' }] };
 ok('incumbent without SType -> no offer', decide(ccNoSType, REQ).offer === false);
-ok('non-ROOM_OCCUPIED rejection -> not eligible', decide({ verdict: 'REJECTED', reason: 'ROOM_UNSUITABLE' }, REQ).reason === 'NOT_ELIGIBLE');
-ok('multi-room conflict -> not eligible', decide({ reason: 'ROOM_OCCUPIED', conflicts: [{ room: 'A' }, { room: 'B' }] }, REQ).reason === 'NOT_ELIGIBLE');
+const ru = decide({ verdict: 'REJECTED', reason: 'ROOM_UNSUITABLE', human: 'that room is not suitable' }, REQ);
+ok('non-ROOM_OCCUPIED rejection -> no offer', ru.offer === false);
+ok('non-ROOM_OCCUPIED rejection -> preemptReason NOT_ELIGIBLE', ru.preemptReason === 'NOT_ELIGIBLE');
+ok('non-ROOM_OCCUPIED rejection -> original reason passed through', ru.reason === 'ROOM_UNSUITABLE');
+ok('non-ROOM_OCCUPIED rejection -> original human passed through', ru.human === 'that room is not suitable');
+const mm = decide({ reason: 'ROOM_OCCUPIED', conflicts: [{ room: 'A' }, { room: 'B' }] }, REQ);
+ok('multi-room conflict -> no offer, preemptReason NOT_ELIGIBLE', mm.offer === false && mm.preemptReason === 'NOT_ELIGIBLE');
+// The bug this guards: a NOT_CONFIRMED (confirmed=false) that hit an occupied room must keep its
+// "present the summary now" guidance instead of collapsing to a bare "booking failed".
+const nc = decide({ verdict: 'REJECTED', reason: 'NOT_CONFIRMED', human: 'present the summary now, end with "Confirm to book."' }, REQ);
+ok('NOT_CONFIRMED passes through -> agent still told to present the summary', nc.offer === false && nc.reason === 'NOT_CONFIRMED' && /present the summary/.test(nc.human));
+// A ROOM_OCCUPIED that cannot be preempted (unauthorized) still reads as "room taken", not "failed".
+const roBlocked = decide(Object.assign({ human: 'Studio F is taken in that window' }, cc), Object.assign({}, REQ, { authority: 'Standard' }));
+ok('occupied-but-not-preemptible -> ROOM_OCCUPIED message passes through', roBlocked.offer === false && roBlocked.reason === 'ROOM_OCCUPIED' && /taken/.test(roBlocked.human || ''));
 
 console.log('\n' + (fail ? fail + ' failing, ' + pass + ' passing' : 'all ' + pass + ' checks pass'));
 process.exit(fail ? 1 : 0);
