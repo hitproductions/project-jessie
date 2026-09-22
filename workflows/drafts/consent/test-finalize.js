@@ -57,5 +57,16 @@ ok('requester-booked notice says Booked', /Booked/.test(F.notifyRequesterBooked(
 ok('move-fail notice says nothing changed', /nothing changed/i.test(F.notifyRequesterFailed(baseRow, 'move')));
 ok('book-fail notice says not double-booked', /double-booked/i.test(F.notifyRequesterFailed(baseRow, 'book')));
 
+console.log('\nplacement kind (book-preempt vs move-preempt)');
+ok('book reqPayload -> book placement', F.placementKind({ summary: 'X' }) === 'book');
+ok('move reqPayload -> move placement', F.placementKind({ kind: 'move', event_id: 'e' }) === 'move');
+const moveReq = { kind: 'move', title: 'CELEB / Ms. Letty / HL', event_id: 'evtB', booking_date: '2027-10-20',
+  new_start_iso: '2027-10-22T14:00:00+08:00', new_end_iso: '2027-10-22T17:00:00+08:00', new_rooms: 'Studio F',
+  requester: 'ULETTY', requester_name: 'Ms. Letty', confirmed: true };
+const pm = F.placeMovePayload(baseRow, moveReq);
+ok('placeMovePayload moves the requester booking (owner) confirmed', pm.event_id === 'evtB' && pm.requester === 'ULETTY' && pm.confirmed === true);
+ok('placeMovePayload targets the freed window/room', pm.new_start_iso === '2027-10-22T14:00:00+08:00' && pm.new_rooms === 'Studio F');
+ok('placeMovePayload no authority needed (owner move)', pm.authority === '');
+
 console.log('\n' + (fail ? fail + ' failing, ' + pass + ' passing' : 'all ' + pass + ' checks pass'));
 process.exit(fail ? 1 : 0);

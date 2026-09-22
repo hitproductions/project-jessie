@@ -67,6 +67,28 @@ function bookPayload(row, req) {
   });
 }
 
+// Placement kind: a book-preempt places the requester with a fresh Book Session; a move-preempt
+// places them by MOVING their existing booking into the freed room (reqPayload carries kind:'move').
+function placementKind(req) {
+  return (req && req.kind === 'move') ? 'move' : 'book';
+}
+
+// Move payload to PLACE the requester (move their own booking into the freed room). The reqPayload
+// already carries the move fields from the Move preempt branch; force confirmed and fill the room.
+function placeMovePayload(row, req) {
+  return {
+    title: req.title || row['Incumbent Title'] || '',
+    event_id: req.event_id || '',
+    booking_date: req.booking_date || '',
+    new_start_iso: req.new_start_iso || row['Req Start'],
+    new_end_iso: req.new_end_iso || row['Req End'],
+    new_rooms: req.new_rooms || row['Room/Booth'] || '',
+    requester: req.requester || row['Requester'] || '',    // the requester owns this booking -> owner=true
+    requester_name: req.requester_name || row['Requester Name'] || '',
+    confirmed: true, authority: '', department: '',
+  };
+}
+
 // Classify the sub-workflow results (both return a `status` field).
 function classifyMove(r) {
   const s = String((r && r.status) || '').toUpperCase();
@@ -117,7 +139,7 @@ function notifyRequesterFailed(row, stage) {
 }
 
 module.exports = {
-  safeParse, dateOf, finalizePlan, movePayload, bookPayload,
+  safeParse, dateOf, finalizePlan, movePayload, bookPayload, placementKind, placeMovePayload,
   classifyMove, classifyBook, rowDone, rowFailed,
   notifyIncumbentMoved, notifyRequesterBooked, notifyRequesterFailed,
 };
