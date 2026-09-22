@@ -417,3 +417,40 @@ move — it reads them live.
    Consent`; normal branch unchanged (prove zero regression against the full `test-nodes` suite).
 4. **Build + create `Finalize Consent`** in n8n and wire it; validate end to end with a real approved
    request on year-shifted dates. Then `MBOOTH` rides the same engine.
+
+- **2026-09-22 — #3 PROVEN END-TO-END LIVE (with fixes).** Drove the full book-preempt path via
+  Slack QA (Howard-authorized). Calendar ground truth on the year-shifted date confirmed the whole
+  mechanism: a Celebrity Recording request into an occupied Studio F → preempt detected → `Open
+  Consent Request` wrote a PENDING row + DMed the incumbent + informed the requester → the incumbent
+  consented and moved their own booking via the normal Move flow → Move Booking's tail hook matched
+  the PENDING row by `Incumbent Event Id` → `Finalize Consent` placed the requester into the freed
+  slot. End state: **INCUMBENT relocated + the higher-priority booking placed, no double-book.**
+
+  **Five bugs found and fixed live to get there (all imported + verified stored + health green):**
+  1. **Consent Sheets nodes must reference the tab by its numeric gid, not by name.** The Google
+     Sheets *append/update* operation resolves the sheet by gid; `mode:list value:"Consent Requests"`
+     fails `Sheet with ID Consent Requests not found` (only *read* tolerates the name). Set all six
+     consent nodes to `value:"431550013"` (Open `Write Pending Row`; Finalize `Mark Done`/`Mark Failed
+     Place`; main `Read Pending Consent`/`Mark Rejected`; move `Read Consent Rows`).
+  2. **`Read Pending Consent` / `Read Consent Rows` must set `alwaysOutputData: true`.** With the
+     correct (usually empty) consent tab, a 0-row read makes n8n skip every downstream node —
+     silently killing the entire main workflow after `Read Pending Consent` (success, no reply) and
+     truncating Move Booking before `Return Moved`. The old by-name read accidentally hit a non-empty
+     sheet and masked this. **This is the dangerous one: an empty consent tab took Jessie fully dark.**
+  3. **Decide Preempt (Book Session) must carry `reference_data` into `reqPayload`.** Finalize replays
+     the requester's Book server-side; without the Room Table injection it rejects `NO_REFERENCE_DATA`.
+  4. **Finalize `Book Requester` (executeWorkflow) must map `reference_data`.** The node passed 13
+     fields but not `reference_data`, so it was dropped at the node boundary even though `placePayload`
+     carried it. executeWorkflow only forwards mapped keys.
+  5. **Finalize `Placed Book?` must match `CREATED`, not `BOOKED`.** Book Session returns
+     `status:'CREATED'` on success (from `Verify`). The IF checked `=== 'BOOKED'`, so a real placement
+     was mis-classified as a failure — row wrongly marked FAILED, requester told "couldn't place" when
+     the calendar event had in fact been created. `classifyBook` in `finalize.js` fixed to match too.
+
+  **Two agent-level findings opened (PENDING 24, 25):** the agent can *fabricate* a preemption offer
+  without calling Book Session (no row written), and can double-call Book Session (duplicate consent
+  requests / double incumbent DM). Neither risks a double-book (the guards hold); both are follow-ups.
+
+  **Live workflow versions after this session:** main `v146`, Book Session `v35`, Move Booking `v16`,
+  Finalize `v5`, Open `v2`. Test-event cleanup pending Howard's approval (INCUMBENT + CELEBTEST6 on
+  Studio F 2027-11-08; three FAILED test rows in the Consent Requests tab).

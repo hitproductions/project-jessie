@@ -96,8 +96,11 @@ function classifyMove(r) {
   return 'failed';
 }
 function classifyBook(r) {
+  // Book Session returns status 'CREATED' on success (from its Verify node), NOT 'BOOKED'.
+  // The live "Placed Book?" IF node must match 'CREATED' too, or a real placement is
+  // mis-reported as a failure and the row is wrongly marked FAILED. (Found 2026-09-22.)
   const s = String((r && r.status) || '').toUpperCase();
-  return s === 'BOOKED' ? 'booked' : 'failed';
+  return s === 'CREATED' ? 'booked' : 'failed';
 }
 
 // Row updates (Google Sheets update, matched on Request ID). Only the changed cells.

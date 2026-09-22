@@ -35,6 +35,9 @@ function decide(cc, REQ) {
     rooms: inc.room || REQ.rooms, description: REQ.description, session_type: REQ.session_type,
     client: REQ.client, department: REQ.department, engineer: REQ.engineer,
     bookingType: REQ.bookingType, all_day: REQ.all_day,
+    // reference_data (Room Table injection) must ride along so Finalize can replay the
+    // requester's Book Session server-side; without it Book rejects NO_REFERENCE_DATA.
+    reference_data: REQ.reference_data,
   });
   return preemptAtConflict({
     requesterAuthorized: isAuthorized(REQ.authority),

@@ -44,7 +44,8 @@ console.log('\nclassifiers (match live status shapes)');
 ok('MOVED -> moved', F.classifyMove({ status: 'MOVED' }) === 'moved');
 ok('PARTIAL -> partial (stop, double-book risk)', F.classifyMove({ status: 'PARTIAL' }) === 'partial');
 ok('REJECTED -> failed', F.classifyMove({ status: 'REJECTED', reason: 'ROOM_OCCUPIED' }) === 'failed');
-ok('BOOKED -> booked', F.classifyBook({ status: 'BOOKED' }) === 'booked');
+ok('CREATED -> booked (Book Session success token)', F.classifyBook({ status: 'CREATED' }) === 'booked');
+ok('BOOKED -> failed (not a token Book Session emits)', F.classifyBook({ status: 'BOOKED' }) === 'failed');
 ok('book FAILED -> failed', F.classifyBook({ status: 'FAILED' }) === 'failed');
 
 console.log('\nrow updates + messages');

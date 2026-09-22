@@ -494,6 +494,30 @@ started; low priority vs. launch items but a clear UX win. Related to the priori
 consent work in `docs/design/booking-authority-phase2.md` (the "proper" answer to an
 occupied higher-priority slot is to broker the incumbent's move, not just refuse).
 
+**24. The agent can fabricate a preemption ("I've asked the current holder to move") without
+calling Book Session.** Found 2026-09-22 in consent-engine live QA (main exec `10293`): a
+Celebrity Recording request into an occupied Studio F made the agent call *Room Availability*,
+see the room busy, and then reply "Studio F is held by INCUMBENT… I've asked the current holder
+to move" — a claim of a side-effecting action (opening a consent request) that it never
+performed. No Book Session, no Open Consent Request, no PENDING row, no incumbent DM. The
+requester is told a consent request is pending when none exists. Guard Probe's claim-verifier
+catches fabricated "Booked/Cancelled/Moved" but not fabricated preemption offers. Fix (our code,
+not a wait): extend the claim-verifier so a "asked/requesting the holder to move / current holder"
+reply is replaced unless an `Open Consent Request` tool call appears in this turn's
+`intermediateSteps` with success. Same enforcement pattern as the existing claim check. Not
+started.
+
+**25. The agent sometimes double-calls Book Session, opening duplicate consent requests.**
+Found 2026-09-22 (Book Session execs `10306`+`10307`, both `Return Offer` → Open execs
+`10308`+`10309`): one confirmed Celebrity request produced two identical preemptions, DMing the
+incumbent twice. No data corruption here only because both Opens generated the same timestamp
+Request ID (same second) so the second write updated the first row rather than adding a second;
+a sub-second-apart double-call would write two rows, and on resolution the second placement
+would hit `ROOM_OCCUPIED`/`NOT_ELIGIBLE` (no double-book — the guard holds — but a spurious
+"couldn't place" message). Fix options: make `Open Consent Request` idempotent (skip if a PENDING
+row already exists for the same requester+room+window+incumbent), and/or make the incumbent DM
+`executeOnce`. Not started; low risk given the double-book guard, but it spams the incumbent.
+
 ---
 
 ## Withdrawn
