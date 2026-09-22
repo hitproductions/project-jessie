@@ -175,6 +175,27 @@ acceptable answer for the existing calendar? If not, the descriptions of
 existing events need a `ref:` added, which is a bulk edit against the calendar
 and needs someone to map each booking to a Slack user id first.
 
+**25. Every booking is stamped "Created by: Howard Luistro", and the invite emails go to Howard.**
+
+The calendar OAuth credential in n8n (`googleCalendarOAuth2Api`, id `6D1r3kaq6KaFdL0a`,
+"Google Calendar account") is authenticated as `howard@hitproductions.net`, so Google stamps
+that account as the event *creator* and sends every "New event" organizer email to Howard's
+inbox. Noticed 2026-09-22 — the CEO flagged that all test bookings look like they're Howard's.
+The booker (`ref:` / "Booked by:") is already correct; only the Google-level creator is wrong.
+
+Fix is to re-authenticate that one credential as a neutral `calendar@hitproductions.net` — no
+workflow edits, no re-import (`verify-ids` stays green). Full cutover + smoke-test runbook:
+`docs/runbooks/CALENDAR-ACCOUNT-SWITCH.md`.
+
+**Blocked on Google Workspace (needs admin), all prerequisites before the reconnect:**
+- `calendar@hitproductions.net` exists as a sign-in-able Workspace account (not just an alias).
+- It has "Make changes to events" on KDC Bookings (`c_re5mcrg9om0macp9doqhlsi83g@...`).
+- It can book the room resources (Studio 1–8 / A–F / M1–8 etc.).
+- The Google Cloud OAuth client's consent screen allows it (add as test user if External/Testing).
+
+The reconnect itself needs the `calendar@` password, so Howard runs it (can't be scripted).
+Past events keep Howard's name — Google won't change an existing event's creator.
+
 ---
 
 ## n8n server
