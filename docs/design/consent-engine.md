@@ -454,3 +454,21 @@ move — it reads them live.
   **Live workflow versions after this session:** main `v146`, Book Session `v35`, Move Booking `v16`,
   Finalize `v5`, Open `v2`. Test-event cleanup pending Howard's approval (INCUMBENT + CELEBTEST6 on
   Studio F 2027-11-08; three FAILED test rows in the Consent Requests tab).
+
+- **2026-09-22 (later) — clean confirmation run PASSED + polish.** After the CREATED fix, re-ran the
+  full book-preempt via Slack: agent showed a proper summary **with the "current holder" note**,
+  confirm → Open (single incumbent DM, **no duplicate** this run) → incumbent moved to a free slot →
+  Finalize **Return Done** → requester got **"Done - Studio F is yours"** and the incumbent a
+  "moved to make way" notice. Calendar verified: INCUMBENT 9-12, CELEBTEST7 2-5, no double-book.
+  **Removed the "Automated with this n8n workflow" footer** (`includeLinkToWorkflow:false`) on the five
+  consent message nodes: Open `DM Incumbent`; Finalize `Notify Incumbent`/`Notify Requester OK`/`Notify
+  Place Fail`; main `Notify Requester`. Live: Open **v3**, Finalize **v6**, main **v147**.
+  **Small cosmetic bug still open:** the requester/incumbent notices interpolate `Approver Name`, which
+  Open stores empty (Decide Preempt sets `approverName:''`), so they read "…  moved their session" with a
+  blank name. Fix later: resolve the approver's display name at Open time (or in Finalize from the id).
+  **Two-party QA note (Howard):** in testing Howard is both requester and incumbent (same `ref:`), so both
+  DMs land in his DM. To exercise the real two-person experience, a second tester must OWN the incumbent
+  booking (book it themselves, or seed a calendar event carrying their `ref:`); then Howard's preemption
+  DMs the incumbent tester while requester updates stay with Howard. Consent DMs are NOT behind the
+  Cancel/Move `DEV_REDIRECT`, so QA will really ping the incumbent tester (intended) — just don't seed a
+  non-participant's id.
