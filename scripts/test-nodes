@@ -110,8 +110,8 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['removes "last-resort room"','Studio F is a last-resort room for this.',x=>!/last.resort/i.test(x)],
     ['removes "prioritized"','rooms prioritized for VO Recording',x=>!/prioriti/i.test(x)],
     ['keeps the article readable','The priority rooms are free.',x=>/^The rooms/.test(x)],
-    ['normalises an embellished marker','a\n\nConfirm to cancel both. (y/n)',x=>x.endsWith('Confirm to cancel. (yes/no)')],
-    ['supplies a missing suffix','a\n\nConfirm to book',x=>x.endsWith('Confirm to book. (yes/no)')],
+    ['normalises an embellished marker','a\n\nConfirm to cancel both. (y/n)',x=>x.endsWith('Confirm to cancel.')&&/Reply only with "yes" to cancel, or "no" to keep it\./.test(x)],
+    ['supplies a missing suffix','a\n\nConfirm to book',x=>x.endsWith('Confirm to book.')&&/Reply only with "yes" to book, or "no" to change anything\./.test(x)],
     ['leaves a mid-sentence mention','I will ask you to confirm to book later. Which room?',x=>x.includes('confirm to book later')],
     ['falls back on empty output','',x=>x.length>10],
     // Vocabulary and corruption found in the 2026-08-30 QA run.
