@@ -360,6 +360,23 @@ suite('Check Conflicts — booked-for is never the client', ()=>{
   check('bf','on-behalf but Personal (not external) -> CLEAR, guard skipped',run({description:forK,bookingType:'Personal',client:'',summary:'X / Kristine Trocino / TL'})==='CLEAR');
 });
 
+// ── Title initials must be abbreviations, not names ───────────────────────────
+suite('Check Conflicts — title initials are strictly initials', ()=>{
+  const whole=src('Check Conflicts');
+  const i=whole.indexOf('// --- the title last segment must be initials');
+  const j=whole.indexOf("const segs = String(REQ.description");
+  const body=whole.slice(i,j);
+  const run=REQ=>{ const r=new Function('REQ',body+'\nreturn null;')(REQ); return r?r[0].json.reason:'CLEAR'; };
+  check('ti','a nickname in the initials slot is refused',run({session_type:'Celebrity Recording',summary:'BROWSE / Jem Lim / Drey'})==='TITLE_INITIALS');
+  check('ti','a name+name initials slot is refused',run({session_type:'Band Recording',summary:'BROWSE / Jem Lim / Drey x Brian Cua'})==='TITLE_INITIALS');
+  check('ti','refused even when the model omitted the session type',run({session_type:'',summary:'BROWSE / Jem Lim / Drey x Brian Cua'})==='TITLE_INITIALS');
+  check('ti','a full name in the initials slot is refused',run({session_type:'Band Recording',summary:'X / Acme / Daryl Reyes'})==='TITLE_INITIALS');
+  check('ti','proper single initials pass',run({session_type:'VO Recording',summary:'X / Acme / DR'})==='CLEAR');
+  check('ti','engineer x arranger initials pass',run({session_type:'Band Recording',summary:'X / Acme / DR x PL'})==='CLEAR');
+  check('ti','internal 1-segment title is skipped',run({session_type:'',summary:'M2 - Peemo'})==='CLEAR');
+  check('ti','a two-segment title is skipped',run({session_type:'VO Recording',summary:'X / Acme'})==='CLEAR');
+});
+
 // ── Confirmation gate ───────────────────────────────────────────────────────
 suite('Confirmation gate — a series must be confirmed', ()=>{
   const whole=src('Check Conflicts');

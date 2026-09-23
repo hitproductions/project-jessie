@@ -556,6 +556,19 @@ recommendation, not a hard requirement), so it fits **Guard Probe**: for a sessi
 room"* line to the summary deterministically, rather than relying on the prompt. Not started; pairs
 naturally with #29 (both read the same `Session Types` data).
 
+**31. Title initials are blocked, but not auto-corrected to the right person.** Found 2026-09-24: a
+Celebrity Recording titled *BROWSE / Jem Lim / Drey* — the engineer's nickname (Daryl Reyes goes by "Drey",
+initials **DR**) landed in the initials slot instead of `DR`. Book Session now has a `TITLE_INITIALS` guard
+that **blocks** any 3-segment studio title whose last segment is not proper initials (`DR` / `DR x PL`), so a
+name/nickname can no longer reach the calendar — but the model has to *retry* and produce the right initials
+itself, and it is nondeterministic (in testing it produced "Drey x Brian Cua" one turn and the correct
+"DR x BC" the next). The clean fix is a **deterministic rewrite**: map the engineer/arranger name-or-nickname
+to canonical initials from Airtable and rewrite the segment, so `Drey → DR` always. Blocker: **Book Session
+has no Bookers data** (only Get Client + Get Booker-for-the-requester). Needs a Bookers alias→initials map
+plumbed in — cleanest via `Room Table`'s `referenceData` (already an input to Book Session), which means
+adding a Bookers read to the context lane. Deferred from QA round 2 (2026-09-24) as a core-path change; the
+guard holds the line meanwhile.
+
 ---
 
 ## Withdrawn
