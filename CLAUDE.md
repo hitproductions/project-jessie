@@ -278,9 +278,15 @@ being *made*; only this one stops one being *claimed*.
 `Book Session` refuses before anything reaches the calendar:
 
 ```
-MISSING_DETAILS · NO_REFERENCE_DATA · PAST_DATE · NOT_CONFIRMED · DURATION_INVALID
+MISSING_DETAILS · MISSING_CLIENT · NO_REFERENCE_DATA · PAST_DATE · NOT_CONFIRMED · DURATION_INVALID
 ROOM_UNSUITABLE · ROOM_NOT_PRIORITY · NO_ROOM · UNKNOWN_ROOM · ROOM_OCCUPIED · UNVERIFIABLE
 ```
+
+`MISSING_CLIENT` guards on-behalf bookings: when a booking is *booked for* a colleague
+(`Booked by: X (for Y)`) and is External, a real client distinct from Y is required — the
+person it is booked for is never the client and never the title's Client segment. Prompt-only
+rules did not hold (the model laundered the booked-for name into the client/title), so this is
+enforced in `Check Conflicts`. See the `booked_for` tool input and `(for …)` in `Guard Probe`/summary.
 
 `Cancel Booking` refuses with:
 

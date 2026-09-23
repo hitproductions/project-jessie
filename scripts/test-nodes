@@ -344,6 +344,22 @@ suite('Check Conflicts — the booking guards', ()=>{
   check('cc','music initials survive',r.s==='BABY / Dante Nora / DR x PL',r.s);
 });
 
+// ── On-behalf bookings still need a real client ──────────────────────────────
+suite('Check Conflicts — booked-for is never the client', ()=>{
+  const whole=src('Check Conflicts');
+  const i=whole.indexOf('// --- on-behalf bookings');
+  const j=whole.indexOf('// Rooms and session types are passed in by Room Table');
+  const body=whole.slice(i,j);
+  const run=REQ=>{ const r=new Function('REQ',body+'\nreturn null;')(REQ); return r?r[0].json.reason:'CLEAR'; };
+  const forK='Engineer: Tara Lim (Post Engineer) | Booked by: Howard Luistro (for Kristine Trocino) | ref: U1';
+  check('bf','on-behalf external, no client -> MISSING_CLIENT',run({description:forK,bookingType:'External',client:'',summary:'SMOKETEST2 / Kristine Trocino / TL'})==='MISSING_CLIENT');
+  check('bf','on-behalf external, client IS the booked-for -> MISSING_CLIENT',run({description:forK,bookingType:'External',client:'Kristine Trocino',summary:'X / Kristine Trocino / TL'})==='MISSING_CLIENT');
+  check('bf','on-behalf external, booked-for in the title client slot -> MISSING_CLIENT',run({description:forK,bookingType:'External',client:'Acme Records',summary:'X / Kristine Trocino / TL'})==='MISSING_CLIENT');
+  check('bf','on-behalf external, distinct real client -> CLEAR',run({description:forK,bookingType:'External',client:'Acme Records',summary:'SMOKETEST2 / Acme Records / TL'})==='CLEAR');
+  check('bf','self-booking (no for-person) -> CLEAR, guard skipped',run({description:'Engineer: Tara Lim | Booked by: Howard Luistro | ref: U1',bookingType:'External',client:'',summary:'X / Acme / TL'})==='CLEAR');
+  check('bf','on-behalf but Personal (not external) -> CLEAR, guard skipped',run({description:forK,bookingType:'Personal',client:'',summary:'X / Kristine Trocino / TL'})==='CLEAR');
+});
+
 // ── Confirmation gate ───────────────────────────────────────────────────────
 suite('Confirmation gate — a series must be confirmed', ()=>{
   const whole=src('Check Conflicts');
