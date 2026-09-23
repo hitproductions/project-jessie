@@ -561,9 +561,11 @@ suite('Build Recipients — who gets a DM on an authorized change', ()=>{
   check('nr','booker DM is dev-redirected',r[0].to==='U08V3CKDGJF'&&/^\[DEV\] would notify/.test(r[0].text));
   check('nr','booker DM carries the room note',/was moved to Studio 7 by Howard Luistro/.test(r[0].text));
 
-  r=run(co,trig,engRow('U026N6E1R'));
-  check('nr','engineer added when distinct',r.length===2&&/Tara Lim \(U026N6E1R\)/.test(r[1].text)&&/you are assigned to/.test(r[1].text),JSON.stringify(r).slice(0,120));
-  check('nr','engineer DM is dev-redirected too',r[1].to==='U08V3CKDGJF');
+  r=run(co,trig,engRow('U026N6E1R'));   // engineer Tara IS on ALLOW
+  check('nr','engineer added when distinct',r.length===2&&/you are assigned to/.test(r[1].text),JSON.stringify(r).slice(0,120));
+  check('nr','an allowlisted engineer gets a real DM (honors ALLOW)',r[1].to==='U026N6E1R'&&!/\[DEV\]/.test(r[1].text));
+  r=run(co,trig,engRow('U0TESTENG'));   // engineer NOT on ALLOW -> still redirected
+  check('nr','a non-allowlisted engineer is still redirected',r.length===2&&r[1].to==='U08V3CKDGJF'&&/^\[DEV\] would notify/.test(r[1].text));
 
   r=run(co,trig,engRow('U0TESTVENER'));   // engineer IS the booker
   check('nr','no duplicate when engineer is the booker',r.length===1);
@@ -573,11 +575,11 @@ suite('Build Recipients — who gets a DM on an authorized change', ()=>{
   // QA allowlist: an allowlisted recipient (a Sept-24 tester) gets a real DM, no [DEV].
   r=run({...co,bookerRef:'U098UFMKQHZ',bookerName:'Trish'},trig,{});
   check('nr','an allowlisted booker gets a real DM',r.length===1&&r[0].to==='U098UFMKQHZ'&&!/\[DEV\]/.test(r[0].text),JSON.stringify(r[0]).slice(0,90));
-  // Booker-only rule: an allowlisted person is DM'd for real ONLY as the booker. As the
-  // engineer they are still redirected (honorAllow=false), so a tester isn't pinged for a
-  // test booking made FOR them where they're only the engineer.
+  // QA round 2 (2026-09-24): the engineer notice now honors ALLOW too, so an allowlisted
+  // tester assigned as the engineer (e.g. Tara) gets a real DM; a non-listed engineer still
+  // redirects (covered above). Booker + engineer both honor ALLOW now.
   r=run({...co,bookerRef:'U098UFMKQHZ',bookerName:'Trish'},trig,engRow('U026N6E1R'));  // engineer Tara, on ALLOW
-  check('nr','an allowlisted engineer is still redirected (booker-only)',r.length===2&&r[1].to==='U08V3CKDGJF'&&/^\[DEV\] would notify Tara Lim/.test(r[1].text),JSON.stringify(r[1]).slice(0,90));
+  check('nr','an allowlisted engineer gets a real DM too',r.length===2&&r[1].to==='U026N6E1R'&&!/\[DEV\]/.test(r[1].text)&&/you are assigned to/.test(r[1].text),JSON.stringify(r[1]).slice(0,90));
 });
 
 console.log('\n'+(fail? fail+' failing, '+pass+' passing' : 'all '+pass+' checks pass'));
