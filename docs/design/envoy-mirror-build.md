@@ -5,7 +5,24 @@ Status: **draft, not implemented** · Owner: Tel · Drafted 2026-09-23
 An alternative (or complement) to the [read-side change](./envoy-jessie-readside-build.md). Instead of
 teaching Jessie to read the resource calendars, this **mirrors Envoy bookings onto KDC Bookings**, so
 they show on the master calendar **and** Jessie sees them there (she already reads KDC Bookings today).
-**Nothing here is built or imported.**
+**Not imported or tested.**
+
+## Scaffold workflow (untested)
+
+A starting-point workflow is at [`workflows/envoy-mirror-v1.json`](../../workflows/envoy-mirror-v1.json)
+— a Schedule Trigger (every 2 min) → one Code node ("Mirror Envoy to KDC") carrying the full
+create / update / delete / reconcile logic, with Studio E already on the **live** id. Import it and adapt.
+
+**Before it can run, verify/adjust:**
+
+- **Google auth from a Code node.** The node calls `this.helpers.httpRequestWithAuthentication` with the
+  `googleCalendarOAuth2Api` credential. If that isn't usable from a Code node in the installed n8n, the
+  node throws a clear error on the first run — split the Google calls into HTTP Request nodes (same
+  logic, the pattern the other workflows already use). Attach the Google credential either way.
+- **Activate it** — a workflow imported/created via the API can default to inactive (gotcha 0).
+- **Untested** — built with no live pull/test. Run it against a **test** setup first, watch the run
+  summary (`created / updated / deleted / failed`), and confirm no duplicates and correct reconcile
+  (cancel a tablet booking → its KDC copy is removed on the next run) before trusting it.
 
 ## Why this covers both goals at once
 

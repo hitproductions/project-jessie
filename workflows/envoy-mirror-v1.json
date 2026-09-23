@@ -1,0 +1,55 @@
+{
+   "nodes" : [
+      {
+         "type" : "n8n-nodes-base.scheduleTrigger",
+         "position" : [
+            0,
+            0
+         ],
+         "typeVersion" : 1.2,
+         "name" : "Every 2 min",
+         "parameters" : {
+            "rule" : {
+               "interval" : [
+                  {
+                     "field" : "minutes",
+                     "minutesInterval" : 2
+                  }
+               ]
+            }
+         },
+         "id" : "a1b2c3d4-0001-4000-8000-000000000001"
+      },
+      {
+         "typeVersion" : 2,
+         "parameters" : {
+            "jsCode" : "// Jessie \u00e2\u0080\u0094 Envoy Mirror  (Code node, Run Once for All Items)\n//\n// Copies Envoy-origin bookings from the room RESOURCE calendars onto the KDC\n// Bookings calendar, so they appear on the master view AND Jessie (which reads\n// KDC Bookings) can see them. Idempotent + self-healing: each run reconciles \u00e2\u0080\u0094\n// create new copies, update changed ones, delete copies whose source is gone.\n//\n// UNTESTED SCAFFOLD \u00e2\u0080\u0094 drafted with no live pull/test (docs/design/envoy-mirror-build.md).\n// DEPENDENCY TO VERIFY FIRST: this node calls the Google Calendar API with\n// this.helpers.httpRequestWithAuthentication + the 'googleCalendarOAuth2Api'\n// credential. If that helper is not usable from a Code node in the installed\n// n8n, build the Google calls as HTTP Request nodes instead (same logic).\nif (!this || !this.helpers || typeof this.helpers.httpRequestWithAuthentication !== 'function') {\n  throw new Error('httpRequestWithAuthentication not available in this Code node \u00e2\u0080\u0094 build the Google calls as HTTP Request nodes (see docs/design/envoy-mirror-build.md).');\n}\n\nconst KDC = 'c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com';\n\n// Room -> resource calendar. Studio E uses the LIVE id; the workflows' old\n// c_18807te... is dead (docs/design/studio-e-id-fix.md).\nconst ROOMS = {\n  'Studio 1':'hitproductions.net_3737303833303637363538@resource.calendar.google.com',\n  'Studio 2':'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com',\n  'Studio 3':'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com',\n  'Studio 4':'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com',\n  'Studio 5':'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com',\n  'Studio 6':'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com',\n  'Studio 7':'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com',\n  'Studio 8':'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com',\n  'Studio A':'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com',\n  'Studio B':'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com',\n  'Studio C':'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com',\n  'Studio D':'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com',\n  'Studio E':'c_1888r4bbc2lhqgndmprism70nft64@resource.calendar.google.com',\n  'Studio F':'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com',\n  'Studio M':'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com',\n  'M1':'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com',\n  'M2':'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com',\n  'M3':'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com',\n  'M4':'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com',\n  'M5':'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com',\n  'M6':'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com',\n  'M7':'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com',\n  'M8':'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com',\n  'Salin':'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com',\n  'Katha':'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com',\n  'Likha':'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com',\n  'Lobby':'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com'\n};\n\nconst api = (opts) =>\n  this.helpers.httpRequestWithAuthentication.call(this, 'googleCalendarOAuth2Api',\n    Object.assign({ json: true }, opts));\n\nconst evUrl = (cal) =>\n  'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(cal) + '/events';\n\nconst now = Date.now();\nconst timeMin = new Date(now - 24 * 3600 * 1000).toISOString();       // small past buffer\nconst timeMax = new Date(now + 90 * 24 * 3600 * 1000).toISOString();  // forward window\nconst isoOf = (x) => (x && (x.dateTime || x.date)) || '';\n\n// Narrow scope: only mirror EnvoyORIGIN events. Jessie's own bookings on a\n// resource calendar are organized by KDC Bookings (excluded); personal-calendar\n// bookings are organized by a person and carry no Envoy marker (excluded).\nconst isEnvoy = (ev, calId) => {\n  const desc = String(ev.description || '');\n  const org = String((ev.organizer || {}).email || '').toLowerCase();\n  return /created by envoy/i.test(desc)\n      || /^rooms/.test(String(ev.id || ''))\n      || org === String(calId).toLowerCase();\n};\n\n// 1) Desired mirror set, from the resource calendars.\nconst desired = {};   // sourceKey -> { room, summary, start, end }\nfor (const room of Object.keys(ROOMS)) {\n  const calId = ROOMS[room];\n  let res;\n  try {\n    res = await api({ method: 'GET', url: evUrl(calId),\n      qs: { timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: 250 } });\n  } catch (e) { continue; }   // skip a calendar that errors; next run retries\n  for (const ev of ((res && res.items) || [])) {\n    if (!ev || ev.status === 'cancelled') continue;\n    if (!isEnvoy(ev, calId)) continue;\n    desired[calId + ':' + ev.id] = { room, summary: ev.summary || 'Envoy booking',\n      start: ev.start, end: ev.end };\n  }\n}\n\n// 2) Existing mirror copies on KDC Bookings (marked with a private property).\nconst existing = {};   // sourceKey -> { id, summary, startISO, endISO }\nlet pageToken;\ndo {\n  let res;\n  try {\n    res = await api({ method: 'GET', url: evUrl(KDC),\n      qs: Object.assign({ timeMin, timeMax, singleEvents: 'true', maxResults: 250,\n        privateExtendedProperty: 'envoyMirror=1' }, pageToken ? { pageToken } : {}) });\n  } catch (e) { break; }\n  for (const ev of ((res && res.items) || [])) {\n    const sk = ev.extendedProperties && ev.extendedProperties.private\n      && ev.extendedProperties.private.envoyMirrorSource;\n    if (!sk) continue;\n    existing[sk] = { id: ev.id, summary: ev.summary || '',\n      startISO: isoOf(ev.start), endISO: isoOf(ev.end) };\n  }\n  pageToken = res && res.nextPageToken;\n} while (pageToken);\n\nconst bodyFor = (d, sourceKey) => ({\n  summary: d.room + ' - ' + d.summary,\n  location: d.room,\n  description: 'Created by Envoy (mirrored). Manage this booking in Envoy.\\nsource: ' + sourceKey,\n  start: d.start,\n  end: d.end,\n  transparency: 'opaque',\n  reminders: { useDefault: false },\n  extendedProperties: { private: { envoyMirror: '1', envoyMirrorSource: sourceKey } }\n});\n\nlet created = 0, updated = 0, deleted = 0, failed = 0;\n\n// 3a) Create new / update changed.\nfor (const sourceKey of Object.keys(desired)) {\n  const d = desired[sourceKey], ex = existing[sourceKey];\n  try {\n    if (!ex) {\n      await api({ method: 'POST', url: evUrl(KDC), body: bodyFor(d, sourceKey) });\n      created++;\n    } else if (ex.summary !== (d.room + ' - ' + d.summary)\n            || ex.startISO !== isoOf(d.start) || ex.endISO !== isoOf(d.end)) {\n      await api({ method: 'PATCH', url: evUrl(KDC) + '/' + encodeURIComponent(ex.id),\n        body: bodyFor(d, sourceKey) });\n      updated++;\n    }\n  } catch (e) { failed++; }\n}\n\n// 3b) Delete copies whose source is gone (Envoy booking cancelled/released).\nfor (const sourceKey of Object.keys(existing)) {\n  if (desired[sourceKey]) continue;\n  try {\n    await api({ method: 'DELETE', url: evUrl(KDC) + '/' + encodeURIComponent(existing[sourceKey].id) });\n    deleted++;\n  } catch (e) { failed++; }\n}\n\nreturn [{ json: { ran: new Date().toISOString(), resourceCalendars: Object.keys(ROOMS).length,\n  desired: Object.keys(desired).length, existing: Object.keys(existing).length,\n  created, updated, deleted, failed } }];\n"
+         },
+         "name" : "Mirror Envoy to KDC",
+         "type" : "n8n-nodes-base.code",
+         "position" : [
+            240,
+            0
+         ],
+         "id" : "a1b2c3d4-0002-4000-8000-000000000002"
+      }
+   ],
+   "connections" : {
+      "Every 2 min" : {
+         "main" : [
+            [
+               {
+                  "type" : "main",
+                  "node" : "Mirror Envoy to KDC",
+                  "index" : 0
+               }
+            ]
+         ]
+      }
+   },
+   "settings" : {
+      "executionOrder" : "v1"
+   },
+   "name" : "Jessie \u2014 Envoy Mirror",
+   "pinData" : {}
+}
