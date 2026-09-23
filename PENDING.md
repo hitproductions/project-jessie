@@ -537,6 +537,25 @@ artifact. Only reason it opens for Howard today is his HAIST Dev authority makes
 preempter; a Standard user booking over their own booking already just gets the plain "room's taken"
 refusal (`NOT_AUTHORIZED` → no preempt). Not started.
 
+**29. Music sessions that require an arranger don't capture one.** Found 2026-09-23 booking a Celebrity
+Recording (Music) — the summary had `Engineer: Drey` and **no Arranger**, and Jessie never asked, even
+though Airtable **Session Types → "Celebrity Recording" → `Engineer Role Required`** lists **Music Engineer,
+Post Engineer, and Music Arranger**. The role data is injected via `Room Table` but this is a prompt-level
+behavior (the "one principle"): the model dropped it. Fix (deterministic): for a session type whose
+`Engineer Role Required` includes **Music Arranger**, Book Session should treat the arranger as a captured
+role — surface an **Arranger** line in the summary and prompt for it (or refuse) when it's missing. Needs a
+new arranger input + a guard, not just a prompt tweak. `Arranger` already exists as a role on the
+`Advertising Projects` table. Not started; normal-booking pre-launch polish.
+
+**30. Celebrity / "pair with a conference room" sessions don't recommend a holding room.** Found 2026-09-23:
+a Celebrity Recording in Studio F was summarized with no suggestion of a holding room, though Airtable
+**Session Types → "Celebrity Recording" → `Room Requirements`** = *"Large, pair with one or more conference
+room as holding areas"* (and celeb-in-F/C is the classic case — Likha/Katha as holding). It's advisory (a
+recommendation, not a hard requirement), so it fits **Guard Probe**: for a session type whose
+`Room Requirements` says "pair with … conference room", append a *"consider adding Likha/Katha as a holding
+room"* line to the summary deterministically, rather than relying on the prompt. Not started; pairs
+naturally with #29 (both read the same `Session Types` data).
+
 ---
 
 ## Withdrawn
