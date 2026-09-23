@@ -30,6 +30,27 @@ contention.
 2. **Mirror** (post-launch) — the main solution.
 3. **Read-side change** — hold as optional hardening, only if the sync-lag window proves a problem.
 
+## Scenario — a booker books via Envoy (with the mirror)
+
+Worked with the **real tablet test from 2026-09-23** (event "TEST ENVOY", Studio 7, booked on the
+tablet) as the example.
+
+1. **Booker books Studio 7 on the Envoy tablet.** Immediately the event is on **Studio 7's resource
+   calendar** — organizer = the room resource, description "Created by Envoy", id `rooms…`. It is
+   **not** on KDC Bookings yet, and Jessie can't see it yet. *(This is exactly the state we captured
+   live: present on the resource calendar, absent from KDC Bookings.)*
+2. **Within one poll (~2 min) the mirror copies it onto KDC Bookings** — "Studio 7" in the
+   title/location so Jessie's matchers pick it up, and no Jessie `Booked by:` / `ref:` marker.
+3. **Now both are true:**
+   - ✅ It shows on **KDC Bookings** — the master view has it.
+   - ✅ **Jessie sees it** (she already reads KDC Bookings): availability reports Studio 7 busy, a
+     lookup lists it as *"made outside Jessie"*, and she won't double-book it. Asked to cancel/move it,
+     she refuses → "change it in Envoy."
+
+**Sync-lag caveat:** in the ~2-minute gap between steps 1 and 2 the booking isn't on KDC Bookings yet,
+so Jessie doesn't see it and could double-book. Tight polling shrinks the window; the read-side change
+closes it entirely if ever needed.
+
 ## Why it can work — the mechanism
 
 Jessie doesn't only write to its own group calendar. On every booking, `Book Session` → **Create
