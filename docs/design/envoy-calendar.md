@@ -52,9 +52,16 @@ Jessie's own bookings are already on the resource calendars (she invites the res
 means she sees **everything** in one place — her own bookings, tablet/Envoy bookings, and the
 personal-calendar bookings staff already make directly on a resource.
 
-- **Scope: 2 places** — `Check Conflicts` (in `Book Session`) and the `Room Availability` workflow.
+- **Scope (decided 2026-09-23): 3 workflows.**
+    - **Prevent double-booking** — `Check Conflicts` (in `Book Session`) and the `Room Availability`
+      workflow read the resource calendars, so Jessie won't book over an Envoy/tablet booking.
+    - **Booker visibility** — `Find Booking` also reads the resource calendars, so a lookup ("what's
+      booked in Studio 7?") includes tablet bookings.
 - **Form:** a Google **freebusy** query across the resource calendars (plus the group calendar, for
-  safety) — returns each room's busy blocks no matter who booked it.
+  safety) for availability/conflicts; `Find Booking` lists the resource-calendar events (deduped —
+  Jessie's own bookings and multi-room events appear on more than one calendar).
+- **Tablet bookings are read-only in Jessie:** visible and block double-booking, but they carry no
+  Jessie `ref:` marker, so Cancel/Move still refuse them (change them in Envoy). Existing behavior.
 - **Writing is unchanged:** Jessie still creates bookings on the group calendar and invites the
   resource, so her events still show in Envoy. Only the read side moves.
 - **Prerequisite — fix the Studio E id (below)**, or Studio E availability reads a deleted calendar.
@@ -123,9 +130,12 @@ From `Book Session` → Create Event (the live attendee map). Studio 1 uses the 
 
 - Confirm the Envoy Rooms subscription (step 3).
 - Decide auth method with IT: super-admin service account vs per-room sharing (step 4).
-- **Build + QA the read-side change** (Check Conflicts + Room Availability → resource-calendar
-  freebusy) so tablet bookings reach Jessie — post-launch.
+- **Build + QA the read-side change** (Check Conflicts + Room Availability + Find Booking →
+  resource-calendar reads) so tablet bookings block double-booking and show in lookups — post-launch.
 - **Fix the Studio E resource id** across the live workflows (prerequisite for the read-side change).
+- **Decide "reflected in our calendar":** the read-side change gives Jessie recognition + booker
+  visibility; whether Envoy bookings should *also* mirror onto the KDC Bookings master calendar (a new
+  sync workflow) vs. overlaying the resource calendars in the master view is a separate, open call.
 
 ## Sources
 
