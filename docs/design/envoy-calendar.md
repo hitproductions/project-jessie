@@ -82,6 +82,25 @@ bookings don't reach the real resource calendar (Envoy won't see them) and Studi
 unreliable. The id appears across the live workflows (Book Session, Room Availability, Find Booking,
 main) — fix everywhere via pull-edit-import + QA.
 
+## Open question for Howard — the KDC Bookings master view
+
+The read-side change makes Jessie recognize tablet bookings and show them in her lookups, but it does
+**not** put Envoy bookings onto the **KDC Bookings** calendar. Why: Envoy creates the event on the room
+**resource calendar** (organizer = the room itself) and never invites KDC Bookings, so KDC Bookings —
+which only holds Jessie's bookings and manually-added group events — never receives it. Nothing is
+lost: the **resource calendar is the complete per-room truth**.
+
+**Decision needed:** does the team rely on KDC Bookings as the single calendar people look at?
+
+- **If no** (people use the room/resource calendars, the Envoy tablets, or ask Jessie) → the current
+  handoff is enough; leave it.
+- **If yes** → an Envoy booking would look free on that master view, so close it with one of:
+  - **Overlay** the resource calendars in the master view — a Google Calendar display setting, no code,
+    quickest; or
+  - **Mirror** Envoy bookings onto KDC Bookings — a small new sync workflow.
+
+Separate from the read-side change, and doesn't block it.
+
 ## Process to connect Envoy (for IT)
 
 1. **Resources confirmed** ✅ (2026-09-22) — rooms are managed Google resources.
@@ -138,9 +157,8 @@ From `Book Session` → Create Event (the live attendee map). Studio 1 uses the 
 - **Build + QA the read-side change** (Check Conflicts + Room Availability + Find Booking →
   resource-calendar reads) so tablet bookings block double-booking and show in lookups — post-launch.
 - **Fix the Studio E resource id** across the live workflows (prerequisite for the read-side change).
-- **Decide "reflected in our calendar":** the read-side change gives Jessie recognition + booker
-  visibility; whether Envoy bookings should *also* mirror onto the KDC Bookings master calendar (a new
-  sync workflow) vs. overlaying the resource calendars in the master view is a separate, open call.
+- **Decide the KDC Bookings master view** — overlay vs. mirror vs. leave as-is; see the "Open question
+  for Howard" section above.
 
 ## Sources
 
