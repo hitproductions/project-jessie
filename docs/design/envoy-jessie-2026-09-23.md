@@ -3,7 +3,7 @@
 Dated snapshot of the Envoy/Jessie booking-source work. The living design doc is
 [`envoy-calendar.md`](./envoy-calendar.md) — this file freezes where things stand today.
 
-## The goal (Howard's priority)
+## The goal
 
 Whatever is booked through **Envoy** (door tablets) must be **recognized by Jessie** (so she never
 double-books over it) and **reflected in our calendar**, and bookers must be able to **see** those
@@ -39,13 +39,6 @@ bookings through Jessie.
   which does not resolve (deleted). The live Studio E resource is `c_1888r4bbc2lhqgndmprism70nft64`.
   Jessie is inviting a dead Studio E resource — her Studio E bookings don't reach the real calendar and
   availability there is unreliable. Prerequisite for the read-side change; also a live bug on its own.
-
-## Open questions
-
-- **"Reflected in our calendar" — which calendar?** The read-side change gives Jessie recognition +
-  booker visibility. Whether Envoy bookings should *also* appear on the **KDC Bookings master calendar**
-  (a new mirror/sync workflow) vs. overlaying the resource calendars in the master view is still open.
-- **n8n Google credential access** to the resource calendars' free/busy — to verify at build/QA time.
 
 ## Next steps
 
