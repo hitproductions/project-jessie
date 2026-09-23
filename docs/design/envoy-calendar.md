@@ -32,6 +32,11 @@ the bridge.
   Jessie test booking ("TEST JESSIE ENVOY", Studio 7, 23 Sep 2027 10:00–18:00) was confirmed sitting
   on Studio 7's resource calendar with the room accepted — the exact surface Envoy reads — so **a
   Jessie booking is visible in Envoy now** (view it in Envoy on the 2027 date, not tomorrow).
+- **Tablet → resource-calendar path validated (2026-09-23).** A real Envoy door-tablet booking
+  ("TEST ENVOY", Studio 7, 23 Sep 2026) landed on Studio 7's resource calendar — organizer = the room
+  resource, description "Created by Envoy", room accepted — and was **absent from KDC Bookings**.
+  Confirms a tablet booking sits on the exact surface Jessie will read after the read-side change, and
+  is invisible to her until then.
 
 ## Two directions
 
