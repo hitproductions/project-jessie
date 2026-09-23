@@ -97,7 +97,10 @@ lost: the **resource calendar is the complete per-room truth**.
 - **If yes** → an Envoy booking would look free on that master view, so close it with one of:
   - **Overlay** the resource calendars in the master view — a Google Calendar display setting, no code,
     quickest; or
-  - **Mirror** Envoy bookings onto KDC Bookings — a small new sync workflow.
+  - **Mirror** Envoy bookings onto KDC Bookings — a small new sync workflow. **This one also makes
+    Jessie recognize them** (she already reads KDC Bookings), so it can *replace or complement* the
+    read-side change. Draft + tradeoffs (a sync-lag double-book window):
+    [`envoy-mirror-build.md`](./envoy-mirror-build.md).
 
 Separate from the read-side change, and doesn't block it.
 
