@@ -198,6 +198,18 @@ Slack DM → n8n → agent (Gemini 3.5 Flash Lite, temp 0.2) → Airtable + Goog
 | `Jessie — Expand Series` | `hkx9PXcgW9nrzY2a` | computes the dates of a recurring booking (deterministic; the model does not do the date math), for the pre-confirmation summary |
 | `Jessie — Book Series` | `UAwFoifgkfL1xNP2` | creates a whole recurring series server-side — expands the dates and loops Book Session per date, all-or-skip; the model calls it once |
 | `Jessie — Prune Executions` | `K2tPBykMwKcQGMub` | daily 04:00 cleanup so the DB does not fill |
+| `Jessie — Open Consent Request` | `nEHnCMMXS0am59Zy` | consent engine — writes a PENDING row to the Consent Requests Sheet + DMs the holder/incumbent (both cross-dept **priority preemption** and **M-booth** shared-booth requests) |
+| `Jessie — Finalize Consent` | `TO1UnZTZ2LhtE9J3` | consent engine — on approval, places the requester: **M-booth** = cancel the holder's hold instance then book (resource transfer); **preempt** = place-only after the incumbent has moved |
+| `Jessie — Consent Sweep` | `QHHDevaWhMk8gSBX` | consent engine — **scheduled ~10 min**; on a PENDING row past its `Deadline`: M-booth → book (timeout=book), preempt → mark EXPIRED. Fires even during a Cloudflare edge outage |
+
+The **consent engine** (the three workflows above) handles two callers that both need someone's OK before
+acting: **cross-department priority preemption** (a higher-ranked session bumps a lower one, incumbent
+consents + moves) and **M-booth shared use** (a booth with a standing recurring hold; the holder consents,
+their hold instance is cancelled and the requester is booked). State lives in the `Consent Requests` tab of
+the Jessie Log Google Sheet (gid `431550013`), one row per request. Detection + the request are wired into
+`Book Session`/`Move Booking`; the reply-router + `Call Finalize` live in `Project Jessie v2`. Design:
+`docs/design/consent-engine.md` + `docs/design/mbooth-approval.md`. Testing is routed **to Howard only** —
+the launch flip is `DEV_REDIRECT=''` in the three spots (see *Before launch* #2).
 
 Airtable base `app8GQxEInqJi1NRP` · calendar `c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com`
 · launch 2026-10-12 (dev freeze 2026-09-23).
