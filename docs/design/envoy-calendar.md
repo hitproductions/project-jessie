@@ -9,6 +9,27 @@ Jessie — people can book a studio from the door tablets, and those bookings an
 consistent. Both sit on the same Google Calendar **room resources**, which become the shared source of
 truth for what's booked, so no direct Jessie ↔ Envoy integration is needed.
 
+## Recommendation (2026-09-23)
+
+**Do the mirror, not both.** For the goal — keep KDC Bookings as the calendar people look at, have
+Envoy bookings appear there, and have Jessie recognize them — the [mirror](./envoy-mirror-build.md) is
+the direct fit: one new workflow that lands Envoy bookings on KDC Bookings, where Jessie already reads.
+The [read-side change](./envoy-jessie-readside-build.md) alone doesn't satisfy it (it never puts
+bookings on KDC Bookings) and rewrites 3 load-bearing hot-path workflows — more risk and QA. "Both" is
+overkill for studio booking volume.
+
+The mirror's one weakness is a **sync-lag window** (a tablet booking isn't on KDC Bookings for the poll
+interval, so Jessie could double-book in that gap). Poll tight (~2 min). **Add the read-side change
+later only if that window actually bites** — a real double-booking incident, or heavy same-room
+contention.
+
+**Sequence:**
+
+1. **Studio E id fix** ([`studio-e-id-fix.md`](./studio-e-id-fix.md)) — independent live bug,
+   prerequisite for either approach, can ship before launch.
+2. **Mirror** (post-launch) — the main solution.
+3. **Read-side change** — hold as optional hardening, only if the sync-lag window proves a problem.
+
 ## Why it can work — the mechanism
 
 Jessie doesn't only write to its own group calendar. On every booking, `Book Session` → **Create
