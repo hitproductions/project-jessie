@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meet Jessie — Your Studio Booking Assistant</title>
+<style>
+  :root {
+    --ink: #1c1c1e;
+    --muted: #6b6b70;
+    --accent: #2f6f4f;
+    --rule: #e6e6e8;
+    --quote-bg: #f5f7f6;
+    --bg: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #ececed; --muted: #9a9aa0; --accent: #7bc39a;
+      --rule: #2c2c30; --quote-bg: #18211d; --bg: #131315;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #ececed; --muted: #9a9aa0; --accent: #7bc39a;
+    --rule: #2c2c30; --quote-bg: #18211d; --bg: #131315;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 16px 80px;
+  }
+  h1 { font-size: 2em; line-height: 1.2; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 1.3em; margin: 2em 0 0.5em; letter-spacing: -0.01em; }
+  .byline { color: var(--muted); font-size: 0.9em; margin: 0 0 1.5em; }
+  p { margin: 0.75em 0; }
+  ul { padding-left: 1.25em; margin: 0.75em 0; }
+  li { margin: 0.5em 0; }
+  strong { font-weight: 650; }
+  blockquote {
+    margin: 0.75em 0;
+    padding: 0.5em 1em;
+    background: var(--quote-bg);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+  }
+  blockquote p { margin: 0; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<h1>Meet Jessie — Your Studio Booking Assistant</h1>
+<p class="byline">Hit Productions · 23 September 2026</p>
+
+<h2>Say hello to Jessie</h2>
+<p>Jessie is a friendly assistant that books studio and room time for you — right inside Slack. There&#39;s no app to learn, no form to fill out, and no commands to memorize.</p>
+<p><strong>Just send them a direct message like you&#39;d text a colleague.</strong> Tell them what you need in plain words — the project, the room, the day and time — and they take care of the calendar. If something&#39;s missing, they&#39;ll ask. And before they book anything, they show you a summary and wait for your <strong>&quot;yes.&quot;</strong></p>
+<blockquote><p><strong>Try:</strong> <em>&quot;book Studio 3 tomorrow 2–5pm for project Sunrise, I&#39;m the engineer&quot;</em></p></blockquote>
+<p>That&#39;s it — Jessie handles the rest.</p>
+
+<h2>The everyday things they do</h2>
+<p>These are the bread-and-butter requests. Just say them in your own words — you don&#39;t need the exact wording below.</p>
+<p><strong>Book a session</strong></p>
+<blockquote><p><em>&quot;book Studio 5 on Friday 10am–1pm for the Nescafe radio spot, engineer is Mike&quot;</em></p></blockquote>
+<p><strong>Cancel a booking</strong></p>
+<blockquote><p><em>&quot;cancel my Studio 5 session on Friday&quot;</em></p></blockquote>
+<p><strong>Move or reschedule</strong></p>
+<blockquote><p><em>&quot;move the Nescafe session to Monday same time&quot;</em></p></blockquote>
+<p><strong>Check what&#39;s free</strong></p>
+<blockquote><p><em>&quot;which rooms are open tomorrow afternoon?&quot;</em></p></blockquote>
+<p><strong>Book a recurring series</strong></p>
+<blockquote><p><em>&quot;book Studio 2 every Tuesday 2–4pm for the next 6 weeks for the podcast&quot;</em></p></blockquote>
+<p>For cancels and moves, Jessie always finds the right booking and shows it to you first, so nothing changes until you say yes.</p>
+
+<h2>What makes them reliable</h2>
+<p>Jessie is careful by design. A few things happen quietly behind every request:</p>
+<ul>
+<li><p><strong>They ask when something&#39;s missing.</strong> Forgot the time or the room? They&#39;ll ask instead of guessing.</p></li>
+<li><p><strong>They check the live calendar every time.</strong> They won&#39;t double-book a room — if it&#39;s taken, they tell you and offer alternatives.</p></li>
+<li><p><strong>They always wait for your yes.</strong> Nothing is booked, cancelled, or moved until you confirm. A summary is just a summary until you reply <strong>&quot;yes.&quot;</strong></p></li>
+<li><p><strong>They know the rooms and session types.</strong> They read the current room list and what each one is suited for, so their suggestions match how the studio actually works.</p></li>
+</ul>
+<p>In short: they do the fiddly checking so you don&#39;t have to, and they never act without your go-ahead.</p>
+
+<h2>The clever part: approval windows</h2>
+<p>Sometimes the room you want is already spoken for. Instead of just saying &quot;no,&quot; Jessie can quietly open a short <strong>approval window</strong> — they ask the right person, and sort it out for you.</p>
+<p><strong>Priority bookings.</strong> Some sessions outrank others. If a higher-priority session needs a room a lower-priority one is holding, Jessie messages the current holder to ask. If the holder agrees, Jessie moves their session and books yours — automatically, no back-and-forth. If they don&#39;t respond in time, nothing is disturbed and you&#39;re told.</p>
+<p><strong>Sharing the M booths.</strong> The small &quot;M&quot; booths each have a regular owner who holds standing time on them. If you want one of those slots, Jessie checks with the owner first. Say yes comes back, the booth is handed over to you cleanly for that date; if not, the owner keeps it.</p>
+<p>Either way, <strong>you never have to chase anyone yourself.</strong> Jessie asks, waits for a reply, and lets you know how it turned out — and no booking is ever taken from someone without their okay.</p>
+
+<h2>What Jessie can&#39;t do (yet)</h2>
+<p>A few honest limits, so nothing catches you off guard:</p>
+<ul>
+<li><p><strong>They only handle room and studio bookings.</strong> They&#39;re not a general assistant — no emails, files, or other tasks.</p></li>
+<li><p><strong>They need a clear yes.</strong> &quot;Maybe&quot; or a vague reply won&#39;t confirm a booking. Say <strong>yes</strong> or <strong>no</strong>.</p></li>
+<li><p><strong>They won&#39;t touch someone else&#39;s booking</strong> — unless you&#39;re an authorized coordinator for that department. This keeps everyone&#39;s sessions safe.</p></li>
+<li><p><strong>They never double-book.</strong> If a room&#39;s taken, that&#39;s a firm no (though an approval window may still open — see above).</p></li>
+<li><p><strong>Bookings made directly in Google Calendar</strong> may not be fully recognized until they&#39;re set up for Jessie. If something you booked elsewhere isn&#39;t showing up, that&#39;s why.</p></li>
+</ul>
+<p>None of these are bugs — they&#39;re the guardrails that keep the calendar trustworthy.</p>
+
+<h2>Tips for a smooth first time</h2>
+<ul>
+<li><p><strong>Give the essentials up front</strong> — date, time, room, and what it&#39;s for. The more you include, the fewer questions they&#39;ll ask.</p></li>
+<li><p><strong>Reply &quot;yes&quot; or &quot;no&quot;</strong> to confirm. That final yes is what makes it real.</p></li>
+<li><p><strong>Changed your mind?</strong> Just say so — &quot;actually, make it 3pm&quot; or &quot;cancel that&quot; — before you confirm.</p></li>
+<li><p><strong>Something looks off?</strong> If a booking didn&#39;t land the way you expected, flag it to the team rather than re-sending the same request over and over.</p></li>
+</ul>
+<p>That&#39;s everything you need to get going. Say hi to Jessie in Slack and try your first booking — they&#39;ll walk you through the rest.</p>
+</body>
+</html>
