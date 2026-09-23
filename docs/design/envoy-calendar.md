@@ -1,13 +1,13 @@
 # Design — Envoy Rooms on the studio resource calendars
 
-Status: **exploration (post-launch)** · Started 2026-09-22 · Owner: Tel
+Status: **planned (post-launch)** · Started 2026-09-22 · Owner: Tel · Decision 2026-09-23: tablets are a booking source
 
 ## Idea
 
-Use **Envoy Rooms** (door tablet / mobile / Google Calendar) as a **visibility layer** for studio
-bookings — the tablets and Envoy views show what's booked. **Bookings are made only through Jessie**
-(and, for launch, on our calendar); Envoy is not a second booking front-end. It works without a direct
-Jessie ↔ Envoy integration because both sit on the same Google Calendar **room resources**.
+Use **Envoy Rooms** (door tablet / mobile / Google Calendar) as a **second booking source** alongside
+Jessie — people can book a studio from the door tablets, and those bookings and Jessie's must stay
+consistent. Both sit on the same Google Calendar **room resources**, which become the shared source of
+truth for what's booked, so no direct Jessie ↔ Envoy integration is needed.
 
 ## Why it can work — the mechanism
 
@@ -33,14 +33,42 @@ the bridge.
   on Studio 7's resource calendar with the room accepted — the exact surface Envoy reads — so **a
   Jessie booking is visible in Envoy now** (view it in Envoy on the 2027 date, not tomorrow).
 
-## Jessie → Envoy visibility — validated
+## Two directions
 
 **Jessie → Envoy: works — validated 2026-09-22.** Jessie invites the room resource on every event, so
 her bookings appear on the resource calendars, which is exactly what Envoy reads. Confirmed live with
 the Studio 7 test booking above (on the resource calendar, room accepted). ✅
 
-Because **bookings are made only through Jessie**, Envoy stays a read-only view of what Jessie has
-booked — so there's no reverse-direction sync to design around.
+**Envoy → Jessie: needs a change (decided 2026-09-23 — tablets are a booking source).** ❌ (until done)
+A tablet booking lands on the room's **resource calendar**, but Jessie's `Check Conflicts` and `Room
+Availability` read **only** the group calendar `c_re5…@group.calendar.google.com` — never the resource
+calendars. So today Jessie is **blind to a tablet booking and could book over it.** Closing this is the
+change below.
+
+## Making tablets a booking source (the read-side change)
+
+Point Jessie's availability **reads** at the **room resource calendars** instead of the group calendar.
+Jessie's own bookings are already on the resource calendars (she invites the resource), so reading there
+means she sees **everything** in one place — her own bookings, tablet/Envoy bookings, and the
+personal-calendar bookings staff already make directly on a resource.
+
+- **Scope: 2 places** — `Check Conflicts` (in `Book Session`) and the `Room Availability` workflow.
+- **Form:** a Google **freebusy** query across the resource calendars (plus the group calendar, for
+  safety) — returns each room's busy blocks no matter who booked it.
+- **Writing is unchanged:** Jessie still creates bookings on the group calendar and invites the
+  resource, so her events still show in Envoy. Only the read side moves.
+- **Prerequisite — fix the Studio E id (below)**, or Studio E availability reads a deleted calendar.
+- **Must be QA'd** (availability + double-booking are load-bearing) and is a **post-launch** change:
+  dev freeze is 2026-09-23, launch 2026-10-12. Schedule it deliberately, not into the freeze.
+
+### Studio E resource id is wrong (found 2026-09-23)
+
+`Book Session` maps **Studio E → `c_18807te03d2sqh0lmtal9sbb04gao`**, which **does not resolve**
+(deleted). The live Studio E resource is **`c_1888r4bbc2lhqgndmprism70nft64`** ("Studio E (5)", real
+bookings, organizer KDC Bookings). So Jessie currently invites a dead Studio E resource — her Studio E
+bookings don't reach the real resource calendar (Envoy won't see them) and Studio E availability is
+unreliable. The id appears across the live workflows (Book Session, Room Availability, Find Booking,
+main) — fix everywhere via pull-edit-import + QA.
 
 ## Process to connect Envoy (for IT)
 
@@ -52,8 +80,9 @@ booked — so there's no reverse-direction sync to design around.
    people" → **Make changes to events**). Least-privilege = the sharing route.
 5. **Connect in Envoy dashboard** — Rooms → Google Calendar → authenticate → select the rooms to pair
    with the location → Assign → Save.
-6. **Confirm visibility** — open a connected room in Envoy and check that a Jessie booking shows on
-   the correct date (mind the 2027 QA year-shift). Envoy is display-only; bookings stay in Jessie.
+6. **Confirm both directions** — a Jessie booking shows in Envoy (validated); and after the read-side
+   change above, a tablet booking shows in Jessie's availability. Mind the 2027 QA year-shift when
+   checking dates.
 
 ## Room → resource calendar map
 
@@ -74,7 +103,7 @@ From `Book Session` → Create Event (the live attendee map). Studio 1 uses the 
 | Studio B | `c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com` |
 | Studio C | `c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com` |
 | Studio D | `c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com` |
-| Studio E | `c_18807te03d2sqh0lmtal9sbb04gao@resource.calendar.google.com` |
+| Studio E | ⚠️ workflow has `c_18807te03d2sqh0lmtal9sbb04gao` (**dead** — see Studio E note); live resource is `c_1888r4bbc2lhqgndmprism70nft64@resource.calendar.google.com` |
 | Studio F | `c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com` |
 | Studio M | `c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com` |
 | M1 | `c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com` |
@@ -94,6 +123,9 @@ From `Book Session` → Create Event (the live attendee map). Studio 1 uses the 
 
 - Confirm the Envoy Rooms subscription (step 3).
 - Decide auth method with IT: super-admin service account vs per-room sharing (step 4).
+- **Build + QA the read-side change** (Check Conflicts + Room Availability → resource-calendar
+  freebusy) so tablet bookings reach Jessie — post-launch.
+- **Fix the Studio E resource id** across the live workflows (prerequisite for the read-side change).
 
 ## Sources
 
