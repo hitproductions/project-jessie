@@ -70,13 +70,15 @@ function decideMBooth(cc, REQ) {
   const nonHolds = cc.conflicts.filter(c => !isStandingHold(c));
   if (!holds.length) return { action: 'none', why: 'conflict is not a recurring hold' };
   if (nonHolds.length) return { action: 'room_taken', why: 'a real (non-recurring) booking also overlaps' };
-  let holder = '', holdName = '';
-  for (const h of holds) { const r = parseRefId(h.description); if (r) { holder = r; holdName = parseHoldName(h.summary); break; } }
+  // Capture the hold's event-instance id + title too: on consent Finalize CANCELS this hold instance
+  // (M-booth only, releasing the room resource) BEFORE booking the requester — a clean transfer.
+  let holder = '', holdName = '', holdEventId = '', holdTitle = '';
+  for (const h of holds) { const r = parseRefId(h.description); if (r) { holder = r; holdName = parseHoldName(h.summary); holdEventId = h.id || ''; holdTitle = h.summary || ''; break; } }
   if (!holder) return { action: 'unidentified_holder', why: 'recurring hold has no ref: tag' };
   const requester = parseRefId(REQ && REQ.description);
   if (requester && requester === holder) return { action: 'book_as_holder', why: 'requester is the hold owner' };
   return { action: 'open_mbooth', approver: holder, approverName: holdName, booth: room,
-    why: 'open consent to the booth holder (from the hold ref:)' };
+    holdEventId: holdEventId, holdTitle: holdTitle, why: 'open consent to the booth holder (from the hold ref:)' };
 }
 
 // ── 3. Deadline tiers (request execution) — CONFIRMED by Howard 2026-09-22 ────

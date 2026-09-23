@@ -29,6 +29,7 @@ const realC = { room: 'M2', summary: 'YELLOW / Jem Lim / EL', id: 'r1', transpar
 ok('a recurring event is a standing hold (Busy or Free)', isStandingHold(holdBusy) && isStandingHold(holdFree));
 ok('a one-off booking is NOT a hold', !isStandingHold(realC));
 ok('non-holder wanting a held booth -> open_mbooth to the hold ref (any booth)', (() => { const d = decideMBooth({ reason:'ROOM_OCCUPIED', conflicts:[holdBusy] }, { rooms: 'M4', description: 'ref: UHOWARD' }); return d.action === 'open_mbooth' && d.approver === 'U098UFLG70B' && d.approverName === 'Tel'; })());
+ok('open_mbooth carries the hold event id + title (for cancel-then-book)', (() => { const d = decideMBooth({ reason:'ROOM_OCCUPIED', conflicts:[holdBusy] }, { rooms:'M4', description:'ref: UHOWARD' }); return d.holdEventId === 'h1' && d.holdTitle === 'M4 - Tel'; })());
 ok('holds carry over any booth with a ref: (M2)', decideMBooth({ reason:'ROOM_OCCUPIED', conflicts:[holdFree] }, { rooms:'M2', description:'ref: UHOWARD' }).approver === 'UPPEY3F4G');
 ok('the hold owner booking their own booth -> book_as_holder', decideMBooth({ reason:'ROOM_OCCUPIED', conflicts:[holdBusy] }, { rooms: 'M4', description: 'ref: U098UFLG70B' }).action === 'book_as_holder');
 ok('a real booking overlapping too -> room_taken (first-come)', decideMBooth({ reason:'ROOM_OCCUPIED', conflicts:[holdFree, realC] }, { rooms:'M2', description:'ref: UHOWARD' }).action === 'room_taken');

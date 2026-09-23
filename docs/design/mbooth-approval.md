@@ -115,6 +115,19 @@ table's `Slack User ID` field.) Until a hold is tagged, requests for that booth 
 
 `#jessie-approvals` is `C0C34UMFXGD` (shared with `PREEMPT`; view/audit feed only). Fully set.
 
+
+
+### Resource transfer (cancel-then-book) — added 2026-09-23
+A booth is a Google **resource with capacity 1**. The holder's standing hold reserves that resource, so
+just *adding* the requester's booking left its room resource **auto-declined** (Rico kept the room). Fix
+(Howard-confirmed, **M-booths only, never studios**): on consent, Finalize **cancels the holder's hold
+INSTANCE for that date** (deletes just that recurring occurrence, freeing the resource) and **then** books
+the requester, who now holds the room cleanly. Book Session (v40) captures the hold's event-instance id
+onto the row (`Incumbent Event Id`); Finalize (v8) has a `Cancel Hold?` IF (Kind=MBOOTH && id present) →
+`Cancel Hold` (Calendar DELETE the instance, onError-continue) → `Book Requester`. The PREEMPT path is
+untouched (it move-then-books; nothing is deleted). Caveat: holds are all-day, so a *timed* share still
+cancels the holder's whole-day instance for that date (accepted, booths only).
+
 ## Still open for the team
 
 Only one design question remains (everything else — booth set, holders, Slack ids, held-detection,
@@ -141,7 +154,7 @@ wiring stages are LIVE + component-verified:**
    writes `Kind`; Build Messages has booth wording ("… your standing booth, OK to let them use it?").
    Book Session's Decide Preempt builds the MBOOTH `open` object (approver=holder, relocation fields
    empty, the booth's Book payload in `Req Payload`). Reuses the DEV_REDIRECT gate (still Howard-only).
-3. ✅ **Approve→finalize router path — LIVE (main v149).** Consent Router is Kind-aware: an MBOOTH row +
+3. ✅ **Approve→finalize router path + CANCEL-THEN-BOOK — LIVE (main v149/v150, Book v40, Finalize v8).** Consent Router is Kind-aware: an MBOOTH row +
    holder `yes` → branch `mbooth-book`; a new `MBooth Book?` IF routes it to `Call Finalize MBOOTH`
    (place-only Book). Book Session v38 lets that placement **bypass the permanent hold** — Check
    Conflicts skips a `transparent && recurring` hold when `room_override` is set, so the consented
