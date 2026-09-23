@@ -146,11 +146,13 @@ wiring stages are LIVE + component-verified:**
    (place-only Book). Book Session v38 lets that placement **bypass the permanent hold** — Check
    Conflicts skips a `transparent && recurring` hold when `room_override` is set, so the consented
    booking isn't blocked by the very hold the holder just approved. Normal path verified unbroken.
-4. ⏳ **The Sweep — NOT built yet.** Scheduled workflow (~10 min) running `sweepAction` over PENDING
-   rows: MBOOTH past-deadline → Finalize (book, per timeout=book); PREEMPT past-deadline → EXPIRED +
-   notify. Schedule-triggered → fires even during a Cloudflare edge outage. Shared by both callers
-   (also closes the "a preemption hangs forever if the incumbent never replies" gap). Without it, the
-   holder-**replies** path works; only the **no-response → book** timeout is missing.
+4. ✅ **The Sweep — BUILT (inactive), `Jessie — Consent Sweep` QHHDevaWhMk8gSBX.** Schedule (10 min) →
+   Read Pending Rows → Sweep Decide (`sweepAction`) → Route: MBOOTH past-deadline → Call Finalize
+   (book, timeout=book); PREEMPT/other past-deadline → Mark EXPIRED. Schedule-triggered → fires even
+   during a Cloudflare edge outage. Left **inactive** until the stale test rows are cleared — activating
+   it now would BOOK the 2 stale M1 MBOOTH rows (timeout=book) and EXPIRE the stale Studio 7 PREEMPT row.
+   Activate with `./scripts/n8n-write activate QHHDevaWhMk8gSBX`. (Follow-up: a per-row requester notice
+   on expire; Finalize already notifies on the book path.)
 
 **Live end-to-end test is blocked on a data gap:** the real M2/M6 standing holds are 2026 near-term
 recurring events whose recurrence does NOT reach the year-shifted QA dates (2027), so M-booth stays
@@ -158,5 +160,7 @@ dormant in QA (M2/M6 just book normally there). To test the flow live, seed a `t
 "M2 - Peemo" event on a 2027 QA date (needs calendar write access — the connector is read-only here),
 or test post-launch with `YEAR_SHIFT=0` on a real near-term date where the hold exists.
 
-**Cosmetic follow-up:** Finalize's requester/holder notices are PREEMPT-worded ("… moved their session
-to make way") — for an MBOOTH placement nothing moved, so make those notices Kind-aware.
+**Cosmetic follow-ups:** (1) Finalize's requester/holder notices are PREEMPT-worded ("… moved their
+session to make way") — for an MBOOTH placement nothing moved, so make those notices Kind-aware. (2) An
+all-day booth booking (no time given) is correct, but the DM whenPhrase rendered it "8:00 AM–8:00 AM";
+fixed in Open v7 → renders "<date> (all day)".
