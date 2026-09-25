@@ -28,10 +28,18 @@ pinged. Flip one constant per sub-workflow and notifications go to the real book
 |---|---|---|---|
 | `Cancel Booking` → `Build Recipients` | `const DEV_REDIRECT = '…';` | `'U08V3CKDGJF'` (Howard) | `''` |
 | `Move Booking` → `Build Recipients` | `const DEV_REDIRECT = '…';` | `'U08V3CKDGJF'` (Howard) | `''` |
+| **`Open Consent Request` → `Build Request`** (consent engine) | `const DEV_REDIRECT = '…';` | `'U08V3CKDGJF'` (Howard) | `''` |
+
+**The consent engine has its own switch** (added 2026-09-22; missing from this list until 2026-09-25).
+It routes each consent row's Approver and Requester, which every consent DM downstream reads (Open,
+Finalize, the main-workflow router). If Cancel/Move are flipped and this one isn't, every M-booth and
+priority request at launch still DMs Howard instead of the real booth holder / incumbent. The real
+booking is still the one moved or placed; only the messages go to the wrong person.
 
 Once `DEV_REDIRECT = ''`, the `ALLOW` list beside it is inert (everyone is notified for real), so it
-needs no change — leave it or delete it. The **booker-only** rule (engineer redirects while
-`DEV_REDIRECT` is set) also dissolves: at launch both booker and engineer get real DMs.
+needs no change — leave it or delete it. During QA round 2 all three `ALLOW` lists hold the dev + QA
+roster (Howard, Trish, Camy, Jess, Tel, Tara, Genzo), and since 2026-09-24 the Cancel/Move **engineer**
+notice honors `ALLOW` too (it used to always redirect). All of that is moot once the redirects are `''`.
 
 ## 3. `HAIST Dev` god-mode — decide (keep or pull)
 
@@ -55,10 +63,15 @@ Enforced via `isHaistDev` in Cancel/Move. See `docs/design/booking-authority.md`
 1. `./scripts/test-nodes --live` and `./scripts/test-gate` (update the 2027 date expectations first).
 2. A live DM: confirm a relative date resolves to the **real** year, and that an authorized change
    DMs the **real** booker/engineer (no `[DEV]` prefix).
-3. `./scripts/health` — every node green.
+3. A consent request (an M-booth over a standing hold is the easiest): the **real holder** gets the DM,
+   not Howard. Note the consent deadline tiers (same day = 3h, tomorrow = 10:00, 2+ days = 24h) become
+   reachable only now; QA's 2027 dates always landed in the 24h tier. Watch the first same-day request.
+4. `./scripts/health` — every node green.
 
 ## How this list was verified (repeatable)
 
 Fetch each workflow and grep for: `YEAR_SHIFT`, `plus({ years`, `DEV_REDIRECT`, `TEST_COORD`,
-`ALLOW =`, `isHaistDev`, `HAIST Dev`. Only main (year shift) and Cancel/Move (redirect + HAIST Dev)
-should match.
+`ALLOW =`, `isHaistDev`, `HAIST Dev`. Only main (year shift), Cancel/Move (redirect + HAIST Dev) and
+Open Consent Request (redirect) should match. **Re-verified 2026-09-25 across all 12 live Jessie
+workflows** (the nine plus Open Consent Request, Finalize Consent, Consent Sweep): exactly those four,
+everything else clean.

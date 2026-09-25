@@ -208,8 +208,9 @@ consents + moves) and **M-booth shared use** (a booth with a standing recurring 
 their hold instance is cancelled and the requester is booked). State lives in the `Consent Requests` tab of
 the Jessie Log Google Sheet (gid `431550013`), one row per request. Detection + the request are wired into
 `Book Session`/`Move Booking`; the reply-router + `Call Finalize` live in `Project Jessie v2`. Design:
-`docs/design/consent-engine.md` + `docs/design/mbooth-approval.md`. Testing is routed **to Howard only** —
-the launch flip is `DEV_REDIRECT=''` in the three spots (see *Before launch* #2).
+`docs/design/consent-engine.md` + `docs/design/mbooth-approval.md`. During QA, consent DMs reach the dev +
+QA roster (Howard, Trish, Camy, Jess, Tel, Tara, Genzo) and everyone else is redirected to Howard. The
+launch flip is `DEV_REDIRECT=''` in the three spots (see *Before launch* #2 and `docs/launch-checklist.md`).
 
 Airtable base `app8GQxEInqJi1NRP` · calendar `c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com`
 · launch 2026-10-12 (dev freeze 2026-09-23).
@@ -230,7 +231,7 @@ only script that writes to n8n.
 | `./scripts/test-gate` | the confirmation gate and date resolver on their own |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
 | `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
-| `./scripts/verify-ids` | the seven workflow ids and the Jessie bot id still point at the live app |
+| `./scripts/verify-ids` | all twelve Jessie workflow ids (incl. the three consent workflows) resolve to **active** workflows with the right names, and the Jessie bot id still points at the live app |
 | `./scripts/backup-live` | snapshot every live workflow into `workflows/live/` (also run nightly by the GitHub Action) |
 | `./scripts/reapply-main-fixes` · `--check` | after someone else imports main: report which of our main fixes survived, and re-apply the missing ones **on top of** their version (never imports; flags structural gaps for a hand merge) |
 
@@ -396,9 +397,10 @@ Three switches flip for launch — do them together:
    resolved from the title initials via `Lookup Engineer`.
    - **Consent engine has its OWN `DEV_REDIRECT`** in `Open Consent Request` → `Build Request` (added
      2026-09-22). It routes the row's `Approver` and `Requester` — which every consent DM downstream
-     (Open, Finalize, main router) reads — to Howard unless the recipient is a HAIST dev
-     (`ALLOW = Howard, Tel, Genzo`; narrower than Cancel/Move's list, on purpose). So no real non-dev
-     is DM'd during testing. **Set its `DEV_REDIRECT = ''` at launch too.** The tail hook matches on
+     (Open, Finalize, main router) reads — to Howard unless the recipient is on `ALLOW` (since
+     2026-09-24 the same dev + QA roster as Cancel/Move). So no real non-QA person is DM'd during
+     testing. **Set its `DEV_REDIRECT = ''` at launch too** — it was missing from
+     `docs/launch-checklist.md` until 2026-09-25. The tail hook matches on
      `Incumbent Event Id`, not `Approver`, so the real booking is still the one moved/placed.
 3. **`TEST_COORD`** (the hard-coded Howard id) in `Check Ownership` / `Resolve Booking` — drop it once
    the `HAIST Dev` Airtable tag is live on Howard (it's strictly broader). Weekend hard-code only.
@@ -409,10 +411,10 @@ Three switches flip for launch — do them together:
    dev, is set up QA-style: on the notification ALLOW list with her real Standard authority.)
 
 Notification routing during dev (not a launch flip, but related): `Build Recipients` in Cancel/Move
-has `DEV_REDIRECT` (reroute to Howard) and `ALLOW` (ids that get their own real DM). `ALLOW` applies
-to the **booker only** — the engineer notice always redirects while `DEV_REDIRECT` is set, so a
-tester is pinged only for bookings they made. `DEV_REDIRECT=''` at launch restores real DMs to
-booker + engineer.
+has `DEV_REDIRECT` (reroute to Howard) and `ALLOW` (ids that get their own real DM). Since QA round 2
+(2026-09-24) `ALLOW` applies to both the booker **and** the engineer notice (it used to be booker-only),
+so Tara, the one listed tester who is also an engineer, gets engineer notices. `DEV_REDIRECT=''` at
+launch restores real DMs to booker + engineer for everyone.
 
 ## Waiting on other systems
 

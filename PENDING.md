@@ -58,7 +58,7 @@ decide if the `Recording Booth` tag belongs. Low priority; no behavior impact.
 **Update 2026-09-21 (verified live):** `Room Name` now reads `Studio 2` with no trailing space —
 appears resolved (verify by eye, the character is invisible).
 
-**5. `Clients.Preferred Rooms` needs a companion field. Nothing gets deleted.**
+**5. ~~`Clients.Preferred Rooms` needs a companion field.~~ RESOLVED (marked 2026-09-25):** the Clients tool now returns `Preferred Room Names`, so Jessie can read preferred rooms (see CLAUDE.md *Not done*: proposing them is still best-effort, not deterministic). Original note:
 
 The field is a link to Rooms & Studios, so the API returns record ids —
 `reced8Jk7wG24KpdE` — not names. Jessie cannot read those. When she tried, she
@@ -127,7 +127,7 @@ different set of rooms.
 Priority vs Last Resort (VO, Music Vocal Recording, Music Mixing, Celebrity Recording now have
 Studios 7/8 or 4/5/6 as genuine fallbacks; Event/Meeting/QC no longer duplicate).
 
-**24. Add a `Preemption Rank` field to `Session Types` (for the consent/preemption feature).**
+**24. ~~Add a `Preemption Rank` field to `Session Types`.~~ RESOLVED (marked 2026-09-25):** the field exists and is populated. Live `referenceData.preemptionRanks` reads e.g. Celebrity Recording 100, Post Mixing / QC / Localization Editing 50, and the preemption flow was proven live on 2026-09-23. Original note:
 Raised 2026-09-21. The consent engine ([consent-engine.md](docs/design/consent-engine.md)) needs a
 deterministic way to know one session type outranks another (e.g. Celebrity Recording > VO) before it
 may offer to preempt an occupied room. Add a Number field `Preemption Rank` on `Session Types`
@@ -136,7 +136,7 @@ suggested starting table is in the design doc. **Inert until the preemption bran
 can be added any time with zero effect on the live bot. Not created yet (spec only) per Howard's "write
 the spec" instruction.
 
-**8. Does the bot have `reactions:write`?**
+**8. ~~Does the bot have `reactions:write`?~~ RESOLVED (marked 2026-09-25):** yes. The 👀 acknowledgement visibly lands on incoming messages (seen on the 2026-09-23 QA smoke tests). Original note:
 
 Jessie puts 👀 on an incoming message and removes it when she replies, so people
 can see it landed during the 7–12 seconds a turn takes. Without the scope the
@@ -159,7 +159,7 @@ record of why the gate strips that suffix at all.
 
 ## Google Calendar
 
-**10. Bookings Jessie did not create can never be cancelled through her.**
+**10. Bookings Jessie did not create can never be cancelled through her.** — **MOSTLY RESOLVED 2026-09-23:** every untagged event from 23 Sep to 31 Dec 2026 (39 edits) was backfilled with `ref:` / `Booked by:` / `Dept:` (see `docs/BACKFILL-CHECKLIST.md`). Still open for events added directly in Google Calendar *after* the backfill, and for 2027 onward: rerun the backfill per window. Original note:
 
 `Cancel Booking` reads a `ref:` marker out of the event description to decide
 whose booking it is. Events created before this build, or added directly in
@@ -376,7 +376,7 @@ Created to prove `NOT_YOURS` — the refusal to cancel someone else's booking �
 left in place. On a 2027 date so it cannot collide with anything real. Delete it
 through Jessie or Google Calendar once it is no longer needed for that test.
 
-**17. Engineer initials in booking titles are composed by the model.** A title like
+**17. ~~Engineer initials in booking titles are composed by the model.~~ RESOLVED 2026-09-25 (Book Session v45):** the `All Bookers` staff resolver rewrites the title's initials from Bookers `Initials` (see #31). Original note: A title like
 `SESSION / Client / KC` has the engineer's initials written by the agent with no
 lookup behind them, so a wrong guess becomes a wrong calendar title. Fixing it
 properly means an Airtable engineer lookup inside `Book Session` — a new node in
@@ -423,7 +423,7 @@ clone). Things that exist only in his copy and are **missing from here**:
 Until those are merged in, this repo is not the record it claims to be. Whoever
 reconciles them should merge *into* this repo (it has the history), not the other way.
 
-**20. `EOD-2026-09-08.md` is referenced but not in hand.** `MONITOR-SETUP.md` cites it
+**20. ~~`EOD-2026-09-08.md` is referenced but not in hand.~~ RESOLVED (marked 2026-09-25):** it's in the repo at `docs/eod/EOD-2026-09-08.md`. The connector-machine-sleeps hypothesis it carries is still an open outage lead; see `docs/outages/OUTAGES.md`. Original note: `MONITOR-SETUP.md` cites it
 for the **connector-machine-sleeps hypothesis** — that the machine running the
 Cloudflare tunnel connector sleeps, dropping inbound while n8n keeps running. That
 would fit the "breaks when nobody is using it, heals itself" pattern better than

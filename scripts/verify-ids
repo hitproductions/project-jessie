@@ -24,7 +24,11 @@ expect = {
  "bAyDw7udhmY0NL38":"Jessie — Cancel Booking","t7lwR2km4tfN8DbM":"Jessie — Move Booking",
  "yzirq12O227VTFp8":"Jessie — Find Booking","e7tBQB458nstrqei":"Jessie — Room Availability",
  "hkx9PXcgW9nrzY2a":"Jessie — Expand Series","UAwFoifgkfL1xNP2":"Jessie — Book Series",
- "K2tPBykMwKcQGMub":"Jessie — Prune Executions"}
+ "K2tPBykMwKcQGMub":"Jessie — Prune Executions",
+ # the consent engine (added 2026-09-25). The Sweep runs on a schedule, so a silent
+ # deactivation would stop M-booth timeouts and preempt expiries with nothing visibly broken.
+ "nEHnCMMXS0am59Zy":"Jessie — Open Consent Request","TO1UnZTZ2LhtE9J3":"Jessie — Finalize Consent",
+ "QHHDevaWhMk8gSBX":"Jessie — Consent Sweep"}
 print("workflow ids:")
 for wid, name in expect.items():
     w = api("/api/v1/workflows/%s" % wid)
