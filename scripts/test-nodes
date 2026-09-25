@@ -255,7 +255,21 @@ suite('Guard Probe — what reaches Slack', ()=>{
     // availability a turn earlier, and that flow has to keep working.
     ['offer vs check','a failed check cannot support an offer',SUM,
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"BAD_WINDOW"}]'}]},
-      x=>/did not run/.test(x.output)&&!/Confirm to book/.test(x.output)],
+      x=>/make sure Studio 8 is free/.test(x.output)&&!/availability check|did not run/.test(x.output)&&!/Confirm to book/.test(x.output)],
+    // QA 2026-09-24, twice: junk glued to a timestamp -> BAD_WINDOW, the model retried cleanly and the
+    // room came back free, and the guard still refused. The latest answer wins now.
+    ['offer vs check','a failed check followed by a good retry is not a contradiction',SUM,
+      {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"BAD_WINDOW"}]'},
+              {action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"FREE_BUT_LAST_RESORT"}}]'}]},
+      x=>/Confirm to book/.test(x.output)&&!/Hold on|make sure/.test(x.output)],
+    ['offer vs check','a busy answer superseded by a free re-check stands',SUM,
+      {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"BUSY"}}]'},
+              {action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"FREE"}}]'}]},
+      x=>/Confirm to book/.test(x.output)&&!/Hold on/.test(x.output)],
+    ['offer vs check','a free answer overturned by a busy re-check is refused',SUM,
+      {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"FREE"}}]'},
+              {action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"BUSY"}}]'}]},
+      x=>/already booked for that time/.test(x.output)&&!/Confirm to book/.test(x.output)],
     ['offer vs check','a busy room cannot be offered',SUM,
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"BUSY"}}]'}]},
       x=>/already booked for that time/.test(x.output)&&!/Confirm to book/.test(x.output)],
@@ -358,6 +372,17 @@ suite('Check Conflicts — booked-for is never the client', ()=>{
   check('bf','on-behalf external, distinct real client -> CLEAR',run({description:forK,bookingType:'External',client:'Acme Records',summary:'SMOKETEST2 / Acme Records / TL'})==='CLEAR');
   check('bf','self-booking (no for-person) -> CLEAR, guard skipped',run({description:'Engineer: Tara Lim | Booked by: Howard Luistro | ref: U1',bookingType:'External',client:'',summary:'X / Acme / TL'})==='CLEAR');
   check('bf','on-behalf but Personal (not external) -> CLEAR, guard skipped',run({description:forK,bookingType:'Personal',client:'',summary:'X / Kristine Trocino / TL'})==='CLEAR');
+});
+
+// ── Timestamps keep only their ISO text ──────────────────────────────────────
+suite('Check Conflicts — junk glued to a timestamp is dropped', ()=>{
+  const line=src('Check Conflicts').split('\n').find(l=>l.startsWith('const isoOnly'));
+  const isoOnly=new Function(line+'; return isoOnly;')();
+  check('iso','trailing Khmer junk dropped (QA 2026-09-24)',isoOnly('2027-09-27T17:00:00+08:00\u1797\u17b6sa')==='2027-09-27T17:00:00+08:00');
+  check('iso','trailing CJK junk dropped (QA 2026-09-24)',isoOnly('2027-10-01T17:00:00+08:00\u5bb9\u5668id')==='2027-10-01T17:00:00+08:00');
+  check('iso','a clean timestamp is unchanged',isoOnly('2027-09-27T14:00:00+08:00')==='2027-09-27T14:00:00+08:00');
+  check('iso','an all-day date is unchanged',isoOnly('2027-09-30')==='2027-09-30');
+  check('iso','a non-ISO value is left for the guards',isoOnly('tomorrow')==='tomorrow');
 });
 
 // ── Title initials must be abbreviations, not names ───────────────────────────

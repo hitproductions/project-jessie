@@ -462,6 +462,15 @@ the task runner), for whoever has shell access to the box.
     not list, so one nightly run with that key would have erased the entire rollback
     artifact and exited 0. It no longer deletes anything — it warns and leaves them.
 
+16. **The model glues visible junk onto strings it copies, not just invisible characters.**
+    QA on 2026-09-24 caught `2027-09-27T17:00:00+08:00ភាsa` and `…+08:00容器id` sent to Room
+    Availability. The `clean()` scrubber only strips invisible characters (the 30 Aug U+FE0F case),
+    so these came back `BAD_WINDOW`. The model retried cleanly in the same turn, but Guard Probe
+    refused on *any* failed call and replaced a correct, checked summary with "Hold on — the
+    availability check did not run". Both refusals that day were false positives. Timestamps now
+    go through `isoOnly()` (Room Availability + Book Session), and Guard Probe judges the latest
+    answer that turn rather than any answer. Treat every model-supplied string as possibly padded.
+
 ## Not done
 
 - Titles are composed by the model; a wrong project title becomes a wrong calendar title.
