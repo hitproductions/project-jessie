@@ -94,6 +94,13 @@ const FIXES = [
       if (ra < 0 || rb < 0) return 'reference block not found';
       if (!t || tb < 0) return 'offer-check header not found in target';
       t.parameters.jsCode = c.slice(0, tb) + r.slice(ra, rb) + c.slice(tb); return ''; } },
+  { id: 'v155 Guard Probe flags an unusual length before the yes', present: wf => code(wf, 'Guard Probe').includes('an unusual length, said BEFORE the yes'),
+    apply: wf => { const H = '// --- an unusual length, said BEFORE the yes', O = "// --- an offer this turn's check contradicts";
+      const r = code(REF, 'Guard Probe'), ra = r.indexOf(H), rb = r.indexOf(O);
+      const t = node(wf, 'Guard Probe'), c = code(wf, 'Guard Probe'), tb = c.indexOf(O);
+      if (ra < 0 || rb < 0 || rb < ra) return 'reference block not found';
+      if (!t || tb < 0) return 'offer-check header not found in target';
+      t.parameters.jsCode = c.slice(0, tb) + r.slice(ra, rb) + c.slice(tb); return ''; } },
   { id: 'v151/152 booked_for on Book Session tool', present: wf => /booked_for/.test(desc(wf, 'Book Session')),
     apply: wf => { const t = node(wf, 'Book Session'); if (!t) return 'Book Session tool missing';
       if (desc(REF, 'Book Session').includes("$('Booked For')") && !node(wf, 'Booked For')) return 'reference expression needs the Booked For node';

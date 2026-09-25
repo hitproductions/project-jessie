@@ -99,7 +99,8 @@ suite('Guard Probe — what reaches Slack', ()=>{
     if(name==='Get Booker')   return {first:()=>({json:{fields:{Name:'Tara Lim'}}})};
     if(name==='Gate Context') return {first:()=>({json:{dateNotice:ctx.dateNotice||'',pastDateNotice:'',
                                                         startOnlyNotice:ctx.startOnly?'THEY GAVE A START TIME AND NO END TIME.':''}})};
-    if(name==='Room Table')   return {first:()=>({json:{roomTable:ctx.roomTable===undefined?ROOMS:ctx.roomTable}})};
+    if(name==='Room Table')   return {first:()=>({json:{roomTable:ctx.roomTable===undefined?ROOMS:ctx.roomTable,
+                                                        referenceData:JSON.stringify({types:[{type:'VO Recording',min:60,max:180},{type:'Music Vocal Recording',min:60,max:120},{type:'Localization Editing',min:240,max:null}]})}})};
     if(name==='Booked For')   return {first:()=>({json:{bookedFor:ctx.bookedFor||''}})};
     if(ctx.executed && Object.prototype.hasOwnProperty.call(ctx.executed,name))
       return {isExecuted:ctx.executed[name],first:()=>({json:{}})};
@@ -185,6 +186,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['dated weekday survives','\\(\\?!\\\\d\\)'],
     ['booker is not always you','a near-miss of the real one'],
     ['booked for','booked for a colleague: the summary says so'],
+    ['usual length','an unusual length, said BEFORE the yes'],
   ];
   const t2=[
     // a date with no year — both older patterns need one
@@ -294,6 +296,24 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['offer vs check','no check this turn is not a contradiction',SUM,
       {steps:[{action:{tool:'Clients'},observation:'[{"ok":1}]'}]},
       x=>/Confirm to book/.test(x.output)&&!/Hold on/.test(x.output)],
+    // QA M5 2026-09-25: an unusual length is flagged before the yes, both ways, never as a "minimum".
+    ['usual length','9 hours of VO is flagged before the yes (QA M5)',
+      '*BUZZ / Jem Lim / TL*\n*Date:* October 1, 2027 (Fri)\n*Time:* 9:00 AM – 6:00 PM\n*Room:* Studio F\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
+      {},x=>/Heads up: 9 hours is longer than VO Recording sessions usually run \(1–3 hours\)\. Still book it as is\?\nReply only with "yes" to book/.test(x.output)&&/Confirm to book\.$/.test(x.output)],
+    ['usual length','15 minutes: the model note is replaced, never "minimum" (QA M5)',
+      'Note: The session length requested (15 minutes) is shorter than the minimum duration for a VO Recording session (60 minutes).\n\n*PROJECT STAR / Sasa Abella / RG*\n*Time:* 2:00 PM – 2:15 PM\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
+      {},x=>/Heads up: 15 minutes is shorter than VO Recording sessions usually run \(1–3 hours\)/.test(x.output)&&!/minimum/i.test(x.output)&&/^\*PROJECT STAR/.test(x.output)],
+    ['usual length','a length on the boundary is normal',
+      '*X / Y / TL*\n*Time:* 1:00 PM – 4:00 PM\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
+      {},x=>!/Heads up/.test(x.output)],
+    ['usual length','a type with only a minimum',
+      '*X / Y / TL*\n*Time:* 1:00 PM – 3:00 PM\n*Session Type:* Localization Editing\n\nConfirm to book. (yes/no)',
+      {},x=>/Heads up: 2 hours is shorter than Localization Editing sessions usually run \(at least 4 hours\)/.test(x.output)],
+    ['usual length','an unknown session type is left alone',
+      '*X / Y / TL*\n*Time:* 9:00 AM – 6:00 PM\n*Session Type:* Something New\n\nConfirm to book. (yes/no)',
+      {},x=>!/Heads up/.test(x.output)],
+    ['usual length','only a booking summary',
+      'Booked. That was a long one: 9:00 AM – 6:00 PM, VO Recording.',{},x=>!/Heads up/.test(x.output)],
     // QA B2 2026-09-25: the summary shows who the booking is for, from Booked For.
     ['booked for','the booker line gains "(for X)"','*SUSHI / Pael / DR*\n*Booked by:* Tara Lim\n\nConfirm to book. (yes/no)',
       {bookedFor:'Japs Concepcion'},x=>/\*Booked by:\* Tara Lim \(for Japs Concepcion\)/.test(x.output)],

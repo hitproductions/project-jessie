@@ -314,6 +314,14 @@ the prompt gets a notice so Jessie doesn't ask "who is Japs?", and Guard Probe a
 summary's booker line. It never throws (on error it answers "no one"). QA B2, 2026-09-25: "Book Studio F
 for Japs" had been booked as plain `Booked by: Camy Caridad`.
 
+**Unusual lengths are flagged before the yes** (main v155). Min/Max Duration in Session Types is what a
+session *usually* runs, not a limit (Tara, 2026-08-30: "it could go on for 8 hours"), so nothing blocks
+on it. Book Session adds a note to the "Booked." reply (`durationNote`), and Guard Probe now also puts one
+plain line above the confirmation, computed from the summary's *Time:* and *Session Type:* against Room
+Table's reference data: *"Heads up: 9 hours is longer than VO Recording sessions usually run (1–3 hours).
+Still book it as is?"* It first drops the model's own duration remarks, so there's one line and never
+"minimum" or "maximum allowed". QA M5, 2026-09-25: the prompt-only version flagged 15 minutes and missed 9 hours.
+
 `Cancel Booking` refuses with:
 
 ```
