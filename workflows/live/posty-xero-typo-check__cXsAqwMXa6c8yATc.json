@@ -196,7 +196,7 @@
         ]
       }
     },
-    "createdAt": "2026-09-17T10:45:34.265Z",
+    "createdAt": "2026-09-25T07:28:38.705Z",
     "description": null,
     "name": null,
     "nodeGroups": [],
@@ -273,6 +273,7 @@
           }
         },
         "id": "read-state",
+        "maxTries": 3,
         "name": "Read State",
         "parameters": {
           "documentId": {
@@ -291,8 +292,10 @@
           180,
           100
         ],
+        "retryOnFail": true,
         "type": "n8n-nodes-base.googleSheets",
-        "typeVersion": 4.5
+        "typeVersion": 4.5,
+        "waitBetweenTries": 2000
       },
       {
         "id": "set-oldest",
@@ -748,21 +751,21 @@
         "typeVersion": 4.2
       }
     ],
-    "updatedAt": "2026-09-17T10:45:34.265Z",
-    "versionId": "0d410313-2816-4b89-8447-6ea9513a88db",
+    "updatedAt": "2026-09-25T07:28:38.705Z",
+    "versionId": "ddb23bd7-3339-4a9e-915e-02c6b17e6e3f",
     "workflowId": "cXsAqwMXa6c8yATc",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-09-17T10:45:34.773Z",
+        "createdAt": "2026-09-25T07:28:39.084Z",
         "event": "activated",
-        "id": 789,
+        "id": 1098,
         "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
-        "versionId": "0d410313-2816-4b89-8447-6ea9513a88db",
+        "versionId": "ddb23bd7-3339-4a9e-915e-02c6b17e6e3f",
         "workflowId": "cXsAqwMXa6c8yATc"
       }
     ]
   },
-  "activeVersionId": "0d410313-2816-4b89-8447-6ea9513a88db",
+  "activeVersionId": "ddb23bd7-3339-4a9e-915e-02c6b17e6e3f",
   "connections": {
     "Advance Watermark": {
       "main": [
@@ -1036,6 +1039,7 @@
         }
       },
       "id": "read-state",
+      "maxTries": 3,
       "name": "Read State",
       "parameters": {
         "documentId": {
@@ -1054,8 +1058,10 @@
         180,
         100
       ],
+      "retryOnFail": true,
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5
+      "typeVersion": 4.5,
+      "waitBetweenTries": 2000
     },
     {
       "id": "set-oldest",
@@ -1548,7 +1554,7 @@
   },
   "tags": [],
   "triggerCount": 2,
-  "updatedAt": "2026-09-17T10:45:34.260Z",
-  "versionCounter": 10,
-  "versionId": "0d410313-2816-4b89-8447-6ea9513a88db"
+  "updatedAt": "2026-09-25T07:28:38.701Z",
+  "versionCounter": 11,
+  "versionId": "ddb23bd7-3339-4a9e-915e-02c6b17e6e3f"
 }

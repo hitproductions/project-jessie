@@ -1,0 +1,122 @@
+{
+  "active": false,
+  "activeVersion": null,
+  "activeVersionId": null,
+  "connections": {
+    "Build URL": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Hook": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build URL",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-09-21T02:57:35.944Z",
+  "description": null,
+  "id": "c1YIsN2ZZvgPjyt8",
+  "isArchived": false,
+  "meta": null,
+  "name": "TMP — Airtable schema probe",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "a1",
+      "name": "Hook",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "at-probe",
+        "responseMode": "lastNode"
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "7f3a1c88-2b55-4d21-9e10-5c6d8a2f4b30"
+    },
+    {
+      "id": "a0",
+      "name": "Build URL",
+      "parameters": {
+        "jsCode": "const u=$input.first().json.body.url;\nreturn[{json:{url:u}}];"
+      },
+      "position": [
+        200,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "GHFLO2W0J7uxFaz5",
+          "name": "Airtable (Post Logsheet — live)"
+        }
+      },
+      "id": "a2",
+      "name": "Read",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "options": {},
+        "url": "={{ $json.url }}"
+      },
+      "position": [
+        400,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    }
+  ],
+  "pinData": null,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-21T02:57:35.958Z",
+      "project": {
+        "createdAt": "2026-09-04T06:28:22.466Z",
+        "creatorId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "zkz4JuokdGopHd2A",
+        "name": "Tara Lim <tara@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-04T07:14:04.840Z"
+      },
+      "projectId": "zkz4JuokdGopHd2A",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-21T02:57:35.958Z",
+      "workflowId": "c1YIsN2ZZvgPjyt8"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-09-24T06:27:10.238Z",
+  "versionCounter": 4,
+  "versionId": "1a71befe-8b6f-42b2-8b8f-bd487ed99303"
+}

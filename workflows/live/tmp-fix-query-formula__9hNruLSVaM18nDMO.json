@@ -1,0 +1,125 @@
+{
+  "active": false,
+  "activeVersion": null,
+  "activeVersionId": null,
+  "connections": {
+    "Hook": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Update QUERY",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Update QUERY": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Result",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-09-22T02:25:02.438Z",
+  "description": null,
+  "id": "9hNruLSVaM18nDMO",
+  "isArchived": false,
+  "meta": null,
+  "name": "TMP — Fix QUERY formula",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "q1",
+      "name": "Hook",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "tmp-fix-query",
+        "responseMode": "lastNode"
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "b2c3d4e5-tmp-query"
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "q2",
+      "name": "Update QUERY",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "jsonBody": "{\"values\":[[\"=QUERY({Richard!B:Y;Tara!B:Y;Regie!B:Y;Whannie!B:Y;Eli!B:Y},\\\"select Col5,Col6,Col8,Col15,Col4,Col19,Col21,Col17,Col23 where Col23 is not null\\\",1)\"]]}",
+        "method": "PUT",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1ExrX8bTBYG64Goq8VKy1JsGkeGUX5rxKbu3sOZ-P1XY/values/QUERY!A1?valueInputOption=USER_ENTERED"
+      },
+      "position": [
+        220,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "q3",
+      "name": "Result",
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nreturn [{ json: { updated: r.updatedRange || 'unknown', cells: r.updatedCells || 0 } }];"
+      },
+      "position": [
+        440,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    }
+  ],
+  "pinData": null,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-22T02:25:02.449Z",
+      "project": {
+        "createdAt": "2026-09-04T06:28:22.466Z",
+        "creatorId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "zkz4JuokdGopHd2A",
+        "name": "Tara Lim <tara@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-04T07:14:04.840Z"
+      },
+      "projectId": "zkz4JuokdGopHd2A",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-22T02:25:02.449Z",
+      "workflowId": "9hNruLSVaM18nDMO"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-09-24T06:26:52.511Z",
+  "versionCounter": 1,
+  "versionId": "d47e851b-7038-427d-86d0-658b979f6717"
+}

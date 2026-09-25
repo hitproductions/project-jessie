@@ -1,0 +1,1049 @@
+{
+  "active": true,
+  "activeVersion": {
+    "authors": "Tara Lim",
+    "autosaved": false,
+    "connections": {
+      "Build Digest": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Send Digest",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Build Reminder Notify": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Write Reminder Notify",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Build Reminders": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Send Reminder",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Daily — 09:00": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Normalize Request",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Is Month-End Run": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Index (Reminders)",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Normalize Request": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Should Digest",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Is Month-End Run",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "On Request": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Normalize Request",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Index": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Build Digest",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Index (Reminders)": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Build Reminders",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Send Digest": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Check Sent",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Send Reminder": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Build Reminder Notify",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Should Digest": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Index",
+              "type": "main"
+            }
+          ]
+        ]
+      }
+    },
+    "createdAt": "2026-09-25T08:42:42.092Z",
+    "description": null,
+    "name": null,
+    "nodeGroups": [],
+    "nodes": [
+      {
+        "id": "w3-sticky",
+        "name": "Sticky — read me",
+        "parameters": {
+          "content": "## Workflow 3 — Weekly Digest\n\nReads the index only — zero Slack history calls.\n\n### Two ways in, one code path\n* **Schedule** — daily 09:00 Manila trigger,\n  gated by `Normalize Request` into two cadences:\n  * **Digest** — every **Monday**, to leadership\n    (regie, tara, edith, vic, lyn). Gate: `Should\n    Digest` on `run_digest`.\n  * **Engineer nudges** — the **last weekday of\n    the month**, one DM per engineer with open\n    work. Gate: `Is Month-End Run` on\n    `run_reminders`.\n* **Execute Workflow** — someone DMs Posty\n  \"digest\" -> manual, requester only, any day.\n\n### Buckets\n`120+` / `90-119` / `60-89` / `30-59`; `<30`\ncounted, not listed. DELETED & CANCELLED excluded.\n\n### Released this month\nThe list is month-to-date (release_date's\nYYYY-MM). The scoreboard's \"Released this week\"\ncount stays 7-day, so Net backlog is week vs week.\n\n### Long sections split\nSlack caps a text block at 5,000 chars. Sections\nsplit across messages rather than dropping rows.",
+          "height": 664,
+          "width": 484
+        },
+        "position": [
+          -656,
+          -256
+        ],
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1
+      },
+      {
+        "id": "w3-cron",
+        "name": "Daily — 09:00",
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "expression": "0 9 * * *",
+                "field": "cronExpression"
+              }
+            ]
+          }
+        },
+        "position": [
+          -128,
+          -80
+        ],
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2
+      },
+      {
+        "id": "w3-manual",
+        "name": "On Request",
+        "parameters": {},
+        "position": [
+          -128,
+          112
+        ],
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1
+      },
+      {
+        "id": "w3-normalize",
+        "name": "Normalize Request",
+        "parameters": {
+          "jsCode": "// One entry point for both triggers, so the scheduled digest and the on-demand one can\n// never drift apart.\n//\n// The Schedule Trigger fires daily at 09:00 Manila; the Execute Workflow Trigger emits\n// whatever the caller passed, which for a manual request is { user }. Presence of `user`\n// is what distinguishes them.\n//\n// One daily clock drives two INDEPENDENT cadences (Tara, 2026-09-25):\n//   • digest    — weekly, every Monday (plus any manual \"digest\" request, on any day)\n//   • reminders — monthly, the last weekday of the month (scheduled only)\n// Each branch is gated downstream on the flag it owns (run_digest / run_reminders), so the\n// leadership digest can go weekly without nagging every engineer every week.\nconst inp = $input.first().json || {};\nconst manual = Boolean(inp.user);\n\n// Manila-local \"today\". The trigger fires at 09:00 Manila, but Date is UTC-based, so the\n// offset has to be applied before reading the calendar date.\nconst nowManila = new Date(Date.now() + 8 * 3600 * 1000);\nconst Y = nowManila.getUTCFullYear();\nconst M = nowManila.getUTCMonth();\nconst D = nowManila.getUTCDate();\nconst DOW = nowManila.getUTCDay();          // 0 Sun … 6 Sat; Monday = 1\n\n// The last weekday of the month. Cron cannot express this, so the daily trigger fires every\n// day and this gates the reminders branch. Walking back from the last calendar day handles\n// months that end on a weekend: if the 31st is a Sunday, reminders go out on Friday the 29th.\nfunction lastWeekdayOfMonth(year, monthIndex) {\n  const d = new Date(Date.UTC(year, monthIndex + 1, 0));   // day 0 of next month = last day\n  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() - 1);\n  return d.getUTCDate();\n}\n\n// A manual request always builds a digest and never fires reminders. A scheduled run builds\n// the digest only on Mondays, and fires reminders only on the last weekday of the month.\nconst runDigest = manual || DOW === 1;\nconst runReminders = !manual && D === lastWeekdayOfMonth(Y, M);\n\n// The weekly digest goes to leadership. Recipients receive it automatically — Posty opens\n// the DM itself, so nobody needs to have interacted with it first. Anyone can also request\n// one at any time by DMing \"digest\", which routes here through the Execute Workflow trigger.\n// regie + tara since 2026-08-31; edith, vic, lyn added 2026-09-25 (Tara).\nconst SCHEDULED_RECIPIENTS = [\n  'U025597KZ',   // regie\n  'U026N6E1R',   // tara\n  'U026LGTKN',   // edith\n  'U025544MH',   // vic\n  'U026LNFMU',   // lyn\n];\n\nreturn [{ json: {\n  mode: manual ? 'manual' : 'scheduled',\n  run_digest: runDigest,\n  run_reminders: runReminders,\n  recipients: manual ? [inp.user] : SCHEDULED_RECIPIENTS,\n  // Manila-local date. The digest is \"as of\" the day it runs, in the studio's own timezone.\n  as_of: new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10),\n} }];"
+        },
+        "position": [
+          144,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w3-read",
+        "maxTries": 3,
+        "name": "Read Index",
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          584,
+          0
+        ],
+        "retryOnFail": true,
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "waitBetweenTries": 2000
+      },
+      {
+        "id": "w3-build",
+        "name": "Build Digest",
+        "parameters": {
+          "jsCode": "// Posty — digest builder. code/build-digest.js pasted verbatim below, plus the engineer\n// allowlist from code/parse.js so the digest can group by who announced each project.\n// Tested by ./scripts/test-embedded-w3. Edit in code/, run the tests, paste back.\n\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nfunction engineerName(user) {\n  const u = String(user || '').trim();\n  return POST_ENGINEERS[u] || 'unassigned';\n}\n\n// Posty — Workflow 3's digest builder.\n//\n// Handoff §7 Workflow 3. Reads the index only; makes zero Slack history calls. Pure, so\n// ./scripts/test-nodes can run it offline against real numbers.\n//\n// Used by BOTH the monthly scheduled run and the on-demand request, so the two can never\n// disagree about what \"open\" means.\n\n\nconst MAX_BLOCK = 3500;   // Slack caps a text block at 5,000 chars; leave headroom (§7)\n\nfunction escapeForSlack(t) {\n  return String(t == null ? '' : t)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\nfunction ageDays(postedDate, asOf) {\n  const a = Date.parse(String(postedDate) + 'T00:00:00Z');\n  const b = Date.parse(String(asOf) + 'T00:00:00Z');\n  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;\n  return Math.round((b - a) / 86400000);\n}\n\n// \"1 Sep 2026\" — the format §7's example uses.\nconst MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nfunction humanDate(iso) {\n  const m = String(iso).match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);\n  if (!m) return String(iso);\n  return String(Number(m[3])) + ' ' + MONTHS[Number(m[2]) - 1] + ' ' + m[1];\n}\n\n// One line per project: the original post text, then its age. §7's example format is the\n// source text itself — nearly every post already opens with its QU number, so prefixing\n// one produces \"QU-13639 / QU-13639 / Saatchi...\". Where a post does NOT lead with a code\n// (a pro bono job, or \"ay sori po eto pala QU-13864 / ...\"), the text still carries\n// whatever identification exists, which is the most honest thing to print.\n// Widest line that fits without horizontal scrolling in a Slack code block on a laptop.\n// Longer titles are truncated: the QU number leads every line so it is never the part\n// that gets cut, and the full text is always in the Sheet and in the original post.\nconst LINE_WIDTH = 80;\n\n// Lines inside a code block are NOT escaped.\n//\n// Slack renders code-block content literally, so an escaped \"&amp;\" would display as the\n// five characters &amp; rather than an ampersand. A bare & is safe either way — it is not\n// an entity, so it survives both literal rendering and entity decoding. Escaping is for\n// text Slack will interpret; this text it will not.\nfunction codeLine(row, age) {\n  const text = String(row.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim();\n  const room = LINE_WIDTH - 7;\n  const body = text.length > room ? text.slice(0, room - 1) + '…' : text;\n  return String(age).padStart(4) + 'd  ' + body;\n}\n\n// One line per released project — the post text only, no age column (they all shipped in\n// the same month). The QU leads the text, so truncation never eats the identifier.\nfunction releasedLine(row) {\n  const text = String(row.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim();\n  return text.length > LINE_WIDTH ? text.slice(0, LINE_WIDTH - 1) + '…' : text;\n}\n\n// Split a section into as many messages as it needs. §7: if a bucket overflows, split\n// rather than dropping rows — a digest that silently truncates is worse than two messages,\n// because the rows it drops are the ones nobody is looking at.\n// Split a section into as many messages as it needs. §7: if a bucket overflows, split\n// rather than dropping rows — a digest that silently truncates is worse than two messages,\n// because the rows it drops are the ones nobody is looking at.\n//\n// Code fences must never straddle a split, or one message ends with an unclosed ``` and\n// the next starts with a stray one. When a split lands inside a fence, close it before the\n// break and reopen it after.\nfunction chunk(header, lines) {\n  if (!lines.length) return [];\n  const out = [];\n  let buf = header;\n  let inFence = false;\n  for (const l of lines) {\n    if (buf.length + l.length + 1 > MAX_BLOCK) {\n      out.push(inFence ? buf + '\\n```' : buf);\n      buf = header + ' (cont.)' + (inFence ? '\\n```' : '');\n    }\n    buf += '\\n' + l;\n    if (l === '```') inFence = !inFence;\n  }\n  out.push(inFence ? buf + '\\n```' : buf);\n  return out;\n}\n\n// Group a bucket by the engineer who announced each project.\n//\n// Engineers are ordered by their OLDEST project, not by count — a person with two 500-day\n// jobs needs chasing before someone with eight at 50 days. Within each engineer, oldest\n// first, same as everywhere else.\n//\n// A single-engineer bucket gets no headings: when someone requests their own digest, or\n// only one person has anything overdue, the names are noise.\nfunction groupByEngineer(entries, nameOf) {\n  const groups = new Map();\n  for (const e of entries) {\n    const who = nameOf(e.row.posted_by);\n    if (!groups.has(who)) groups.set(who, []);\n    groups.get(who).push(e);\n  }\n  const ordered = [...groups.entries()]\n    .map(([who, list]) => ({ who, list, oldest: Math.max(...list.map((x) => x.age)) }))\n    .sort((a, b) => b.oldest - a.oldest);\n  return ordered;\n}\n\n// One bucket, grouped by engineer unless there is only one of them.\n//\n// Projects sit in a monospace block so the ages form a scannable column and the long\n// slash-separated titles stop wrapping into each other. The engineer heading stays OUTSIDE\n// the block — Slack ignores *bold* inside code fences.\nfunction renderBucket(entries, nameOf) {\n  const groups = groupByEngineer(entries, nameOf);\n  if (groups.length <= 1) {\n    return ['```', ...entries.map((o) => codeLine(o.row, o.age)), '```'];\n  }\n  const out = [];\n  for (const g of groups) {\n    out.push('');\n    out.push('*' + g.who + '* (' + g.list.length + ')');\n    out.push('```');\n    for (const o of g.list) out.push(codeLine(o.row, o.age));\n    out.push('```');\n  }\n  return out;\n}\n\nfunction buildDigest(input) {\n  const { rows = [], asOf, mode = 'scheduled', nameOf = (u) => String(u || 'unassigned') } = input;\n\n  // DELETED rows are excluded here as well as everywhere else — a deleted intake post\n  // means the project is not being chased.\n  const open = [];\n  const untracked = [];\n  for (const r of rows) {\n    const status = String(r.status || '').trim();\n    if (status === 'UNTRACKED') { untracked.push(r); continue; }\n    if (status !== 'OPEN') continue;\n    const age = ageDays(r.posted_date, asOf);\n    if (age === null) continue;              // no usable date, cannot be aged or bucketed\n    open.push({ row: r, age });\n  }\n\n  open.sort((a, b) => b.age - a.age);        // oldest first, §7 step 4\n\n  // Age bands. Tara, 2026-09-03: 120 / 90 / 60 replaces the handoff's 90 / 45. Boundaries\n  // are inclusive at the lower end, so a project at exactly 60 days lands in 60–89.\n  // Anything under 60 is counted in the header but never listed (§7 step 3).\n  const over120 = open.filter((o) => o.age >= 120);\n  const band90 = open.filter((o) => o.age >= 90 && o.age < 120);\n  const band60 = open.filter((o) => o.age >= 60 && o.age < 90);\n  const band30 = open.filter((o) => o.age >= 30 && o.age < 60);\n  const fresh = open.filter((o) => o.age < 30);\n\n  // Weekly movement. Everything here is stateless — derived from the same index, no stored\n  // snapshot — so the numbers can never drift from a saved copy. \"This week\" is the 7 days\n  // ending on the run date (age 0..6), the same window the released list uses. Added with the\n  // weekly switch so the digest shows what CHANGED, not just a static backlog. Tara, 2026-09-25.\n  const inWeek = (d) => { const a = ageDays(d, asOf); return a !== null && a >= 0 && a <= 6; };\n  const isReal = (r) => { const s = String(r.status || '').trim(); return s && s !== 'DELETED'; };\n\n  // Announced in the last 7 days (any live status — a project posted and released in the same\n  // week is still \"new this week\"). Newest first.\n  const newThisWeek = rows.filter((r) => isReal(r) && inWeek(r.posted_date));\n  newThisWeek.sort((a, b) => ageDays(a.posted_date, asOf) - ageDays(b.posted_date, asOf));\n\n  // Released in the last 7 days. Chronological.\n  const releasedThisWeek = rows.filter((r) =>\n    String(r.status || '').trim() === 'RELEASED' && inWeek(r.release_date));\n  releasedThisWeek.sort((a, b) =>\n    String(a.release_date).localeCompare(String(b.release_date)));\n\n  // Crossed a threshold this week: an open project whose age moved from below a boundary to\n  // at/above it within the last 7 days, i.e. age now in [T, T+6]. Computed without a snapshot\n  // — the age itself says when it crossed. Each project is attributed to the HIGHEST boundary\n  // it crossed, so it appears once. These are the \"newly urgent\" — worth a look before they\n  // sink into the bands. Oldest first.\n  const crossed = [];\n  for (const o of open) {\n    let t = 0;\n    if (o.age >= 120 && o.age <= 126) t = 120;\n    else if (o.age >= 90 && o.age <= 96) t = 90;\n    else if (o.age >= 60 && o.age <= 66) t = 60;\n    if (t) crossed.push({ row: o.row, age: o.age, threshold: t });\n  }\n  crossed.sort((a, b) => b.age - a.age);\n\n  const net = newThisWeek.length - releasedThisWeek.length;\n  const netStr = (net > 0 ? '+' : '') + net;   // +2 grew, -3 shrank, 0 flat\n\n  const messages = [];\n  const title = mode === 'manual'\n    ? 'Posty — open projects as of ' + humanDate(asOf) + '  (requested)'\n    : 'Posty — open projects as of ' + humanDate(asOf);\n\n  // Scoreboard: one glance at the week. Always present, quiet week or not.\n  const scoreboard = 'Open: ' + open.length\n    + '  ·  New this week: ' + newThisWeek.length\n    + '  ·  Released this week: ' + releasedThisWeek.length\n    + '  ·  Net backlog: ' + netStr;\n\n  let head = title + '\\n' + scoreboard;\n  const bandsEmpty = !over120.length && !band90.length && !band60.length && !band30.length;\n  if (bandsEmpty) {\n    head += '\\n\\nNothing over 30 days. ' + fresh.length + ' project' +\n            (fresh.length === 1 ? '' : 's') + ' open and under 30 days.';\n  }\n  messages.push(head);\n\n  if (!bandsEmpty) {\n    // Empty bands are skipped rather than printed as \"(0)\". With four of them, a run of\n    // zero-count headers is noise that pushes the real work further down the DM.\n    const bands = [['🔴 120+ days', over120], ['🟠 90–119 days', band90],\n                   ['🟡 60–89 days', band60], ['🟢 30–59 days', band30]];\n    for (const [label, bucket] of bands) {\n      if (bucket.length) {\n        messages.push(...chunk(label + ' (' + bucket.length + ')', renderBucket(bucket, nameOf)));\n      }\n    }\n  }\n\n  // Newly urgent — crossed 60/90/120 in the last 7 days. The age column leads, then the tag\n  // for which boundary it just passed.\n  if (crossed.length) {\n    messages.push(...chunk('⏫ Crossed a threshold this week (' + crossed.length + ')',\n      ['```', ...crossed.map((c) =>\n        String(c.age).padStart(4) + 'd  (' + c.threshold + '+)  ' +\n        String(c.row.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim().slice(0, 62)),\n       '```']));\n  }\n\n  // Announced this week — the fresh intake, so the reader sees inflow at a glance.\n  if (newThisWeek.length) {\n    messages.push(...chunk('🆕 New this week (' + newThisWeek.length + ')',\n      ['```', ...newThisWeek.map((r) => codeLine(r, ageDays(r.posted_date, asOf))), '```']));\n  }\n\n  // Released this month — flat chronological log of everything that shipped so far in the run\n  // date's calendar month, matched on release_date's YYYY-MM (Tara, 2026-09-25: the list is\n  // monthly even though the digest is weekly). The scoreboard's \"Released this week\" count\n  // stays a 7-day figure, so Net backlog still compares a week against a week.\n  const month = String(asOf || '').slice(0, 7);\n  const releasedThisMonth = rows.filter((r) =>\n    String(r.status || '').trim() === 'RELEASED' && String(r.release_date || '').startsWith(month));\n  releasedThisMonth.sort((a, b) =>\n    String(a.release_date).localeCompare(String(b.release_date)));\n  if (releasedThisMonth.length) {\n    messages.push(...chunk('✅ Released this month (' + releasedThisMonth.length + ')',\n      releasedThisMonth.map((r, i) => (i + 1) + '. ' + releasedLine(r))));\n  }\n\n  // §7 step 5. These carry no QU at all — not even a synthetic one — so no automation can\n  // resolve them. Listed so they are visible, not so they can be actioned.\n  //\n  // The index deliberately keeps every unmatched message (§9 note 5 calls that acceptable\n  // noise), which means UNTRACKED also collects plain channel chatter — \"salamuch\",\n  // \"Corgrats Eli!\", a bare @mention. Those are noise in the index and merely untidy; in a\n  // digest sent to two people they make the whole thing look unreliable.\n  //\n  // Every real project post in this channel uses \" / \" between fields. Requiring a slash\n  // separates \"QU-______ / SPOTIFY / Lea Lardizabal / H&M\" — a real job awaiting a code —\n  // from \"this is DENTSU pala\". The filter is presentation only: nothing is dropped from\n  // the index, and the omitted count is printed so the filter can never hide a surprise.\n  const realUntracked = untracked.filter((r) => String(r.source_text || '').includes('/'));\n  const noise = untracked.length - realUntracked.length;\n\n  if (realUntracked.length) {\n    let header = 'Not tracked (' + realUntracked.length + ') — no QU code, needs manual check';\n    if (noise) header += '\\n(' + noise + ' non-project message' + (noise === 1 ? '' : 's') + ' omitted)';\n    messages.push(...chunk(header,\n      realUntracked.map((r) => escapeForSlack(r.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim())));\n  }\n\n  // Row-count warning. The index grows ~500 released rows a year and full-sheet reads\n  // slow past a few thousand. Warn well ahead — in the monthly digest Tara already reads —\n  // so old released rows can be archived before it hurts. Tara, 2026-09-08.\n  const SIZE_WARN = 4000;\n  if (rows.length >= SIZE_WARN) {\n    messages.push('🗄️ Heads up: the index is at ' + rows.length + ' rows. Past ~5,000, old '\n      + 'released rows should be archived to keep Posty fast — worth planning, not urgent.');\n  }\n\n  return {\n    messages,\n    summary: {\n      rows_total: rows.length,\n      over120: over120.length,\n      band90: band90.length,\n      band60: band60.length,\n      band30: band30.length,\n      under30: fresh.length,\n      untracked: realUntracked.length,\n      untracked_noise: noise,\n      total_open: open.length,\n      new_this_week: newThisWeek.length,\n      released_this_week: releasedThisWeek.length,\n      released_this_month: releasedThisMonth.length,\n      crossed_this_week: crossed.length,\n      net_backlog: net,\n    },\n  };\n}\n\nconst cfg = $('Normalize Request').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nconst d = buildDigest({ rows, asOf: cfg.as_of, mode: cfg.mode, nameOf: engineerName });\n\n// Fan out to one item per recipient per message. The Slack node runs once per item and\n// preserves order, so each person receives the sections in sequence.\nconst out = [];\nfor (const user of cfg.recipients) {\n  for (const text of d.messages) out.push({ json: { user, text, summary: d.summary } });\n}\nreturn out;\n"
+        },
+        "position": [
+          624,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w3-send",
+        "name": "Send Digest",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "jsonBody": "={{ JSON.stringify({ channel: $json.user, text: $json.text, metadata: { event_type: 'posty_digest', event_payload: { as_of: $('Normalize Request').first().json.as_of } } }) }}",
+          "method": "POST",
+          "nodeCredentialType": "slackApi",
+          "options": {
+            "batching": {
+              "batch": {
+                "batchInterval": 300,
+                "batchSize": 1
+              }
+            }
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "url": "https://slack.com/api/chat.postMessage"
+        },
+        "position": [
+          864,
+          0
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "w3-fsched",
+        "name": "Is Month-End Run",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.run_reminders }}",
+                "operator": {
+                  "operation": "true",
+                  "singleValue": true,
+                  "type": "boolean"
+                },
+                "rightValue": true
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          384,
+          240
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "w3-readrem",
+        "maxTries": 3,
+        "name": "Read Index (Reminders)",
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          624,
+          240
+        ],
+        "retryOnFail": true,
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "waitBetweenTries": 2000
+      },
+      {
+        "id": "w3-buildrem",
+        "name": "Build Reminders",
+        "parameters": {
+          "jsCode": "// Month-end nudge, one DM per post engineer who has open work.\n//\n// Separate from the digest: the digest tells Tara and regie about EVERYONE's open projects,\n// this tells each engineer about their OWN. It is deliberately short — counts plus the\n// oldest one — because the point is to prompt a look, not to be the list. Asking for the\n// list is one reply away and that flow already exists.\n//\n// Anyone with nothing open gets no message. A monthly \"you have 0 open projects\" is the\n// kind of notification people learn to ignore, which costs the ones that matter.\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nconst cfg = $('Normalize Request').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nfunction ageDays(posted, today) {\n  const a = Date.parse(String(posted) + 'T00:00:00Z');\n  const b = Date.parse(String(today) + 'T00:00:00Z');\n  return (Number.isFinite(a) && Number.isFinite(b)) ? Math.round((b - a) / 86400000) : null;\n}\nfunction escapeForSlack(t) {\n  return String(t == null ? '' : t)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\nconst byUser = new Map();\nfor (const r of rows) {\n  if (String(r.status || '').trim() !== 'OPEN') continue;\n  const who = String(r.posted_by || '').trim();\n  if (!Object.prototype.hasOwnProperty.call(POST_ENGINEERS, who)) continue;  // unknown author\n  const age = ageDays(r.posted_date, cfg.as_of);\n  if (age === null) continue;\n  if (!byUser.has(who)) byUser.set(who, []);\n  byUser.get(who).push({ row: r, age });\n}\n\nconst out = [];\nfor (const [user, list] of byUser) {\n  list.sort((a, b) => b.age - a.age);   // oldest first\n  const engName = POST_ENGINEERS[user] || 'there';\n  // Intro, then one message per open project — the same line-by-line format as the\n  // \"remind\" command, so each can be reacted to and updated on the spot. Tara 2026-09-08.\n  out.push({ json: { user, qu_number: '', is_header: true,\n    text: 'Month-end check \\ud83d\\udc4b Hi ' + engName + ', here are your ' + list.length\n        + ' open project' + (list.length === 1 ? '' : 's') + '.\\n\\n'\n        + 'For each one that is finished:\\n'\n        + '1. React with 🚀 or ✅ on it \\u2014 I\\'ll mark it released.\\n'\n        + '2. Reply to that same message with the release details.' } });\n  for (const item of list) {\n    out.push({ json: { user, qu_number: item.row.qu_number, is_header: false,\n      text: escapeForSlack(String(item.row.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim())\n            + '  \\u2014  ' + item.age + 'd' } });\n  }\n}\nreturn out;"
+        },
+        "position": [
+          864,
+          240
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "nmFoMiSOz2wjLG1I",
+            "name": "Posty Slack (Bot)"
+          }
+        },
+        "id": "w3-sendrem",
+        "name": "Send Reminder",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $json.user }}"
+          },
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          },
+          "select": "channel",
+          "text": "={{ $json.text }}"
+        },
+        "position": [
+          1104,
+          240
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "webhookId": "1a1c0896-b5d7-40fa-be04-608d5c8b99dd"
+      },
+      {
+        "id": "rn-build",
+        "name": "Build Reminder Notify",
+        "parameters": {
+          "jsCode": "// Record each reminder message's ts as that project's notify_ts, so the engineer's\n// reaction on it resolves back to the project. Pair responses to Build Reminders by order.\nconst inputs = $('Build Reminders').all().map((i) => i.json);\nconst resps = $input.all().map((i) => i.json);\nfunction slackTs(r){ return String(r.message_timestamp || (r.message && r.message.ts) || '').trim(); }\nconst out = [];\nfor (let i = 0; i < resps.length; i++) {\n  const src = inputs[i];\n  if (!src || src.is_header || !src.qu_number) continue;\n  const ts = slackTs(resps[i]); if (!ts) continue;\n  out.push({ json: { qu_number: src.qu_number, notify_ts: ts, last_seen: new Date().toISOString() } });\n}\nreturn out;"
+        },
+        "position": [
+          1264,
+          600
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "rn-write",
+        "name": "Write Reminder Notify",
+        "parameters": {
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "matchingColumns": [
+              "qu_number"
+            ],
+            "schema": [],
+            "value": {}
+          },
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+          },
+          "operation": "appendOrUpdate",
+          "options": {
+            "cellFormat": "RAW"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "posty_qu_index"
+          }
+        },
+        "position": [
+          1488,
+          600
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5
+      },
+      {
+        "id": "should-digest-01",
+        "name": "Should Digest",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.run_digest }}",
+                "operator": {
+                  "operation": "true",
+                  "singleValue": true,
+                  "type": "boolean"
+                },
+                "rightValue": true
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            }
+          },
+          "options": {}
+        },
+        "position": [
+          344,
+          0
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2
+      },
+      {
+        "id": "check-sent-01",
+        "name": "Check Sent",
+        "parameters": {
+          "jsCode": "// Slack answers HTTP 200 even when a post fails ({ ok: false, error }), so the HTTP node\n// never errors on its own. The Slack node this replaced did — keep that: a failed digest\n// must reach the Error Alert, not vanish. Passes items through unchanged on success.\nconst all = $input.all();\nconst bad = all.filter((i) => !i.json || i.json.ok !== true);\nif (bad.length) {\n  const why = [...new Set(bad.map((i) => (i.json && i.json.error) || 'unknown'))].join(', ');\n  throw new Error('Digest send failed for ' + bad.length + ' of ' + all.length + ' message(s): ' + why);\n}\nreturn all;"
+        },
+        "position": [
+          1084,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      }
+    ],
+    "updatedAt": "2026-09-25T08:42:42.092Z",
+    "versionId": "aac17111-b610-40bc-826e-22b841b12fae",
+    "workflowId": "7cG9CRcCoT5UvTTi",
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-25T08:42:42.643Z",
+        "event": "activated",
+        "id": 1118,
+        "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "versionId": "aac17111-b610-40bc-826e-22b841b12fae",
+        "workflowId": "7cG9CRcCoT5UvTTi"
+      }
+    ]
+  },
+  "activeVersionId": "aac17111-b610-40bc-826e-22b841b12fae",
+  "connections": {
+    "Build Digest": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send Digest",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Build Reminder Notify": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write Reminder Notify",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Build Reminders": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send Reminder",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Daily — 09:00": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Normalize Request",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Is Month-End Run": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Index (Reminders)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Normalize Request": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Should Digest",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Is Month-End Run",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "On Request": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Normalize Request",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Index": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build Digest",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Index (Reminders)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build Reminders",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Send Digest": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Check Sent",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Send Reminder": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build Reminder Notify",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Should Digest": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Index",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-08-31T10:37:51.382Z",
+  "description": null,
+  "id": "7cG9CRcCoT5UvTTi",
+  "isArchived": false,
+  "meta": null,
+  "name": "Posty — Weekly Digest",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "w3-sticky",
+      "name": "Sticky — read me",
+      "parameters": {
+        "content": "## Workflow 3 — Weekly Digest\n\nReads the index only — zero Slack history calls.\n\n### Two ways in, one code path\n* **Schedule** — daily 09:00 Manila trigger,\n  gated by `Normalize Request` into two cadences:\n  * **Digest** — every **Monday**, to leadership\n    (regie, tara, edith, vic, lyn). Gate: `Should\n    Digest` on `run_digest`.\n  * **Engineer nudges** — the **last weekday of\n    the month**, one DM per engineer with open\n    work. Gate: `Is Month-End Run` on\n    `run_reminders`.\n* **Execute Workflow** — someone DMs Posty\n  \"digest\" -> manual, requester only, any day.\n\n### Buckets\n`120+` / `90-119` / `60-89` / `30-59`; `<30`\ncounted, not listed. DELETED & CANCELLED excluded.\n\n### Released this month\nThe list is month-to-date (release_date's\nYYYY-MM). The scoreboard's \"Released this week\"\ncount stays 7-day, so Net backlog is week vs week.\n\n### Long sections split\nSlack caps a text block at 5,000 chars. Sections\nsplit across messages rather than dropping rows.",
+        "height": 664,
+        "width": 484
+      },
+      "position": [
+        -656,
+        -256
+      ],
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1
+    },
+    {
+      "id": "w3-cron",
+      "name": "Daily — 09:00",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "expression": "0 9 * * *",
+              "field": "cronExpression"
+            }
+          ]
+        }
+      },
+      "position": [
+        -128,
+        -80
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "w3-manual",
+      "name": "On Request",
+      "parameters": {},
+      "position": [
+        -128,
+        112
+      ],
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1
+    },
+    {
+      "id": "w3-normalize",
+      "name": "Normalize Request",
+      "parameters": {
+        "jsCode": "// One entry point for both triggers, so the scheduled digest and the on-demand one can\n// never drift apart.\n//\n// The Schedule Trigger fires daily at 09:00 Manila; the Execute Workflow Trigger emits\n// whatever the caller passed, which for a manual request is { user }. Presence of `user`\n// is what distinguishes them.\n//\n// One daily clock drives two INDEPENDENT cadences (Tara, 2026-09-25):\n//   • digest    — weekly, every Monday (plus any manual \"digest\" request, on any day)\n//   • reminders — monthly, the last weekday of the month (scheduled only)\n// Each branch is gated downstream on the flag it owns (run_digest / run_reminders), so the\n// leadership digest can go weekly without nagging every engineer every week.\nconst inp = $input.first().json || {};\nconst manual = Boolean(inp.user);\n\n// Manila-local \"today\". The trigger fires at 09:00 Manila, but Date is UTC-based, so the\n// offset has to be applied before reading the calendar date.\nconst nowManila = new Date(Date.now() + 8 * 3600 * 1000);\nconst Y = nowManila.getUTCFullYear();\nconst M = nowManila.getUTCMonth();\nconst D = nowManila.getUTCDate();\nconst DOW = nowManila.getUTCDay();          // 0 Sun … 6 Sat; Monday = 1\n\n// The last weekday of the month. Cron cannot express this, so the daily trigger fires every\n// day and this gates the reminders branch. Walking back from the last calendar day handles\n// months that end on a weekend: if the 31st is a Sunday, reminders go out on Friday the 29th.\nfunction lastWeekdayOfMonth(year, monthIndex) {\n  const d = new Date(Date.UTC(year, monthIndex + 1, 0));   // day 0 of next month = last day\n  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() - 1);\n  return d.getUTCDate();\n}\n\n// A manual request always builds a digest and never fires reminders. A scheduled run builds\n// the digest only on Mondays, and fires reminders only on the last weekday of the month.\nconst runDigest = manual || DOW === 1;\nconst runReminders = !manual && D === lastWeekdayOfMonth(Y, M);\n\n// The weekly digest goes to leadership. Recipients receive it automatically — Posty opens\n// the DM itself, so nobody needs to have interacted with it first. Anyone can also request\n// one at any time by DMing \"digest\", which routes here through the Execute Workflow trigger.\n// regie + tara since 2026-08-31; edith, vic, lyn added 2026-09-25 (Tara).\nconst SCHEDULED_RECIPIENTS = [\n  'U025597KZ',   // regie\n  'U026N6E1R',   // tara\n  'U026LGTKN',   // edith\n  'U025544MH',   // vic\n  'U026LNFMU',   // lyn\n];\n\nreturn [{ json: {\n  mode: manual ? 'manual' : 'scheduled',\n  run_digest: runDigest,\n  run_reminders: runReminders,\n  recipients: manual ? [inp.user] : SCHEDULED_RECIPIENTS,\n  // Manila-local date. The digest is \"as of\" the day it runs, in the studio's own timezone.\n  as_of: new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10),\n} }];"
+      },
+      "position": [
+        144,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w3-read",
+      "maxTries": 3,
+      "name": "Read Index",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        584,
+        0
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "w3-build",
+      "name": "Build Digest",
+      "parameters": {
+        "jsCode": "// Posty — digest builder. code/build-digest.js pasted verbatim below, plus the engineer\n// allowlist from code/parse.js so the digest can group by who announced each project.\n// Tested by ./scripts/test-embedded-w3. Edit in code/, run the tests, paste back.\n\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nfunction engineerName(user) {\n  const u = String(user || '').trim();\n  return POST_ENGINEERS[u] || 'unassigned';\n}\n\n// Posty — Workflow 3's digest builder.\n//\n// Handoff §7 Workflow 3. Reads the index only; makes zero Slack history calls. Pure, so\n// ./scripts/test-nodes can run it offline against real numbers.\n//\n// Used by BOTH the monthly scheduled run and the on-demand request, so the two can never\n// disagree about what \"open\" means.\n\n\nconst MAX_BLOCK = 3500;   // Slack caps a text block at 5,000 chars; leave headroom (§7)\n\nfunction escapeForSlack(t) {\n  return String(t == null ? '' : t)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\nfunction ageDays(postedDate, asOf) {\n  const a = Date.parse(String(postedDate) + 'T00:00:00Z');\n  const b = Date.parse(String(asOf) + 'T00:00:00Z');\n  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;\n  return Math.round((b - a) / 86400000);\n}\n\n// \"1 Sep 2026\" — the format §7's example uses.\nconst MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nfunction humanDate(iso) {\n  const m = String(iso).match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);\n  if (!m) return String(iso);\n  return String(Number(m[3])) + ' ' + MONTHS[Number(m[2]) - 1] + ' ' + m[1];\n}\n\n// One line per project: the original post text, then its age. §7's example format is the\n// source text itself — nearly every post already opens with its QU number, so prefixing\n// one produces \"QU-13639 / QU-13639 / Saatchi...\". Where a post does NOT lead with a code\n// (a pro bono job, or \"ay sori po eto pala QU-13864 / ...\"), the text still carries\n// whatever identification exists, which is the most honest thing to print.\n// Widest line that fits without horizontal scrolling in a Slack code block on a laptop.\n// Longer titles are truncated: the QU number leads every line so it is never the part\n// that gets cut, and the full text is always in the Sheet and in the original post.\nconst LINE_WIDTH = 80;\n\n// Lines inside a code block are NOT escaped.\n//\n// Slack renders code-block content literally, so an escaped \"&amp;\" would display as the\n// five characters &amp; rather than an ampersand. A bare & is safe either way — it is not\n// an entity, so it survives both literal rendering and entity decoding. Escaping is for\n// text Slack will interpret; this text it will not.\nfunction codeLine(row, age) {\n  const text = String(row.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim();\n  const room = LINE_WIDTH - 7;\n  const body = text.length > room ? text.slice(0, room - 1) + '…' : text;\n  return String(age).padStart(4) + 'd  ' + body;\n}\n\n// One line per released project — the post text only, no age column (they all shipped in\n// the same month). The QU leads the text, so truncation never eats the identifier.\nfunction releasedLine(row) {\n  const text = String(row.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim();\n  return text.length > LINE_WIDTH ? text.slice(0, LINE_WIDTH - 1) + '…' : text;\n}\n\n// Split a section into as many messages as it needs. §7: if a bucket overflows, split\n// rather than dropping rows — a digest that silently truncates is worse than two messages,\n// because the rows it drops are the ones nobody is looking at.\n// Split a section into as many messages as it needs. §7: if a bucket overflows, split\n// rather than dropping rows — a digest that silently truncates is worse than two messages,\n// because the rows it drops are the ones nobody is looking at.\n//\n// Code fences must never straddle a split, or one message ends with an unclosed ``` and\n// the next starts with a stray one. When a split lands inside a fence, close it before the\n// break and reopen it after.\nfunction chunk(header, lines) {\n  if (!lines.length) return [];\n  const out = [];\n  let buf = header;\n  let inFence = false;\n  for (const l of lines) {\n    if (buf.length + l.length + 1 > MAX_BLOCK) {\n      out.push(inFence ? buf + '\\n```' : buf);\n      buf = header + ' (cont.)' + (inFence ? '\\n```' : '');\n    }\n    buf += '\\n' + l;\n    if (l === '```') inFence = !inFence;\n  }\n  out.push(inFence ? buf + '\\n```' : buf);\n  return out;\n}\n\n// Group a bucket by the engineer who announced each project.\n//\n// Engineers are ordered by their OLDEST project, not by count — a person with two 500-day\n// jobs needs chasing before someone with eight at 50 days. Within each engineer, oldest\n// first, same as everywhere else.\n//\n// A single-engineer bucket gets no headings: when someone requests their own digest, or\n// only one person has anything overdue, the names are noise.\nfunction groupByEngineer(entries, nameOf) {\n  const groups = new Map();\n  for (const e of entries) {\n    const who = nameOf(e.row.posted_by);\n    if (!groups.has(who)) groups.set(who, []);\n    groups.get(who).push(e);\n  }\n  const ordered = [...groups.entries()]\n    .map(([who, list]) => ({ who, list, oldest: Math.max(...list.map((x) => x.age)) }))\n    .sort((a, b) => b.oldest - a.oldest);\n  return ordered;\n}\n\n// One bucket, grouped by engineer unless there is only one of them.\n//\n// Projects sit in a monospace block so the ages form a scannable column and the long\n// slash-separated titles stop wrapping into each other. The engineer heading stays OUTSIDE\n// the block — Slack ignores *bold* inside code fences.\nfunction renderBucket(entries, nameOf) {\n  const groups = groupByEngineer(entries, nameOf);\n  if (groups.length <= 1) {\n    return ['```', ...entries.map((o) => codeLine(o.row, o.age)), '```'];\n  }\n  const out = [];\n  for (const g of groups) {\n    out.push('');\n    out.push('*' + g.who + '* (' + g.list.length + ')');\n    out.push('```');\n    for (const o of g.list) out.push(codeLine(o.row, o.age));\n    out.push('```');\n  }\n  return out;\n}\n\nfunction buildDigest(input) {\n  const { rows = [], asOf, mode = 'scheduled', nameOf = (u) => String(u || 'unassigned') } = input;\n\n  // DELETED rows are excluded here as well as everywhere else — a deleted intake post\n  // means the project is not being chased.\n  const open = [];\n  const untracked = [];\n  for (const r of rows) {\n    const status = String(r.status || '').trim();\n    if (status === 'UNTRACKED') { untracked.push(r); continue; }\n    if (status !== 'OPEN') continue;\n    const age = ageDays(r.posted_date, asOf);\n    if (age === null) continue;              // no usable date, cannot be aged or bucketed\n    open.push({ row: r, age });\n  }\n\n  open.sort((a, b) => b.age - a.age);        // oldest first, §7 step 4\n\n  // Age bands. Tara, 2026-09-03: 120 / 90 / 60 replaces the handoff's 90 / 45. Boundaries\n  // are inclusive at the lower end, so a project at exactly 60 days lands in 60–89.\n  // Anything under 60 is counted in the header but never listed (§7 step 3).\n  const over120 = open.filter((o) => o.age >= 120);\n  const band90 = open.filter((o) => o.age >= 90 && o.age < 120);\n  const band60 = open.filter((o) => o.age >= 60 && o.age < 90);\n  const band30 = open.filter((o) => o.age >= 30 && o.age < 60);\n  const fresh = open.filter((o) => o.age < 30);\n\n  // Weekly movement. Everything here is stateless — derived from the same index, no stored\n  // snapshot — so the numbers can never drift from a saved copy. \"This week\" is the 7 days\n  // ending on the run date (age 0..6), the same window the released list uses. Added with the\n  // weekly switch so the digest shows what CHANGED, not just a static backlog. Tara, 2026-09-25.\n  const inWeek = (d) => { const a = ageDays(d, asOf); return a !== null && a >= 0 && a <= 6; };\n  const isReal = (r) => { const s = String(r.status || '').trim(); return s && s !== 'DELETED'; };\n\n  // Announced in the last 7 days (any live status — a project posted and released in the same\n  // week is still \"new this week\"). Newest first.\n  const newThisWeek = rows.filter((r) => isReal(r) && inWeek(r.posted_date));\n  newThisWeek.sort((a, b) => ageDays(a.posted_date, asOf) - ageDays(b.posted_date, asOf));\n\n  // Released in the last 7 days. Chronological.\n  const releasedThisWeek = rows.filter((r) =>\n    String(r.status || '').trim() === 'RELEASED' && inWeek(r.release_date));\n  releasedThisWeek.sort((a, b) =>\n    String(a.release_date).localeCompare(String(b.release_date)));\n\n  // Crossed a threshold this week: an open project whose age moved from below a boundary to\n  // at/above it within the last 7 days, i.e. age now in [T, T+6]. Computed without a snapshot\n  // — the age itself says when it crossed. Each project is attributed to the HIGHEST boundary\n  // it crossed, so it appears once. These are the \"newly urgent\" — worth a look before they\n  // sink into the bands. Oldest first.\n  const crossed = [];\n  for (const o of open) {\n    let t = 0;\n    if (o.age >= 120 && o.age <= 126) t = 120;\n    else if (o.age >= 90 && o.age <= 96) t = 90;\n    else if (o.age >= 60 && o.age <= 66) t = 60;\n    if (t) crossed.push({ row: o.row, age: o.age, threshold: t });\n  }\n  crossed.sort((a, b) => b.age - a.age);\n\n  const net = newThisWeek.length - releasedThisWeek.length;\n  const netStr = (net > 0 ? '+' : '') + net;   // +2 grew, -3 shrank, 0 flat\n\n  const messages = [];\n  const title = mode === 'manual'\n    ? 'Posty — open projects as of ' + humanDate(asOf) + '  (requested)'\n    : 'Posty — open projects as of ' + humanDate(asOf);\n\n  // Scoreboard: one glance at the week. Always present, quiet week or not.\n  const scoreboard = 'Open: ' + open.length\n    + '  ·  New this week: ' + newThisWeek.length\n    + '  ·  Released this week: ' + releasedThisWeek.length\n    + '  ·  Net backlog: ' + netStr;\n\n  let head = title + '\\n' + scoreboard;\n  const bandsEmpty = !over120.length && !band90.length && !band60.length && !band30.length;\n  if (bandsEmpty) {\n    head += '\\n\\nNothing over 30 days. ' + fresh.length + ' project' +\n            (fresh.length === 1 ? '' : 's') + ' open and under 30 days.';\n  }\n  messages.push(head);\n\n  if (!bandsEmpty) {\n    // Empty bands are skipped rather than printed as \"(0)\". With four of them, a run of\n    // zero-count headers is noise that pushes the real work further down the DM.\n    const bands = [['🔴 120+ days', over120], ['🟠 90–119 days', band90],\n                   ['🟡 60–89 days', band60], ['🟢 30–59 days', band30]];\n    for (const [label, bucket] of bands) {\n      if (bucket.length) {\n        messages.push(...chunk(label + ' (' + bucket.length + ')', renderBucket(bucket, nameOf)));\n      }\n    }\n  }\n\n  // Newly urgent — crossed 60/90/120 in the last 7 days. The age column leads, then the tag\n  // for which boundary it just passed.\n  if (crossed.length) {\n    messages.push(...chunk('⏫ Crossed a threshold this week (' + crossed.length + ')',\n      ['```', ...crossed.map((c) =>\n        String(c.age).padStart(4) + 'd  (' + c.threshold + '+)  ' +\n        String(c.row.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim().slice(0, 62)),\n       '```']));\n  }\n\n  // Announced this week — the fresh intake, so the reader sees inflow at a glance.\n  if (newThisWeek.length) {\n    messages.push(...chunk('🆕 New this week (' + newThisWeek.length + ')',\n      ['```', ...newThisWeek.map((r) => codeLine(r, ageDays(r.posted_date, asOf))), '```']));\n  }\n\n  // Released this month — flat chronological log of everything that shipped so far in the run\n  // date's calendar month, matched on release_date's YYYY-MM (Tara, 2026-09-25: the list is\n  // monthly even though the digest is weekly). The scoreboard's \"Released this week\" count\n  // stays a 7-day figure, so Net backlog still compares a week against a week.\n  const month = String(asOf || '').slice(0, 7);\n  const releasedThisMonth = rows.filter((r) =>\n    String(r.status || '').trim() === 'RELEASED' && String(r.release_date || '').startsWith(month));\n  releasedThisMonth.sort((a, b) =>\n    String(a.release_date).localeCompare(String(b.release_date)));\n  if (releasedThisMonth.length) {\n    messages.push(...chunk('✅ Released this month (' + releasedThisMonth.length + ')',\n      releasedThisMonth.map((r, i) => (i + 1) + '. ' + releasedLine(r))));\n  }\n\n  // §7 step 5. These carry no QU at all — not even a synthetic one — so no automation can\n  // resolve them. Listed so they are visible, not so they can be actioned.\n  //\n  // The index deliberately keeps every unmatched message (§9 note 5 calls that acceptable\n  // noise), which means UNTRACKED also collects plain channel chatter — \"salamuch\",\n  // \"Corgrats Eli!\", a bare @mention. Those are noise in the index and merely untidy; in a\n  // digest sent to two people they make the whole thing look unreliable.\n  //\n  // Every real project post in this channel uses \" / \" between fields. Requiring a slash\n  // separates \"QU-______ / SPOTIFY / Lea Lardizabal / H&M\" — a real job awaiting a code —\n  // from \"this is DENTSU pala\". The filter is presentation only: nothing is dropped from\n  // the index, and the omitted count is printed so the filter can never hide a surprise.\n  const realUntracked = untracked.filter((r) => String(r.source_text || '').includes('/'));\n  const noise = untracked.length - realUntracked.length;\n\n  if (realUntracked.length) {\n    let header = 'Not tracked (' + realUntracked.length + ') — no QU code, needs manual check';\n    if (noise) header += '\\n(' + noise + ' non-project message' + (noise === 1 ? '' : 's') + ' omitted)';\n    messages.push(...chunk(header,\n      realUntracked.map((r) => escapeForSlack(r.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim())));\n  }\n\n  // Row-count warning. The index grows ~500 released rows a year and full-sheet reads\n  // slow past a few thousand. Warn well ahead — in the monthly digest Tara already reads —\n  // so old released rows can be archived before it hurts. Tara, 2026-09-08.\n  const SIZE_WARN = 4000;\n  if (rows.length >= SIZE_WARN) {\n    messages.push('🗄️ Heads up: the index is at ' + rows.length + ' rows. Past ~5,000, old '\n      + 'released rows should be archived to keep Posty fast — worth planning, not urgent.');\n  }\n\n  return {\n    messages,\n    summary: {\n      rows_total: rows.length,\n      over120: over120.length,\n      band90: band90.length,\n      band60: band60.length,\n      band30: band30.length,\n      under30: fresh.length,\n      untracked: realUntracked.length,\n      untracked_noise: noise,\n      total_open: open.length,\n      new_this_week: newThisWeek.length,\n      released_this_week: releasedThisWeek.length,\n      released_this_month: releasedThisMonth.length,\n      crossed_this_week: crossed.length,\n      net_backlog: net,\n    },\n  };\n}\n\nconst cfg = $('Normalize Request').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nconst d = buildDigest({ rows, asOf: cfg.as_of, mode: cfg.mode, nameOf: engineerName });\n\n// Fan out to one item per recipient per message. The Slack node runs once per item and\n// preserves order, so each person receives the sections in sequence.\nconst out = [];\nfor (const user of cfg.recipients) {\n  for (const text of d.messages) out.push({ json: { user, text, summary: d.summary } });\n}\nreturn out;\n"
+      },
+      "position": [
+        624,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w3-send",
+      "name": "Send Digest",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.user, text: $json.text, metadata: { event_type: 'posty_digest', event_payload: { as_of: $('Normalize Request').first().json.as_of } } }) }}",
+        "method": "POST",
+        "nodeCredentialType": "slackApi",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchInterval": 300,
+              "batchSize": 1
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://slack.com/api/chat.postMessage"
+      },
+      "position": [
+        864,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "w3-fsched",
+      "name": "Is Month-End Run",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.run_reminders }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        384,
+        240
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "w3-readrem",
+      "maxTries": 3,
+      "name": "Read Index (Reminders)",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        624,
+        240
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "w3-buildrem",
+      "name": "Build Reminders",
+      "parameters": {
+        "jsCode": "// Month-end nudge, one DM per post engineer who has open work.\n//\n// Separate from the digest: the digest tells Tara and regie about EVERYONE's open projects,\n// this tells each engineer about their OWN. It is deliberately short — counts plus the\n// oldest one — because the point is to prompt a look, not to be the list. Asking for the\n// list is one reply away and that flow already exists.\n//\n// Anyone with nothing open gets no message. A monthly \"you have 0 open projects\" is the\n// kind of notification people learn to ignore, which costs the ones that matter.\nconst POST_ENGINEERS = {\n  'U025597KZ':   'regie',\n  'U029T6N7U':   'philip',\n  'U026N6E1R':   'tara',\n  'U04DLRCAA':   'glenn',\n  'U6UAKUP08':   'whannie',\n  'U026LMLM4':   'rico',\n  'U026N9FV9':   'vener',\n  'U026N7KR7':   'topet',\n  'U026MTBLM':   'richard',\n  'U026R9SUQ':   'eddie boy',\n  'U08V83R45QV': 'elijah',\n  'U08V3CKDGJF': 'howard',\n};\n\nconst cfg = $('Normalize Request').first().json;\nconst rows = $input.all().map((i) => i.json);\n\nfunction ageDays(posted, today) {\n  const a = Date.parse(String(posted) + 'T00:00:00Z');\n  const b = Date.parse(String(today) + 'T00:00:00Z');\n  return (Number.isFinite(a) && Number.isFinite(b)) ? Math.round((b - a) / 86400000) : null;\n}\nfunction escapeForSlack(t) {\n  return String(t == null ? '' : t)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n}\n\nconst byUser = new Map();\nfor (const r of rows) {\n  if (String(r.status || '').trim() !== 'OPEN') continue;\n  const who = String(r.posted_by || '').trim();\n  if (!Object.prototype.hasOwnProperty.call(POST_ENGINEERS, who)) continue;  // unknown author\n  const age = ageDays(r.posted_date, cfg.as_of);\n  if (age === null) continue;\n  if (!byUser.has(who)) byUser.set(who, []);\n  byUser.get(who).push({ row: r, age });\n}\n\nconst out = [];\nfor (const [user, list] of byUser) {\n  list.sort((a, b) => b.age - a.age);   // oldest first\n  const engName = POST_ENGINEERS[user] || 'there';\n  // Intro, then one message per open project — the same line-by-line format as the\n  // \"remind\" command, so each can be reacted to and updated on the spot. Tara 2026-09-08.\n  out.push({ json: { user, qu_number: '', is_header: true,\n    text: 'Month-end check \\ud83d\\udc4b Hi ' + engName + ', here are your ' + list.length\n        + ' open project' + (list.length === 1 ? '' : 's') + '.\\n\\n'\n        + 'For each one that is finished:\\n'\n        + '1. React with 🚀 or ✅ on it \\u2014 I\\'ll mark it released.\\n'\n        + '2. Reply to that same message with the release details.' } });\n  for (const item of list) {\n    out.push({ json: { user, qu_number: item.row.qu_number, is_header: false,\n      text: escapeForSlack(String(item.row.source_text || '').replace(/\\s*\\n\\s*/g, ' ').trim())\n            + '  \\u2014  ' + item.age + 'd' } });\n  }\n}\nreturn out;"
+      },
+      "position": [
+        864,
+        240
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "nmFoMiSOz2wjLG1I",
+          "name": "Posty Slack (Bot)"
+        }
+      },
+      "id": "w3-sendrem",
+      "name": "Send Reminder",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.user }}"
+        },
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "select": "channel",
+        "text": "={{ $json.text }}"
+      },
+      "position": [
+        1104,
+        240
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "webhookId": "1a1c0896-b5d7-40fa-be04-608d5c8b99dd"
+    },
+    {
+      "id": "rn-build",
+      "name": "Build Reminder Notify",
+      "parameters": {
+        "jsCode": "// Record each reminder message's ts as that project's notify_ts, so the engineer's\n// reaction on it resolves back to the project. Pair responses to Build Reminders by order.\nconst inputs = $('Build Reminders').all().map((i) => i.json);\nconst resps = $input.all().map((i) => i.json);\nfunction slackTs(r){ return String(r.message_timestamp || (r.message && r.message.ts) || '').trim(); }\nconst out = [];\nfor (let i = 0; i < resps.length; i++) {\n  const src = inputs[i];\n  if (!src || src.is_header || !src.qu_number) continue;\n  const ts = slackTs(resps[i]); if (!ts) continue;\n  out.push({ json: { qu_number: src.qu_number, notify_ts: ts, last_seen: new Date().toISOString() } });\n}\nreturn out;"
+      },
+      "position": [
+        1264,
+        600
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "rn-write",
+      "name": "Write Reminder Notify",
+      "parameters": {
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "qu_number"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "operation": "appendOrUpdate",
+        "options": {
+          "cellFormat": "RAW"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        1488,
+        600
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "should-digest-01",
+      "name": "Should Digest",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.run_digest }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        344,
+        0
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "check-sent-01",
+      "name": "Check Sent",
+      "parameters": {
+        "jsCode": "// Slack answers HTTP 200 even when a post fails ({ ok: false, error }), so the HTTP node\n// never errors on its own. The Slack node this replaced did — keep that: a failed digest\n// must reach the Error Alert, not vanish. Passes items through unchanged on success.\nconst all = $input.all();\nconst bad = all.filter((i) => !i.json || i.json.ok !== true);\nif (bad.length) {\n  const why = [...new Set(bad.map((i) => (i.json && i.json.error) || 'unknown'))].join(', ');\n  throw new Error('Digest send failed for ' + bad.length + ' of ' + all.length + ' message(s): ' + why);\n}\nreturn all;"
+      },
+      "position": [
+        1084,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    }
+  ],
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "errorWorkflow": "jl8vbMIWx399ixgJ",
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "timezone": "Asia/Manila"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-04T07:30:51.505Z",
+      "project": {
+        "createdAt": "2026-09-04T06:28:22.466Z",
+        "creatorId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "zkz4JuokdGopHd2A",
+        "name": "Tara Lim <tara@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-04T07:14:04.840Z"
+      },
+      "projectId": "zkz4JuokdGopHd2A",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-04T07:30:51.505Z",
+      "workflowId": "7cG9CRcCoT5UvTTi"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": {
+    "node:Daily — 09:00": {
+      "recurrenceRules": []
+    },
+    "node:Month End — 09:00": {
+      "recurrenceRules": []
+    },
+    "node:Monthly — 1st 09:00": {
+      "recurrenceRules": []
+    }
+  },
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-09-25T08:42:42.087Z",
+  "versionCounter": 24,
+  "versionId": "aac17111-b610-40bc-826e-22b841b12fae"
+}

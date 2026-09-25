@@ -1,0 +1,1013 @@
+{
+  "active": true,
+  "activeVersion": {
+    "authors": "Tara Lim",
+    "autosaved": false,
+    "connections": {
+      "Decide": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Needs Write?",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Ensure Sync Tab": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Write Back Id",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Form": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Parse Request",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Needs Write?": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Write Tracker",
+              "type": "main"
+            }
+          ],
+          [
+            {
+              "index": 0,
+              "node": "Result",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Needs Writeback?": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Ensure Sync Tab",
+              "type": "main"
+            }
+          ],
+          [
+            {
+              "index": 0,
+              "node": "Result",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Parse Request": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Quotation",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Prepare Writeback": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Needs Writeback?",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Quotation": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Sync Tab",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Sync Tab": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Tracker",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Tracker": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Decide",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Write Back Id": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Result",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Write Tracker": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Prepare Writeback",
+              "type": "main"
+            }
+          ]
+        ]
+      }
+    },
+    "createdAt": "2026-09-22T09:28:28.328Z",
+    "description": null,
+    "name": null,
+    "nodeGroups": [],
+    "nodes": [
+      {
+        "id": "bs-form",
+        "name": "Form",
+        "parameters": {
+          "formDescription": "Paste the link to the quotation Google Sheet. Run it again after the QU number comes back from Xero — it updates the same record instead of making a new one.",
+          "formFields": {
+            "values": [
+              {
+                "fieldLabel": "Quotation sheet link",
+                "fieldType": "text",
+                "placeholder": "https://docs.google.com/spreadsheets/d/...",
+                "requiredField": true
+              },
+              {
+                "fieldLabel": "Mode",
+                "fieldOptions": {
+                  "values": [
+                    {
+                      "option": "Sync"
+                    },
+                    {
+                      "option": "Preview only"
+                    }
+                  ]
+                },
+                "fieldType": "dropdown",
+                "requiredField": true
+              }
+            ]
+          },
+          "formTitle": "Sync a quotation to the tracker",
+          "options": {},
+          "path": "backlog-sync",
+          "responseMode": "lastNode"
+        },
+        "position": [
+          0,
+          0
+        ],
+        "type": "n8n-nodes-base.formTrigger",
+        "typeVersion": 2.2,
+        "webhookId": "b1c7e0d2-5a41-4f7e-9d3a-7c2f6e8a1b40"
+      },
+      {
+        "id": "bs-parse",
+        "name": "Parse Request",
+        "parameters": {
+          "jsCode": "// Everything configurable lives here, in one visible place.\nconst CONFIG = {\n  \"airtableBaseId\": \"appAG0jca180QLRzg\",\n  \"airtableTable\": \"Projects\",\n  \"quotationTab\": \"MAIN\",\n  \"quotationRange\": \"A1:T200\",\n  \"syncTab\": \"_hitsync\"\n};\n\n/**\n * Google URLs all carry a `/d/<id>` segment, so matching that alone accepts a Doc, a\n * deck or an uploaded file just as happily as a spreadsheet. It then fails much later,\n * at the Sheets API, as \"Requested entity was not found\" — which tells the person who\n * pasted it nothing at all. Someone pasted a Google Doc link on 22 Sept and got exactly\n * that. These are matched first so the complaint can name what they actually pasted.\n */\nconst WRONG_LINK_KINDS = [\n  [/\\/document\\/d\\//, 'a Google Doc'],\n  [/\\/presentation\\/d\\//, 'a Google Slides deck'],\n  [/\\/forms\\/d\\//, 'a Google Form'],\n  [/\\/file\\/d\\//, 'a file stored in Drive (an upload, not a Google Sheet)'],\n];\n\n/**\n * Accepts what a person will actually paste: a full edit URL, a sharing URL, or the bare\n * id. Only `/spreadsheets/d/` counts as a link — anything else is rejected here rather\n * than turned into a request that cannot work.\n */\nfunction parseFileId(raw) {\n  const s = String(raw === null || raw === undefined ? '' : raw).trim();\n  if (!s) return null;\n  for (const pair of WRONG_LINK_KINDS) if (pair[0].test(s)) return null;\n  const fromUrl = /\\/spreadsheets\\/d\\/([a-zA-Z0-9_-]{20,})/.exec(s);\n  if (fromUrl) return fromUrl[1];\n  if (/^[a-zA-Z0-9_-]{20,}$/.test(s)) return s;\n  return null;\n}\n\n/** null when the link is usable, otherwise the sentence to show the person. */\nfunction describeLinkProblem(raw) {\n  const s = String(raw === null || raw === undefined ? '' : raw).trim();\n  if (!s) return 'No link was given. Paste the link to the quotation Google Sheet.';\n  for (const pair of WRONG_LINK_KINDS) {\n    if (pair[0].test(s)) {\n      return (\n        `That link points at ${pair[1]}, not a Google Sheet. Open the quotation ` +\n        `spreadsheet and copy the link from the address bar — a Sheet's link contains ` +\n        `/spreadsheets/d/.`\n      );\n    }\n  }\n  if (!parseFileId(s)) {\n    return (\n      `That does not look like a Google Sheet link or id: ${JSON.stringify(s)}. ` +\n      `Paste the full link from the address bar.`\n    );\n  }\n  return null;\n}\n\nconst form = $input.first().json;\nconst raw = form['Quotation sheet link'];\n\nconst problem = describeLinkProblem(raw);\nif (problem) throw new Error(problem);\n\nconst fileId = parseFileId(raw);\n\nconst preview = String(form['Mode'] || '').toLowerCase().indexOf('preview') !== -1;\n\nconst sheets = 'https://sheets.googleapis.com/v4/spreadsheets/' + fileId + '/values/';\nconst table = encodeURIComponent(CONFIG.airtableTable);\n\nreturn [{\n  json: {\n    fileId: fileId,\n    preview: preview,\n    config: CONFIG,\n    // FORMATTED_VALUE gives '48,782.22' — the same string a person reads in the cell.\n    // parseMoney is built for that; UNFORMATTED_VALUE would change the shape of every\n    // number the extractor sees.\n    quotationUrl: sheets + encodeURIComponent(CONFIG.quotationTab + '!' + CONFIG.quotationRange) +\n      '?valueRenderOption=FORMATTED_VALUE',\n    syncTabUrl: sheets + encodeURIComponent(CONFIG.syncTab + '!A2') +\n      '?valueRenderOption=UNFORMATTED_VALUE',\n    trackerUrl: 'https://api.airtable.com/v0/' + CONFIG.airtableBaseId + '/' + table,\n    // values.update cannot create a tab — it returns 'Unable to parse range'. The tab has\n    // to be added explicitly first, which is what this url is for.\n    ensureSyncTabUrl: 'https://sheets.googleapis.com/v4/spreadsheets/' + fileId + ':batchUpdate'\n  }\n}];"
+        },
+        "position": [
+          220,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "bs-read-quotation",
+        "name": "Read Quotation",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleSheetsOAuth2Api",
+          "options": {},
+          "url": "={{ $json.quotationUrl }}"
+        },
+        "position": [
+          440,
+          0
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "bs-read-synctab",
+        "name": "Read Sync Tab",
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleSheetsOAuth2Api",
+          "options": {},
+          "url": "={{ $('Parse Request').first().json.syncTabUrl }}"
+        },
+        "position": [
+          660,
+          0
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "ugqgQhQBlB8PF7I7",
+            "name": "Airtable (Kristine — live tracker)"
+          }
+        },
+        "id": "bs-read-tracker",
+        "name": "Read Tracker",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "airtableTokenApi",
+          "options": {
+            "pagination": {
+              "pagination": {
+                "completeExpression": "={{ !$response.body.offset }}",
+                "limitPagesFetched": true,
+                "maxRequests": 20,
+                "paginationCompleteWhen": "other",
+                "paginationMode": "updateAParameterInEachRequest",
+                "parameters": {
+                  "parameters": [
+                    {
+                      "name": "offset",
+                      "type": "qs",
+                      "value": "={{ $response.body.offset }}"
+                    }
+                  ]
+                },
+                "requestInterval": 250
+              }
+            }
+          },
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "pageSize",
+                "value": "100"
+              }
+            ]
+          },
+          "sendQuery": true,
+          "url": "={{ $('Parse Request').first().json.trackerUrl }}"
+        },
+        "position": [
+          880,
+          0
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "bs-decide",
+        "name": "Decide",
+        "parameters": {
+          "jsCode": "// ---------------------------------------------------------------------------\n// Generated by scripts/build-workflow.js from code/extract.js, code/sync.js and\n// code/run.js. Do not edit here — edit those files and rebuild, or the tests stop\n// describing what actually runs.\n// ---------------------------------------------------------------------------\n\n/**\n * Pull the Airtable-bound fields out of one quotation tab.\n *\n * Kristine's mapping is written in cell addresses (B35, B36, B38, E119). We honor those\n * as the expected positions, but we *find* each value by its label in column A instead of\n * reading the address blind. The quotation template gets rows inserted into it — the\n * `QU # (DATE)` tab and the `MAIN` tab in the same workbook already disagree by four rows\n * on where the totals block starts. A blind read of E119 would silently pick up whatever\n * moved into that cell; a label read either finds `RND PACKAGE COST` or reports that it\n * could not.\n *\n * Every anchor still carries its expected row. When the two disagree we take the label and\n * raise a drift warning, so the sheet drifting is visible rather than silent.\n */\n\n/**\n * Exact `Service` choices from the Projects table. Several carry a trailing space that is\n * part of the stored value — 'Recording ' is not 'Recording'. Airtable rejects a write that\n * does not match a choice character for character, so these are copied verbatim.\n * Refresh with: node scripts/refresh-choices.js\n */\nconst SERVICE_CHOICES = [\n  'AV Integration',\n  'Video',\n  'Other',\n  'Recording ',\n  'Mixing ',\n  'Editing ',\n  'Lobby Events / Rental',\n  'Sound Design',\n  'Sonic Branding ',\n  'In-Studio Listening / Preview Session ',\n  'Music Composition',\n  'Studio Rental',\n  'BUYOUT',\n  'Video post-production',\n  'Directing ',\n];\n\nconst DEFAULTS = {\n  serviceChoices: SERVICE_CHOICES,\n  // Applied only when creating a record, never on update. A record with no Status is\n  // invisible in the tracker's grouped views, and the sheet has no Status column to read.\n  statusOnCreate: 'Awaiting Quote Approval',\n  // 'product'         -> Project Title = PRODUCT, as specified.\n  // 'company-product' -> 'HARAYA DEL ROSARIO - AUDIOBOOK PRODUCTION', matching how the\n  //                      existing 18 records are titled (client first). Opt in.\n  projectTitleMode: 'product',\n};\n\nconst ANCHORS = {\n  company: { label: 'AGENCY/COMPANY', valueCol: 1, expectedRow: 35 },\n  contact: { label: 'PRODUCER/MAIN CONTACT', valueCol: 1, expectedRow: 36 },\n  product: { label: 'PRODUCT', valueCol: 1, expectedRow: 37 },\n  services: { label: 'PROJECT DETAILS', valueCol: 1, expectedRow: 38 },\n  // Rows below confirmed against the live sheet on 2026-09-20, by reading what the Sheets\n  // API actually returned. Note these are one lower than the handoff's cell references:\n  // the spec's E119 is the TOTAL row, not RND PACKAGE COST. See README, 'Approved cost'.\n  rndPackageCost: { label: 'RND PACKAGE COST', valueCol: 4, expectedRow: 120 },\n  total: { label: 'TOTAL', valueCol: 4, expectedRow: 119 },\n  totalNet: { label: 'TOTAL NET', valueCol: 4, expectedRow: 116 },\n};\n\nconst text = (v) => String(v === null || v === undefined ? '' : v).replace(/\\s+/g, ' ').trim();\n\n/** Uppercase, collapse whitespace, drop a trailing colon. For comparing labels only. */\nconst label = (v) => text(v).replace(/[:：]+$/, '').trim().toUpperCase();\n\nconst at = (grid, row, col) => text(grid[row] && grid[row][col]);\n\n/** A1-style address for a zero-indexed row/col, so warnings name a cell a human can open. */\nfunction address(row, col) {\n  let n = col + 1;\n  let name = '';\n  while (n > 0) {\n    const rem = (n - 1) % 26;\n    name = String.fromCharCode(65 + rem) + name;\n    n = Math.floor((n - 1) / 26);\n  }\n  return `${name}${row + 1}`;\n}\n\n/**\n * Locate a label in column A. Exact match after normalizing, which is what keeps\n * 'TOTAL' from matching 'TOTAL NET', 'TOTAL HOURS:' or ' ACTUALS TOTAL'.\n * Column A only — the MAIN tab carries a second quotation block in columns K-S with its\n * own 'TOTAL' and 'QU CODE:' rows, and that block is not part of this mapping.\n */\nfunction findLabelRow(grid, wanted) {\n  const want = label(wanted);\n  for (let r = 0; r < grid.length; r++) {\n    if (label(grid[r] && grid[r][0]) === want) return r;\n  }\n  return -1;\n}\n\n/** '48,782.22' -> 48782.22 | ' - ' -> null | '' -> null | '(1,200)' -> -1200 */\nfunction parseMoney(raw) {\n  const s = text(raw);\n  if (!s) return null;\n  if (/^[-–—\\s]*$/.test(s)) return null;\n  const negative = /^\\(.*\\)$/.test(s);\n  const digits = s.replace(/[()]/g, '').replace(/[^0-9.-]/g, '');\n  if (!digits || !/[0-9]/.test(digits)) return null;\n  const n = Number(digits);\n  if (!Number.isFinite(n)) return null;\n  return negative ? -Math.abs(n) : n;\n}\n\n/**\n * 'RECORDING, DIRECTING' -> ['Recording ', 'Directing ']\n *\n * Whole string first: three of the real choices contain a slash or hyphen\n * ('Lobby Events / Rental', 'Video post-production'), so splitting eagerly would shred\n * them. Only commas and semicolons split. Anything that does not match a choice exactly\n * is reported rather than guessed at — a wrong multi-select is harder to notice than a\n * missing one.\n */\nfunction mapServices(raw, choices) {\n  const source = text(raw);\n  const matched = [];\n  const unmatched = [];\n  if (!source) return { services: matched, unmatched };\n\n  const lookup = new Map(choices.map((c) => [label(c), c]));\n\n  const whole = lookup.get(label(source));\n  if (whole) return { services: [whole], unmatched };\n\n  for (const token of source.split(/[,;]+/)) {\n    const t = text(token);\n    if (!t) continue;\n    const hit = lookup.get(label(t));\n    if (hit) {\n      if (!matched.includes(hit)) matched.push(hit);\n    } else if (!unmatched.includes(t)) {\n      unmatched.push(t);\n    }\n  }\n  return { services: matched, unmatched };\n}\n\n/**\n * The QU code lives in a merged cell written as free text — 'QU CODE: QU-18135' — not as\n * a label/value pair like the rows above it. It may also be blank, because the number only\n * exists after the quote has been through Xero.\n */\nfunction extractQuNumber(grid) {\n  for (let r = 0; r < grid.length; r++) {\n    for (let c = 0; c <= 1; c++) {\n      const cell = at(grid, r, c);\n      const m = /^QU\\s*CODE\\s*[:：]?\\s*(.*)$/i.exec(cell);\n      if (!m) continue;\n      const inline = text(m[1]);\n      const value = inline || at(grid, r, c + 1);\n      if (value) return { quNumber: value, row: r, col: c };\n    }\n  }\n  return { quNumber: null, row: -1, col: -1 };\n}\n\n/**\n * Reduce a QU cell to comparable digits. The tracker holds 'QU-17902', 'QU- 18006',\n * 'QU-' and 'QU- 17969, 17972, 17973' — string equality is not a usable key across those.\n * Used only for the fallback match; the record id written back to the sheet is the real key.\n */\nfunction normalizeQu(raw) {\n  const nums = text(raw).match(/\\d{3,}/g);\n  return nums ? nums.join(',') : null;\n}\n\n/**\n * @param {Array<Array<string>>} grid  Row-major values of one quotation tab, A1 at [0][0].\n * @param {object} [options]\n * @returns {{fields: object, meta: object, warnings: string[]}}\n */\nfunction extractQuotation(grid, options) {\n  const config = Object.assign({}, DEFAULTS, options || {});\n  const warnings = [];\n  const found = {};\n\n  for (const [key, anchor] of Object.entries(ANCHORS)) {\n    const row = findLabelRow(grid, anchor.label);\n    if (row === -1) {\n      found[key] = { row: -1, value: '' };\n      continue;\n    }\n    if (row !== anchor.expectedRow - 1) {\n      warnings.push(\n        `Template drift: '${anchor.label}' expected on row ${anchor.expectedRow}, found on ` +\n          `row ${row + 1}. Read ${address(row, anchor.valueCol)} instead of ` +\n          `${address(anchor.expectedRow - 1, anchor.valueCol)}.`\n      );\n    }\n    found[key] = { row, value: at(grid, row, anchor.valueCol) };\n  }\n\n  for (const key of ['company', 'contact', 'product', 'services']) {\n    if (found[key].row === -1) {\n      warnings.push(`Missing label '${ANCHORS[key].label}' in column A — nothing to read for ${key}.`);\n    }\n  }\n\n  const company = found.company.value;\n  const contact = found.contact.value;\n  const product = found.product.value;\n\n  // House format, matching all 18 existing records: 'Steve Huang / LAKIWIN'.\n  const contactCompany = [contact, company].filter(Boolean).join(' / ');\n  if (!contact || !company) {\n    warnings.push(\n      `CONTACT Name / COMPANY built from a partial pair (contact='${contact}', company='${company}').`\n    );\n  }\n\n  const { services, unmatched } = mapServices(found.services.value, config.serviceChoices);\n  if (unmatched.length) {\n    warnings.push(\n      `PROJECT DETAILS has no matching Service choice for: ${unmatched\n        .map((u) => `'${u}'`)\n        .join(', ')}. Left off the record — add the choice in Airtable or fix the sheet.`\n    );\n  }\n\n  // Approved cost: the rounded package figure is what the client signs off on. Fall back to\n  // TOTAL when it has not been filled in, so the record is never silently zero.\n  const rnd = parseMoney(found.rndPackageCost.value);\n  const total = parseMoney(found.total.value);\n  let approvedCost = rnd;\n  let approvedCostSource = 'RND PACKAGE COST';\n  if (approvedCost === null) {\n    approvedCost = total;\n    approvedCostSource = 'TOTAL (fallback)';\n    warnings.push(\n      `RND PACKAGE COST (${address(found.rndPackageCost.row, ANCHORS.rndPackageCost.valueCol)}) ` +\n        `is empty — used TOTAL instead` + (total === null ? ', which is also empty.' : ` (${total}).`)\n    );\n  }\n  if (approvedCost === null) {\n    approvedCostSource = 'none';\n    warnings.push('No approved cost found — Approved Cost (Local) will be left empty.');\n  }\n\n  const qu = extractQuNumber(grid);\n\n  const projectTitle =\n    config.projectTitleMode === 'company-product'\n      ? [company, product].filter(Boolean).join(' - ')\n      : product;\n\n  const fields = {};\n  if (projectTitle) fields['Project Title'] = projectTitle;\n  if (contactCompany) fields['CONTACT Name / COMPANY'] = contactCompany;\n  if (services.length) fields['Service'] = services;\n  if (approvedCost !== null) fields['Approved Cost (Local)'] = approvedCost;\n  if (qu.quNumber) fields['QU Number'] = qu.quNumber;\n\n  return {\n    fields,\n    meta: {\n      quNumber: qu.quNumber,\n      quNumberNormalized: normalizeQu(qu.quNumber),\n      quCell: qu.row === -1 ? null : address(qu.row, qu.col),\n      approvedCostSource,\n      rndPackageCost: rnd,\n      total,\n      totalNet: parseMoney(found.totalNet.value),\n      unmatchedServices: unmatched,\n      statusOnCreate: config.statusOnCreate,\n      readFrom: Object.fromEntries(\n        Object.entries(found).map(([k, v]) => [\n          k,\n          v.row === -1 ? null : address(v.row, ANCHORS[k].valueCol),\n        ])\n      ),\n    },\n    warnings,\n  };\n}\n\n/**\n * Decide what a quotation should do to the tracker: create, update, or nothing.\n *\n * Pure. No network. The n8n workflow reads the sheet and the table, hands both to\n * decideAction, and performs whatever comes back. Keeping the decision separate from the\n * I/O is what makes it testable, and this is the part worth testing — a sync that creates\n * a second record every run is worse than no sync at all.\n *\n * Three rules hold the whole thing up:\n *\n *  1. The record id written back into the sheet is the key. Not the QU number. The tracker\n *     holds 'QU-', 'QU- 18006' and 'QU- 17969, 17972, 17973'; the QU also does not exist\n *     until the quote has been through Xero, which is after the first sync. It is a\n *     fallback, never the primary.\n *  2. Never write an empty value over a populated one. The sheet is one view of a project;\n *     people also type directly into Airtable. A blank cell means 'the sheet does not know',\n *     not 'set this to blank'.\n *  3. If nothing changed, write nothing. Keeps revision history readable and keeps the\n *     run cheap.\n */\n\n\n/** Fields the sync owns. Anything else on the record is somebody else's and is left alone. */\nconst SYNCED_FIELDS = [\n  'Project Title',\n  'CONTACT Name / COMPANY',\n  'Service',\n  'Approved Cost (Local)',\n  'QU Number',\n];\n\n/**\n * Written when the record is created, then never touched again.\n *\n * `Project Title` is not in Kristine's mapping — it is here so a new record is not\n * nameless in the tracker's primary column. But the sheet's PRODUCT cell is a rate\n * description, and people write something better by hand: the live tracker had\n * 'Haraya Del Rosario - The 90-Day Leadership Field Manual' where the sheet says\n * 'AUDIOBOOK PRODUCTION - PER DAY RATE'. Syncing that field on update would replace a\n * human's title with a worse one on every run, so it seeds and then stays out of the way.\n */\nconst CREATE_ONLY_FIELDS = ['Project Title'];\n\nconst sameValue = (a, b) => {\n  if (Array.isArray(a) || Array.isArray(b)) {\n    const x = Array.isArray(a) ? a.slice().sort() : [];\n    const y = Array.isArray(b) ? b.slice().sort() : [];\n    return x.length === y.length && x.every((v, i) => v === y[i]);\n  }\n  if (typeof a === 'number' || typeof b === 'number') {\n    const x = Number(a);\n    const y = Number(b);\n    if (Number.isFinite(x) && Number.isFinite(y)) return Math.abs(x - y) < 0.005;\n  }\n  return String(a === undefined || a === null ? '' : a) === String(b === undefined || b === null ? '' : b);\n};\n\nconst isEmpty = (v) =>\n  v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);\n\n/**\n * @param {object} extracted        extractQuotation() output\n * @param {object} [options]\n * @param {string|null} [options.storedRecordId]  record id read back from the sheet\n * @param {Array}  [options.existingRecords]      [{ id, fields }] from the Projects table\n * @param {string|null} [options.sourceFileId]    Drive file id, for the audit column\n * @param {string} [options.statusOnCreate]\n */\nfunction decideAction(extracted, options) {\n  const opts = options || {};\n  const existing = opts.existingRecords || [];\n  const notes = [];\n  const incoming = extracted.fields || {};\n\n  let target = null;\n  let matchedBy = null;\n\n  if (opts.storedRecordId) {\n    target = existing.find((r) => r.id === opts.storedRecordId) || null;\n    if (target) {\n      matchedBy = 'record id from sheet';\n    } else {\n      notes.push(\n        `The sheet points at record ${opts.storedRecordId}, which is not in the table ` +\n          `(deleted, or the sheet was copied from another project). Falling back to the QU number.`\n      );\n    }\n  }\n\n  if (!target) {\n    const wantedQu = extracted.meta && extracted.meta.quNumberNormalized;\n    if (wantedQu) {\n      const hits = existing.filter((r) => normalizeQu(r.fields && r.fields['QU Number']) === wantedQu);\n      if (hits.length === 1) {\n        target = hits[0];\n        matchedBy = 'QU number';\n      } else if (hits.length > 1) {\n        // Two records carrying the same QU is a data problem in the tracker. Picking one\n        // at random would quietly corrupt whichever we lost.\n        return {\n          action: 'skip',\n          recordId: null,\n          fields: {},\n          matchedBy: null,\n          reason:\n            `QU ${extracted.meta.quNumber} matches ${hits.length} records ` +\n            `(${hits.map((h) => h.id).join(', ')}). Refusing to guess which one to update.`,\n          notes,\n          warnings: extracted.warnings || [],\n        };\n      }\n    }\n  }\n\n  if (!target) {\n    const fields = {};\n    for (const key of SYNCED_FIELDS) {\n      if (!isEmpty(incoming[key])) fields[key] = incoming[key];\n    }\n    if (opts.statusOnCreate) fields['Status'] = opts.statusOnCreate;\n    if (opts.sourceFileId && opts.includeSourceFileField) {\n      fields['_sync_source_file'] = opts.sourceFileId;\n    }\n    return {\n      action: 'create',\n      recordId: null,\n      fields,\n      matchedBy: null,\n      reason: 'No record id in the sheet and no QU match — this quotation is new to the tracker.',\n      notes,\n      warnings: extracted.warnings || [],\n    };\n  }\n\n  const current = target.fields || {};\n  const fields = {};\n  const changes = [];\n  const held = [];\n\n  for (const key of SYNCED_FIELDS) {\n    const next = incoming[key];\n\n    if (CREATE_ONLY_FIELDS.includes(key)) {\n      // Surfaced rather than silent: someone comparing the sheet to the tracker should be\n      // able to see that the two disagree and that the sync chose not to intervene.\n      if (!isEmpty(next) && !isEmpty(current[key]) && !sameValue(next, current[key])) {\n        notes.push(\n          `${key} differs — sheet says ${JSON.stringify(next)}, tracker says ` +\n            `${JSON.stringify(current[key])}. Left as it is; ${key} is only written when a ` +\n            `record is first created.`\n        );\n      }\n      continue;\n    }\n\n    if (isEmpty(next)) {\n      // Rule 2. Only worth mentioning when there is something there to protect.\n      if (!isEmpty(current[key])) held.push(key);\n      continue;\n    }\n    if (!sameValue(next, current[key])) {\n      fields[key] = next;\n      changes.push(\n        `${key}: ${JSON.stringify(current[key] === undefined ? null : current[key])} -> ${JSON.stringify(next)}`\n      );\n    }\n  }\n\n  if (held.length) {\n    notes.push(`Sheet had nothing for ${held.join(', ')} — left the tracker's values alone.`);\n  }\n\n  if (!changes.length) {\n    return {\n      action: 'skip',\n      recordId: target.id,\n      fields: {},\n      matchedBy,\n      reason: `Matched ${target.id} by ${matchedBy}; every synced field already agrees.`,\n      notes,\n      warnings: extracted.warnings || [],\n    };\n  }\n\n  return {\n    action: 'update',\n    recordId: target.id,\n    fields,\n    matchedBy,\n    reason: `Matched ${target.id} by ${matchedBy}. Changing: ${changes.join('; ')}.`,\n    notes,\n    warnings: extracted.warnings || [],\n  };\n}\n\n/**\n * The glue between n8n's HTTP nodes and the two pure modules.\n *\n * Everything here is still pure — it takes the raw shapes the Google Sheets and Airtable\n * APIs return and produces a decision plus a human-readable summary. The Code node in the\n * workflow is this file, extract.js and sync.js concatenated by scripts/build-workflow.js,\n * with a four-line n8n adapter on the end. Same reason Posty does it: the code that is\n * tested is the code that ships.\n */\n\n\n\n// --- link parsing (sliced out verbatim into the Parse Request node) ---------\n\n/**\n * Google URLs all carry a `/d/<id>` segment, so matching that alone accepts a Doc, a\n * deck or an uploaded file just as happily as a spreadsheet. It then fails much later,\n * at the Sheets API, as \"Requested entity was not found\" — which tells the person who\n * pasted it nothing at all. Someone pasted a Google Doc link on 22 Sept and got exactly\n * that. These are matched first so the complaint can name what they actually pasted.\n */\nconst WRONG_LINK_KINDS = [\n  [/\\/document\\/d\\//, 'a Google Doc'],\n  [/\\/presentation\\/d\\//, 'a Google Slides deck'],\n  [/\\/forms\\/d\\//, 'a Google Form'],\n  [/\\/file\\/d\\//, 'a file stored in Drive (an upload, not a Google Sheet)'],\n];\n\n/**\n * Accepts what a person will actually paste: a full edit URL, a sharing URL, or the bare\n * id. Only `/spreadsheets/d/` counts as a link — anything else is rejected here rather\n * than turned into a request that cannot work.\n */\nfunction parseFileId(raw) {\n  const s = String(raw === null || raw === undefined ? '' : raw).trim();\n  if (!s) return null;\n  for (const pair of WRONG_LINK_KINDS) if (pair[0].test(s)) return null;\n  const fromUrl = /\\/spreadsheets\\/d\\/([a-zA-Z0-9_-]{20,})/.exec(s);\n  if (fromUrl) return fromUrl[1];\n  if (/^[a-zA-Z0-9_-]{20,}$/.test(s)) return s;\n  return null;\n}\n\n/** null when the link is usable, otherwise the sentence to show the person. */\nfunction describeLinkProblem(raw) {\n  const s = String(raw === null || raw === undefined ? '' : raw).trim();\n  if (!s) return 'No link was given. Paste the link to the quotation Google Sheet.';\n  for (const pair of WRONG_LINK_KINDS) {\n    if (pair[0].test(s)) {\n      return (\n        `That link points at ${pair[1]}, not a Google Sheet. Open the quotation ` +\n        `spreadsheet and copy the link from the address bar — a Sheet's link contains ` +\n        `/spreadsheets/d/.`\n      );\n    }\n  }\n  if (!parseFileId(s)) {\n    return (\n      `That does not look like a Google Sheet link or id: ${JSON.stringify(s)}. ` +\n      `Paste the full link from the address bar.`\n    );\n  }\n  return null;\n}\n\n// --- end link parsing -------------------------------------------------------\n\n/**\n * The `_hitsync` tab holds the Airtable record id in A2. The tab may not exist yet — for\n * every quotation file made before this sync did — in which case the read node fails soft\n * and we get nothing. That is a normal first run, not an error.\n */\nfunction readStoredRecordId(values) {\n  const cell = values && values[0] && values[0][0];\n  const s = String(cell === null || cell === undefined ? '' : cell).trim();\n  return /^rec[A-Za-z0-9]{14}$/.test(s) ? s : null;\n}\n\n/** Airtable REST hands back { records: [{ id, fields }] }, possibly across pages. */\nfunction collectAirtableRecords(pages) {\n  const out = [];\n  for (const page of [].concat(pages || [])) {\n    const records = (page && page.records) || [];\n    for (const r of records) out.push({ id: r.id, fields: r.fields || {} });\n  }\n  return out;\n}\n\n/** One readable block for the form's result screen. Kristine reads this, not the JSON. */\nfunction summarize(state) {\n  const { decision, extracted, preview } = state;\n  const lines = [];\n  const verb = { create: 'Created', update: 'Updated', skip: 'No change' }[decision.action];\n\n  lines.push(preview ? `PREVIEW — nothing was written.` : `${verb}.`);\n  lines.push('');\n  lines.push(decision.reason);\n\n  if (decision.action !== 'skip') {\n    lines.push('');\n    lines.push(decision.action === 'create' ? 'Fields written:' : 'Fields changed:');\n    for (const [k, v] of Object.entries(decision.fields)) {\n      lines.push(`  ${k}: ${Array.isArray(v) ? v.join(', ') : v}`);\n    }\n  }\n\n  const notes = [].concat(decision.notes || [], decision.warnings || []);\n  if (notes.length) {\n    lines.push('');\n    lines.push('Worth checking:');\n    for (const n of notes) lines.push(`  - ${n}`);\n  }\n\n  lines.push('');\n  lines.push(`Approved cost taken from: ${extracted.meta.approvedCostSource}`);\n\n  return lines.join('\\n');\n}\n\n/**\n * @param {object} ctx\n * @param {Array<Array<string>>} ctx.sheetValues     values from <tab>!A1:T200\n * @param {Array<Array<string>>} [ctx.syncTabValues] values from _hitsync!A2, if the tab exists\n * @param {Array|object} [ctx.airtablePages]         one or more Airtable list responses\n * @param {string} ctx.fileId\n * @param {boolean} [ctx.preview]\n * @param {object} [ctx.options]\n */\nfunction runDecision(ctx) {\n  const extracted = extractQuotation(ctx.sheetValues || [], ctx.options);\n  const storedRecordId = readStoredRecordId(ctx.syncTabValues);\n  const existingRecords = collectAirtableRecords(ctx.airtablePages);\n\n  const decision = decideAction(extracted, {\n    storedRecordId,\n    existingRecords,\n    sourceFileId: ctx.fileId,\n    statusOnCreate: (ctx.options && ctx.options.statusOnCreate) || DEFAULTS.statusOnCreate,\n    includeSourceFileField: Boolean(ctx.options && ctx.options.includeSourceFileField),\n  });\n\n  const preview = Boolean(ctx.preview);\n  const state = { extracted, decision, storedRecordId, preview, fileId: ctx.fileId };\n\n  return {\n    action: preview ? 'preview' : decision.action,\n    plannedAction: decision.action,\n    recordId: decision.recordId,\n    fields: decision.fields,\n    // The write-back only needs to happen when a record is created and the sheet does not\n    // already point at one. An update already knows which record it is talking to.\n    needsRecordIdWriteback: !preview && decision.action === 'create',\n    storedRecordId,\n    matchedBy: decision.matchedBy,\n    reason: decision.reason,\n    notes: decision.notes,\n    warnings: decision.warnings,\n    meta: extracted.meta,\n    summary: summarize(state),\n  };\n}\n\n/**\n * The Airtable call this run needs, or null when there is nothing to write.\n *\n * Built here rather than in the workflow so that the create/update choice is covered by\n * tests instead of by an IF node nobody can unit-test. The HTTP node just executes\n * whatever method, url and body it is handed.\n */\nfunction buildWriteRequest(result, cfg) {\n  if (!result || result.action === 'preview' || result.plannedAction === 'skip') return null;\n  const table = encodeURIComponent(cfg.table);\n  const base = `https://api.airtable.com/v0/${cfg.baseId}/${table}`;\n\n  if (result.plannedAction === 'create') {\n    return { method: 'POST', url: base, body: { fields: result.fields, typecast: false } };\n  }\n  if (!result.recordId) return null;\n  return {\n    method: 'PATCH',\n    url: `${base}/${result.recordId}`,\n    body: { fields: result.fields, typecast: false },\n  };\n}\n\n/**\n * Stamp the new record id into the quotation's `_hitsync` tab.\n *\n * Writes the header alongside the value so the tab explains itself to whoever opens it,\n * and so a file whose tab exists but is empty ends up correct either way. RAW, not\n * USER_ENTERED — a record id must never be interpreted by Sheets.\n */\nfunction buildWritebackRequest(fileId, recordId, cfg) {\n  if (!fileId || !recordId) return null;\n  const range = encodeURIComponent(`${cfg.syncTab}!A1:A2`);\n  return {\n    method: 'PUT',\n    url:\n      `https://sheets.googleapis.com/v4/spreadsheets/${fileId}/values/${range}` +\n      `?valueInputOption=RAW`,\n    body: { values: [['airtable_record_id'], [recordId]] },\n  };\n}\n\n// --- n8n adapter -----------------------------------------------------------\nconst input = $('Parse Request').first().json;\nconst sheetResponse = $('Read Quotation').first().json;\n\n// The _hitsync tab does not exist in quotation files made before this sync did. That node\n// is set to fail soft, so a missing tab arrives as an error payload, not as values.\nlet syncTabValues = null;\ntry {\n  const syncResponse = $('Read Sync Tab').first().json;\n  if (syncResponse && syncResponse.values) syncTabValues = syncResponse.values;\n} catch (e) {\n  syncTabValues = null;\n}\n\nconst trackerPages = $('Read Tracker').all().map(function (item) { return item.json; });\n\nconst result = runDecision({\n  sheetValues: (sheetResponse && sheetResponse.values) || [],\n  syncTabValues: syncTabValues,\n  airtablePages: trackerPages,\n  fileId: input.fileId,\n  preview: input.preview\n});\n\nconst write = buildWriteRequest(result, {\n  baseId: input.config.airtableBaseId,\n  table: input.config.airtableTable\n});\n\nreturn [{\n  json: Object.assign({}, result, { needsWrite: Boolean(write), write: write || {} })\n}];"
+        },
+        "position": [
+          1100,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "bs-if-write",
+        "name": "Needs Write?",
+        "parameters": {
+          "conditions": {
+            "boolean": [
+              {
+                "value1": "={{ $json.needsWrite }}",
+                "value2": true
+              }
+            ]
+          }
+        },
+        "position": [
+          1320,
+          0
+        ],
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1
+      },
+      {
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "ugqgQhQBlB8PF7I7",
+            "name": "Airtable (Kristine — live tracker)"
+          }
+        },
+        "id": "bs-write-tracker",
+        "name": "Write Tracker",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "contentType": "json",
+          "jsonBody": "={{ JSON.stringify($json.write.body) }}",
+          "method": "={{ $json.write.method }}",
+          "nodeCredentialType": "airtableTokenApi",
+          "options": {},
+          "sendBody": true,
+          "specifyBody": "json",
+          "url": "={{ $json.write.url }}"
+        },
+        "position": [
+          1540,
+          -120
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "bs-prepare-writeback",
+        "name": "Prepare Writeback",
+        "parameters": {
+          "jsCode": "// ---------------------------------------------------------------------------\n// Generated by scripts/build-workflow.js from code/extract.js, code/sync.js and\n// code/run.js. Do not edit here — edit those files and rebuild, or the tests stop\n// describing what actually runs.\n// ---------------------------------------------------------------------------\n\n/**\n * Pull the Airtable-bound fields out of one quotation tab.\n *\n * Kristine's mapping is written in cell addresses (B35, B36, B38, E119). We honor those\n * as the expected positions, but we *find* each value by its label in column A instead of\n * reading the address blind. The quotation template gets rows inserted into it — the\n * `QU # (DATE)` tab and the `MAIN` tab in the same workbook already disagree by four rows\n * on where the totals block starts. A blind read of E119 would silently pick up whatever\n * moved into that cell; a label read either finds `RND PACKAGE COST` or reports that it\n * could not.\n *\n * Every anchor still carries its expected row. When the two disagree we take the label and\n * raise a drift warning, so the sheet drifting is visible rather than silent.\n */\n\n/**\n * Exact `Service` choices from the Projects table. Several carry a trailing space that is\n * part of the stored value — 'Recording ' is not 'Recording'. Airtable rejects a write that\n * does not match a choice character for character, so these are copied verbatim.\n * Refresh with: node scripts/refresh-choices.js\n */\nconst SERVICE_CHOICES = [\n  'AV Integration',\n  'Video',\n  'Other',\n  'Recording ',\n  'Mixing ',\n  'Editing ',\n  'Lobby Events / Rental',\n  'Sound Design',\n  'Sonic Branding ',\n  'In-Studio Listening / Preview Session ',\n  'Music Composition',\n  'Studio Rental',\n  'BUYOUT',\n  'Video post-production',\n  'Directing ',\n];\n\nconst DEFAULTS = {\n  serviceChoices: SERVICE_CHOICES,\n  // Applied only when creating a record, never on update. A record with no Status is\n  // invisible in the tracker's grouped views, and the sheet has no Status column to read.\n  statusOnCreate: 'Awaiting Quote Approval',\n  // 'product'         -> Project Title = PRODUCT, as specified.\n  // 'company-product' -> 'HARAYA DEL ROSARIO - AUDIOBOOK PRODUCTION', matching how the\n  //                      existing 18 records are titled (client first). Opt in.\n  projectTitleMode: 'product',\n};\n\nconst ANCHORS = {\n  company: { label: 'AGENCY/COMPANY', valueCol: 1, expectedRow: 35 },\n  contact: { label: 'PRODUCER/MAIN CONTACT', valueCol: 1, expectedRow: 36 },\n  product: { label: 'PRODUCT', valueCol: 1, expectedRow: 37 },\n  services: { label: 'PROJECT DETAILS', valueCol: 1, expectedRow: 38 },\n  // Rows below confirmed against the live sheet on 2026-09-20, by reading what the Sheets\n  // API actually returned. Note these are one lower than the handoff's cell references:\n  // the spec's E119 is the TOTAL row, not RND PACKAGE COST. See README, 'Approved cost'.\n  rndPackageCost: { label: 'RND PACKAGE COST', valueCol: 4, expectedRow: 120 },\n  total: { label: 'TOTAL', valueCol: 4, expectedRow: 119 },\n  totalNet: { label: 'TOTAL NET', valueCol: 4, expectedRow: 116 },\n};\n\nconst text = (v) => String(v === null || v === undefined ? '' : v).replace(/\\s+/g, ' ').trim();\n\n/** Uppercase, collapse whitespace, drop a trailing colon. For comparing labels only. */\nconst label = (v) => text(v).replace(/[:：]+$/, '').trim().toUpperCase();\n\nconst at = (grid, row, col) => text(grid[row] && grid[row][col]);\n\n/** A1-style address for a zero-indexed row/col, so warnings name a cell a human can open. */\nfunction address(row, col) {\n  let n = col + 1;\n  let name = '';\n  while (n > 0) {\n    const rem = (n - 1) % 26;\n    name = String.fromCharCode(65 + rem) + name;\n    n = Math.floor((n - 1) / 26);\n  }\n  return `${name}${row + 1}`;\n}\n\n/**\n * Locate a label in column A. Exact match after normalizing, which is what keeps\n * 'TOTAL' from matching 'TOTAL NET', 'TOTAL HOURS:' or ' ACTUALS TOTAL'.\n * Column A only — the MAIN tab carries a second quotation block in columns K-S with its\n * own 'TOTAL' and 'QU CODE:' rows, and that block is not part of this mapping.\n */\nfunction findLabelRow(grid, wanted) {\n  const want = label(wanted);\n  for (let r = 0; r < grid.length; r++) {\n    if (label(grid[r] && grid[r][0]) === want) return r;\n  }\n  return -1;\n}\n\n/** '48,782.22' -> 48782.22 | ' - ' -> null | '' -> null | '(1,200)' -> -1200 */\nfunction parseMoney(raw) {\n  const s = text(raw);\n  if (!s) return null;\n  if (/^[-–—\\s]*$/.test(s)) return null;\n  const negative = /^\\(.*\\)$/.test(s);\n  const digits = s.replace(/[()]/g, '').replace(/[^0-9.-]/g, '');\n  if (!digits || !/[0-9]/.test(digits)) return null;\n  const n = Number(digits);\n  if (!Number.isFinite(n)) return null;\n  return negative ? -Math.abs(n) : n;\n}\n\n/**\n * 'RECORDING, DIRECTING' -> ['Recording ', 'Directing ']\n *\n * Whole string first: three of the real choices contain a slash or hyphen\n * ('Lobby Events / Rental', 'Video post-production'), so splitting eagerly would shred\n * them. Only commas and semicolons split. Anything that does not match a choice exactly\n * is reported rather than guessed at — a wrong multi-select is harder to notice than a\n * missing one.\n */\nfunction mapServices(raw, choices) {\n  const source = text(raw);\n  const matched = [];\n  const unmatched = [];\n  if (!source) return { services: matched, unmatched };\n\n  const lookup = new Map(choices.map((c) => [label(c), c]));\n\n  const whole = lookup.get(label(source));\n  if (whole) return { services: [whole], unmatched };\n\n  for (const token of source.split(/[,;]+/)) {\n    const t = text(token);\n    if (!t) continue;\n    const hit = lookup.get(label(t));\n    if (hit) {\n      if (!matched.includes(hit)) matched.push(hit);\n    } else if (!unmatched.includes(t)) {\n      unmatched.push(t);\n    }\n  }\n  return { services: matched, unmatched };\n}\n\n/**\n * The QU code lives in a merged cell written as free text — 'QU CODE: QU-18135' — not as\n * a label/value pair like the rows above it. It may also be blank, because the number only\n * exists after the quote has been through Xero.\n */\nfunction extractQuNumber(grid) {\n  for (let r = 0; r < grid.length; r++) {\n    for (let c = 0; c <= 1; c++) {\n      const cell = at(grid, r, c);\n      const m = /^QU\\s*CODE\\s*[:：]?\\s*(.*)$/i.exec(cell);\n      if (!m) continue;\n      const inline = text(m[1]);\n      const value = inline || at(grid, r, c + 1);\n      if (value) return { quNumber: value, row: r, col: c };\n    }\n  }\n  return { quNumber: null, row: -1, col: -1 };\n}\n\n/**\n * Reduce a QU cell to comparable digits. The tracker holds 'QU-17902', 'QU- 18006',\n * 'QU-' and 'QU- 17969, 17972, 17973' — string equality is not a usable key across those.\n * Used only for the fallback match; the record id written back to the sheet is the real key.\n */\nfunction normalizeQu(raw) {\n  const nums = text(raw).match(/\\d{3,}/g);\n  return nums ? nums.join(',') : null;\n}\n\n/**\n * @param {Array<Array<string>>} grid  Row-major values of one quotation tab, A1 at [0][0].\n * @param {object} [options]\n * @returns {{fields: object, meta: object, warnings: string[]}}\n */\nfunction extractQuotation(grid, options) {\n  const config = Object.assign({}, DEFAULTS, options || {});\n  const warnings = [];\n  const found = {};\n\n  for (const [key, anchor] of Object.entries(ANCHORS)) {\n    const row = findLabelRow(grid, anchor.label);\n    if (row === -1) {\n      found[key] = { row: -1, value: '' };\n      continue;\n    }\n    if (row !== anchor.expectedRow - 1) {\n      warnings.push(\n        `Template drift: '${anchor.label}' expected on row ${anchor.expectedRow}, found on ` +\n          `row ${row + 1}. Read ${address(row, anchor.valueCol)} instead of ` +\n          `${address(anchor.expectedRow - 1, anchor.valueCol)}.`\n      );\n    }\n    found[key] = { row, value: at(grid, row, anchor.valueCol) };\n  }\n\n  for (const key of ['company', 'contact', 'product', 'services']) {\n    if (found[key].row === -1) {\n      warnings.push(`Missing label '${ANCHORS[key].label}' in column A — nothing to read for ${key}.`);\n    }\n  }\n\n  const company = found.company.value;\n  const contact = found.contact.value;\n  const product = found.product.value;\n\n  // House format, matching all 18 existing records: 'Steve Huang / LAKIWIN'.\n  const contactCompany = [contact, company].filter(Boolean).join(' / ');\n  if (!contact || !company) {\n    warnings.push(\n      `CONTACT Name / COMPANY built from a partial pair (contact='${contact}', company='${company}').`\n    );\n  }\n\n  const { services, unmatched } = mapServices(found.services.value, config.serviceChoices);\n  if (unmatched.length) {\n    warnings.push(\n      `PROJECT DETAILS has no matching Service choice for: ${unmatched\n        .map((u) => `'${u}'`)\n        .join(', ')}. Left off the record — add the choice in Airtable or fix the sheet.`\n    );\n  }\n\n  // Approved cost: the rounded package figure is what the client signs off on. Fall back to\n  // TOTAL when it has not been filled in, so the record is never silently zero.\n  const rnd = parseMoney(found.rndPackageCost.value);\n  const total = parseMoney(found.total.value);\n  let approvedCost = rnd;\n  let approvedCostSource = 'RND PACKAGE COST';\n  if (approvedCost === null) {\n    approvedCost = total;\n    approvedCostSource = 'TOTAL (fallback)';\n    warnings.push(\n      `RND PACKAGE COST (${address(found.rndPackageCost.row, ANCHORS.rndPackageCost.valueCol)}) ` +\n        `is empty — used TOTAL instead` + (total === null ? ', which is also empty.' : ` (${total}).`)\n    );\n  }\n  if (approvedCost === null) {\n    approvedCostSource = 'none';\n    warnings.push('No approved cost found — Approved Cost (Local) will be left empty.');\n  }\n\n  const qu = extractQuNumber(grid);\n\n  const projectTitle =\n    config.projectTitleMode === 'company-product'\n      ? [company, product].filter(Boolean).join(' - ')\n      : product;\n\n  const fields = {};\n  if (projectTitle) fields['Project Title'] = projectTitle;\n  if (contactCompany) fields['CONTACT Name / COMPANY'] = contactCompany;\n  if (services.length) fields['Service'] = services;\n  if (approvedCost !== null) fields['Approved Cost (Local)'] = approvedCost;\n  if (qu.quNumber) fields['QU Number'] = qu.quNumber;\n\n  return {\n    fields,\n    meta: {\n      quNumber: qu.quNumber,\n      quNumberNormalized: normalizeQu(qu.quNumber),\n      quCell: qu.row === -1 ? null : address(qu.row, qu.col),\n      approvedCostSource,\n      rndPackageCost: rnd,\n      total,\n      totalNet: parseMoney(found.totalNet.value),\n      unmatchedServices: unmatched,\n      statusOnCreate: config.statusOnCreate,\n      readFrom: Object.fromEntries(\n        Object.entries(found).map(([k, v]) => [\n          k,\n          v.row === -1 ? null : address(v.row, ANCHORS[k].valueCol),\n        ])\n      ),\n    },\n    warnings,\n  };\n}\n\n/**\n * Decide what a quotation should do to the tracker: create, update, or nothing.\n *\n * Pure. No network. The n8n workflow reads the sheet and the table, hands both to\n * decideAction, and performs whatever comes back. Keeping the decision separate from the\n * I/O is what makes it testable, and this is the part worth testing — a sync that creates\n * a second record every run is worse than no sync at all.\n *\n * Three rules hold the whole thing up:\n *\n *  1. The record id written back into the sheet is the key. Not the QU number. The tracker\n *     holds 'QU-', 'QU- 18006' and 'QU- 17969, 17972, 17973'; the QU also does not exist\n *     until the quote has been through Xero, which is after the first sync. It is a\n *     fallback, never the primary.\n *  2. Never write an empty value over a populated one. The sheet is one view of a project;\n *     people also type directly into Airtable. A blank cell means 'the sheet does not know',\n *     not 'set this to blank'.\n *  3. If nothing changed, write nothing. Keeps revision history readable and keeps the\n *     run cheap.\n */\n\n\n/** Fields the sync owns. Anything else on the record is somebody else's and is left alone. */\nconst SYNCED_FIELDS = [\n  'Project Title',\n  'CONTACT Name / COMPANY',\n  'Service',\n  'Approved Cost (Local)',\n  'QU Number',\n];\n\n/**\n * Written when the record is created, then never touched again.\n *\n * `Project Title` is not in Kristine's mapping — it is here so a new record is not\n * nameless in the tracker's primary column. But the sheet's PRODUCT cell is a rate\n * description, and people write something better by hand: the live tracker had\n * 'Haraya Del Rosario - The 90-Day Leadership Field Manual' where the sheet says\n * 'AUDIOBOOK PRODUCTION - PER DAY RATE'. Syncing that field on update would replace a\n * human's title with a worse one on every run, so it seeds and then stays out of the way.\n */\nconst CREATE_ONLY_FIELDS = ['Project Title'];\n\nconst sameValue = (a, b) => {\n  if (Array.isArray(a) || Array.isArray(b)) {\n    const x = Array.isArray(a) ? a.slice().sort() : [];\n    const y = Array.isArray(b) ? b.slice().sort() : [];\n    return x.length === y.length && x.every((v, i) => v === y[i]);\n  }\n  if (typeof a === 'number' || typeof b === 'number') {\n    const x = Number(a);\n    const y = Number(b);\n    if (Number.isFinite(x) && Number.isFinite(y)) return Math.abs(x - y) < 0.005;\n  }\n  return String(a === undefined || a === null ? '' : a) === String(b === undefined || b === null ? '' : b);\n};\n\nconst isEmpty = (v) =>\n  v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);\n\n/**\n * @param {object} extracted        extractQuotation() output\n * @param {object} [options]\n * @param {string|null} [options.storedRecordId]  record id read back from the sheet\n * @param {Array}  [options.existingRecords]      [{ id, fields }] from the Projects table\n * @param {string|null} [options.sourceFileId]    Drive file id, for the audit column\n * @param {string} [options.statusOnCreate]\n */\nfunction decideAction(extracted, options) {\n  const opts = options || {};\n  const existing = opts.existingRecords || [];\n  const notes = [];\n  const incoming = extracted.fields || {};\n\n  let target = null;\n  let matchedBy = null;\n\n  if (opts.storedRecordId) {\n    target = existing.find((r) => r.id === opts.storedRecordId) || null;\n    if (target) {\n      matchedBy = 'record id from sheet';\n    } else {\n      notes.push(\n        `The sheet points at record ${opts.storedRecordId}, which is not in the table ` +\n          `(deleted, or the sheet was copied from another project). Falling back to the QU number.`\n      );\n    }\n  }\n\n  if (!target) {\n    const wantedQu = extracted.meta && extracted.meta.quNumberNormalized;\n    if (wantedQu) {\n      const hits = existing.filter((r) => normalizeQu(r.fields && r.fields['QU Number']) === wantedQu);\n      if (hits.length === 1) {\n        target = hits[0];\n        matchedBy = 'QU number';\n      } else if (hits.length > 1) {\n        // Two records carrying the same QU is a data problem in the tracker. Picking one\n        // at random would quietly corrupt whichever we lost.\n        return {\n          action: 'skip',\n          recordId: null,\n          fields: {},\n          matchedBy: null,\n          reason:\n            `QU ${extracted.meta.quNumber} matches ${hits.length} records ` +\n            `(${hits.map((h) => h.id).join(', ')}). Refusing to guess which one to update.`,\n          notes,\n          warnings: extracted.warnings || [],\n        };\n      }\n    }\n  }\n\n  if (!target) {\n    const fields = {};\n    for (const key of SYNCED_FIELDS) {\n      if (!isEmpty(incoming[key])) fields[key] = incoming[key];\n    }\n    if (opts.statusOnCreate) fields['Status'] = opts.statusOnCreate;\n    if (opts.sourceFileId && opts.includeSourceFileField) {\n      fields['_sync_source_file'] = opts.sourceFileId;\n    }\n    return {\n      action: 'create',\n      recordId: null,\n      fields,\n      matchedBy: null,\n      reason: 'No record id in the sheet and no QU match — this quotation is new to the tracker.',\n      notes,\n      warnings: extracted.warnings || [],\n    };\n  }\n\n  const current = target.fields || {};\n  const fields = {};\n  const changes = [];\n  const held = [];\n\n  for (const key of SYNCED_FIELDS) {\n    const next = incoming[key];\n\n    if (CREATE_ONLY_FIELDS.includes(key)) {\n      // Surfaced rather than silent: someone comparing the sheet to the tracker should be\n      // able to see that the two disagree and that the sync chose not to intervene.\n      if (!isEmpty(next) && !isEmpty(current[key]) && !sameValue(next, current[key])) {\n        notes.push(\n          `${key} differs — sheet says ${JSON.stringify(next)}, tracker says ` +\n            `${JSON.stringify(current[key])}. Left as it is; ${key} is only written when a ` +\n            `record is first created.`\n        );\n      }\n      continue;\n    }\n\n    if (isEmpty(next)) {\n      // Rule 2. Only worth mentioning when there is something there to protect.\n      if (!isEmpty(current[key])) held.push(key);\n      continue;\n    }\n    if (!sameValue(next, current[key])) {\n      fields[key] = next;\n      changes.push(\n        `${key}: ${JSON.stringify(current[key] === undefined ? null : current[key])} -> ${JSON.stringify(next)}`\n      );\n    }\n  }\n\n  if (held.length) {\n    notes.push(`Sheet had nothing for ${held.join(', ')} — left the tracker's values alone.`);\n  }\n\n  if (!changes.length) {\n    return {\n      action: 'skip',\n      recordId: target.id,\n      fields: {},\n      matchedBy,\n      reason: `Matched ${target.id} by ${matchedBy}; every synced field already agrees.`,\n      notes,\n      warnings: extracted.warnings || [],\n    };\n  }\n\n  return {\n    action: 'update',\n    recordId: target.id,\n    fields,\n    matchedBy,\n    reason: `Matched ${target.id} by ${matchedBy}. Changing: ${changes.join('; ')}.`,\n    notes,\n    warnings: extracted.warnings || [],\n  };\n}\n\n/**\n * The glue between n8n's HTTP nodes and the two pure modules.\n *\n * Everything here is still pure — it takes the raw shapes the Google Sheets and Airtable\n * APIs return and produces a decision plus a human-readable summary. The Code node in the\n * workflow is this file, extract.js and sync.js concatenated by scripts/build-workflow.js,\n * with a four-line n8n adapter on the end. Same reason Posty does it: the code that is\n * tested is the code that ships.\n */\n\n\n\n// --- link parsing (sliced out verbatim into the Parse Request node) ---------\n\n/**\n * Google URLs all carry a `/d/<id>` segment, so matching that alone accepts a Doc, a\n * deck or an uploaded file just as happily as a spreadsheet. It then fails much later,\n * at the Sheets API, as \"Requested entity was not found\" — which tells the person who\n * pasted it nothing at all. Someone pasted a Google Doc link on 22 Sept and got exactly\n * that. These are matched first so the complaint can name what they actually pasted.\n */\nconst WRONG_LINK_KINDS = [\n  [/\\/document\\/d\\//, 'a Google Doc'],\n  [/\\/presentation\\/d\\//, 'a Google Slides deck'],\n  [/\\/forms\\/d\\//, 'a Google Form'],\n  [/\\/file\\/d\\//, 'a file stored in Drive (an upload, not a Google Sheet)'],\n];\n\n/**\n * Accepts what a person will actually paste: a full edit URL, a sharing URL, or the bare\n * id. Only `/spreadsheets/d/` counts as a link — anything else is rejected here rather\n * than turned into a request that cannot work.\n */\nfunction parseFileId(raw) {\n  const s = String(raw === null || raw === undefined ? '' : raw).trim();\n  if (!s) return null;\n  for (const pair of WRONG_LINK_KINDS) if (pair[0].test(s)) return null;\n  const fromUrl = /\\/spreadsheets\\/d\\/([a-zA-Z0-9_-]{20,})/.exec(s);\n  if (fromUrl) return fromUrl[1];\n  if (/^[a-zA-Z0-9_-]{20,}$/.test(s)) return s;\n  return null;\n}\n\n/** null when the link is usable, otherwise the sentence to show the person. */\nfunction describeLinkProblem(raw) {\n  const s = String(raw === null || raw === undefined ? '' : raw).trim();\n  if (!s) return 'No link was given. Paste the link to the quotation Google Sheet.';\n  for (const pair of WRONG_LINK_KINDS) {\n    if (pair[0].test(s)) {\n      return (\n        `That link points at ${pair[1]}, not a Google Sheet. Open the quotation ` +\n        `spreadsheet and copy the link from the address bar — a Sheet's link contains ` +\n        `/spreadsheets/d/.`\n      );\n    }\n  }\n  if (!parseFileId(s)) {\n    return (\n      `That does not look like a Google Sheet link or id: ${JSON.stringify(s)}. ` +\n      `Paste the full link from the address bar.`\n    );\n  }\n  return null;\n}\n\n// --- end link parsing -------------------------------------------------------\n\n/**\n * The `_hitsync` tab holds the Airtable record id in A2. The tab may not exist yet — for\n * every quotation file made before this sync did — in which case the read node fails soft\n * and we get nothing. That is a normal first run, not an error.\n */\nfunction readStoredRecordId(values) {\n  const cell = values && values[0] && values[0][0];\n  const s = String(cell === null || cell === undefined ? '' : cell).trim();\n  return /^rec[A-Za-z0-9]{14}$/.test(s) ? s : null;\n}\n\n/** Airtable REST hands back { records: [{ id, fields }] }, possibly across pages. */\nfunction collectAirtableRecords(pages) {\n  const out = [];\n  for (const page of [].concat(pages || [])) {\n    const records = (page && page.records) || [];\n    for (const r of records) out.push({ id: r.id, fields: r.fields || {} });\n  }\n  return out;\n}\n\n/** One readable block for the form's result screen. Kristine reads this, not the JSON. */\nfunction summarize(state) {\n  const { decision, extracted, preview } = state;\n  const lines = [];\n  const verb = { create: 'Created', update: 'Updated', skip: 'No change' }[decision.action];\n\n  lines.push(preview ? `PREVIEW — nothing was written.` : `${verb}.`);\n  lines.push('');\n  lines.push(decision.reason);\n\n  if (decision.action !== 'skip') {\n    lines.push('');\n    lines.push(decision.action === 'create' ? 'Fields written:' : 'Fields changed:');\n    for (const [k, v] of Object.entries(decision.fields)) {\n      lines.push(`  ${k}: ${Array.isArray(v) ? v.join(', ') : v}`);\n    }\n  }\n\n  const notes = [].concat(decision.notes || [], decision.warnings || []);\n  if (notes.length) {\n    lines.push('');\n    lines.push('Worth checking:');\n    for (const n of notes) lines.push(`  - ${n}`);\n  }\n\n  lines.push('');\n  lines.push(`Approved cost taken from: ${extracted.meta.approvedCostSource}`);\n\n  return lines.join('\\n');\n}\n\n/**\n * @param {object} ctx\n * @param {Array<Array<string>>} ctx.sheetValues     values from <tab>!A1:T200\n * @param {Array<Array<string>>} [ctx.syncTabValues] values from _hitsync!A2, if the tab exists\n * @param {Array|object} [ctx.airtablePages]         one or more Airtable list responses\n * @param {string} ctx.fileId\n * @param {boolean} [ctx.preview]\n * @param {object} [ctx.options]\n */\nfunction runDecision(ctx) {\n  const extracted = extractQuotation(ctx.sheetValues || [], ctx.options);\n  const storedRecordId = readStoredRecordId(ctx.syncTabValues);\n  const existingRecords = collectAirtableRecords(ctx.airtablePages);\n\n  const decision = decideAction(extracted, {\n    storedRecordId,\n    existingRecords,\n    sourceFileId: ctx.fileId,\n    statusOnCreate: (ctx.options && ctx.options.statusOnCreate) || DEFAULTS.statusOnCreate,\n    includeSourceFileField: Boolean(ctx.options && ctx.options.includeSourceFileField),\n  });\n\n  const preview = Boolean(ctx.preview);\n  const state = { extracted, decision, storedRecordId, preview, fileId: ctx.fileId };\n\n  return {\n    action: preview ? 'preview' : decision.action,\n    plannedAction: decision.action,\n    recordId: decision.recordId,\n    fields: decision.fields,\n    // The write-back only needs to happen when a record is created and the sheet does not\n    // already point at one. An update already knows which record it is talking to.\n    needsRecordIdWriteback: !preview && decision.action === 'create',\n    storedRecordId,\n    matchedBy: decision.matchedBy,\n    reason: decision.reason,\n    notes: decision.notes,\n    warnings: decision.warnings,\n    meta: extracted.meta,\n    summary: summarize(state),\n  };\n}\n\n/**\n * The Airtable call this run needs, or null when there is nothing to write.\n *\n * Built here rather than in the workflow so that the create/update choice is covered by\n * tests instead of by an IF node nobody can unit-test. The HTTP node just executes\n * whatever method, url and body it is handed.\n */\nfunction buildWriteRequest(result, cfg) {\n  if (!result || result.action === 'preview' || result.plannedAction === 'skip') return null;\n  const table = encodeURIComponent(cfg.table);\n  const base = `https://api.airtable.com/v0/${cfg.baseId}/${table}`;\n\n  if (result.plannedAction === 'create') {\n    return { method: 'POST', url: base, body: { fields: result.fields, typecast: false } };\n  }\n  if (!result.recordId) return null;\n  return {\n    method: 'PATCH',\n    url: `${base}/${result.recordId}`,\n    body: { fields: result.fields, typecast: false },\n  };\n}\n\n/**\n * Stamp the new record id into the quotation's `_hitsync` tab.\n *\n * Writes the header alongside the value so the tab explains itself to whoever opens it,\n * and so a file whose tab exists but is empty ends up correct either way. RAW, not\n * USER_ENTERED — a record id must never be interpreted by Sheets.\n */\nfunction buildWritebackRequest(fileId, recordId, cfg) {\n  if (!fileId || !recordId) return null;\n  const range = encodeURIComponent(`${cfg.syncTab}!A1:A2`);\n  return {\n    method: 'PUT',\n    url:\n      `https://sheets.googleapis.com/v4/spreadsheets/${fileId}/values/${range}` +\n      `?valueInputOption=RAW`,\n    body: { values: [['airtable_record_id'], [recordId]] },\n  };\n}\n\n// --- n8n adapter -----------------------------------------------------------\nconst input = $('Parse Request').first().json;\nconst decided = $('Decide').first().json;\nconst written = $('Write Tracker').first().json;\n\n// On a create, Airtable's response carries the new record id. That id is the thing we\n// stamp into the sheet, and it is what stops the next run creating a duplicate.\nconst recordId = (written && written.id) || decided.recordId || null;\n\nconst writeback = decided.needsRecordIdWriteback\n  ? buildWritebackRequest(input.fileId, recordId, { syncTab: input.config.syncTab })\n  : null;\n\nreturn [{\n  json: {\n    recordId: recordId,\n    needsWriteback: Boolean(writeback),\n    writeback: writeback || {}\n  }\n}];"
+        },
+        "position": [
+          1760,
+          -120
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "bs-if-writeback",
+        "name": "Needs Writeback?",
+        "parameters": {
+          "conditions": {
+            "boolean": [
+              {
+                "value1": "={{ $json.needsWriteback }}",
+                "value2": true
+              }
+            ]
+          }
+        },
+        "position": [
+          1980,
+          -120
+        ],
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "bs-ensure-tab",
+        "name": "Ensure Sync Tab",
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "contentType": "json",
+          "jsonBody": "={{ JSON.stringify({ requests: [ { addSheet: { properties: { title: $('Parse Request').first().json.config.syncTab, hidden: true } } } ] }) }}",
+          "method": "POST",
+          "nodeCredentialType": "googleSheetsOAuth2Api",
+          "options": {},
+          "sendBody": true,
+          "specifyBody": "json",
+          "url": "={{ $('Parse Request').first().json.ensureSyncTabUrl }}"
+        },
+        "position": [
+          2200,
+          -320
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Fgoi5qTg907ugiVG",
+            "name": "Google Sheets account"
+          }
+        },
+        "id": "bs-write-back",
+        "name": "Write Back Id",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "contentType": "json",
+          "jsonBody": "={{ JSON.stringify($('Prepare Writeback').first().json.writeback.body) }}",
+          "method": "PUT",
+          "nodeCredentialType": "googleSheetsOAuth2Api",
+          "options": {},
+          "sendBody": true,
+          "specifyBody": "json",
+          "url": "={{ $('Prepare Writeback').first().json.writeback.url }}"
+        },
+        "position": [
+          2200,
+          -220
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
+      },
+      {
+        "id": "bs-result",
+        "name": "Result",
+        "parameters": {
+          "jsCode": "const decided = $('Decide').first().json;\n\nlet recordId = decided.recordId;\ntry {\n  const prepared = $('Prepare Writeback').first().json;\n  if (prepared && prepared.recordId) recordId = prepared.recordId;\n} catch (e) {\n  // Nothing was written this run — skip or preview. decided.recordId is already right.\n}\n\nreturn [{\n  json: {\n    result: decided.summary,\n    action: decided.action,\n    recordId: recordId,\n    matchedBy: decided.matchedBy,\n    warnings: decided.warnings\n  }\n}];"
+        },
+        "position": [
+          2440,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      }
+    ],
+    "updatedAt": "2026-09-22T09:28:28.328Z",
+    "versionId": "1c68a5e9-6faf-4e6d-a922-0883a22143c2",
+    "workflowId": "xo2LIyiqYrJnTLki",
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-22T09:28:28.533Z",
+        "event": "activated",
+        "id": 983,
+        "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "versionId": "1c68a5e9-6faf-4e6d-a922-0883a22143c2",
+        "workflowId": "xo2LIyiqYrJnTLki"
+      },
+      {
+        "createdAt": "2026-09-22T09:28:29.008Z",
+        "event": "activated",
+        "id": 985,
+        "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "versionId": "1c68a5e9-6faf-4e6d-a922-0883a22143c2",
+        "workflowId": "xo2LIyiqYrJnTLki"
+      },
+      {
+        "createdAt": "2026-09-22T09:28:28.479Z",
+        "event": "deactivated",
+        "id": 982,
+        "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "versionId": "1c68a5e9-6faf-4e6d-a922-0883a22143c2",
+        "workflowId": "xo2LIyiqYrJnTLki"
+      },
+      {
+        "createdAt": "2026-09-22T09:28:28.938Z",
+        "event": "deactivated",
+        "id": 984,
+        "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "versionId": "1c68a5e9-6faf-4e6d-a922-0883a22143c2",
+        "workflowId": "xo2LIyiqYrJnTLki"
+      }
+    ]
+  },
+  "activeVersionId": "1c68a5e9-6faf-4e6d-a922-0883a22143c2",
+  "connections": {
+    "Decide": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Needs Write?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Ensure Sync Tab": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write Back Id",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Form": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Parse Request",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Needs Write?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write Tracker",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Result",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Needs Writeback?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Ensure Sync Tab",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Result",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Parse Request": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Quotation",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Prepare Writeback": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Needs Writeback?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Quotation": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Sync Tab",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Sync Tab": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Tracker",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Tracker": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Decide",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Write Back Id": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Result",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Write Tracker": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Prepare Writeback",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-09-20T08:23:22.063Z",
+  "description": null,
+  "id": "xo2LIyiqYrJnTLki",
+  "isArchived": false,
+  "meta": null,
+  "name": "Backlog Sync — Quotation to Tracker",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "bs-form",
+      "name": "Form",
+      "parameters": {
+        "formDescription": "Paste the link to the quotation Google Sheet. Run it again after the QU number comes back from Xero — it updates the same record instead of making a new one.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Quotation sheet link",
+              "fieldType": "text",
+              "placeholder": "https://docs.google.com/spreadsheets/d/...",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Mode",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Sync"
+                  },
+                  {
+                    "option": "Preview only"
+                  }
+                ]
+              },
+              "fieldType": "dropdown",
+              "requiredField": true
+            }
+          ]
+        },
+        "formTitle": "Sync a quotation to the tracker",
+        "options": {},
+        "path": "backlog-sync",
+        "responseMode": "lastNode"
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "webhookId": "b1c7e0d2-5a41-4f7e-9d3a-7c2f6e8a1b40"
+    },
+    {
+      "id": "bs-parse",
+      "name": "Parse Request",
+      "parameters": {
+        "jsCode": "// Everything configurable lives here, in one visible place.\nconst CONFIG = {\n  \"airtableBaseId\": \"appAG0jca180QLRzg\",\n  \"airtableTable\": \"Projects\",\n  \"quotationTab\": \"MAIN\",\n  \"quotationRange\": \"A1:T200\",\n  \"syncTab\": \"_hitsync\"\n};\n\n/**\n * Google URLs all carry a `/d/<id>` segment, so matching that alone accepts a Doc, a\n * deck or an uploaded file just as happily as a spreadsheet. It then fails much later,\n * at the Sheets API, as \"Requested entity was not found\" — which tells the person who\n * pasted it nothing at all. Someone pasted a Google Doc link on 22 Sept and got exactly\n * that. These are matched first so the complaint can name what they actually pasted.\n */\nconst WRONG_LINK_KINDS = [\n  [/\\/document\\/d\\//, 'a Google Doc'],\n  [/\\/presentation\\/d\\//, 'a Google Slides deck'],\n  [/\\/forms\\/d\\//, 'a Google Form'],\n  [/\\/file\\/d\\//, 'a file stored in Drive (an upload, not a Google Sheet)'],\n];\n\n/**\n * Accepts what a person will actually paste: a full edit URL, a sharing URL, or the bare\n * id. Only `/spreadsheets/d/` counts as a link — anything else is rejected here rather\n * than turned into a request that cannot work.\n */\nfunction parseFileId(raw) {\n  const s = String(raw === null || raw === undefined ? '' : raw).trim();\n  if (!s) return null;\n  for (const pair of WRONG_LINK_KINDS) if (pair[0].test(s)) return null;\n  const fromUrl = /\\/spreadsheets\\/d\\/([a-zA-Z0-9_-]{20,})/.exec(s);\n  if (fromUrl) return fromUrl[1];\n  if (/^[a-zA-Z0-9_-]{20,}$/.test(s)) return s;\n  return null;\n}\n\n/** null when the link is usable, otherwise the sentence to show the person. */\nfunction describeLinkProblem(raw) {\n  const s = String(raw === null || raw === undefined ? '' : raw).trim();\n  if (!s) return 'No link was given. Paste the link to the quotation Google Sheet.';\n  for (const pair of WRONG_LINK_KINDS) {\n    if (pair[0].test(s)) {\n      return (\n        `That link points at ${pair[1]}, not a Google Sheet. Open the quotation ` +\n        `spreadsheet and copy the link from the address bar — a Sheet's link contains ` +\n        `/spreadsheets/d/.`\n      );\n    }\n  }\n  if (!parseFileId(s)) {\n    return (\n      `That does not look like a Google Sheet link or id: ${JSON.stringify(s)}. ` +\n      `Paste the full link from the address bar.`\n    );\n  }\n  return null;\n}\n\nconst form = $input.first().json;\nconst raw = form['Quotation sheet link'];\n\nconst problem = describeLinkProblem(raw);\nif (problem) throw new Error(problem);\n\nconst fileId = parseFileId(raw);\n\nconst preview = String(form['Mode'] || '').toLowerCase().indexOf('preview') !== -1;\n\nconst sheets = 'https://sheets.googleapis.com/v4/spreadsheets/' + fileId + '/values/';\nconst table = encodeURIComponent(CONFIG.airtableTable);\n\nreturn [{\n  json: {\n    fileId: fileId,\n    preview: preview,\n    config: CONFIG,\n    // FORMATTED_VALUE gives '48,782.22' — the same string a person reads in the cell.\n    // parseMoney is built for that; UNFORMATTED_VALUE would change the shape of every\n    // number the extractor sees.\n    quotationUrl: sheets + encodeURIComponent(CONFIG.quotationTab + '!' + CONFIG.quotationRange) +\n      '?valueRenderOption=FORMATTED_VALUE',\n    syncTabUrl: sheets + encodeURIComponent(CONFIG.syncTab + '!A2') +\n      '?valueRenderOption=UNFORMATTED_VALUE',\n    trackerUrl: 'https://api.airtable.com/v0/' + CONFIG.airtableBaseId + '/' + table,\n    // values.update cannot create a tab — it returns 'Unable to parse range'. The tab has\n    // to be added explicitly first, which is what this url is for.\n    ensureSyncTabUrl: 'https://sheets.googleapis.com/v4/spreadsheets/' + fileId + ':batchUpdate'\n  }\n}];"
+      },
+      "position": [
+        220,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "bs-read-quotation",
+      "name": "Read Quotation",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {},
+        "url": "={{ $json.quotationUrl }}"
+      },
+      "position": [
+        440,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "bs-read-synctab",
+      "name": "Read Sync Tab",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {},
+        "url": "={{ $('Parse Request').first().json.syncTabUrl }}"
+      },
+      "position": [
+        660,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ugqgQhQBlB8PF7I7",
+          "name": "Airtable (Kristine — live tracker)"
+        }
+      },
+      "id": "bs-read-tracker",
+      "name": "Read Tracker",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "options": {
+          "pagination": {
+            "pagination": {
+              "completeExpression": "={{ !$response.body.offset }}",
+              "limitPagesFetched": true,
+              "maxRequests": 20,
+              "paginationCompleteWhen": "other",
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "offset",
+                    "type": "qs",
+                    "value": "={{ $response.body.offset }}"
+                  }
+                ]
+              },
+              "requestInterval": 250
+            }
+          }
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "pageSize",
+              "value": "100"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "={{ $('Parse Request').first().json.trackerUrl }}"
+      },
+      "position": [
+        880,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "bs-decide",
+      "name": "Decide",
+      "parameters": {
+        "jsCode": "// ---------------------------------------------------------------------------\n// Generated by scripts/build-workflow.js from code/extract.js, code/sync.js and\n// code/run.js. Do not edit here — edit those files and rebuild, or the tests stop\n// describing what actually runs.\n// ---------------------------------------------------------------------------\n\n/**\n * Pull the Airtable-bound fields out of one quotation tab.\n *\n * Kristine's mapping is written in cell addresses (B35, B36, B38, E119). We honor those\n * as the expected positions, but we *find* each value by its label in column A instead of\n * reading the address blind. The quotation template gets rows inserted into it — the\n * `QU # (DATE)` tab and the `MAIN` tab in the same workbook already disagree by four rows\n * on where the totals block starts. A blind read of E119 would silently pick up whatever\n * moved into that cell; a label read either finds `RND PACKAGE COST` or reports that it\n * could not.\n *\n * Every anchor still carries its expected row. When the two disagree we take the label and\n * raise a drift warning, so the sheet drifting is visible rather than silent.\n */\n\n/**\n * Exact `Service` choices from the Projects table. Several carry a trailing space that is\n * part of the stored value — 'Recording ' is not 'Recording'. Airtable rejects a write that\n * does not match a choice character for character, so these are copied verbatim.\n * Refresh with: node scripts/refresh-choices.js\n */\nconst SERVICE_CHOICES = [\n  'AV Integration',\n  'Video',\n  'Other',\n  'Recording ',\n  'Mixing ',\n  'Editing ',\n  'Lobby Events / Rental',\n  'Sound Design',\n  'Sonic Branding ',\n  'In-Studio Listening / Preview Session ',\n  'Music Composition',\n  'Studio Rental',\n  'BUYOUT',\n  'Video post-production',\n  'Directing ',\n];\n\nconst DEFAULTS = {\n  serviceChoices: SERVICE_CHOICES,\n  // Applied only when creating a record, never on update. A record with no Status is\n  // invisible in the tracker's grouped views, and the sheet has no Status column to read.\n  statusOnCreate: 'Awaiting Quote Approval',\n  // 'product'         -> Project Title = PRODUCT, as specified.\n  // 'company-product' -> 'HARAYA DEL ROSARIO - AUDIOBOOK PRODUCTION', matching how the\n  //                      existing 18 records are titled (client first). Opt in.\n  projectTitleMode: 'product',\n};\n\nconst ANCHORS = {\n  company: { label: 'AGENCY/COMPANY', valueCol: 1, expectedRow: 35 },\n  contact: { label: 'PRODUCER/MAIN CONTACT', valueCol: 1, expectedRow: 36 },\n  product: { label: 'PRODUCT', valueCol: 1, expectedRow: 37 },\n  services: { label: 'PROJECT DETAILS', valueCol: 1, expectedRow: 38 },\n  // Rows below confirmed against the live sheet on 2026-09-20, by reading what the Sheets\n  // API actually returned. Note these are one lower than the handoff's cell references:\n  // the spec's E119 is the TOTAL row, not RND PACKAGE COST. See README, 'Approved cost'.\n  rndPackageCost: { label: 'RND PACKAGE COST', valueCol: 4, expectedRow: 120 },\n  total: { label: 'TOTAL', valueCol: 4, expectedRow: 119 },\n  totalNet: { label: 'TOTAL NET', valueCol: 4, expectedRow: 116 },\n};\n\nconst text = (v) => String(v === null || v === undefined ? '' : v).replace(/\\s+/g, ' ').trim();\n\n/** Uppercase, collapse whitespace, drop a trailing colon. For comparing labels only. */\nconst label = (v) => text(v).replace(/[:：]+$/, '').trim().toUpperCase();\n\nconst at = (grid, row, col) => text(grid[row] && grid[row][col]);\n\n/** A1-style address for a zero-indexed row/col, so warnings name a cell a human can open. */\nfunction address(row, col) {\n  let n = col + 1;\n  let name = '';\n  while (n > 0) {\n    const rem = (n - 1) % 26;\n    name = String.fromCharCode(65 + rem) + name;\n    n = Math.floor((n - 1) / 26);\n  }\n  return `${name}${row + 1}`;\n}\n\n/**\n * Locate a label in column A. Exact match after normalizing, which is what keeps\n * 'TOTAL' from matching 'TOTAL NET', 'TOTAL HOURS:' or ' ACTUALS TOTAL'.\n * Column A only — the MAIN tab carries a second quotation block in columns K-S with its\n * own 'TOTAL' and 'QU CODE:' rows, and that block is not part of this mapping.\n */\nfunction findLabelRow(grid, wanted) {\n  const want = label(wanted);\n  for (let r = 0; r < grid.length; r++) {\n    if (label(grid[r] && grid[r][0]) === want) return r;\n  }\n  return -1;\n}\n\n/** '48,782.22' -> 48782.22 | ' - ' -> null | '' -> null | '(1,200)' -> -1200 */\nfunction parseMoney(raw) {\n  const s = text(raw);\n  if (!s) return null;\n  if (/^[-–—\\s]*$/.test(s)) return null;\n  const negative = /^\\(.*\\)$/.test(s);\n  const digits = s.replace(/[()]/g, '').replace(/[^0-9.-]/g, '');\n  if (!digits || !/[0-9]/.test(digits)) return null;\n  const n = Number(digits);\n  if (!Number.isFinite(n)) return null;\n  return negative ? -Math.abs(n) : n;\n}\n\n/**\n * 'RECORDING, DIRECTING' -> ['Recording ', 'Directing ']\n *\n * Whole string first: three of the real choices contain a slash or hyphen\n * ('Lobby Events / Rental', 'Video post-production'), so splitting eagerly would shred\n * them. Only commas and semicolons split. Anything that does not match a choice exactly\n * is reported rather than guessed at — a wrong multi-select is harder to notice than a\n * missing one.\n */\nfunction mapServices(raw, choices) {\n  const source = text(raw);\n  const matched = [];\n  const unmatched = [];\n  if (!source) return { services: matched, unmatched };\n\n  const lookup = new Map(choices.map((c) => [label(c), c]));\n\n  const whole = lookup.get(label(source));\n  if (whole) return { services: [whole], unmatched };\n\n  for (const token of source.split(/[,;]+/)) {\n    const t = text(token);\n    if (!t) continue;\n    const hit = lookup.get(label(t));\n    if (hit) {\n      if (!matched.includes(hit)) matched.push(hit);\n    } else if (!unmatched.includes(t)) {\n      unmatched.push(t);\n    }\n  }\n  return { services: matched, unmatched };\n}\n\n/**\n * The QU code lives in a merged cell written as free text — 'QU CODE: QU-18135' — not as\n * a label/value pair like the rows above it. It may also be blank, because the number only\n * exists after the quote has been through Xero.\n */\nfunction extractQuNumber(grid) {\n  for (let r = 0; r < grid.length; r++) {\n    for (let c = 0; c <= 1; c++) {\n      const cell = at(grid, r, c);\n      const m = /^QU\\s*CODE\\s*[:：]?\\s*(.*)$/i.exec(cell);\n      if (!m) continue;\n      const inline = text(m[1]);\n      const value = inline || at(grid, r, c + 1);\n      if (value) return { quNumber: value, row: r, col: c };\n    }\n  }\n  return { quNumber: null, row: -1, col: -1 };\n}\n\n/**\n * Reduce a QU cell to comparable digits. The tracker holds 'QU-17902', 'QU- 18006',\n * 'QU-' and 'QU- 17969, 17972, 17973' — string equality is not a usable key across those.\n * Used only for the fallback match; the record id written back to the sheet is the real key.\n */\nfunction normalizeQu(raw) {\n  const nums = text(raw).match(/\\d{3,}/g);\n  return nums ? nums.join(',') : null;\n}\n\n/**\n * @param {Array<Array<string>>} grid  Row-major values of one quotation tab, A1 at [0][0].\n * @param {object} [options]\n * @returns {{fields: object, meta: object, warnings: string[]}}\n */\nfunction extractQuotation(grid, options) {\n  const config = Object.assign({}, DEFAULTS, options || {});\n  const warnings = [];\n  const found = {};\n\n  for (const [key, anchor] of Object.entries(ANCHORS)) {\n    const row = findLabelRow(grid, anchor.label);\n    if (row === -1) {\n      found[key] = { row: -1, value: '' };\n      continue;\n    }\n    if (row !== anchor.expectedRow - 1) {\n      warnings.push(\n        `Template drift: '${anchor.label}' expected on row ${anchor.expectedRow}, found on ` +\n          `row ${row + 1}. Read ${address(row, anchor.valueCol)} instead of ` +\n          `${address(anchor.expectedRow - 1, anchor.valueCol)}.`\n      );\n    }\n    found[key] = { row, value: at(grid, row, anchor.valueCol) };\n  }\n\n  for (const key of ['company', 'contact', 'product', 'services']) {\n    if (found[key].row === -1) {\n      warnings.push(`Missing label '${ANCHORS[key].label}' in column A — nothing to read for ${key}.`);\n    }\n  }\n\n  const company = found.company.value;\n  const contact = found.contact.value;\n  const product = found.product.value;\n\n  // House format, matching all 18 existing records: 'Steve Huang / LAKIWIN'.\n  const contactCompany = [contact, company].filter(Boolean).join(' / ');\n  if (!contact || !company) {\n    warnings.push(\n      `CONTACT Name / COMPANY built from a partial pair (contact='${contact}', company='${company}').`\n    );\n  }\n\n  const { services, unmatched } = mapServices(found.services.value, config.serviceChoices);\n  if (unmatched.length) {\n    warnings.push(\n      `PROJECT DETAILS has no matching Service choice for: ${unmatched\n        .map((u) => `'${u}'`)\n        .join(', ')}. Left off the record — add the choice in Airtable or fix the sheet.`\n    );\n  }\n\n  // Approved cost: the rounded package figure is what the client signs off on. Fall back to\n  // TOTAL when it has not been filled in, so the record is never silently zero.\n  const rnd = parseMoney(found.rndPackageCost.value);\n  const total = parseMoney(found.total.value);\n  let approvedCost = rnd;\n  let approvedCostSource = 'RND PACKAGE COST';\n  if (approvedCost === null) {\n    approvedCost = total;\n    approvedCostSource = 'TOTAL (fallback)';\n    warnings.push(\n      `RND PACKAGE COST (${address(found.rndPackageCost.row, ANCHORS.rndPackageCost.valueCol)}) ` +\n        `is empty — used TOTAL instead` + (total === null ? ', which is also empty.' : ` (${total}).`)\n    );\n  }\n  if (approvedCost === null) {\n    approvedCostSource = 'none';\n    warnings.push('No approved cost found — Approved Cost (Local) will be left empty.');\n  }\n\n  const qu = extractQuNumber(grid);\n\n  const projectTitle =\n    config.projectTitleMode === 'company-product'\n      ? [company, product].filter(Boolean).join(' - ')\n      : product;\n\n  const fields = {};\n  if (projectTitle) fields['Project Title'] = projectTitle;\n  if (contactCompany) fields['CONTACT Name / COMPANY'] = contactCompany;\n  if (services.length) fields['Service'] = services;\n  if (approvedCost !== null) fields['Approved Cost (Local)'] = approvedCost;\n  if (qu.quNumber) fields['QU Number'] = qu.quNumber;\n\n  return {\n    fields,\n    meta: {\n      quNumber: qu.quNumber,\n      quNumberNormalized: normalizeQu(qu.quNumber),\n      quCell: qu.row === -1 ? null : address(qu.row, qu.col),\n      approvedCostSource,\n      rndPackageCost: rnd,\n      total,\n      totalNet: parseMoney(found.totalNet.value),\n      unmatchedServices: unmatched,\n      statusOnCreate: config.statusOnCreate,\n      readFrom: Object.fromEntries(\n        Object.entries(found).map(([k, v]) => [\n          k,\n          v.row === -1 ? null : address(v.row, ANCHORS[k].valueCol),\n        ])\n      ),\n    },\n    warnings,\n  };\n}\n\n/**\n * Decide what a quotation should do to the tracker: create, update, or nothing.\n *\n * Pure. No network. The n8n workflow reads the sheet and the table, hands both to\n * decideAction, and performs whatever comes back. Keeping the decision separate from the\n * I/O is what makes it testable, and this is the part worth testing — a sync that creates\n * a second record every run is worse than no sync at all.\n *\n * Three rules hold the whole thing up:\n *\n *  1. The record id written back into the sheet is the key. Not the QU number. The tracker\n *     holds 'QU-', 'QU- 18006' and 'QU- 17969, 17972, 17973'; the QU also does not exist\n *     until the quote has been through Xero, which is after the first sync. It is a\n *     fallback, never the primary.\n *  2. Never write an empty value over a populated one. The sheet is one view of a project;\n *     people also type directly into Airtable. A blank cell means 'the sheet does not know',\n *     not 'set this to blank'.\n *  3. If nothing changed, write nothing. Keeps revision history readable and keeps the\n *     run cheap.\n */\n\n\n/** Fields the sync owns. Anything else on the record is somebody else's and is left alone. */\nconst SYNCED_FIELDS = [\n  'Project Title',\n  'CONTACT Name / COMPANY',\n  'Service',\n  'Approved Cost (Local)',\n  'QU Number',\n];\n\n/**\n * Written when the record is created, then never touched again.\n *\n * `Project Title` is not in Kristine's mapping — it is here so a new record is not\n * nameless in the tracker's primary column. But the sheet's PRODUCT cell is a rate\n * description, and people write something better by hand: the live tracker had\n * 'Haraya Del Rosario - The 90-Day Leadership Field Manual' where the sheet says\n * 'AUDIOBOOK PRODUCTION - PER DAY RATE'. Syncing that field on update would replace a\n * human's title with a worse one on every run, so it seeds and then stays out of the way.\n */\nconst CREATE_ONLY_FIELDS = ['Project Title'];\n\nconst sameValue = (a, b) => {\n  if (Array.isArray(a) || Array.isArray(b)) {\n    const x = Array.isArray(a) ? a.slice().sort() : [];\n    const y = Array.isArray(b) ? b.slice().sort() : [];\n    return x.length === y.length && x.every((v, i) => v === y[i]);\n  }\n  if (typeof a === 'number' || typeof b === 'number') {\n    const x = Number(a);\n    const y = Number(b);\n    if (Number.isFinite(x) && Number.isFinite(y)) return Math.abs(x - y) < 0.005;\n  }\n  return String(a === undefined || a === null ? '' : a) === String(b === undefined || b === null ? '' : b);\n};\n\nconst isEmpty = (v) =>\n  v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);\n\n/**\n * @param {object} extracted        extractQuotation() output\n * @param {object} [options]\n * @param {string|null} [options.storedRecordId]  record id read back from the sheet\n * @param {Array}  [options.existingRecords]      [{ id, fields }] from the Projects table\n * @param {string|null} [options.sourceFileId]    Drive file id, for the audit column\n * @param {string} [options.statusOnCreate]\n */\nfunction decideAction(extracted, options) {\n  const opts = options || {};\n  const existing = opts.existingRecords || [];\n  const notes = [];\n  const incoming = extracted.fields || {};\n\n  let target = null;\n  let matchedBy = null;\n\n  if (opts.storedRecordId) {\n    target = existing.find((r) => r.id === opts.storedRecordId) || null;\n    if (target) {\n      matchedBy = 'record id from sheet';\n    } else {\n      notes.push(\n        `The sheet points at record ${opts.storedRecordId}, which is not in the table ` +\n          `(deleted, or the sheet was copied from another project). Falling back to the QU number.`\n      );\n    }\n  }\n\n  if (!target) {\n    const wantedQu = extracted.meta && extracted.meta.quNumberNormalized;\n    if (wantedQu) {\n      const hits = existing.filter((r) => normalizeQu(r.fields && r.fields['QU Number']) === wantedQu);\n      if (hits.length === 1) {\n        target = hits[0];\n        matchedBy = 'QU number';\n      } else if (hits.length > 1) {\n        // Two records carrying the same QU is a data problem in the tracker. Picking one\n        // at random would quietly corrupt whichever we lost.\n        return {\n          action: 'skip',\n          recordId: null,\n          fields: {},\n          matchedBy: null,\n          reason:\n            `QU ${extracted.meta.quNumber} matches ${hits.length} records ` +\n            `(${hits.map((h) => h.id).join(', ')}). Refusing to guess which one to update.`,\n          notes,\n          warnings: extracted.warnings || [],\n        };\n      }\n    }\n  }\n\n  if (!target) {\n    const fields = {};\n    for (const key of SYNCED_FIELDS) {\n      if (!isEmpty(incoming[key])) fields[key] = incoming[key];\n    }\n    if (opts.statusOnCreate) fields['Status'] = opts.statusOnCreate;\n    if (opts.sourceFileId && opts.includeSourceFileField) {\n      fields['_sync_source_file'] = opts.sourceFileId;\n    }\n    return {\n      action: 'create',\n      recordId: null,\n      fields,\n      matchedBy: null,\n      reason: 'No record id in the sheet and no QU match — this quotation is new to the tracker.',\n      notes,\n      warnings: extracted.warnings || [],\n    };\n  }\n\n  const current = target.fields || {};\n  const fields = {};\n  const changes = [];\n  const held = [];\n\n  for (const key of SYNCED_FIELDS) {\n    const next = incoming[key];\n\n    if (CREATE_ONLY_FIELDS.includes(key)) {\n      // Surfaced rather than silent: someone comparing the sheet to the tracker should be\n      // able to see that the two disagree and that the sync chose not to intervene.\n      if (!isEmpty(next) && !isEmpty(current[key]) && !sameValue(next, current[key])) {\n        notes.push(\n          `${key} differs — sheet says ${JSON.stringify(next)}, tracker says ` +\n            `${JSON.stringify(current[key])}. Left as it is; ${key} is only written when a ` +\n            `record is first created.`\n        );\n      }\n      continue;\n    }\n\n    if (isEmpty(next)) {\n      // Rule 2. Only worth mentioning when there is something there to protect.\n      if (!isEmpty(current[key])) held.push(key);\n      continue;\n    }\n    if (!sameValue(next, current[key])) {\n      fields[key] = next;\n      changes.push(\n        `${key}: ${JSON.stringify(current[key] === undefined ? null : current[key])} -> ${JSON.stringify(next)}`\n      );\n    }\n  }\n\n  if (held.length) {\n    notes.push(`Sheet had nothing for ${held.join(', ')} — left the tracker's values alone.`);\n  }\n\n  if (!changes.length) {\n    return {\n      action: 'skip',\n      recordId: target.id,\n      fields: {},\n      matchedBy,\n      reason: `Matched ${target.id} by ${matchedBy}; every synced field already agrees.`,\n      notes,\n      warnings: extracted.warnings || [],\n    };\n  }\n\n  return {\n    action: 'update',\n    recordId: target.id,\n    fields,\n    matchedBy,\n    reason: `Matched ${target.id} by ${matchedBy}. Changing: ${changes.join('; ')}.`,\n    notes,\n    warnings: extracted.warnings || [],\n  };\n}\n\n/**\n * The glue between n8n's HTTP nodes and the two pure modules.\n *\n * Everything here is still pure — it takes the raw shapes the Google Sheets and Airtable\n * APIs return and produces a decision plus a human-readable summary. The Code node in the\n * workflow is this file, extract.js and sync.js concatenated by scripts/build-workflow.js,\n * with a four-line n8n adapter on the end. Same reason Posty does it: the code that is\n * tested is the code that ships.\n */\n\n\n\n// --- link parsing (sliced out verbatim into the Parse Request node) ---------\n\n/**\n * Google URLs all carry a `/d/<id>` segment, so matching that alone accepts a Doc, a\n * deck or an uploaded file just as happily as a spreadsheet. It then fails much later,\n * at the Sheets API, as \"Requested entity was not found\" — which tells the person who\n * pasted it nothing at all. Someone pasted a Google Doc link on 22 Sept and got exactly\n * that. These are matched first so the complaint can name what they actually pasted.\n */\nconst WRONG_LINK_KINDS = [\n  [/\\/document\\/d\\//, 'a Google Doc'],\n  [/\\/presentation\\/d\\//, 'a Google Slides deck'],\n  [/\\/forms\\/d\\//, 'a Google Form'],\n  [/\\/file\\/d\\//, 'a file stored in Drive (an upload, not a Google Sheet)'],\n];\n\n/**\n * Accepts what a person will actually paste: a full edit URL, a sharing URL, or the bare\n * id. Only `/spreadsheets/d/` counts as a link — anything else is rejected here rather\n * than turned into a request that cannot work.\n */\nfunction parseFileId(raw) {\n  const s = String(raw === null || raw === undefined ? '' : raw).trim();\n  if (!s) return null;\n  for (const pair of WRONG_LINK_KINDS) if (pair[0].test(s)) return null;\n  const fromUrl = /\\/spreadsheets\\/d\\/([a-zA-Z0-9_-]{20,})/.exec(s);\n  if (fromUrl) return fromUrl[1];\n  if (/^[a-zA-Z0-9_-]{20,}$/.test(s)) return s;\n  return null;\n}\n\n/** null when the link is usable, otherwise the sentence to show the person. */\nfunction describeLinkProblem(raw) {\n  const s = String(raw === null || raw === undefined ? '' : raw).trim();\n  if (!s) return 'No link was given. Paste the link to the quotation Google Sheet.';\n  for (const pair of WRONG_LINK_KINDS) {\n    if (pair[0].test(s)) {\n      return (\n        `That link points at ${pair[1]}, not a Google Sheet. Open the quotation ` +\n        `spreadsheet and copy the link from the address bar — a Sheet's link contains ` +\n        `/spreadsheets/d/.`\n      );\n    }\n  }\n  if (!parseFileId(s)) {\n    return (\n      `That does not look like a Google Sheet link or id: ${JSON.stringify(s)}. ` +\n      `Paste the full link from the address bar.`\n    );\n  }\n  return null;\n}\n\n// --- end link parsing -------------------------------------------------------\n\n/**\n * The `_hitsync` tab holds the Airtable record id in A2. The tab may not exist yet — for\n * every quotation file made before this sync did — in which case the read node fails soft\n * and we get nothing. That is a normal first run, not an error.\n */\nfunction readStoredRecordId(values) {\n  const cell = values && values[0] && values[0][0];\n  const s = String(cell === null || cell === undefined ? '' : cell).trim();\n  return /^rec[A-Za-z0-9]{14}$/.test(s) ? s : null;\n}\n\n/** Airtable REST hands back { records: [{ id, fields }] }, possibly across pages. */\nfunction collectAirtableRecords(pages) {\n  const out = [];\n  for (const page of [].concat(pages || [])) {\n    const records = (page && page.records) || [];\n    for (const r of records) out.push({ id: r.id, fields: r.fields || {} });\n  }\n  return out;\n}\n\n/** One readable block for the form's result screen. Kristine reads this, not the JSON. */\nfunction summarize(state) {\n  const { decision, extracted, preview } = state;\n  const lines = [];\n  const verb = { create: 'Created', update: 'Updated', skip: 'No change' }[decision.action];\n\n  lines.push(preview ? `PREVIEW — nothing was written.` : `${verb}.`);\n  lines.push('');\n  lines.push(decision.reason);\n\n  if (decision.action !== 'skip') {\n    lines.push('');\n    lines.push(decision.action === 'create' ? 'Fields written:' : 'Fields changed:');\n    for (const [k, v] of Object.entries(decision.fields)) {\n      lines.push(`  ${k}: ${Array.isArray(v) ? v.join(', ') : v}`);\n    }\n  }\n\n  const notes = [].concat(decision.notes || [], decision.warnings || []);\n  if (notes.length) {\n    lines.push('');\n    lines.push('Worth checking:');\n    for (const n of notes) lines.push(`  - ${n}`);\n  }\n\n  lines.push('');\n  lines.push(`Approved cost taken from: ${extracted.meta.approvedCostSource}`);\n\n  return lines.join('\\n');\n}\n\n/**\n * @param {object} ctx\n * @param {Array<Array<string>>} ctx.sheetValues     values from <tab>!A1:T200\n * @param {Array<Array<string>>} [ctx.syncTabValues] values from _hitsync!A2, if the tab exists\n * @param {Array|object} [ctx.airtablePages]         one or more Airtable list responses\n * @param {string} ctx.fileId\n * @param {boolean} [ctx.preview]\n * @param {object} [ctx.options]\n */\nfunction runDecision(ctx) {\n  const extracted = extractQuotation(ctx.sheetValues || [], ctx.options);\n  const storedRecordId = readStoredRecordId(ctx.syncTabValues);\n  const existingRecords = collectAirtableRecords(ctx.airtablePages);\n\n  const decision = decideAction(extracted, {\n    storedRecordId,\n    existingRecords,\n    sourceFileId: ctx.fileId,\n    statusOnCreate: (ctx.options && ctx.options.statusOnCreate) || DEFAULTS.statusOnCreate,\n    includeSourceFileField: Boolean(ctx.options && ctx.options.includeSourceFileField),\n  });\n\n  const preview = Boolean(ctx.preview);\n  const state = { extracted, decision, storedRecordId, preview, fileId: ctx.fileId };\n\n  return {\n    action: preview ? 'preview' : decision.action,\n    plannedAction: decision.action,\n    recordId: decision.recordId,\n    fields: decision.fields,\n    // The write-back only needs to happen when a record is created and the sheet does not\n    // already point at one. An update already knows which record it is talking to.\n    needsRecordIdWriteback: !preview && decision.action === 'create',\n    storedRecordId,\n    matchedBy: decision.matchedBy,\n    reason: decision.reason,\n    notes: decision.notes,\n    warnings: decision.warnings,\n    meta: extracted.meta,\n    summary: summarize(state),\n  };\n}\n\n/**\n * The Airtable call this run needs, or null when there is nothing to write.\n *\n * Built here rather than in the workflow so that the create/update choice is covered by\n * tests instead of by an IF node nobody can unit-test. The HTTP node just executes\n * whatever method, url and body it is handed.\n */\nfunction buildWriteRequest(result, cfg) {\n  if (!result || result.action === 'preview' || result.plannedAction === 'skip') return null;\n  const table = encodeURIComponent(cfg.table);\n  const base = `https://api.airtable.com/v0/${cfg.baseId}/${table}`;\n\n  if (result.plannedAction === 'create') {\n    return { method: 'POST', url: base, body: { fields: result.fields, typecast: false } };\n  }\n  if (!result.recordId) return null;\n  return {\n    method: 'PATCH',\n    url: `${base}/${result.recordId}`,\n    body: { fields: result.fields, typecast: false },\n  };\n}\n\n/**\n * Stamp the new record id into the quotation's `_hitsync` tab.\n *\n * Writes the header alongside the value so the tab explains itself to whoever opens it,\n * and so a file whose tab exists but is empty ends up correct either way. RAW, not\n * USER_ENTERED — a record id must never be interpreted by Sheets.\n */\nfunction buildWritebackRequest(fileId, recordId, cfg) {\n  if (!fileId || !recordId) return null;\n  const range = encodeURIComponent(`${cfg.syncTab}!A1:A2`);\n  return {\n    method: 'PUT',\n    url:\n      `https://sheets.googleapis.com/v4/spreadsheets/${fileId}/values/${range}` +\n      `?valueInputOption=RAW`,\n    body: { values: [['airtable_record_id'], [recordId]] },\n  };\n}\n\n// --- n8n adapter -----------------------------------------------------------\nconst input = $('Parse Request').first().json;\nconst sheetResponse = $('Read Quotation').first().json;\n\n// The _hitsync tab does not exist in quotation files made before this sync did. That node\n// is set to fail soft, so a missing tab arrives as an error payload, not as values.\nlet syncTabValues = null;\ntry {\n  const syncResponse = $('Read Sync Tab').first().json;\n  if (syncResponse && syncResponse.values) syncTabValues = syncResponse.values;\n} catch (e) {\n  syncTabValues = null;\n}\n\nconst trackerPages = $('Read Tracker').all().map(function (item) { return item.json; });\n\nconst result = runDecision({\n  sheetValues: (sheetResponse && sheetResponse.values) || [],\n  syncTabValues: syncTabValues,\n  airtablePages: trackerPages,\n  fileId: input.fileId,\n  preview: input.preview\n});\n\nconst write = buildWriteRequest(result, {\n  baseId: input.config.airtableBaseId,\n  table: input.config.airtableTable\n});\n\nreturn [{\n  json: Object.assign({}, result, { needsWrite: Boolean(write), write: write || {} })\n}];"
+      },
+      "position": [
+        1100,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "bs-if-write",
+      "name": "Needs Write?",
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.needsWrite }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "position": [
+        1320,
+        0
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1
+    },
+    {
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ugqgQhQBlB8PF7I7",
+          "name": "Airtable (Kristine — live tracker)"
+        }
+      },
+      "id": "bs-write-tracker",
+      "name": "Write Tracker",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "contentType": "json",
+        "jsonBody": "={{ JSON.stringify($json.write.body) }}",
+        "method": "={{ $json.write.method }}",
+        "nodeCredentialType": "airtableTokenApi",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "={{ $json.write.url }}"
+      },
+      "position": [
+        1540,
+        -120
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "bs-prepare-writeback",
+      "name": "Prepare Writeback",
+      "parameters": {
+        "jsCode": "// ---------------------------------------------------------------------------\n// Generated by scripts/build-workflow.js from code/extract.js, code/sync.js and\n// code/run.js. Do not edit here — edit those files and rebuild, or the tests stop\n// describing what actually runs.\n// ---------------------------------------------------------------------------\n\n/**\n * Pull the Airtable-bound fields out of one quotation tab.\n *\n * Kristine's mapping is written in cell addresses (B35, B36, B38, E119). We honor those\n * as the expected positions, but we *find* each value by its label in column A instead of\n * reading the address blind. The quotation template gets rows inserted into it — the\n * `QU # (DATE)` tab and the `MAIN` tab in the same workbook already disagree by four rows\n * on where the totals block starts. A blind read of E119 would silently pick up whatever\n * moved into that cell; a label read either finds `RND PACKAGE COST` or reports that it\n * could not.\n *\n * Every anchor still carries its expected row. When the two disagree we take the label and\n * raise a drift warning, so the sheet drifting is visible rather than silent.\n */\n\n/**\n * Exact `Service` choices from the Projects table. Several carry a trailing space that is\n * part of the stored value — 'Recording ' is not 'Recording'. Airtable rejects a write that\n * does not match a choice character for character, so these are copied verbatim.\n * Refresh with: node scripts/refresh-choices.js\n */\nconst SERVICE_CHOICES = [\n  'AV Integration',\n  'Video',\n  'Other',\n  'Recording ',\n  'Mixing ',\n  'Editing ',\n  'Lobby Events / Rental',\n  'Sound Design',\n  'Sonic Branding ',\n  'In-Studio Listening / Preview Session ',\n  'Music Composition',\n  'Studio Rental',\n  'BUYOUT',\n  'Video post-production',\n  'Directing ',\n];\n\nconst DEFAULTS = {\n  serviceChoices: SERVICE_CHOICES,\n  // Applied only when creating a record, never on update. A record with no Status is\n  // invisible in the tracker's grouped views, and the sheet has no Status column to read.\n  statusOnCreate: 'Awaiting Quote Approval',\n  // 'product'         -> Project Title = PRODUCT, as specified.\n  // 'company-product' -> 'HARAYA DEL ROSARIO - AUDIOBOOK PRODUCTION', matching how the\n  //                      existing 18 records are titled (client first). Opt in.\n  projectTitleMode: 'product',\n};\n\nconst ANCHORS = {\n  company: { label: 'AGENCY/COMPANY', valueCol: 1, expectedRow: 35 },\n  contact: { label: 'PRODUCER/MAIN CONTACT', valueCol: 1, expectedRow: 36 },\n  product: { label: 'PRODUCT', valueCol: 1, expectedRow: 37 },\n  services: { label: 'PROJECT DETAILS', valueCol: 1, expectedRow: 38 },\n  // Rows below confirmed against the live sheet on 2026-09-20, by reading what the Sheets\n  // API actually returned. Note these are one lower than the handoff's cell references:\n  // the spec's E119 is the TOTAL row, not RND PACKAGE COST. See README, 'Approved cost'.\n  rndPackageCost: { label: 'RND PACKAGE COST', valueCol: 4, expectedRow: 120 },\n  total: { label: 'TOTAL', valueCol: 4, expectedRow: 119 },\n  totalNet: { label: 'TOTAL NET', valueCol: 4, expectedRow: 116 },\n};\n\nconst text = (v) => String(v === null || v === undefined ? '' : v).replace(/\\s+/g, ' ').trim();\n\n/** Uppercase, collapse whitespace, drop a trailing colon. For comparing labels only. */\nconst label = (v) => text(v).replace(/[:：]+$/, '').trim().toUpperCase();\n\nconst at = (grid, row, col) => text(grid[row] && grid[row][col]);\n\n/** A1-style address for a zero-indexed row/col, so warnings name a cell a human can open. */\nfunction address(row, col) {\n  let n = col + 1;\n  let name = '';\n  while (n > 0) {\n    const rem = (n - 1) % 26;\n    name = String.fromCharCode(65 + rem) + name;\n    n = Math.floor((n - 1) / 26);\n  }\n  return `${name}${row + 1}`;\n}\n\n/**\n * Locate a label in column A. Exact match after normalizing, which is what keeps\n * 'TOTAL' from matching 'TOTAL NET', 'TOTAL HOURS:' or ' ACTUALS TOTAL'.\n * Column A only — the MAIN tab carries a second quotation block in columns K-S with its\n * own 'TOTAL' and 'QU CODE:' rows, and that block is not part of this mapping.\n */\nfunction findLabelRow(grid, wanted) {\n  const want = label(wanted);\n  for (let r = 0; r < grid.length; r++) {\n    if (label(grid[r] && grid[r][0]) === want) return r;\n  }\n  return -1;\n}\n\n/** '48,782.22' -> 48782.22 | ' - ' -> null | '' -> null | '(1,200)' -> -1200 */\nfunction parseMoney(raw) {\n  const s = text(raw);\n  if (!s) return null;\n  if (/^[-–—\\s]*$/.test(s)) return null;\n  const negative = /^\\(.*\\)$/.test(s);\n  const digits = s.replace(/[()]/g, '').replace(/[^0-9.-]/g, '');\n  if (!digits || !/[0-9]/.test(digits)) return null;\n  const n = Number(digits);\n  if (!Number.isFinite(n)) return null;\n  return negative ? -Math.abs(n) : n;\n}\n\n/**\n * 'RECORDING, DIRECTING' -> ['Recording ', 'Directing ']\n *\n * Whole string first: three of the real choices contain a slash or hyphen\n * ('Lobby Events / Rental', 'Video post-production'), so splitting eagerly would shred\n * them. Only commas and semicolons split. Anything that does not match a choice exactly\n * is reported rather than guessed at — a wrong multi-select is harder to notice than a\n * missing one.\n */\nfunction mapServices(raw, choices) {\n  const source = text(raw);\n  const matched = [];\n  const unmatched = [];\n  if (!source) return { services: matched, unmatched };\n\n  const lookup = new Map(choices.map((c) => [label(c), c]));\n\n  const whole = lookup.get(label(source));\n  if (whole) return { services: [whole], unmatched };\n\n  for (const token of source.split(/[,;]+/)) {\n    const t = text(token);\n    if (!t) continue;\n    const hit = lookup.get(label(t));\n    if (hit) {\n      if (!matched.includes(hit)) matched.push(hit);\n    } else if (!unmatched.includes(t)) {\n      unmatched.push(t);\n    }\n  }\n  return { services: matched, unmatched };\n}\n\n/**\n * The QU code lives in a merged cell written as free text — 'QU CODE: QU-18135' — not as\n * a label/value pair like the rows above it. It may also be blank, because the number only\n * exists after the quote has been through Xero.\n */\nfunction extractQuNumber(grid) {\n  for (let r = 0; r < grid.length; r++) {\n    for (let c = 0; c <= 1; c++) {\n      const cell = at(grid, r, c);\n      const m = /^QU\\s*CODE\\s*[:：]?\\s*(.*)$/i.exec(cell);\n      if (!m) continue;\n      const inline = text(m[1]);\n      const value = inline || at(grid, r, c + 1);\n      if (value) return { quNumber: value, row: r, col: c };\n    }\n  }\n  return { quNumber: null, row: -1, col: -1 };\n}\n\n/**\n * Reduce a QU cell to comparable digits. The tracker holds 'QU-17902', 'QU- 18006',\n * 'QU-' and 'QU- 17969, 17972, 17973' — string equality is not a usable key across those.\n * Used only for the fallback match; the record id written back to the sheet is the real key.\n */\nfunction normalizeQu(raw) {\n  const nums = text(raw).match(/\\d{3,}/g);\n  return nums ? nums.join(',') : null;\n}\n\n/**\n * @param {Array<Array<string>>} grid  Row-major values of one quotation tab, A1 at [0][0].\n * @param {object} [options]\n * @returns {{fields: object, meta: object, warnings: string[]}}\n */\nfunction extractQuotation(grid, options) {\n  const config = Object.assign({}, DEFAULTS, options || {});\n  const warnings = [];\n  const found = {};\n\n  for (const [key, anchor] of Object.entries(ANCHORS)) {\n    const row = findLabelRow(grid, anchor.label);\n    if (row === -1) {\n      found[key] = { row: -1, value: '' };\n      continue;\n    }\n    if (row !== anchor.expectedRow - 1) {\n      warnings.push(\n        `Template drift: '${anchor.label}' expected on row ${anchor.expectedRow}, found on ` +\n          `row ${row + 1}. Read ${address(row, anchor.valueCol)} instead of ` +\n          `${address(anchor.expectedRow - 1, anchor.valueCol)}.`\n      );\n    }\n    found[key] = { row, value: at(grid, row, anchor.valueCol) };\n  }\n\n  for (const key of ['company', 'contact', 'product', 'services']) {\n    if (found[key].row === -1) {\n      warnings.push(`Missing label '${ANCHORS[key].label}' in column A — nothing to read for ${key}.`);\n    }\n  }\n\n  const company = found.company.value;\n  const contact = found.contact.value;\n  const product = found.product.value;\n\n  // House format, matching all 18 existing records: 'Steve Huang / LAKIWIN'.\n  const contactCompany = [contact, company].filter(Boolean).join(' / ');\n  if (!contact || !company) {\n    warnings.push(\n      `CONTACT Name / COMPANY built from a partial pair (contact='${contact}', company='${company}').`\n    );\n  }\n\n  const { services, unmatched } = mapServices(found.services.value, config.serviceChoices);\n  if (unmatched.length) {\n    warnings.push(\n      `PROJECT DETAILS has no matching Service choice for: ${unmatched\n        .map((u) => `'${u}'`)\n        .join(', ')}. Left off the record — add the choice in Airtable or fix the sheet.`\n    );\n  }\n\n  // Approved cost: the rounded package figure is what the client signs off on. Fall back to\n  // TOTAL when it has not been filled in, so the record is never silently zero.\n  const rnd = parseMoney(found.rndPackageCost.value);\n  const total = parseMoney(found.total.value);\n  let approvedCost = rnd;\n  let approvedCostSource = 'RND PACKAGE COST';\n  if (approvedCost === null) {\n    approvedCost = total;\n    approvedCostSource = 'TOTAL (fallback)';\n    warnings.push(\n      `RND PACKAGE COST (${address(found.rndPackageCost.row, ANCHORS.rndPackageCost.valueCol)}) ` +\n        `is empty — used TOTAL instead` + (total === null ? ', which is also empty.' : ` (${total}).`)\n    );\n  }\n  if (approvedCost === null) {\n    approvedCostSource = 'none';\n    warnings.push('No approved cost found — Approved Cost (Local) will be left empty.');\n  }\n\n  const qu = extractQuNumber(grid);\n\n  const projectTitle =\n    config.projectTitleMode === 'company-product'\n      ? [company, product].filter(Boolean).join(' - ')\n      : product;\n\n  const fields = {};\n  if (projectTitle) fields['Project Title'] = projectTitle;\n  if (contactCompany) fields['CONTACT Name / COMPANY'] = contactCompany;\n  if (services.length) fields['Service'] = services;\n  if (approvedCost !== null) fields['Approved Cost (Local)'] = approvedCost;\n  if (qu.quNumber) fields['QU Number'] = qu.quNumber;\n\n  return {\n    fields,\n    meta: {\n      quNumber: qu.quNumber,\n      quNumberNormalized: normalizeQu(qu.quNumber),\n      quCell: qu.row === -1 ? null : address(qu.row, qu.col),\n      approvedCostSource,\n      rndPackageCost: rnd,\n      total,\n      totalNet: parseMoney(found.totalNet.value),\n      unmatchedServices: unmatched,\n      statusOnCreate: config.statusOnCreate,\n      readFrom: Object.fromEntries(\n        Object.entries(found).map(([k, v]) => [\n          k,\n          v.row === -1 ? null : address(v.row, ANCHORS[k].valueCol),\n        ])\n      ),\n    },\n    warnings,\n  };\n}\n\n/**\n * Decide what a quotation should do to the tracker: create, update, or nothing.\n *\n * Pure. No network. The n8n workflow reads the sheet and the table, hands both to\n * decideAction, and performs whatever comes back. Keeping the decision separate from the\n * I/O is what makes it testable, and this is the part worth testing — a sync that creates\n * a second record every run is worse than no sync at all.\n *\n * Three rules hold the whole thing up:\n *\n *  1. The record id written back into the sheet is the key. Not the QU number. The tracker\n *     holds 'QU-', 'QU- 18006' and 'QU- 17969, 17972, 17973'; the QU also does not exist\n *     until the quote has been through Xero, which is after the first sync. It is a\n *     fallback, never the primary.\n *  2. Never write an empty value over a populated one. The sheet is one view of a project;\n *     people also type directly into Airtable. A blank cell means 'the sheet does not know',\n *     not 'set this to blank'.\n *  3. If nothing changed, write nothing. Keeps revision history readable and keeps the\n *     run cheap.\n */\n\n\n/** Fields the sync owns. Anything else on the record is somebody else's and is left alone. */\nconst SYNCED_FIELDS = [\n  'Project Title',\n  'CONTACT Name / COMPANY',\n  'Service',\n  'Approved Cost (Local)',\n  'QU Number',\n];\n\n/**\n * Written when the record is created, then never touched again.\n *\n * `Project Title` is not in Kristine's mapping — it is here so a new record is not\n * nameless in the tracker's primary column. But the sheet's PRODUCT cell is a rate\n * description, and people write something better by hand: the live tracker had\n * 'Haraya Del Rosario - The 90-Day Leadership Field Manual' where the sheet says\n * 'AUDIOBOOK PRODUCTION - PER DAY RATE'. Syncing that field on update would replace a\n * human's title with a worse one on every run, so it seeds and then stays out of the way.\n */\nconst CREATE_ONLY_FIELDS = ['Project Title'];\n\nconst sameValue = (a, b) => {\n  if (Array.isArray(a) || Array.isArray(b)) {\n    const x = Array.isArray(a) ? a.slice().sort() : [];\n    const y = Array.isArray(b) ? b.slice().sort() : [];\n    return x.length === y.length && x.every((v, i) => v === y[i]);\n  }\n  if (typeof a === 'number' || typeof b === 'number') {\n    const x = Number(a);\n    const y = Number(b);\n    if (Number.isFinite(x) && Number.isFinite(y)) return Math.abs(x - y) < 0.005;\n  }\n  return String(a === undefined || a === null ? '' : a) === String(b === undefined || b === null ? '' : b);\n};\n\nconst isEmpty = (v) =>\n  v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);\n\n/**\n * @param {object} extracted        extractQuotation() output\n * @param {object} [options]\n * @param {string|null} [options.storedRecordId]  record id read back from the sheet\n * @param {Array}  [options.existingRecords]      [{ id, fields }] from the Projects table\n * @param {string|null} [options.sourceFileId]    Drive file id, for the audit column\n * @param {string} [options.statusOnCreate]\n */\nfunction decideAction(extracted, options) {\n  const opts = options || {};\n  const existing = opts.existingRecords || [];\n  const notes = [];\n  const incoming = extracted.fields || {};\n\n  let target = null;\n  let matchedBy = null;\n\n  if (opts.storedRecordId) {\n    target = existing.find((r) => r.id === opts.storedRecordId) || null;\n    if (target) {\n      matchedBy = 'record id from sheet';\n    } else {\n      notes.push(\n        `The sheet points at record ${opts.storedRecordId}, which is not in the table ` +\n          `(deleted, or the sheet was copied from another project). Falling back to the QU number.`\n      );\n    }\n  }\n\n  if (!target) {\n    const wantedQu = extracted.meta && extracted.meta.quNumberNormalized;\n    if (wantedQu) {\n      const hits = existing.filter((r) => normalizeQu(r.fields && r.fields['QU Number']) === wantedQu);\n      if (hits.length === 1) {\n        target = hits[0];\n        matchedBy = 'QU number';\n      } else if (hits.length > 1) {\n        // Two records carrying the same QU is a data problem in the tracker. Picking one\n        // at random would quietly corrupt whichever we lost.\n        return {\n          action: 'skip',\n          recordId: null,\n          fields: {},\n          matchedBy: null,\n          reason:\n            `QU ${extracted.meta.quNumber} matches ${hits.length} records ` +\n            `(${hits.map((h) => h.id).join(', ')}). Refusing to guess which one to update.`,\n          notes,\n          warnings: extracted.warnings || [],\n        };\n      }\n    }\n  }\n\n  if (!target) {\n    const fields = {};\n    for (const key of SYNCED_FIELDS) {\n      if (!isEmpty(incoming[key])) fields[key] = incoming[key];\n    }\n    if (opts.statusOnCreate) fields['Status'] = opts.statusOnCreate;\n    if (opts.sourceFileId && opts.includeSourceFileField) {\n      fields['_sync_source_file'] = opts.sourceFileId;\n    }\n    return {\n      action: 'create',\n      recordId: null,\n      fields,\n      matchedBy: null,\n      reason: 'No record id in the sheet and no QU match — this quotation is new to the tracker.',\n      notes,\n      warnings: extracted.warnings || [],\n    };\n  }\n\n  const current = target.fields || {};\n  const fields = {};\n  const changes = [];\n  const held = [];\n\n  for (const key of SYNCED_FIELDS) {\n    const next = incoming[key];\n\n    if (CREATE_ONLY_FIELDS.includes(key)) {\n      // Surfaced rather than silent: someone comparing the sheet to the tracker should be\n      // able to see that the two disagree and that the sync chose not to intervene.\n      if (!isEmpty(next) && !isEmpty(current[key]) && !sameValue(next, current[key])) {\n        notes.push(\n          `${key} differs — sheet says ${JSON.stringify(next)}, tracker says ` +\n            `${JSON.stringify(current[key])}. Left as it is; ${key} is only written when a ` +\n            `record is first created.`\n        );\n      }\n      continue;\n    }\n\n    if (isEmpty(next)) {\n      // Rule 2. Only worth mentioning when there is something there to protect.\n      if (!isEmpty(current[key])) held.push(key);\n      continue;\n    }\n    if (!sameValue(next, current[key])) {\n      fields[key] = next;\n      changes.push(\n        `${key}: ${JSON.stringify(current[key] === undefined ? null : current[key])} -> ${JSON.stringify(next)}`\n      );\n    }\n  }\n\n  if (held.length) {\n    notes.push(`Sheet had nothing for ${held.join(', ')} — left the tracker's values alone.`);\n  }\n\n  if (!changes.length) {\n    return {\n      action: 'skip',\n      recordId: target.id,\n      fields: {},\n      matchedBy,\n      reason: `Matched ${target.id} by ${matchedBy}; every synced field already agrees.`,\n      notes,\n      warnings: extracted.warnings || [],\n    };\n  }\n\n  return {\n    action: 'update',\n    recordId: target.id,\n    fields,\n    matchedBy,\n    reason: `Matched ${target.id} by ${matchedBy}. Changing: ${changes.join('; ')}.`,\n    notes,\n    warnings: extracted.warnings || [],\n  };\n}\n\n/**\n * The glue between n8n's HTTP nodes and the two pure modules.\n *\n * Everything here is still pure — it takes the raw shapes the Google Sheets and Airtable\n * APIs return and produces a decision plus a human-readable summary. The Code node in the\n * workflow is this file, extract.js and sync.js concatenated by scripts/build-workflow.js,\n * with a four-line n8n adapter on the end. Same reason Posty does it: the code that is\n * tested is the code that ships.\n */\n\n\n\n// --- link parsing (sliced out verbatim into the Parse Request node) ---------\n\n/**\n * Google URLs all carry a `/d/<id>` segment, so matching that alone accepts a Doc, a\n * deck or an uploaded file just as happily as a spreadsheet. It then fails much later,\n * at the Sheets API, as \"Requested entity was not found\" — which tells the person who\n * pasted it nothing at all. Someone pasted a Google Doc link on 22 Sept and got exactly\n * that. These are matched first so the complaint can name what they actually pasted.\n */\nconst WRONG_LINK_KINDS = [\n  [/\\/document\\/d\\//, 'a Google Doc'],\n  [/\\/presentation\\/d\\//, 'a Google Slides deck'],\n  [/\\/forms\\/d\\//, 'a Google Form'],\n  [/\\/file\\/d\\//, 'a file stored in Drive (an upload, not a Google Sheet)'],\n];\n\n/**\n * Accepts what a person will actually paste: a full edit URL, a sharing URL, or the bare\n * id. Only `/spreadsheets/d/` counts as a link — anything else is rejected here rather\n * than turned into a request that cannot work.\n */\nfunction parseFileId(raw) {\n  const s = String(raw === null || raw === undefined ? '' : raw).trim();\n  if (!s) return null;\n  for (const pair of WRONG_LINK_KINDS) if (pair[0].test(s)) return null;\n  const fromUrl = /\\/spreadsheets\\/d\\/([a-zA-Z0-9_-]{20,})/.exec(s);\n  if (fromUrl) return fromUrl[1];\n  if (/^[a-zA-Z0-9_-]{20,}$/.test(s)) return s;\n  return null;\n}\n\n/** null when the link is usable, otherwise the sentence to show the person. */\nfunction describeLinkProblem(raw) {\n  const s = String(raw === null || raw === undefined ? '' : raw).trim();\n  if (!s) return 'No link was given. Paste the link to the quotation Google Sheet.';\n  for (const pair of WRONG_LINK_KINDS) {\n    if (pair[0].test(s)) {\n      return (\n        `That link points at ${pair[1]}, not a Google Sheet. Open the quotation ` +\n        `spreadsheet and copy the link from the address bar — a Sheet's link contains ` +\n        `/spreadsheets/d/.`\n      );\n    }\n  }\n  if (!parseFileId(s)) {\n    return (\n      `That does not look like a Google Sheet link or id: ${JSON.stringify(s)}. ` +\n      `Paste the full link from the address bar.`\n    );\n  }\n  return null;\n}\n\n// --- end link parsing -------------------------------------------------------\n\n/**\n * The `_hitsync` tab holds the Airtable record id in A2. The tab may not exist yet — for\n * every quotation file made before this sync did — in which case the read node fails soft\n * and we get nothing. That is a normal first run, not an error.\n */\nfunction readStoredRecordId(values) {\n  const cell = values && values[0] && values[0][0];\n  const s = String(cell === null || cell === undefined ? '' : cell).trim();\n  return /^rec[A-Za-z0-9]{14}$/.test(s) ? s : null;\n}\n\n/** Airtable REST hands back { records: [{ id, fields }] }, possibly across pages. */\nfunction collectAirtableRecords(pages) {\n  const out = [];\n  for (const page of [].concat(pages || [])) {\n    const records = (page && page.records) || [];\n    for (const r of records) out.push({ id: r.id, fields: r.fields || {} });\n  }\n  return out;\n}\n\n/** One readable block for the form's result screen. Kristine reads this, not the JSON. */\nfunction summarize(state) {\n  const { decision, extracted, preview } = state;\n  const lines = [];\n  const verb = { create: 'Created', update: 'Updated', skip: 'No change' }[decision.action];\n\n  lines.push(preview ? `PREVIEW — nothing was written.` : `${verb}.`);\n  lines.push('');\n  lines.push(decision.reason);\n\n  if (decision.action !== 'skip') {\n    lines.push('');\n    lines.push(decision.action === 'create' ? 'Fields written:' : 'Fields changed:');\n    for (const [k, v] of Object.entries(decision.fields)) {\n      lines.push(`  ${k}: ${Array.isArray(v) ? v.join(', ') : v}`);\n    }\n  }\n\n  const notes = [].concat(decision.notes || [], decision.warnings || []);\n  if (notes.length) {\n    lines.push('');\n    lines.push('Worth checking:');\n    for (const n of notes) lines.push(`  - ${n}`);\n  }\n\n  lines.push('');\n  lines.push(`Approved cost taken from: ${extracted.meta.approvedCostSource}`);\n\n  return lines.join('\\n');\n}\n\n/**\n * @param {object} ctx\n * @param {Array<Array<string>>} ctx.sheetValues     values from <tab>!A1:T200\n * @param {Array<Array<string>>} [ctx.syncTabValues] values from _hitsync!A2, if the tab exists\n * @param {Array|object} [ctx.airtablePages]         one or more Airtable list responses\n * @param {string} ctx.fileId\n * @param {boolean} [ctx.preview]\n * @param {object} [ctx.options]\n */\nfunction runDecision(ctx) {\n  const extracted = extractQuotation(ctx.sheetValues || [], ctx.options);\n  const storedRecordId = readStoredRecordId(ctx.syncTabValues);\n  const existingRecords = collectAirtableRecords(ctx.airtablePages);\n\n  const decision = decideAction(extracted, {\n    storedRecordId,\n    existingRecords,\n    sourceFileId: ctx.fileId,\n    statusOnCreate: (ctx.options && ctx.options.statusOnCreate) || DEFAULTS.statusOnCreate,\n    includeSourceFileField: Boolean(ctx.options && ctx.options.includeSourceFileField),\n  });\n\n  const preview = Boolean(ctx.preview);\n  const state = { extracted, decision, storedRecordId, preview, fileId: ctx.fileId };\n\n  return {\n    action: preview ? 'preview' : decision.action,\n    plannedAction: decision.action,\n    recordId: decision.recordId,\n    fields: decision.fields,\n    // The write-back only needs to happen when a record is created and the sheet does not\n    // already point at one. An update already knows which record it is talking to.\n    needsRecordIdWriteback: !preview && decision.action === 'create',\n    storedRecordId,\n    matchedBy: decision.matchedBy,\n    reason: decision.reason,\n    notes: decision.notes,\n    warnings: decision.warnings,\n    meta: extracted.meta,\n    summary: summarize(state),\n  };\n}\n\n/**\n * The Airtable call this run needs, or null when there is nothing to write.\n *\n * Built here rather than in the workflow so that the create/update choice is covered by\n * tests instead of by an IF node nobody can unit-test. The HTTP node just executes\n * whatever method, url and body it is handed.\n */\nfunction buildWriteRequest(result, cfg) {\n  if (!result || result.action === 'preview' || result.plannedAction === 'skip') return null;\n  const table = encodeURIComponent(cfg.table);\n  const base = `https://api.airtable.com/v0/${cfg.baseId}/${table}`;\n\n  if (result.plannedAction === 'create') {\n    return { method: 'POST', url: base, body: { fields: result.fields, typecast: false } };\n  }\n  if (!result.recordId) return null;\n  return {\n    method: 'PATCH',\n    url: `${base}/${result.recordId}`,\n    body: { fields: result.fields, typecast: false },\n  };\n}\n\n/**\n * Stamp the new record id into the quotation's `_hitsync` tab.\n *\n * Writes the header alongside the value so the tab explains itself to whoever opens it,\n * and so a file whose tab exists but is empty ends up correct either way. RAW, not\n * USER_ENTERED — a record id must never be interpreted by Sheets.\n */\nfunction buildWritebackRequest(fileId, recordId, cfg) {\n  if (!fileId || !recordId) return null;\n  const range = encodeURIComponent(`${cfg.syncTab}!A1:A2`);\n  return {\n    method: 'PUT',\n    url:\n      `https://sheets.googleapis.com/v4/spreadsheets/${fileId}/values/${range}` +\n      `?valueInputOption=RAW`,\n    body: { values: [['airtable_record_id'], [recordId]] },\n  };\n}\n\n// --- n8n adapter -----------------------------------------------------------\nconst input = $('Parse Request').first().json;\nconst decided = $('Decide').first().json;\nconst written = $('Write Tracker').first().json;\n\n// On a create, Airtable's response carries the new record id. That id is the thing we\n// stamp into the sheet, and it is what stops the next run creating a duplicate.\nconst recordId = (written && written.id) || decided.recordId || null;\n\nconst writeback = decided.needsRecordIdWriteback\n  ? buildWritebackRequest(input.fileId, recordId, { syncTab: input.config.syncTab })\n  : null;\n\nreturn [{\n  json: {\n    recordId: recordId,\n    needsWriteback: Boolean(writeback),\n    writeback: writeback || {}\n  }\n}];"
+      },
+      "position": [
+        1760,
+        -120
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "bs-if-writeback",
+      "name": "Needs Writeback?",
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.needsWriteback }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "position": [
+        1980,
+        -120
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "bs-ensure-tab",
+      "name": "Ensure Sync Tab",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "contentType": "json",
+        "jsonBody": "={{ JSON.stringify({ requests: [ { addSheet: { properties: { title: $('Parse Request').first().json.config.syncTab, hidden: true } } } ] }) }}",
+        "method": "POST",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "={{ $('Parse Request').first().json.ensureSyncTabUrl }}"
+      },
+      "position": [
+        2200,
+        -320
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "bs-write-back",
+      "name": "Write Back Id",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "contentType": "json",
+        "jsonBody": "={{ JSON.stringify($('Prepare Writeback').first().json.writeback.body) }}",
+        "method": "PUT",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "={{ $('Prepare Writeback').first().json.writeback.url }}"
+      },
+      "position": [
+        2200,
+        -220
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "bs-result",
+      "name": "Result",
+      "parameters": {
+        "jsCode": "const decided = $('Decide').first().json;\n\nlet recordId = decided.recordId;\ntry {\n  const prepared = $('Prepare Writeback').first().json;\n  if (prepared && prepared.recordId) recordId = prepared.recordId;\n} catch (e) {\n  // Nothing was written this run — skip or preview. decided.recordId is already right.\n}\n\nreturn [{\n  json: {\n    result: decided.summary,\n    action: decided.action,\n    recordId: recordId,\n    matchedBy: decided.matchedBy,\n    warnings: decided.warnings\n  }\n}];"
+      },
+      "position": [
+        2440,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    }
+  ],
+  "pinData": null,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-20T08:23:22.070Z",
+      "project": {
+        "createdAt": "2026-09-04T06:28:22.466Z",
+        "creatorId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "zkz4JuokdGopHd2A",
+        "name": "Tara Lim <tara@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-04T07:14:04.840Z"
+      },
+      "projectId": "zkz4JuokdGopHd2A",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-20T08:23:22.070Z",
+      "workflowId": "xo2LIyiqYrJnTLki"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-09-24T06:26:26.987Z",
+  "versionCounter": 6,
+  "versionId": "1c68a5e9-6faf-4e6d-a922-0883a22143c2"
+}

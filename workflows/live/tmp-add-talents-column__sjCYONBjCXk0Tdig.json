@@ -1,0 +1,213 @@
+{
+  "active": false,
+  "activeVersion": null,
+  "activeVersionId": null,
+  "connections": {
+    "Insert Columns": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write Headers",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Manual": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Meta",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Plan": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Insert Columns",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Meta": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Plan",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Write Headers": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Result",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-09-21T19:20:31.976Z",
+  "description": null,
+  "id": "sjCYONBjCXk0Tdig",
+  "isArchived": false,
+  "meta": null,
+  "name": "TMP — Add TALENTS column",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "t1",
+      "name": "Manual",
+      "parameters": {},
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "t2",
+      "name": "Read Meta",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {},
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1ExrX8bTBYG64Goq8VKy1JsGkeGUX5rxKbu3sOZ-P1XY?fields=sheets.properties(title,sheetId,gridProperties/columnCount)"
+      },
+      "position": [
+        220,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "t3",
+      "name": "Plan",
+      "parameters": {
+        "jsCode": "const NON = ['Form Responses 1','QUERY','DATA VALIDATION','DASHBOARD','QUERY ADJUSTMENTS','TIME LOG','_hitsync'];\nconst sheets = $input.first().json.sheets || [];\nconst tabs = sheets.filter(s => NON.indexOf(s.properties.title) === -1);\n\n// Build batchUpdate requests: for each engineer tab, insert a column at index 11 (L)\nconst insertRequests = tabs.map(s => ({\n  insertDimension: {\n    range: { sheetId: s.properties.sheetId, dimension: 'COLUMNS', startIndex: 11, endIndex: 12 },\n    inheritFromBefore: false\n  }\n}));\n\n// Build values update: write TALENTS header in L1 on each tab\nconst headerData = tabs.map(s => ({\n  range: s.properties.title + '!L1',\n  values: [['TALENTS']]\n}));\n\nreturn [{ json: {\n  batchUrl: 'https://sheets.googleapis.com/v4/spreadsheets/1ExrX8bTBYG64Goq8VKy1JsGkeGUX5rxKbu3sOZ-P1XY:batchUpdate',\n  batchBody: { requests: insertRequests },\n  valuesUrl: 'https://sheets.googleapis.com/v4/spreadsheets/1ExrX8bTBYG64Goq8VKy1JsGkeGUX5rxKbu3sOZ-P1XY/values:batchUpdate',\n  valuesBody: { valueInputOption: 'RAW', data: headerData },\n  tabCount: tabs.length,\n  tabNames: tabs.map(s => s.properties.title)\n} }];"
+      },
+      "position": [
+        440,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "t4",
+      "name": "Insert Columns",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "jsonBody": "={{ JSON.stringify($json.batchBody) }}",
+        "method": "POST",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "={{ $json.batchUrl }}"
+      },
+      "position": [
+        660,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "t5",
+      "name": "Write Headers",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "jsonBody": "={{ JSON.stringify($('Plan').first().json.valuesBody) }}",
+        "method": "POST",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "={{ $('Plan').first().json.valuesUrl }}"
+      },
+      "position": [
+        880,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "t6",
+      "name": "Result",
+      "parameters": {
+        "jsCode": "const plan = $('Plan').first().json;\nconst ins = $('Insert Columns').first().json;\nconst hdr = $('Write Headers').first().json;\nreturn [{ json: { tabs: plan.tabNames, inserted: (ins.replies || []).length, headers: (hdr.responses || []).length } }];"
+      },
+      "position": [
+        1100,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    }
+  ],
+  "pinData": null,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-21T19:20:31.982Z",
+      "project": {
+        "createdAt": "2026-09-04T06:28:22.466Z",
+        "creatorId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "zkz4JuokdGopHd2A",
+        "name": "Tara Lim <tara@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-04T07:14:04.840Z"
+      },
+      "projectId": "zkz4JuokdGopHd2A",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-21T19:20:31.982Z",
+      "workflowId": "sjCYONBjCXk0Tdig"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-09-24T06:26:58.440Z",
+  "versionCounter": 1,
+  "versionId": "59ba0f32-221c-4f05-bbab-fc7a391d31a9"
+}

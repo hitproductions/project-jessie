@@ -98,7 +98,7 @@
         ]
       }
     },
-    "createdAt": "2026-09-10T10:26:24.576Z",
+    "createdAt": "2026-09-25T07:28:33.688Z",
     "description": null,
     "name": null,
     "nodeGroups": [],
@@ -146,6 +146,7 @@
           }
         },
         "id": "posty-w1-readstate",
+        "maxTries": 3,
         "name": "Read State",
         "parameters": {
           "documentId": {
@@ -164,8 +165,10 @@
           180,
           0
         ],
+        "retryOnFail": true,
         "type": "n8n-nodes-base.googleSheets",
-        "typeVersion": 4.5
+        "typeVersion": 4.5,
+        "waitBetweenTries": 2000
       },
       {
         "credentials": {
@@ -176,6 +179,7 @@
         },
         "executeOnce": true,
         "id": "posty-w1-readindex",
+        "maxTries": 3,
         "name": "Read Index",
         "parameters": {
           "documentId": {
@@ -194,8 +198,10 @@
           400,
           0
         ],
+        "retryOnFail": true,
         "type": "n8n-nodes-base.googleSheets",
-        "typeVersion": 4.5
+        "typeVersion": 4.5,
+        "waitBetweenTries": 2000
       },
       {
         "credentials": {
@@ -437,21 +443,21 @@
         "typeVersion": 4.5
       }
     ],
-    "updatedAt": "2026-09-10T10:26:24.576Z",
-    "versionId": "d9998fab-77bb-44b8-b8d8-bc65e89c10e4",
+    "updatedAt": "2026-09-25T07:28:33.688Z",
+    "versionId": "eb099570-36ba-495d-a03f-c947f5a0a2ab",
     "workflowId": "DItjvgnQPf5aEsIq",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-09-10T10:26:25.310Z",
+        "createdAt": "2026-09-25T07:28:34.071Z",
         "event": "activated",
-        "id": 767,
+        "id": 1092,
         "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
-        "versionId": "d9998fab-77bb-44b8-b8d8-bc65e89c10e4",
+        "versionId": "eb099570-36ba-495d-a03f-c947f5a0a2ab",
         "workflowId": "DItjvgnQPf5aEsIq"
       }
     ]
   },
-  "activeVersionId": "d9998fab-77bb-44b8-b8d8-bc65e89c10e4",
+  "activeVersionId": "eb099570-36ba-495d-a03f-c947f5a0a2ab",
   "connections": {
     "Build Index": {
       "main": [
@@ -598,6 +604,7 @@
         }
       },
       "id": "posty-w1-readstate",
+      "maxTries": 3,
       "name": "Read State",
       "parameters": {
         "documentId": {
@@ -616,8 +623,10 @@
         180,
         0
       ],
+      "retryOnFail": true,
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5
+      "typeVersion": 4.5,
+      "waitBetweenTries": 2000
     },
     {
       "credentials": {
@@ -628,6 +637,7 @@
       },
       "executeOnce": true,
       "id": "posty-w1-readindex",
+      "maxTries": 3,
       "name": "Read Index",
       "parameters": {
         "documentId": {
@@ -646,8 +656,10 @@
         400,
         0
       ],
+      "retryOnFail": true,
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5
+      "typeVersion": 4.5,
+      "waitBetweenTries": 2000
     },
     {
       "credentials": {
@@ -924,7 +936,7 @@
   },
   "tags": [],
   "triggerCount": 1,
-  "updatedAt": "2026-09-10T10:26:24.572Z",
-  "versionCounter": 15,
-  "versionId": "d9998fab-77bb-44b8-b8d8-bc65e89c10e4"
+  "updatedAt": "2026-09-25T07:28:33.681Z",
+  "versionCounter": 16,
+  "versionId": "eb099570-36ba-495d-a03f-c947f5a0a2ab"
 }
