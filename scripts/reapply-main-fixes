@@ -64,11 +64,43 @@ const FIXES = [
   { id: 'v150 router picks most-recent row', present: wf => /best\s*=\s*r/.test(code(wf, 'Consent Router')),
     apply: wf => { const t = node(wf, 'Consent Router'); if (!t) return 'Consent Router missing';
       t.parameters.jsCode = code(REF, 'Consent Router'); return ''; } },
+  { id: 'v154 All Bookers + Booked For nodes', present: wf => !!node(wf, 'All Bookers') && !!node(wf, 'Booked For'),
+    apply: wf => { const ab = node(REF, 'All Bookers'), bf = node(REF, 'Booked For');
+      if (!ab || !bf) return 'reference has no Booked For nodes';
+      const out = ((wf.connections['All Session Types'] || {}).main || [[]])[0] || [];
+      const i = out.findIndex(x => x.node === 'Room Table');
+      if (i < 0) return 'All Session Types -> Room Table link not found - wire by hand';
+      if (!node(wf, 'All Bookers')) wf.nodes.push(JSON.parse(JSON.stringify(ab)));
+      if (!node(wf, 'Booked For')) wf.nodes.push(JSON.parse(JSON.stringify(bf)));
+      out[i] = { node: 'All Bookers', type: 'main', index: 0 };
+      wf.connections['All Bookers'] = { main: [[{ node: 'Booked For', type: 'main', index: 0 }]] };
+      wf.connections['Booked For'] = { main: [[{ node: 'Room Table', type: 'main', index: 0 }]] };
+      return ''; } },
+  { id: 'v154 Book Session tool prefers Booked For', present: wf => desc(wf, 'Book Session').includes("$('Booked For')"),
+    apply: wf => { if (!node(wf, 'Booked For')) return 'Booked For node missing';
+      node(wf, 'Book Session').parameters.workflowInputs.value.description = desc(REF, 'Book Session'); toggle = true; return ''; } },
+  { id: 'v154 Book Series tool prefers Booked For', present: wf => desc(wf, 'Book Series').includes("$('Booked For')"),
+    apply: wf => { if (!node(wf, 'Booked For')) return 'Booked For node missing';
+      node(wf, 'Book Series').parameters.workflowInputs.value.description = desc(REF, 'Book Series'); toggle = true; return ''; } },
+  { id: 'v154 Booked For notice in the prompt', present: wf => sys(wf).includes("$('Booked For').first().json.notice"),
+    apply: wf => { if (!node(wf, 'Booked For')) return 'Booked For node missing';
+      const a = "{{ $('Gate Context').first().json.resetNotice }}", ag = node(wf, 'Jessie AI Agent'), s = sys(wf);
+      if (s.split(a).length !== 2) return 'resetNotice anchor not found once';
+      ag.parameters.options.systemMessage = s.replace(a, a + "\n{{ $('Booked For').first().json.notice }}"); return ''; } },
+  { id: 'v154 Guard Probe adds (for X) to the summary', present: wf => code(wf, 'Guard Probe').includes('booked for a colleague: the summary says so'),
+    apply: wf => { const H = '// --- booked for a colleague: the summary says so', O = "// --- an offer this turn's check contradicts";
+      const r = code(REF, 'Guard Probe'), ra = r.indexOf(H), rb = r.indexOf(O);
+      const t = node(wf, 'Guard Probe'), c = code(wf, 'Guard Probe'), tb = c.indexOf(O);
+      if (ra < 0 || rb < 0) return 'reference block not found';
+      if (!t || tb < 0) return 'offer-check header not found in target';
+      t.parameters.jsCode = c.slice(0, tb) + r.slice(ra, rb) + c.slice(tb); return ''; } },
   { id: 'v151/152 booked_for on Book Session tool', present: wf => /booked_for/.test(desc(wf, 'Book Session')),
     apply: wf => { const t = node(wf, 'Book Session'); if (!t) return 'Book Session tool missing';
+      if (desc(REF, 'Book Session').includes("$('Booked For')") && !node(wf, 'Booked For')) return 'reference expression needs the Booked For node';
       t.parameters.workflowInputs.value.description = desc(REF, 'Book Session'); toggle = true; return ''; } },
   { id: 'v151/152 booked_for on Book Series tool', present: wf => /booked_for/.test(desc(wf, 'Book Series')),
     apply: wf => { const t = node(wf, 'Book Series'); if (!t) return 'Book Series tool missing';
+      if (desc(REF, 'Book Series').includes("$('Booked For')") && !node(wf, 'Booked For')) return 'reference expression needs the Booked For node';
       t.parameters.workflowInputs.value.description = desc(REF, 'Book Series'); toggle = true; return ''; } },
   { id: 'v152 on-behalf prompt guidance', present: wf => sys(wf).includes(OB_NEW_START),
     apply: wf => { const r = sys(REF), a = r.indexOf(OB_NEW_START), b = r.indexOf(OB_NEW_END, a);
@@ -108,7 +140,7 @@ if (changed) {
   fs.writeFileSync(outPath, JSON.stringify(WF, null, 2) + '\n');
   console.log('\nwrote ' + path.relative(ROOT, outPath) + '. Next:');
   console.log('  ./scripts/check-fromai ' + path.relative(ROOT, outPath));
-  console.log('  ./scripts/test-nodes main ' + path.relative(ROOT, outPath));
+  console.log('  ./scripts/test-nodes ' + path.relative(ROOT, outPath) + ' <book> <cancel> <find> <move>   # all five paths, e.g. the newest workflows/*-vNNN.json');
   console.log('  ./scripts/n8n-write put ' + MAIN_ID + ' ' + path.relative(ROOT, outPath) + '   # then rename to the next vNNN and commit');
   if (toggle) console.log('  ./scripts/n8n-write deactivate ' + MAIN_ID + ' && ./scripts/n8n-write activate ' + MAIN_ID + '   # a tool input was restored');
 } else if (!manual) console.log('\nNothing to re-apply - all our main fixes are present.');

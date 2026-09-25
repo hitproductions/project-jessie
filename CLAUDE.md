@@ -304,6 +304,16 @@ person it is booked for is never the client and never the title's Client segment
 rules did not hold (the model laundered the booked-for name into the client/title), so this is
 enforced in `Check Conflicts`. See the `booked_for` tool input and `(for …)` in `Guard Probe`/summary.
 
+**Who a booking is *for* is decided deterministically** (main v154). The `Booked For` node (between
+`All Bookers` and `Room Table`) scans the requester's messages for the current booking, newest first,
+stopping at the booking request, a finished booking, or a reset, for "for / on behalf of <someone in
+Bookers>" (full name, first name, or a "Goes by" alias). A client is never in Bookers, so "for Jem Lim"
+stays the client; "for John Smith" isn't John Cutangco (a capitalised surname after a lone first name
+blocks the match). The Book Session / Book Series tools prefer its answer over the model's `booked_for`,
+the prompt gets a notice so Jessie doesn't ask "who is Japs?", and Guard Probe adds "(for X)" to the
+summary's booker line. It never throws (on error it answers "no one"). QA B2, 2026-09-25: "Book Studio F
+for Japs" had been booked as plain `Booked by: Camy Caridad`.
+
 `Cancel Booking` refuses with:
 
 ```
@@ -479,6 +489,13 @@ the task runner), for whoever has shell access to the box.
     availability check did not run". Both refusals that day were false positives. Timestamps now
     go through `isoOnly()` (Room Availability + Book Session), and Guard Probe judges the latest
     answer that turn rather than any answer. Treat every model-supplied string as possibly padded.
+
+17. **`test-nodes` with one to four paths used to test the wrong files, silently.** Only the
+    five-path form (`MAIN BOOK CANCEL FIND MOVE`) takes a candidate; `test-nodes main <file>` fell
+    through to "the newest file of each workflow in `workflows/`" and reported on those. It went
+    unnoticed on 2026-09-25 only because every candidate happened to be the newest file. It now refuses
+    anything but zero or five paths. In zsh, pass the paths literally: an unquoted `$VAR` holding
+    several paths is ONE argument (zsh does not word-split).
 
 ## Not done
 

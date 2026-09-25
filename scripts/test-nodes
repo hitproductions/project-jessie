@@ -31,6 +31,13 @@ if [ "${1:-}" = "--live" ]; then
   api yzirq12O227VTFp8 > "$tmp/find.json"
   api t7lwR2km4tfN8DbM > "$tmp/move.json"
   echo "testing the live workflows"
+elif [ $# -gt 0 ] && [ $# -ne 5 ]; then
+  # 2026-09-25: "test-nodes main <file>" used to fall through to the newest repo files and report on
+  # THEM, silently - a candidate that was not the newest file was never tested. Refuse instead.
+  echo "usage: ./scripts/test-nodes                          (newest file of each workflow in workflows/)" >&2
+  echo "       ./scripts/test-nodes --live                   (what n8n has stored)" >&2
+  echo "       ./scripts/test-nodes MAIN BOOK CANCEL FIND MOVE (a candidate: all five paths)" >&2
+  exit 64
 elif [ $# -eq 5 ]; then
   cp "$1" "$tmp/main.json"; cp "$2" "$tmp/book.json"
   cp "$3" "$tmp/cancel.json"; cp "$4" "$tmp/find.json"; cp "$5" "$tmp/move.json"
@@ -50,7 +57,7 @@ echo
 python3 - "$tmp" <<'PY'
 import json,sys,os
 t=sys.argv[1]
-want={"main.json":["Guard Probe"],"book.json":["Check Conflicts"],
+want={"main.json":["Guard Probe","Booked For"],"book.json":["Check Conflicts"],
       "cancel.json":["Check Ownership"],"find.json":["Shape Results"],
       "move.json":["Resolve Booking","Build Recipients"]}
 for f,names in want.items():
@@ -93,6 +100,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     if(name==='Gate Context') return {first:()=>({json:{dateNotice:ctx.dateNotice||'',pastDateNotice:'',
                                                         startOnlyNotice:ctx.startOnly?'THEY GAVE A START TIME AND NO END TIME.':''}})};
     if(name==='Room Table')   return {first:()=>({json:{roomTable:ctx.roomTable===undefined?ROOMS:ctx.roomTable}})};
+    if(name==='Booked For')   return {first:()=>({json:{bookedFor:ctx.bookedFor||''}})};
     if(ctx.executed && Object.prototype.hasOwnProperty.call(ctx.executed,name))
       return {isExecuted:ctx.executed[name],first:()=>({json:{}})};
     return {first:()=>({json:{}})};
@@ -176,6 +184,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['offer vs check','contradicts ---'],
     ['dated weekday survives','\\(\\?!\\\\d\\)'],
     ['booker is not always you','a near-miss of the real one'],
+    ['booked for','booked for a colleague: the summary says so'],
   ];
   const t2=[
     // a date with no year — both older patterns need one
@@ -285,6 +294,13 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['offer vs check','no check this turn is not a contradiction',SUM,
       {steps:[{action:{tool:'Clients'},observation:'[{"ok":1}]'}]},
       x=>/Confirm to book/.test(x.output)&&!/Hold on/.test(x.output)],
+    // QA B2 2026-09-25: the summary shows who the booking is for, from Booked For.
+    ['booked for','the booker line gains "(for X)"','*SUSHI / Pael / DR*\n*Booked by:* Tara Lim\n\nConfirm to book. (yes/no)',
+      {bookedFor:'Japs Concepcion'},x=>/\*Booked by:\* Tara Lim \(for Japs Concepcion\)/.test(x.output)],
+    ['booked for','an existing "(for X)" is left alone','*SUSHI / Pael / DR*\n*Booked by:* Tara Lim (for Japs)\n\nConfirm to book. (yes/no)',
+      {bookedFor:'Japs Concepcion'},x=>/Tara Lim \(for Japs\)\n/.test(x.output)&&!/Japs Concepcion/.test(x.output)],
+    ['booked for','no colleague, no change','*SUSHI / Pael / DR*\n*Booked by:* Tara Lim\n\nConfirm to book. (yes/no)',
+      {},x=>/\*Booked by:\* Tara Lim\n/.test(x.output)],
     ['offer vs check','only applies to a booking summary','Studio 8 is free in that window.',
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"BAD_WINDOW"}]'}]},
       x=>/^Studio 8 is free/.test(x.output)],
@@ -371,7 +387,79 @@ suite('Check Conflicts — booked-for is never the client', ()=>{
   check('bf','on-behalf external, booked-for in the title client slot -> MISSING_CLIENT',run({description:forK,bookingType:'External',client:'Acme Records',summary:'X / Kristine Trocino / TL'})==='MISSING_CLIENT');
   check('bf','on-behalf external, distinct real client -> CLEAR',run({description:forK,bookingType:'External',client:'Acme Records',summary:'SMOKETEST2 / Acme Records / TL'})==='CLEAR');
   check('bf','self-booking (no for-person) -> CLEAR, guard skipped',run({description:'Engineer: Tara Lim | Booked by: Howard Luistro | ref: U1',bookingType:'External',client:'',summary:'X / Acme / TL'})==='CLEAR');
+  // Booked For hands over a canonical name; the client slot may hold only the first name or a nickname.
+  const run2=(REQ)=>{ const STAFF=[{Name:'Japs Concepcion',Info:'Accounts Lead, Goes by Japs, Joana Paula, JPC.'}];
+    const $=name=>({all:()=>name==='All Bookers'?STAFF.map(f=>({json:{fields:f}})):[]});
+    const r=new Function('REQ','$',body+'\nreturn null;')(REQ,$); return r?r[0].json.reason:'CLEAR'; };
+  const forJ='Engineer: Daryl Reyes (Music Engineer) | Booked by: Camy Caridad (for Japs Concepcion) | ref: U1';
+  check('bf','canonical for-name, nickname in the client slot -> MISSING_CLIENT',run2({description:forJ,bookingType:'External',client:'Japs',summary:'SUSHI / Japs / DR'})==='MISSING_CLIENT');
+  check('bf','canonical for-name, real client -> CLEAR',run2({description:forJ,bookingType:'External',client:'Pael',summary:'SUSHI / Pael / DR'})==='CLEAR');
   check('bf','on-behalf but Personal (not external) -> CLEAR, guard skipped',run({description:forK,bookingType:'Personal',client:'',summary:'X / Kristine Trocino / TL'})==='CLEAR');
+});
+
+// ── Booked For: "for <someone in Bookers>" means the booking is for them ──────
+suite('Booked For — deterministic on-behalf detection', ()=>{
+  let code; try { code=src('Booked For'); } catch(e) { console.log('  skip  Booked For is not in this build'); return; }
+  const STAFF=[
+    {Name:'Japs Concepcion',Initials:'JPC',Info:'Accounts Lead, Goes by Japs, Joana Paula, JPC.'},
+    {Name:'Kristine Trocino',Initials:'KT',Info:'BD Associate, Goes by Kristine, Tin, Kite, KT.'},
+    {Name:'Camy Caridad',Initials:'CC',Info:'Voice Caster, Goes by Camy, Camille, CC.'},
+    {Name:'John Cutangco',Initials:'JC',Info:'Loc Engineer, Goes by John, Pusa, JC.'},
+    {Name:'John Rivera',Initials:'JR',Info:'Goes by Johnny, JR.'},
+    {Name:'Dennis Cham',Initials:'DC',Info:'Chairman, Sir Dennis, Dennis, DC.'}];
+  const BOT={bot_id:'B1'};
+  // msgs newest first; the last element of hist is the oldest.
+  const run=(trigger,hist,opts={})=>{
+    const $=name=>{
+      if(name==='Get Booker') return {first:()=>({json:{fields:{Name:opts.requester||'Camy Caridad'}}})};
+      if(name==='All Bookers') { if(opts.broken) throw new Error('airtable down'); return {all:()=>STAFF.map(f=>({json:{fields:f}}))}; }
+      if(name==='Slack Trigger') return {first:()=>({json:trigger})};
+      if(name==='Gate Context') return {first:()=>({json:{epoch:opts.epoch||''}})};
+      if(name==='Get Recent Messages') return {all:()=>hist.map(j=>({json:j}))};
+      return {first:()=>({json:{}}),all:()=>[]};
+    };
+    return new Function('$',code)($)[0].json;
+  };
+  const U=(ts,text)=>({ts:String(ts),text,user:'UCAMY'}), J=(ts,text)=>Object.assign({ts:String(ts),text},BOT);
+  // The exact QA B2 conversation, at the "yes" turn.
+  let h=[U(20,'yes'),J(19,'*Sushi / Pael / DJ* ... Confirm to book.'),U(18,'Ok stud c'),J(17,'Studio F is taken...'),U(16,'Daryl'),
+         J(15,'Who is the assigned engineer?'),U(14,'Client is Pael. Japs is the caster. Project Sushi. vocal recording'),
+         J(13,'Who is the client?'),U(12,'Client is'),J(11,'Who is the client, and what is Japs?'),U(10,'Book Studio F for Japs next Thursday from 1pm to 4pm')];
+  let r=run(h[0],h);
+  check('bfd','QA B2: "for Japs" is found at the yes turn',r.bookedFor==='Japs Concepcion',JSON.stringify(r));
+  check('bfd','and the model is told not to ask who Japs is',/do not ask who they are/.test(r.notice)&&/\(for Japs Concepcion\)/.test(r.notice));
+  r=run(U(2,'Book Studio F for Jem Lim next Thursday 1-4pm'),[]);
+  check('bfd','a client (not in Bookers) is not a booked-for',r.bookedFor==='');
+  r=run(U(2,'Book Studio 7 for John Smith tomorrow 2-4pm'),[]);
+  check('bfd','"for John Smith" is a client, not John Cutangco',r.bookedFor==='');
+  r=run(U(2,'Book Studio 7 on behalf of Kristine Trocino tomorrow 2-4pm'),[]);
+  check('bfd','"on behalf of" a full name',r.bookedFor==='Kristine Trocino');
+  r=run(U(2,'Book Studio F for Japs Next Thursday 1-4pm'),[]);
+  check('bfd','a capitalised weekday after the name still counts',r.bookedFor==='Japs Concepcion');
+  r=run(U(2,'Book Studio 7 for Camy tomorrow 2-4pm'),[]);
+  check('bfd','booking "for" yourself is not on-behalf',r.bookedFor==='');
+  r=run(U(2,'Book Studio 7 for John tomorrow'),[]);
+  check('bfd','an ambiguous first name is skipped',r.bookedFor==='');
+  r=run(U(2,'Book Studio 7 for 2 hours for a VO recording for next Thursday'),[]);
+  check('bfd','"for 2 hours / a VO recording / next Thursday" match no one',r.bookedFor==='');
+  r=run(U(2,'Book Studio F for the chairman tomorrow'),[]);
+  check('bfd','a role word does not match a person',r.bookedFor==='');
+  h=[U(9,'yes'),J(8,'summary... Confirm to book.'),U(7,'actually it is for Kristine'),J(6,'Which room?'),U(5,'Book a VO session tomorrow 2-4pm, project X')];
+  r=run(h[0],h);
+  check('bfd','a follow-up "it is for Kristine" counts',r.bookedFor==='Kristine Trocino');
+  h=[U(9,'yes'),J(8,'summary... Confirm to book.'),U(7,'Book Studio 3 tomorrow 2-4pm, project Y'),J(6,'Booked.'),U(5,'Book Studio F for Japs next Thursday')];
+  r=run(h[0],h);
+  check('bfd','a finished booking ends the scan (no carry-over)',r.bookedFor==='');
+  h=[U(9,'yes'),J(8,'summary'),U(7,'Book Studio 3 tomorrow 2-4pm, project Y'),J(6,'Which client?'),U(5,'Book Studio F for Japs next Thursday')];
+  r=run(h[0],h);
+  check('bfd','a newer request without "for" ends the scan',r.bookedFor==='');
+  h=[U(9,'Book Studio 3 tomorrow'),U(5,'Book Studio F for Japs next Thursday')];
+  r=run(h[0],h,{epoch:'6'});
+  check('bfd','nothing before a reset is read',r.bookedFor==='');
+  r=run(U(2,'Book Studio F for Japs next Thursday'),[],{broken:true});
+  check('bfd','a failure answers "no one" instead of throwing',r.bookedFor===''&&/airtable down/.test(r.error||''));
+  r=run({ts:'3',subtype:'message_changed',message:{text:'Book Studio F for Japs next Thursday',user:'UCAMY'}},[]);
+  check('bfd','a thread "also send to channel" reply is read from message.text',r.bookedFor==='Japs Concepcion');
 });
 
 // ── Engineers and arrangers must be real people in Bookers ────────────────────
