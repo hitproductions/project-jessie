@@ -47,6 +47,9 @@ Two things make it *simpler* than the `PREEMPT` caller:
   - Always floored at now and **capped at the session start** (a deadline can't fall after the session
     begins). Built + offline-tested in `workflows/drafts/mbooth/logic.js` (29/29). The sweep that acts
     on `Deadline` is shared with `PREEMPT`.
+  - **Live since 2026-09-25** (open-consent-request v10, `mboothDeadline` in `Build Request`). Until then
+    live had silently used the consent-engine rule (24h / 1h lead) for M-booth too; the draft had never
+    been ported. PREEMPT keeps that rule. Covered by `./scripts/test-consent`.
 - **Timeout policy — CONFIRMED by Howard 2026-09-22:** an `MBOOTH` request with **no holder response
   by the deadline BOOKS ANYWAY** (silence = the booth defaults to available; the standing hold is a
   courtesy, not a lock). This is the opposite of `PREEMPT`, where silence must only **EXPIRE** the
