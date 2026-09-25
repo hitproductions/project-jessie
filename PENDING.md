@@ -7,7 +7,7 @@ known behaviour gaps, and pre-launch work. Each item says how it was found and w
 **Item numbers are permanent**; other docs cite "PENDING 15". New items get the next number, and resolved
 ones move to the bottom instead of being renumbered.
 
-**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-25 (Envoy added as urgent the same day).
+**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-25 (Envoy 42/43 urgent; 44 added the same evening).
 
 ---
 
@@ -36,6 +36,7 @@ ones move to the bottom instead of being renumbered.
 | 23 | After "room taken", re-offers the same failed slot | Build |
 | 29 | Music sessions don't require an arranger | Build |
 | 30 | Celebrity sessions don't suggest a holding room | Build |
+| 44 | Tells the requester "Booked" even when the room declines seconds later (clash she can't see) | Build |
 | 35 | Timestamp junk-guard not yet in Move Booking / Expand Series | Build (small) |
 | 37 | Never run live: priority request timing out; same-day / next-day M-booth windows | Test now / watch at launch |
 | 38, 16 | 2027 test events still on the calendar | Howard (manual) |
@@ -168,6 +169,18 @@ People will book on the door tablets (Envoy Rooms) as well as through Jessie, so
   but rewrites three hot-path workflows; hold it unless the gap bites.
 - **Order:** item 43 first, then import and test the mirror on year-shifted test bookings, then confirm
   both directions live (a Jessie booking appears on the tablet; a tablet booking blocks Jessie).
+- **What each mirrored copy needs: nothing Jessie-specific (reviewed with Howard 2026-09-25).** The
+  scaffold writes the title `<Room> - <tablet title>`, location `<Room>`, the times, a description ("Created
+  by Envoy (mirrored). Manage this booking in Envoy.") and a private `envoyMirrorSource` marker for
+  update/delete reconcile. That's enough for availability, conflicts and lookups: rooms are found by
+  location and the title's first segment. No `ref:`/`SType:` is deliberate. Jessie mustn't cancel or move a
+  copy (the mirror would recreate it next run; manage it on the tablet), and an emergency same-day booking
+  should never be preemptible. **Keep:** the copy must **not** invite the room resource, or the tablet shows
+  a duplicate and the room declines it.
+- **Polish, not needed for launch:** (a) when asked to cancel or move a mirrored booking, reply "That was
+  booked on the studio tablet. Cancel it there." instead of the generic no-reference refusal (detect
+  `envoyMirror` / "Created by Envoy (mirrored)" in Cancel and Move); (b) if Envoy records who booked, copy
+  their name onto the mirror, so Jessie can answer "who has Studio 7?" for same-day coordination.
 
 **43. Studio E points at a dead calendar id.** Found by Tel 2026-09-23
 ([`docs/design/studio-e-id-fix.md`](docs/design/studio-e-id-fix.md)); still live on 2026-09-25 (Book Session's
@@ -294,6 +307,17 @@ Studio 6, Friday 2027-09-10 10:00–11:00, carrying a fake booker ref (`UFAKE999
 Created to prove `NOT_YOURS` — the refusal to cancel someone else's booking — and
 left in place. On a 2027 date so it cannot collide with anything real. Delete it
 through Jessie or Google Calendar once it is no longer needed for that test.
+
+**44. Jessie says "Booked" even when the room turns the booking down seconds later.** Found 2026-09-25
+while reviewing the Envoy flow. Book Session's `Verify` node looks for a room that `declined` in the Create
+Event *response*, but room resources answer the invitation a few seconds after the event is created (the
+node's own comment says `responseStatus` is always `needsAction` there), so the check effectively never
+fires. When the room is already held by something Jessie can't see on KDC Bookings (a tablet booking inside
+the mirror's poll gap, a standing hold, anything booked directly on the room), she replies "Booked", the room
+declines moments later, and the event sits on KDC Bookings with the room crossed out. This happened on
+2026-09-23 with the M1 test (Rico's hold). **Fix:** after creating the event, wait a few seconds and re-read
+its attendees; if the room declined, delete the new event and tell the requester the room is taken. It
+matters more once tablets are a booking source (item 42).
 
 ---
 
