@@ -64,8 +64,12 @@ Enforced via `isHaistDev` in Cancel/Move. See `docs/design/booking-authority.md`
 2. A live DM: confirm a relative date resolves to the **real** year, and that an authorized change
    DMs the **real** booker/engineer (no `[DEV]` prefix).
 3. A consent request (an M-booth over a standing hold is the easiest): the **real holder** gets the DM,
-   not Howard. Note the consent deadline tiers (same day = 3h, tomorrow = 10:00, 2+ days = 24h) become
-   reachable only now; QA's 2027 dates always landed in the 24h tier. Watch the first same-day request.
+   not Howard. **Consent deadline:** live uses one rule, *24 hours, but no later than 1 hour before the
+   session* (`Open Consent Request` → `Build Request`, `computeDeadline(..., {maxWindowH:24, minLeadMin:60})`).
+   The agreed tiers (same day = 3h, tomorrow = 10:00 on the booking day, 2+ days = 24h) exist only in the
+   tested draft `workflows/drafts/mbooth/logic.js` and were never ported (found 2026-09-25). They differ
+   only for same-day / next-day requests, which QA's 2027 dates never produce. Decide before launch:
+   port the tiers, or keep the live rule.
 4. `./scripts/health` — every node green.
 
 ## How this list was verified (repeatable)
