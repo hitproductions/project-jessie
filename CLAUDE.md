@@ -232,6 +232,7 @@ only script that writes to n8n.
 | `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
 | `./scripts/verify-ids` | the seven workflow ids and the Jessie bot id still point at the live app |
 | `./scripts/backup-live` | snapshot every live workflow into `workflows/live/` (also run nightly by the GitHub Action) |
+| `./scripts/reapply-main-fixes` · `--check` | after someone else imports main: report which of our main fixes survived, and re-apply the missing ones **on top of** their version (never imports; flags structural gaps for a hand merge) |
 
 ## The one principle
 

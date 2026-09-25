@@ -1,0 +1,116 @@
+#!/usr/bin/env node
+// Re-apply our main-workflow fixes on top of someone else's version of main, instead of
+// overwriting theirs. Built 2026-09-25 so Tara's Get Sender patch and our fixes can coexist
+// no matter which copy she built from.
+//
+//   ./scripts/reapply-main-fixes --check            # pull live main, report which fixes are present
+//   ./scripts/reapply-main-fixes                    # pull live main, re-apply what is missing -> candidate
+//   ./scripts/reapply-main-fixes <in.json> [out.json]
+//
+// It never imports. After it writes a candidate: check-fromai, test-nodes main <out>, then
+// n8n-write put, and toggle Active if it says a tool input was restored. The reference copy of
+// each fix is taken from REF (default: the newest workflows/project-jessie-v*.json in git).
+// Field-level fixes are restored in place; anything structural (missing nodes) is reported for a
+// hand merge rather than guessed at.
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+const ROOT = path.resolve(__dirname, '..');
+const MAIN_ID = 'uVVYVB2M7kxpLleI';
+const args = process.argv.slice(2);
+const checkOnly = args.includes('--check');
+const files = args.filter(a => !a.startsWith('--'));
+
+function newestRef() {
+  const dir = path.join(ROOT, 'workflows');
+  const v = fs.readdirSync(dir).map(f => (f.match(/^project-jessie-v(\d+)\.json$/) || [])[1]).filter(Boolean).map(Number);
+  return path.join(dir, 'project-jessie-v' + Math.max(...v) + '.json');
+}
+const REF_PATH = process.env.REF || newestRef();
+let inPath = files[0];
+if (!inPath) {
+  inPath = '/tmp/main-live-for-reapply.json';
+  execSync(`"${ROOT}/scripts/n8n" pull ${MAIN_ID} ${inPath}`, { stdio: ['ignore', 'ignore', 'inherit'] });
+}
+const outPath = files[1] || path.join(ROOT, 'workflows', 'project-jessie-reapplied.json');
+const REF = JSON.parse(fs.readFileSync(REF_PATH, 'utf8'));
+const WF = JSON.parse(fs.readFileSync(inPath, 'utf8'));
+const node = (wf, name) => wf.nodes.find(n => n.name === name);
+const code = (wf, name) => String(((node(wf, name) || {}).parameters || {}).jsCode || '');
+const sys = wf => String((((node(wf, 'Jessie AI Agent') || {}).parameters || {}).options || {}).systemMessage || '');
+const desc = (wf, name) => String((((((node(wf, name) || {}).parameters || {}).workflowInputs) || {}).value || {}).description || '');
+
+const GP_START = "try {\n  if (steps && /Confirm to book";
+const GP_END = "\n\n// --- a booking the lookup did not return";
+const OB_NEW_START = " Booking on behalf of a colleague:";
+const OB_NEW_END = "and empty for a self-booking.";
+const OB_OLD_START = " When the requester books on behalf of another person (for example";
+const OB_OLD_END = "rather than a colleague.";
+const OB_ANCHOR = "That is still three segments.";
+
+const report = [];
+let changed = false, toggle = false, manual = false;
+const note = (id, state, detail) => report.push({ id, state, detail: detail || '' });
+
+// Each fix: id, present(wf), apply(wf) -> '' on success or a reason string for a hand merge.
+const FIXES = [
+  { id: 'v148 Gemini auto-retry', present: wf => !!(node(wf, 'Google Gemini Chat Model') || {}).retryOnFail,
+    apply: wf => { const t = node(wf, 'Google Gemini Chat Model'), r = node(REF, 'Google Gemini Chat Model');
+      if (!t || !r) return 'chat model node missing';
+      for (const k of ['retryOnFail', 'maxTries', 'waitBetweenTries']) t[k] = r[k]; return ''; } },
+  { id: 'v149 M-booth router nodes', present: wf => !!node(wf, 'MBooth Book?') && !!node(wf, 'Call Finalize MBOOTH'),
+    apply: () => 'structural (nodes + connections) - merge by hand from ' + path.basename(REF_PATH) },
+  { id: 'v150 router picks most-recent row', present: wf => /best\s*=\s*r/.test(code(wf, 'Consent Router')),
+    apply: wf => { const t = node(wf, 'Consent Router'); if (!t) return 'Consent Router missing';
+      t.parameters.jsCode = code(REF, 'Consent Router'); return ''; } },
+  { id: 'v151/152 booked_for on Book Session tool', present: wf => /booked_for/.test(desc(wf, 'Book Session')),
+    apply: wf => { const t = node(wf, 'Book Session'); if (!t) return 'Book Session tool missing';
+      t.parameters.workflowInputs.value.description = desc(REF, 'Book Session'); toggle = true; return ''; } },
+  { id: 'v151/152 booked_for on Book Series tool', present: wf => /booked_for/.test(desc(wf, 'Book Series')),
+    apply: wf => { const t = node(wf, 'Book Series'); if (!t) return 'Book Series tool missing';
+      t.parameters.workflowInputs.value.description = desc(REF, 'Book Series'); toggle = true; return ''; } },
+  { id: 'v152 on-behalf prompt guidance', present: wf => sys(wf).includes(OB_NEW_START),
+    apply: wf => { const r = sys(REF), a = r.indexOf(OB_NEW_START), b = r.indexOf(OB_NEW_END, a);
+      if (a < 0 || b < 0) return 'reference sentence not found';
+      const sentence = r.slice(a, b + OB_NEW_END.length);
+      const agent = node(wf, 'Jessie AI Agent'); let s = sys(wf);
+      const oa = s.indexOf(OB_OLD_START), ob = s.indexOf(OB_OLD_END, oa);
+      if (oa >= 0 && ob >= 0) s = s.slice(0, oa) + sentence + s.slice(ob + OB_OLD_END.length);
+      else if (s.split(OB_ANCHOR).length === 2) s = s.replace(OB_ANCHOR, OB_ANCHOR + sentence);
+      else return 'anchor "' + OB_ANCHOR + '" not found once';
+      agent.parameters.options.systemMessage = s; return ''; } },
+  { id: 'v153 Guard Probe judges the latest availability answer', present: wf => code(wf, 'Guard Probe').includes('let me make sure'),
+    apply: wf => { const r = code(REF, 'Guard Probe'), ra = r.indexOf(GP_START), rb = r.indexOf(GP_END);
+      const t = node(wf, 'Guard Probe'); const c = code(wf, 'Guard Probe'), ta = c.indexOf(GP_START), tb = c.indexOf(GP_END);
+      if (ra < 0 || rb < 0) return 'reference block not found';
+      if (!t || ta < 0 || tb < 0) return 'availability block markers not found in target';
+      t.parameters.jsCode = c.slice(0, ta) + r.slice(ra, rb) + c.slice(tb); return ''; } },
+];
+
+for (const f of FIXES) {
+  if (f.present(WF)) { note(f.id, 'present'); continue; }
+  if (checkOnly) { note(f.id, 'MISSING'); continue; }
+  const why = f.apply(WF);
+  if (why) { note(f.id, 'MANUAL', why); manual = true; }
+  else if (f.present(WF)) { note(f.id, 'RE-APPLIED'); changed = true; }
+  else { note(f.id, 'MANUAL', 'applied but marker still absent'); manual = true; }
+}
+
+console.log('target: ' + inPath + '\nreference: ' + path.relative(ROOT, REF_PATH) + '\n');
+for (const r of report) console.log(('  ' + r.state).padEnd(14) + r.id + (r.detail ? '  -- ' + r.detail : ''));
+const missing = report.filter(r => r.state === 'MISSING').length;
+if (checkOnly) {
+  console.log('\n' + (missing ? missing + ' fix(es) missing - run without --check to re-apply.' : 'All our main fixes are present.'));
+  process.exit(missing ? 10 : 0);
+}
+if (changed) {
+  fs.writeFileSync(outPath, JSON.stringify(WF, null, 2) + '\n');
+  console.log('\nwrote ' + path.relative(ROOT, outPath) + '. Next:');
+  console.log('  ./scripts/check-fromai ' + path.relative(ROOT, outPath));
+  console.log('  ./scripts/test-nodes main ' + path.relative(ROOT, outPath));
+  console.log('  ./scripts/n8n-write put ' + MAIN_ID + ' ' + path.relative(ROOT, outPath) + '   # then rename to the next vNNN and commit');
+  if (toggle) console.log('  ./scripts/n8n-write deactivate ' + MAIN_ID + ' && ./scripts/n8n-write activate ' + MAIN_ID + '   # a tool input was restored');
+} else if (!manual) console.log('\nNothing to re-apply - all our main fixes are present.');
+if (manual) console.log('\nSome fixes need a hand merge (see MANUAL above).');
+process.exit(manual ? 2 : (changed ? 10 : 0));
