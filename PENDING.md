@@ -7,7 +7,7 @@ known behaviour gaps, and pre-launch work. Each item says how it was found and w
 **Item numbers are permanent**; other docs cite "PENDING 15". New items get the next number, and resolved
 ones move to the bottom instead of being renumbered.
 
-**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-25.
+**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-25 (Envoy added as urgent the same day).
 
 ---
 
@@ -22,6 +22,8 @@ ones move to the bottom instead of being renumbered.
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
 | 22 | Automatic backup off since 16 Sep; manual backups only (last 2026-09-25) | Follows 21 |
+| 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | Build (Tel's mirror draft) |
+| 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | Build (small; step 1 of 42) |
 
 ### 🟠 Soon: before the SOP is final (by 5 Oct); behaviour real users will hit
 
@@ -148,6 +150,33 @@ Do that as soon as the Cloudflare rule in item 21 is fixed — a WAF skip on `/w
 plus API access for the runner, or an allowlist for GitHub's ranges. Until then, either
 run `./scripts/backup-live` from the VM (not challenged there) or take a manual snapshot
 before any risky change. See `docs/outages/OUTAGES.md` for the captured challenge response.
+
+**42. Envoy studio tablets need read + write with Jessie before launch.** Moved to pre-launch by Howard on
+2026-09-25; Tel's design had it post-launch ([`docs/design/envoy-calendar.md`](docs/design/envoy-calendar.md)).
+People will book on the door tablets (Envoy Rooms) as well as through Jessie, so both must see each other.
+- **Write (Jessie → tablets): works, except Studio E.** Jessie invites the room's resource calendar on
+  every booking, which is the surface Envoy reads (validated live 2026-09-23 with a Studio 7 booking).
+  Studio E is broken by item 43.
+- **Read (tablets → Jessie): not built.** A tablet booking lands on the room's resource calendar only,
+  never on KDC Bookings, which is all Jessie reads, so she can't see it and could double-book over it.
+  Tel's recommendation is the **mirror** ([`docs/design/envoy-mirror-build.md`](docs/design/envoy-mirror-build.md)):
+  one scheduled workflow (~2 min) copying Envoy bookings onto KDC Bookings, where every guard already looks.
+  Scaffold at `workflows/envoy-mirror-v1.json`: **untested, never imported**, and unverified whether its
+  Code node can call Google with the credential. Its one weakness is the poll gap (a tablet booking is
+  invisible to Jessie for up to one interval). The heavier read-side change
+  ([`docs/design/envoy-jessie-readside-build.md`](docs/design/envoy-jessie-readside-build.md)) closes that gap
+  but rewrites three hot-path workflows; hold it unless the gap bites.
+- **Order:** item 43 first, then import and test the mirror on year-shifted test bookings, then confirm
+  both directions live (a Jessie booking appears on the tablet; a tablet booking blocks Jessie).
+
+**43. Studio E points at a dead calendar id.** Found by Tel 2026-09-23
+([`docs/design/studio-e-id-fix.md`](docs/design/studio-e-id-fix.md)); still live on 2026-09-25 (Book Session's
+room map has `c_18807te03d2sqh0lmtal9sbb04gao`, which returns not found; the real Studio E resource is
+`c_1888r4bbc2lhqgndmprism70nft64`). Effects: a Jessie booking of Studio E invites the dead resource, so it
+never reaches the real room calendar or its tablet; and Studio E events are never matched to the room, so
+availability can call Studio E free when it isn't. The old id is in **five** live workflows (checked 2026-09-25): Book Session, Room Availability, Move
+Booking, Find Booking and main. Each needs the new id (pull each first; count only the nodes, not n8n's
+`activeVersion` copy, gotcha 8). A small, mechanical change, and step 1 of item 42.
 
 ---
 

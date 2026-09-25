@@ -2,6 +2,9 @@
 
 Status: **planned (post-launch)** · Started 2026-09-22 · Owner: Tel · Decision 2026-09-23: tablets are a booking source
 
+> **2026-09-25 (Howard): now a pre-launch requirement**, read + write. Tracked as PENDING 42 (tablets) and
+> PENDING 43 (the Studio E id fix, step 1). The sequence below still applies; only the timing moved.
+
 ## Idea
 
 Use **Envoy Rooms** (door tablet / mobile / Google Calendar) as a **second booking source** alongside
