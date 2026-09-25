@@ -31,8 +31,8 @@ else, unprompted:
 
 1. `git pull` — three or four people work on this; someone may have changed it
    since last time. Nobody types git commands here, you run them.
-2. Read `PENDING.md` — the open blockers, each waiting on Airtable, Slack, Google
-   or the server.
+2. Read the **triage board at the top of `PENDING.md`**: 🔴 urgent before launch, 🟠 before the SOP,
+   🟢 additive. Item numbers are permanent; the details sit below the board.
 3. Check what is live and what it actually did:
 
    ```
@@ -419,8 +419,9 @@ launch restores real DMs to booker + engineer for everyone.
 
 ## Waiting on other systems
 
-[PENDING.md](PENDING.md) — needs a change in Airtable, the Slack app, Google Calendar or the
-n8n server. Each says how it was found and what it breaks.
+[PENDING.md](PENDING.md): everything still open, triaged at the top (🔴 urgent before launch, 🟠 before
+the SOP, 🟢 additive), including what waits on Airtable, the Slack app, Google Calendar or the server.
+Each item says how it was found and what it breaks. Numbers are permanent; resolved items move to the bottom.
 
 `docs/outages/SERVER-NOTES.md` is the plain-language version of the server-side fixes (DNS and
 the task runner), for whoever has shell access to the box.

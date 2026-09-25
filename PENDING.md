@@ -1,15 +1,279 @@
 # Pending
 
-Things found while working on Jessie that can't be fixed inside the workflow —
-they need a change in Airtable, in the Slack app, in Google Calendar, or on the
-n8n server.
+Everything still open on Jessie, in one place: things blocked on Airtable, Slack, Google or the server,
+known behaviour gaps, and pre-launch work. Each item says how it was found and what it breaks. First raised
+2026-08-30; every item was checked against the live build when it was written.
 
-Raised 2026-08-30, all checked against the build that is live now. Each one says
-how it was found and what it breaks.
+**Item numbers are permanent**; other docs cite "PENDING 15". New items get the next number, and resolved
+ones move to the bottom instead of being renumbered.
+
+**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-25.
 
 ---
 
-## Airtable
+## Triage: start here
+
+### 🔴 Urgent: must be done before launch
+
+| # | What | Blocked on / owner |
+|---|---|---|
+| 32 | Tara's thread-reply fix not pushed; then run `reapply-main-fixes --check` | Tara |
+| 33 | Launch switches: year shift, **three** `DEV_REDIRECT`s, HAIST Dev decision | Howard, on 12 Oct |
+| 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
+| 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
+| 22 | Automatic backup off since 16 Sep; manual backups only (last 2026-09-25) | Follows 21 |
+
+### 🟠 Soon: before the SOP is final (by 5 Oct); behaviour real users will hit
+
+| # | What | Blocked on / owner |
+|---|---|---|
+| 34 | A1: free rooms sometimes left out of an availability answer; never re-verified | Re-test, then build |
+| 26 | Can claim "I've asked the current holder" without doing it | Build |
+| 27 | Can open the same consent request twice | Build |
+| 28 | Booking over your own booking asks *you* for consent | Build |
+| 23 | After "room taken", re-offers the same failed slot | Build |
+| 29 | Music sessions don't require an arranger | Build |
+| 30 | Celebrity sessions don't suggest a holding room | Build |
+| 35 | Timestamp junk-guard not yet in Move Booking / Expand Series | Build (small) |
+| 37 | Never run live: priority request timing out; same-day / next-day M-booth windows | Test now / watch at launch |
+| 38, 16 | 2027 test events still on the calendar | Howard (manual) |
+
+### 🟢 Additive: fine after launch
+
+| # | What | Blocked on / owner |
+|---|---|---|
+| 36 | Booth holder can't book their own held booth directly | Build |
+| 1–4, 7 | Airtable room-data contradictions (stereo rooms marked 5.1, Studio 1, Studio E, a trailing space, duplicate rankings) | Airtable (Tel) |
+| 10 | Backfill each new window (Jan onward); optionally match the alt-email column | Per window |
+| 11 | Explore an n8n update | Server |
+| 13, 18, 39 | Speed: first Code node ~3.5s, first outbound call ~4s, new staff-list reads ~1s | Server / later |
+| 40 | Leftover snapshot files from renames in `workflows/live/` | Howard's OK to delete |
+| 41 | `Booked For` notice quotes three words instead of the name | Build (tiny) |
+
+**Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31. **Item 14** is a permanent
+known constraint, not a task.
+
+---
+
+## 🔴 Urgent: details
+
+**32. Tara's thread-reply fix (`Get Sender`) is not pushed yet.** Found by Tara in QA round 2: a tester
+replied to Jessie's summary **in a thread with "also send to channel" ticked**. Slack sends that as
+`message_changed` / `thread_broadcast`, with the real `user` and `text` nested under `message`, so
+`Get Sender` looks up an empty user id, Slack rejects it, and the reply fails. She said she'd push it; as
+of 2026-09-25 it's in neither git nor live (`Get Sender` still reads only the top-level `user`).
+**When it lands, run `./scripts/reapply-main-fixes --check`.** If her copy predates main v155 it reverts our
+fixes, and the script re-applies them on top of her version (it never imports). `Booked For` already reads
+`message.text`, so on-behalf detection handles thread broadcasts.
+
+**33. Launch switches: flip together on 12 Oct.** Full detail and the post-flip checks are in
+[`docs/launch-checklist.md`](docs/launch-checklist.md). In short: `YEAR_SHIFT` → 0 in `Gate Context` together
+with the prompt's `plus({ years: 1 })`; `DEV_REDIRECT = ''` in **three** places (Cancel → Build Recipients,
+Move → Build Recipients, Open Consent Request → Build Request; the third was missing from the checklist
+until 2026-09-25); and a decision on `HAIST Dev` god-mode (keep for Howard/Tel/Genzo, or pull).
+
+**15. The instance goes unreachable to the outside world for hours, recurring, mechanism unproven.**
+Recorded so far: 2026-09-02, twice on 2026-09-03, and a long one on 2026-09-05.
+Each time, Slack messages stop producing executions while n8n keeps running
+scheduled work and serving HTTP — so the container is healthy and the inbound path,
+not n8n, is failing. Recoveries have happened with nobody touching it.
+
+The 2026-09-05 window is the best-documented. Jessie's last inbound execution was
+00:05, the next was 13:03 — about thirteen hours. Both bots came back at the *same
+second*: Posty at 13:03:13, Jessie at 13:03:31. Two separate bots resuming together
+means the shared front door recovered, not either bot — strong support for the
+Cloudflare tunnel / host DNS being the cause. The daily pruner (04:00) ran straight
+through the outage, confirming the scheduler stayed alive. Note the reported "up by
+10:30" was not real: no message got through until 13:03, so a test at 10:30 was
+still hitting silence.
+
+Independent, external corroboration arrived by accident: the nightly backup runs on
+GitHub's servers, outside this network, and it failed to reach the API at ~05:00
+Manila on both 2026-09-04 and 2026-09-05 — an outside client getting nothing,
+confirming the site was unreachable from the internet at that time, not merely
+internally wedged. (The backup now retries and skips cleanly instead of crashing,
+and was moved off that window.)
+
+Still the only hints at the moment of failure are outbound DNS errors (`EAI_AGAIN`,
+"DNS server returned an error") minutes before. What would settle it: a real
+external uptime check on the public URL (catches it live, alerts even when the
+network is down, needs no server access), and the `cloudflared`/tunnel container's
+own log from a failure window (needs shell). The nightly backup and daily pruner
+are in place; a watchdog and an uptime check are not yet. Pruning once correlated
+with recovery but was never cleanly isolated from toggling, and the 2026-09-05
+recovery happened with nobody pruning, so "the execution table filled up" is not
+the cause.
+
+**21. The Cloudflare change — and nobody on this project can make it.** The Cloudflare
+account for `signal.hitpromanila.net` belongs to IT, not to anyone working on Jessie. Do
+not write this up as something the reader can go and do; it has to be **requested**.
+
+What to ask for, in this order:
+
+1. **Look up ray id `a3b90afebfcd9b19`** in Security → Events. It names the exact rule or
+   service that issued the challenge. One lookup, and the cause stops being a shortlist.
+2. **Filter Security → Events to `signal.hitpromanila.net` for 21:00–22:00 UTC on
+   15 September** — a measured outage hour. Slack's blocked requests should be there.
+3. **The fix: a WAF skip rule on `/webhook/*` for that hostname**, exempting it from bot,
+   reputation and challenge logic. Needed before launch (12 October) regardless of what the
+   lookups say — any rule that can issue a challenge on that path will take both bots
+   down again, and **no automated caller can ever solve a challenge**.
+4. While they are in there: allow the GitHub Actions ranges, or include the API path in
+   the skip, so the nightly backup can run again (item 22).
+
+**Event Subscriptions is enabled — do not send anyone to check it.** Slack's email said
+they had turned dispatch off, but events have arrived since on both nights measured
+(exec 8953, 16 Sep 07:00 PHT, replied in 19s). Nothing arrives with dispatch off, so it
+is on. Either Slack re-enabled it once requests started succeeding, or the wording was
+loose. Worth one glance only if the bot is silent for a full day and the Cloudflare side
+is known good.
+
+**22. The nightly backup is disabled, and `workflows/live/` is stale.** Disabled
+manually on 2026-09-16 (`gh workflow disable nightly-backup.yml`) because every run
+since 14 September failed on a Cloudflare Managed Challenge — the runner is a
+datacenter IP and cannot solve one.
+
+**Refreshed by hand on 2026-09-17** — `./scripts/backup-live` run from a Mac works
+fine, because a residential IP is not challenged. That is the stopgap while the
+GitHub job is off: run it locally and commit, rather than letting the snapshot age.
+
+This is the rollback artifact, so while the job is off the repo is the only copy of
+what n8n runs, and it is only as current as the last hand run. Re-enable with:
+
+```bash
+gh workflow enable nightly-backup.yml
+```
+
+Do that as soon as the Cloudflare rule in item 21 is fixed — a WAF skip on `/webhook/*`
+plus API access for the runner, or an allowlist for GitHub's ranges. Until then, either
+run `./scripts/backup-live` from the VM (not challenged there) or take a manual snapshot
+before any risky change. See `docs/outages/OUTAGES.md` for the captured challenge response.
+
+---
+
+## 🟠 Soon: details
+
+**34. A1: Jessie sometimes leaves free rooms out when she lists them.** Found in the early-September QA
+(about 30% of availability answers dropped a bookable room) and carried as the top build item through
+18 Sep, then never marked fixed. `Room Availability` computes the free list deterministically, but the
+model restates it and nothing checks the restatement: `Guard Probe` only refuses an offer that this turn's
+check contradicts. **Next step:** a targeted re-test (ask "what's free tomorrow afternoon?" several times
+and compare each answer with the tool's `free` list in the execution). If it still drops rooms, have Guard
+Probe append the tool's list instead of trusting the prose.
+
+**26. The agent can fabricate a preemption ("I've asked the current holder to move") without
+calling Book Session.** Found 2026-09-22 in consent-engine live QA (main exec `10293`): a
+Celebrity Recording request into an occupied Studio F made the agent call *Room Availability*,
+see the room busy, and then reply "Studio F is held by INCUMBENT… I've asked the current holder
+to move" — a claim of a side-effecting action (opening a consent request) that it never
+performed. No Book Session, no Open Consent Request, no PENDING row, no incumbent DM. The
+requester is told a consent request is pending when none exists. Guard Probe's claim-verifier
+catches fabricated "Booked/Cancelled/Moved" but not fabricated preemption offers. Fix (our code,
+not a wait): extend the claim-verifier so a "asked/requesting the holder to move / current holder"
+reply is replaced unless an `Open Consent Request` tool call appears in this turn's
+`intermediateSteps` with success. Same enforcement pattern as the existing claim check. Not
+started.
+
+**27. The agent sometimes double-calls Book Session, opening duplicate consent requests.**
+Found 2026-09-22 (Book Session execs `10306`+`10307`, both `Return Offer` → Open execs
+`10308`+`10309`): one confirmed Celebrity request produced two identical preemptions, DMing the
+incumbent twice. No data corruption here only because both Opens generated the same timestamp
+Request ID (same second) so the second write updated the first row rather than adding a second;
+a sub-second-apart double-call would write two rows, and on resolution the second placement
+would hit `ROOM_OCCUPIED`/`NOT_ELIGIBLE` (no double-book — the guard holds — but a spurious
+"couldn't place" message). Fix options: make `Open Consent Request` idempotent (skip if a PENDING
+row already exists for the same requester+room+window+incumbent), and/or make the incumbent DM
+`executeOnce`. Not started; low risk given the double-book guard, but it spams the incumbent.
+**Also observed 2026-09-22:** the stray second placement surfaced a contradictory "the booking did
+not go through" **after** the requester had already been told "Done - Studio F is yours" — so this
+isn't only incumbent spam, it can confuse the requester with a false failure. Bumps the priority.
+
+**28. Booking over your OWN booking opens a self-consent instead of "you already have this."**
+Raised by Howard 2026-09-22. The preempt branch (`decide.js`/`branch.js`) never checks whether the
+incumbent's booker (`approver`, from the event `ref:`) is the same person as the requester. So when an
+authorized user books a higher-priority session over their *own* existing booking, Jessie opens a
+consent request and DMs *them* asking permission to move their own session — you consent to yourself.
+It works (no double-book), but it's the wrong interaction: it should recognize the booking is yours and
+either say "you already have <title> in <room> at <time> — want to move it?" or just fall through to the
+normal `ROOM_OCCUPIED` refusal (which already names your own booking). Fix (small, our code): in Decide
+Preempt, if `approver === requester` return `offer:false, reason:'SELF_BOOKING'` so it takes the normal
+refusal path — never a self-consent. **Note this also means solo preemption testing is impossible once
+the guard is in** (you can only ever book over your own bookings), which is fine: real preemption QA
+needs a second person owning the incumbent booking. This is a genuine post-launch fix, not a test-only
+artifact. Only reason it opens for Howard today is his HAIST Dev authority makes him an authorized
+preempter; a Standard user booking over their own booking already just gets the plain "room's taken"
+refusal (`NOT_AUTHORIZED` → no preempt). Not started.
+
+**23. After a `ROOM_OCCUPIED` rejection, Jessie re-offers the identical doomed move.**
+Found 2026-09-21 reviewing a live move (execs `9962`, `9971`): Move Booking returned
+`REJECTED / ROOM_OCCUPIED` (Studio 1 taken by `NET-PUSO / JC` in the target window),
+Jessie relayed it correctly — but on the next confirmation it re-presented the *same*
+"Confirm to move" summary and hit the exact same wall, twice. The first rejection's own
+guidance ("offer another time") was ignored because nothing carries the just-failed slot
+across turns. Harmless (the original booking is never touched, `ROOM_OCCUPIED` holds every
+time), but it wastes turns and reads as a loop.
+
+This is our own behavior to fix, not a wait on another system — parked here so it isn't
+lost. Same root as the CLAUDE.md "Not done" note that availability isn't remembered across
+turns. Likely fix: after a `ROOM_OCCUPIED` (or availability) refusal, have Guard Probe /
+the move summary refuse to re-present an unchanged room+window and instead force a
+time/room change — deterministic, in the sub-workflow or Guard Probe, not the prompt. Not
+started; low priority vs. launch items but a clear UX win. Related to the priority-preempt
+consent work in `docs/design/booking-authority-phase2.md` (the "proper" answer to an
+occupied higher-priority slot is to broker the incumbent's move, not just refuse).
+
+**29. Music sessions that require an arranger don't capture one.** Found 2026-09-23 booking a Celebrity
+Recording (Music) — the summary had `Engineer: Drey` and **no Arranger**, and Jessie never asked, even
+though Airtable **Session Types → "Celebrity Recording" → `Engineer Role Required`** lists **Music Engineer,
+Post Engineer, and Music Arranger**. The role data is injected via `Room Table` but this is a prompt-level
+behavior (the "one principle"): the model dropped it. Fix (deterministic): for a session type whose
+`Engineer Role Required` includes **Music Arranger**, Book Session should treat the arranger as a captured
+role — surface an **Arranger** line in the summary and prompt for it (or refuse) when it's missing. Needs a
+new arranger input + a guard, not just a prompt tweak. `Arranger` already exists as a role on the
+`Advertising Projects` table. Not started; normal-booking pre-launch polish.
+
+**30. Celebrity / "pair with a conference room" sessions don't recommend a holding room.** Found 2026-09-23:
+a Celebrity Recording in Studio F was summarized with no suggestion of a holding room, though Airtable
+**Session Types → "Celebrity Recording" → `Room Requirements`** = *"Large, pair with one or more conference
+room as holding areas"* (and celeb-in-F/C is the classic case — Likha/Katha as holding). It's advisory (a
+recommendation, not a hard requirement), so it fits **Guard Probe**: for a session type whose
+`Room Requirements` says "pair with … conference room", append a *"consider adding Likha/Katha as a holding
+room"* line to the summary deterministically, rather than relying on the prompt. Not started; pairs
+naturally with #29 (both read the same `Session Types` data).
+
+**35. The timestamp junk-guard isn't in Move Booking or Expand Series yet.** QA on 2026-09-24 caught the
+model gluing visible junk onto timestamps (`…+08:00ភាsa`). `isoOnly()` now strips it in Room Availability
+(v8) and Book Session (v44+), but Move Booking and Expand Series also take model-supplied times and would
+still reject such a value. Not seen there yet. A small, contained change in two sub-workflows (CLAUDE.md
+gotcha 16).
+
+**37. Consent paths that have never run live.** (a) A **priority (PREEMPT) request timing out**: the Sweep
+marks it `EXPIRED` and nothing moves. Unit-tested and wired, never exercised end to end. It can run now with
+the manual-deadline trick (edit a PENDING row's `Deadline` to the past, wait for the ~10-minute Sweep).
+(b) **Same-day and next-day M-booth windows** (3h / 10:00 on the booking day, live since
+open-consent-request v10) can only occur at launch, because QA's year-shifted dates are always 2+ days out.
+`./scripts/test-consent` covers them with a fixed clock; watch the first real same-day request after launch.
+
+**38. 2027 test events to clear off the calendar** (the Calendar connector is read-only, so this is
+manual). From consent and M-booth testing: M1 on 25, 26 and 28 Sep 2027 and M4 on 27 Sep 2027;
+`BROWSE / Jem Lim / Drey x Brian Cua` (Studio F, 30 Sep 2027, 10am–1pm, booked before the initials guard was
+fixed); the M3 holds from the 18 Sep recurring tests; and `GUARDCHK` (item 16). All year-shifted, so they
+collide with nothing real, but they clutter lookups and QA. Check and clear before launch.
+
+**16. A seeded QA event is still on the calendar.** `GUARDCHK / Bea Jose / HL`,
+Studio 6, Friday 2027-09-10 10:00–11:00, carrying a fake booker ref (`UFAKE99999`).
+Created to prove `NOT_YOURS` — the refusal to cancel someone else's booking — and
+left in place. On a 2027 date so it cannot collide with anything real. Delete it
+through Jessie or Google Calendar once it is no longer needed for that test.
+
+---
+
+## 🟢 Additive: details
+
+**36. A booth holder can't book their own held booth directly.** When the requester *is* the standing
+hold's owner, Book Session's M-booth logic returns `book_as_holder`, but nothing handles it, so it falls
+through to the normal `ROOM_OCCUPIED` refusal. Additive: the holder already has the booth, and can cancel
+their hold instance or pick another booth.
 
 **1. `Room Type` marks nine rooms as `5.1 Mixing`. Two of them record in stereo only.**
 
@@ -58,53 +322,6 @@ decide if the `Recording Booth` tag belongs. Low priority; no behavior impact.
 **Update 2026-09-21 (verified live):** `Room Name` now reads `Studio 2` with no trailing space —
 appears resolved (verify by eye, the character is invisible).
 
-**5. ~~`Clients.Preferred Rooms` needs a companion field.~~ RESOLVED (marked 2026-09-25):** the Clients tool now returns `Preferred Room Names`, so Jessie can read preferred rooms (see CLAUDE.md *Not done*: proposing them is still best-effort, not deterministic). Original note:
-
-The field is a link to Rooms & Studios, so the API returns record ids —
-`reced8Jk7wG24KpdE` — not names. Jessie cannot read those. When she tried, she
-reported one client's preferred rooms as three studios that were not the right
-ones. She is no longer sent the field at all, which is why she asks which room
-instead of proposing one.
-
-*What to add:* a new **Lookup** field on the Clients table, `Preferred Room Names`:
-
-    Field type:        Lookup
-    Linked record:     Preferred Rooms
-    Field to look up:  Room Name
-
-Read-only and computed, so it cannot drift from the link.
-
-*What not to do:* do not delete or convert `Preferred Rooms`. The link is where
-the data lives and the lookup reads through it — remove the link and both fields
-go.
-
-*What it unlocks:* Jessie can propose a room again instead of always asking.
-Until then, always-ask is correct and is what she does.
-
-**Update 2026-09-21:** the `Preferred Room Names` lookup now exists and the Clients tool returns it
-(verified: Dhang Santiago → Studio F, Studio 8); the prompt directs Jessie to lead with it. The data
-unlock is done, but she does not yet *reliably* propose the preferred room (prompt-level behavior) —
-reliable proposal would need deterministic enforcement. Tracked as a soft follow-up.
-
-**6. A client's Technical Requirements points at a field Jessie cannot read.**
-
-Jem Lim's `Technical Requirements` reads:
-
-    Long sessions. Prefers no separate vocal booth — room preference already
-    noted in Preferred Room.
-
-`Preferred Rooms` is withheld from Jessie because it returns record ids (item 5),
-so that last clause dangles. Asked why she had picked a room, she completed it:
-*"Jem Lim's client notes specifically mention a preference for rooms noted in
-their profile"* — which reads as though the room was chosen to suit the client.
-She cannot know that. The prompt tells her never to claim a room is a client's
-preferred one, and the data invites her to anyway.
-
-Fix either end: add the `Preferred Room Names` lookup from item 5 so the
-reference resolves, or remove the clause from the Technical Requirements text.
-Until then expect the claim to reappear — it is the data prompting it, not the
-model inventing freely.
-
 **7. Four session types list the same rooms as both Priority and Last Resort.**
 
 ```
@@ -127,38 +344,6 @@ different set of rooms.
 Priority vs Last Resort (VO, Music Vocal Recording, Music Mixing, Celebrity Recording now have
 Studios 7/8 or 4/5/6 as genuine fallbacks; Event/Meeting/QC no longer duplicate).
 
-**24. ~~Add a `Preemption Rank` field to `Session Types`.~~ RESOLVED (marked 2026-09-25):** the field exists and is populated. Live `referenceData.preemptionRanks` reads e.g. Celebrity Recording 100, Post Mixing / QC / Localization Editing 50, and the preemption flow was proven live on 2026-09-23. Original note:
-Raised 2026-09-21. The consent engine ([consent-engine.md](docs/design/consent-engine.md)) needs a
-deterministic way to know one session type outranks another (e.g. Celebrity Recording > VO) before it
-may offer to preempt an occupied room. Add a Number field `Preemption Rank` on `Session Types`
-(`tblxEvRNPneUhQxUv`), higher = outranks, blank = 0 = never preempts. Tel (she) sets the values — a
-suggested starting table is in the design doc. **Inert until the preemption branch reads it**, so it
-can be added any time with zero effect on the live bot. Not created yet (spec only) per Howard's "write
-the spec" instruction.
-
-**8. ~~Does the bot have `reactions:write`?~~ RESOLVED (marked 2026-09-25):** yes. The 👀 acknowledgement visibly lands on incoming messages (seen on the 2026-09-23 QA smoke tests). Original note:
-
-Jessie puts 👀 on an incoming message and removes it when she replies, so people
-can see it landed during the 7–12 seconds a turn takes. Without the scope the
-reaction silently never appears — replies still work, so it fails invisibly.
-Needs the scope added in the Slack app config and a reinstall.
-
-**9. The Claude Slack connector appends a suffix to messages. Fixed.**
-
-Messages sent through it arrive as `reset *Sent using* <@U0AVDBNH1K4>`.
-
-Fixed as of v81: the confirmation gate strips that suffix before deciding
-whether a reply was a yes or a no, so approval and refusal steps *can* now be
-driven through the connector.
-
-Also fixed in v84: the memory `reset` command strips the suffix too, so `reset`
-sent through the connector clears memory. Nothing outstanding here — kept as a
-record of why the gate strips that suffix at all.
-
----
-
-## Google Calendar
-
 **10. Bookings Jessie did not create can never be cancelled through her.** — **MOSTLY RESOLVED 2026-09-23:** every untagged event from 23 Sep to 31 Dec 2026 (39 edits) was backfilled with `ref:` / `Booked by:` / `Dept:` (see `docs/BACKFILL-CHECKLIST.md`). Still open for events added directly in Google Calendar *after* the backfill, and for 2027 onward: rerun the backfill per window. Original note:
 
 `Cancel Booking` reads a `ref:` marker out of the event description to decide
@@ -175,49 +360,6 @@ acceptable answer for the existing calendar? If not, the descriptions of
 existing events need a `ref:` added, which is a bulk edit against the calendar
 and needs someone to map each booking to a Slack user id first.
 
-**25. Every booking is stamped "Created by: Howard Luistro", and the invite emails go to Howard.** — RESOLVED 2026-09-22.
-
-Switched live 2026-09-22: the "Google Calendar account" credential (`6D1r3kaq6KaFdL0a`)
-was reconnected as `calendar@hitproductions.net` (display name "Jessie Calendar Bot"). No
-workflow edits, no re-import — `verify-ids` still green. Confirmed end to end: a SWITCHTEST
-booking through Jessie created an event whose `creator.email` is `calendar@hitproductions.net`
-(UI "Created by: Jessie Calendar Bot"), with Booked by / ref / engineer / room all intact;
-`health`, `verify-ids`, `test-nodes --live` all green. **Both paths verified live under the new
-credential:** a full book→cancel cycle through Jessie (execs 10181 book / 10187 cancel,
-`claimProbe` booked + cancelled confirmed) — so Cancel Booking's `Delete Event` + calendar
-`httpRequest` reads work as `calendar@` too, and the event was confirmed removed from KDC. Google Workspace prerequisites done by
-Howard + Sir Pao (write on KDC, resource booking, account rename in Admin console).
-
-**Token-expiry risk checked and cleared 2026-09-22.** Confirmed the OAuth app (Google Cloud
-project "JESSIE" → Google Auth Platform → Audience) is **User type: Internal**. Internal apps
-have no "Testing" mode and no ~7-day refresh-token expiry, so there is no silent-break risk from
-this. Do NOT click "Make external" — that would move it out of the safe state.
-
-Original problem (for the record):
-
-The calendar OAuth credential in n8n (`googleCalendarOAuth2Api`, id `6D1r3kaq6KaFdL0a`,
-"Google Calendar account") is authenticated as `howard@hitproductions.net`, so Google stamps
-that account as the event *creator* and sends every "New event" organizer email to Howard's
-inbox. Noticed 2026-09-22 — the CEO flagged that all test bookings look like they're Howard's.
-The booker (`ref:` / "Booked by:") is already correct; only the Google-level creator is wrong.
-
-Fix is to re-authenticate that one credential as a neutral `calendar@hitproductions.net` — no
-workflow edits, no re-import (`verify-ids` stays green). Full cutover + smoke-test runbook:
-`docs/runbooks/CALENDAR-ACCOUNT-SWITCH.md`.
-
-**Blocked on Google Workspace (needs admin), all prerequisites before the reconnect:**
-- `calendar@hitproductions.net` exists as a sign-in-able Workspace account (not just an alias).
-- It has "Make changes to events" on KDC Bookings (`c_re5mcrg9om0macp9doqhlsi83g@...`).
-- It can book the room resources (Studio 1–8 / A–F / M1–8 etc.).
-- The Google Cloud OAuth client's consent screen allows it (add as test user if External/Testing).
-
-The reconnect itself needs the `calendar@` password, so Howard runs it (can't be scripted).
-Past events keep Howard's name — Google won't change an existing event's creator.
-
----
-
-## n8n server
-
 **11. Worth exploring an update — we don't know what the current version can do.**
 
 Two things we wanted turned out not to be reachable from the installed version:
@@ -232,54 +374,6 @@ Gemini itself accepts those parameters — tested directly against the API — s
 the limits are on the n8n side. Whether a newer version lifts any of them is an
 open question, not a promise: worth checking the changelogs for those two nodes
 against what's installed before deciding whether an update is worth the restart.
-
-**12. `PUT /api/v1/workflows/:id` reports success and changes nothing.** — RESOLVED 2026-09-18.
-
-Seen on 2026-08-30 pushing the main workflow: the request returned without an
-error, the response carried no `name` or `updatedAt`, and pulling the workflow
-back showed every node unchanged. The same JSON imported through the browser UI
-applied correctly.
-
-**Root cause: payload shape, not a broken write path.** The public API `PUT`
-accepts a body of exactly `{name, nodes, connections, settings}` and rejects any
-extra top-level or `settings` key (`400 request/body/settings must NOT have
-additional properties`). The 2026-08-30 attempt sent the whole pulled export
-(carrying `id`, `active`, `activeVersion`, `tags`, and settings keys like
-`binaryMode`, `callerPolicy`, `availableInMCP`, `timeSavedMode`), so it never
-applied. Pruning `settings` to the API-allowed keys makes the `PUT` land, and
-n8n *preserves* the internal settings that were not sent (verified: `binaryMode`
-and `callerPolicy` survive a prune-and-PUT), so nothing is lost.
-
-`./scripts/n8n-write` now does this safely: `put <id> <file>` (schema-clean PUT),
-plus `activate` / `deactivate` for the tool-schema reload toggle. Proven on the
-live main + Book Session on 2026-09-18 (External/Personal `bookingType` ship).
-Still: pull before you write, and toggle Active off/on after changing tool inputs.
-
-**14. A Code node cannot reference a tool node — it hangs the task runner.**
-
-`$('Book Session')` inside `Guard Probe` blocks until the task runner's 60-second
-timeout, then fails the node with `Unknown error`. Measured repeatedly on
-2026-08-30: 60,007 / 60,008 / 60,015 / 60,026 ms across four runs, against ~70 ms
-for the same node without it.
-
-It is specific to nodes wired to the agent's `ai_tool` port, which produce no
-`main` output — `$('Gate Context')` and `$('Room Table')` are both fine. Isolated
-by shipping the lookup on its own as a diagnostic that rewrote no text.
-
-What it cost: the natural guard against Jessie claiming a booking she never made
-(seen once in 120 runs) had to be built another way. **Solved without needing
-anything from the server** — `returnIntermediateSteps` on the agent node makes it
-report its own tool calls, and those arrive on `Guard Probe`'s input, where no
-lookup is involved. That turned out to be a better check than the one that was
-blocked: it can require a *success status* on this turn, not merely that a node
-executed at some point.
-
-Worth raising with whoever maintains the n8n instance only as a question: whether
-this is expected for `ai_tool` nodes or a bug in the installed version. Nothing
-is blocked on the answer — it is recorded so the next person does not spend an
-evening rediscovering it.
-
----
 
 **13. The first Code node in every execution costs about 3.5 seconds.**
 
@@ -338,50 +432,6 @@ means it is still happening; ~0.07s means it is fixed.
 mismeasurement — that withdrawal was itself the mistake, taken from a sample that
 happened to catch warm runs.*
 
-**15. The instance goes unreachable to the outside world for hours, recurring, mechanism unproven.**
-Recorded so far: 2026-09-02, twice on 2026-09-03, and a long one on 2026-09-05.
-Each time, Slack messages stop producing executions while n8n keeps running
-scheduled work and serving HTTP — so the container is healthy and the inbound path,
-not n8n, is failing. Recoveries have happened with nobody touching it.
-
-The 2026-09-05 window is the best-documented. Jessie's last inbound execution was
-00:05, the next was 13:03 — about thirteen hours. Both bots came back at the *same
-second*: Posty at 13:03:13, Jessie at 13:03:31. Two separate bots resuming together
-means the shared front door recovered, not either bot — strong support for the
-Cloudflare tunnel / host DNS being the cause. The daily pruner (04:00) ran straight
-through the outage, confirming the scheduler stayed alive. Note the reported "up by
-10:30" was not real: no message got through until 13:03, so a test at 10:30 was
-still hitting silence.
-
-Independent, external corroboration arrived by accident: the nightly backup runs on
-GitHub's servers, outside this network, and it failed to reach the API at ~05:00
-Manila on both 2026-09-04 and 2026-09-05 — an outside client getting nothing,
-confirming the site was unreachable from the internet at that time, not merely
-internally wedged. (The backup now retries and skips cleanly instead of crashing,
-and was moved off that window.)
-
-Still the only hints at the moment of failure are outbound DNS errors (`EAI_AGAIN`,
-"DNS server returned an error") minutes before. What would settle it: a real
-external uptime check on the public URL (catches it live, alerts even when the
-network is down, needs no server access), and the `cloudflared`/tunnel container's
-own log from a failure window (needs shell). The nightly backup and daily pruner
-are in place; a watchdog and an uptime check are not yet. Pruning once correlated
-with recovery but was never cleanly isolated from toggling, and the 2026-09-05
-recovery happened with nobody pruning, so "the execution table filled up" is not
-the cause.
-
-**16. A seeded QA event is still on the calendar.** `GUARDCHK / Bea Jose / HL`,
-Studio 6, Friday 2027-09-10 10:00–11:00, carrying a fake booker ref (`UFAKE99999`).
-Created to prove `NOT_YOURS` — the refusal to cancel someone else's booking — and
-left in place. On a 2027 date so it cannot collide with anything real. Delete it
-through Jessie or Google Calendar once it is no longer needed for that test.
-
-**17. ~~Engineer initials in booking titles are composed by the model.~~ RESOLVED 2026-09-25 (Book Session v45):** the `All Bookers` staff resolver rewrites the title's initials from Bookers `Initials` (see #31). Original note: A title like
-`SESSION / Client / KC` has the engineer's initials written by the agent with no
-lookup behind them, so a wrong guess becomes a wrong calendar title. Fixing it
-properly means an Airtable engineer lookup inside `Book Session` — a new node in
-that sub-workflow, and a design decision, not a repair.
-
 **18. The first outbound call of every turn pays a ~4s cold-connection tax — same root
 as the outages.** Measured 2026-09-06 across many turns: `Get Booker` (the first
 Airtable call) takes ~4.2s consistently, while `All Rooms` and `All Session Types`
@@ -396,7 +446,122 @@ item 13 (the Code-node cold start) are the two fixed per-turn costs, ~7.5s of a
 16.5s median turn, and both are server-side, not workflow changes. Cross-links
 [[15]] (the outages) and 13 (the task runner).
 
-**19. Two diverging working copies of this repo, and the other one has more in it.**
+**39. The two staff-list reads added on 2026-09-25 cost about 1s each.** `All Bookers` runs in main (every
+message; 58 rows, 1.1s measured live) and in Book Session (every booking). Correctness first. If turn time
+matters later, read Bookers once per turn and pass it down (for example via `Room Table`'s `referenceData`),
+or cache it. Related to 13 and 18.
+
+**40. Leftover snapshot files from renames in `workflows/live/`.** `backup-live` never deletes (CLAUDE.md
+gotcha 15), so a renamed workflow leaves its old snapshot behind: `finalize-consent__…`,
+`open-consent-request__…` and `tmp-timesheet-credential-probe__…` (untracked), plus
+`posty-airtable-typo-check__…` and `posty-monthly-digest__…` (tracked). Each shares its workflow id with a
+current snapshot. Safe to delete; needs Howard's OK.
+
+**41. `Booked For`'s notice quotes three words, not just the name.** It tells the model the requester
+wrote "for Japs next Thursday", because the capture takes up to three words. Harmless (the name itself
+resolves correctly), but `matched` should be trimmed to the words that actually matched.
+
+---
+
+## ✅ Resolved
+
+Kept for history: each says how it was found and how it was closed.
+
+**5. ~~`Clients.Preferred Rooms` needs a companion field.~~ RESOLVED (marked 2026-09-25):** the Clients tool now returns `Preferred Room Names`, so Jessie can read preferred rooms (see CLAUDE.md *Not done*: proposing them is still best-effort, not deterministic). Original note:
+
+The field is a link to Rooms & Studios, so the API returns record ids —
+`reced8Jk7wG24KpdE` — not names. Jessie cannot read those. When she tried, she
+reported one client's preferred rooms as three studios that were not the right
+ones. She is no longer sent the field at all, which is why she asks which room
+instead of proposing one.
+
+*What to add:* a new **Lookup** field on the Clients table, `Preferred Room Names`:
+
+    Field type:        Lookup
+    Linked record:     Preferred Rooms
+    Field to look up:  Room Name
+
+Read-only and computed, so it cannot drift from the link.
+
+*What not to do:* do not delete or convert `Preferred Rooms`. The link is where
+the data lives and the lookup reads through it — remove the link and both fields
+go.
+
+*What it unlocks:* Jessie can propose a room again instead of always asking.
+Until then, always-ask is correct and is what she does.
+
+**Update 2026-09-21:** the `Preferred Room Names` lookup now exists and the Clients tool returns it
+(verified: Dhang Santiago → Studio F, Studio 8); the prompt directs Jessie to lead with it. The data
+unlock is done, but she does not yet *reliably* propose the preferred room (prompt-level behavior) —
+reliable proposal would need deterministic enforcement. Tracked as a soft follow-up.
+
+**6. ~~A client's Technical Requirements points at a field Jessie cannot read.~~ RESOLVED (marked 2026-09-25):** the reference now resolves: item 5's `Preferred Room Names` lookup landed, which is one of the two fixes proposed below. Original note:
+
+Jem Lim's `Technical Requirements` reads:
+
+    Long sessions. Prefers no separate vocal booth — room preference already
+    noted in Preferred Room.
+
+`Preferred Rooms` is withheld from Jessie because it returns record ids (item 5),
+so that last clause dangles. Asked why she had picked a room, she completed it:
+*"Jem Lim's client notes specifically mention a preference for rooms noted in
+their profile"* — which reads as though the room was chosen to suit the client.
+She cannot know that. The prompt tells her never to claim a room is a client's
+preferred one, and the data invites her to anyway.
+
+Fix either end: add the `Preferred Room Names` lookup from item 5 so the
+reference resolves, or remove the clause from the Technical Requirements text.
+Until then expect the claim to reappear — it is the data prompting it, not the
+model inventing freely.
+
+**8. ~~Does the bot have `reactions:write`?~~ RESOLVED (marked 2026-09-25):** yes. The 👀 acknowledgement visibly lands on incoming messages (seen on the 2026-09-23 QA smoke tests). Original note:
+
+Jessie puts 👀 on an incoming message and removes it when she replies, so people
+can see it landed during the 7–12 seconds a turn takes. Without the scope the
+reaction silently never appears — replies still work, so it fails invisibly.
+Needs the scope added in the Slack app config and a reinstall.
+
+**9. The Claude Slack connector appends a suffix to messages. Fixed.**
+
+Messages sent through it arrive as `reset *Sent using* <@U0AVDBNH1K4>`.
+
+Fixed as of v81: the confirmation gate strips that suffix before deciding
+whether a reply was a yes or a no, so approval and refusal steps *can* now be
+driven through the connector.
+
+Also fixed in v84: the memory `reset` command strips the suffix too, so `reset`
+sent through the connector clears memory. Nothing outstanding here — kept as a
+record of why the gate strips that suffix at all.
+
+**12. `PUT /api/v1/workflows/:id` reports success and changes nothing.** — RESOLVED 2026-09-18.
+
+Seen on 2026-08-30 pushing the main workflow: the request returned without an
+error, the response carried no `name` or `updatedAt`, and pulling the workflow
+back showed every node unchanged. The same JSON imported through the browser UI
+applied correctly.
+
+**Root cause: payload shape, not a broken write path.** The public API `PUT`
+accepts a body of exactly `{name, nodes, connections, settings}` and rejects any
+extra top-level or `settings` key (`400 request/body/settings must NOT have
+additional properties`). The 2026-08-30 attempt sent the whole pulled export
+(carrying `id`, `active`, `activeVersion`, `tags`, and settings keys like
+`binaryMode`, `callerPolicy`, `availableInMCP`, `timeSavedMode`), so it never
+applied. Pruning `settings` to the API-allowed keys makes the `PUT` land, and
+n8n *preserves* the internal settings that were not sent (verified: `binaryMode`
+and `callerPolicy` survive a prune-and-PUT), so nothing is lost.
+
+`./scripts/n8n-write` now does this safely: `put <id> <file>` (schema-clean PUT),
+plus `activate` / `deactivate` for the tool-schema reload toggle. Proven on the
+live main + Book Session on 2026-09-18 (External/Personal `bookingType` ship).
+Still: pull before you write, and toggle Active off/on after changing tool inputs.
+
+**17. ~~Engineer initials in booking titles are composed by the model.~~ RESOLVED 2026-09-25 (Book Session v45):** the `All Bookers` staff resolver rewrites the title's initials from Bookers `Initials` (see #31). Original note: A title like
+`SESSION / Client / KC` has the engineer's initials written by the agent with no
+lookup behind them, so a wrong guess becomes a wrong calendar title. Fixing it
+properly means an Airtable engineer lookup inside `Book Session` — a new node in
+that sub-workflow, and a design decision, not a repair.
+
+**19. ~~Two diverging working copies of this repo.~~ RESOLVED (marked 2026-09-25):** everything listed below as missing is now in this repo: `webhook-canary`, `baseline`, the 2–4 Sep evidence (now `docs/outages/evidence/`), the 7 Sep QA and test log, the outage write-up, CANARY-SETUP, EOD-09-08, and the v116–v120 / book-session v26–28 files. Original note:
 Numbering is settled: **we use v120**, Howard's number. Verified 8 Sep that the live
 main workflow is **byte-for-byte identical** to
 `workflows/project-jessie-v120.json` — same 40 nodes, same Guard Probe (436 lines),
@@ -431,130 +596,53 @@ anything in `OUTAGES.md`. Note the 8 Sept instrumented window argues against it 
 *that* window (278 consecutive 200s straight through the tunnel), but it may well
 explain others. Get that doc and the connector's sleep/wake log.
 
-**21. The Cloudflare change — and nobody on this project can make it.** The Cloudflare
-account for `signal.hitpromanila.net` belongs to IT, not to anyone working on Jessie. Do
-not write this up as something the reader can go and do; it has to be **requested**.
+**24. ~~Add a `Preemption Rank` field to `Session Types`.~~ RESOLVED (marked 2026-09-25):** the field exists and is populated. Live `referenceData.preemptionRanks` reads e.g. Celebrity Recording 100, Post Mixing / QC / Localization Editing 50, and the preemption flow was proven live on 2026-09-23. Original note:
+Raised 2026-09-21. The consent engine ([consent-engine.md](docs/design/consent-engine.md)) needs a
+deterministic way to know one session type outranks another (e.g. Celebrity Recording > VO) before it
+may offer to preempt an occupied room. Add a Number field `Preemption Rank` on `Session Types`
+(`tblxEvRNPneUhQxUv`), higher = outranks, blank = 0 = never preempts. Tel (she) sets the values — a
+suggested starting table is in the design doc. **Inert until the preemption branch reads it**, so it
+can be added any time with zero effect on the live bot. Not created yet (spec only) per Howard's "write
+the spec" instruction.
 
-What to ask for, in this order:
+**25. Every booking is stamped "Created by: Howard Luistro", and the invite emails go to Howard.** — RESOLVED 2026-09-22.
 
-1. **Look up ray id `a3b90afebfcd9b19`** in Security → Events. It names the exact rule or
-   service that issued the challenge. One lookup, and the cause stops being a shortlist.
-2. **Filter Security → Events to `signal.hitpromanila.net` for 21:00–22:00 UTC on
-   15 September** — a measured outage hour. Slack's blocked requests should be there.
-3. **The fix: a WAF skip rule on `/webhook/*` for that hostname**, exempting it from bot,
-   reputation and challenge logic. Needed before launch (12 October) regardless of what the
-   lookups say — any rule that can issue a challenge on that path will take both bots
-   down again, and **no automated caller can ever solve a challenge**.
-4. While they are in there: allow the GitHub Actions ranges, or include the API path in
-   the skip, so the nightly backup can run again (item 22).
+Switched live 2026-09-22: the "Google Calendar account" credential (`6D1r3kaq6KaFdL0a`)
+was reconnected as `calendar@hitproductions.net` (display name "Jessie Calendar Bot"). No
+workflow edits, no re-import — `verify-ids` still green. Confirmed end to end: a SWITCHTEST
+booking through Jessie created an event whose `creator.email` is `calendar@hitproductions.net`
+(UI "Created by: Jessie Calendar Bot"), with Booked by / ref / engineer / room all intact;
+`health`, `verify-ids`, `test-nodes --live` all green. **Both paths verified live under the new
+credential:** a full book→cancel cycle through Jessie (execs 10181 book / 10187 cancel,
+`claimProbe` booked + cancelled confirmed) — so Cancel Booking's `Delete Event` + calendar
+`httpRequest` reads work as `calendar@` too, and the event was confirmed removed from KDC. Google Workspace prerequisites done by
+Howard + Sir Pao (write on KDC, resource booking, account rename in Admin console).
 
-**Event Subscriptions is enabled — do not send anyone to check it.** Slack's email said
-they had turned dispatch off, but events have arrived since on both nights measured
-(exec 8953, 16 Sep 07:00 PHT, replied in 19s). Nothing arrives with dispatch off, so it
-is on. Either Slack re-enabled it once requests started succeeding, or the wording was
-loose. Worth one glance only if the bot is silent for a full day and the Cloudflare side
-is known good.
+**Token-expiry risk checked and cleared 2026-09-22.** Confirmed the OAuth app (Google Cloud
+project "JESSIE" → Google Auth Platform → Audience) is **User type: Internal**. Internal apps
+have no "Testing" mode and no ~7-day refresh-token expiry, so there is no silent-break risk from
+this. Do NOT click "Make external" — that would move it out of the safe state.
 
-**22. The nightly backup is disabled, and `workflows/live/` is stale.** Disabled
-manually on 2026-09-16 (`gh workflow disable nightly-backup.yml`) because every run
-since 14 September failed on a Cloudflare Managed Challenge — the runner is a
-datacenter IP and cannot solve one.
+Original problem (for the record):
 
-**Refreshed by hand on 2026-09-17** — `./scripts/backup-live` run from a Mac works
-fine, because a residential IP is not challenged. That is the stopgap while the
-GitHub job is off: run it locally and commit, rather than letting the snapshot age.
+The calendar OAuth credential in n8n (`googleCalendarOAuth2Api`, id `6D1r3kaq6KaFdL0a`,
+"Google Calendar account") is authenticated as `howard@hitproductions.net`, so Google stamps
+that account as the event *creator* and sends every "New event" organizer email to Howard's
+inbox. Noticed 2026-09-22 — the CEO flagged that all test bookings look like they're Howard's.
+The booker (`ref:` / "Booked by:") is already correct; only the Google-level creator is wrong.
 
-This is the rollback artifact, so while the job is off the repo is the only copy of
-what n8n runs, and it is only as current as the last hand run. Re-enable with:
+Fix is to re-authenticate that one credential as a neutral `calendar@hitproductions.net` — no
+workflow edits, no re-import (`verify-ids` stays green). Full cutover + smoke-test runbook:
+`docs/runbooks/CALENDAR-ACCOUNT-SWITCH.md`.
 
-```bash
-gh workflow enable nightly-backup.yml
-```
+**Blocked on Google Workspace (needs admin), all prerequisites before the reconnect:**
+- `calendar@hitproductions.net` exists as a sign-in-able Workspace account (not just an alias).
+- It has "Make changes to events" on KDC Bookings (`c_re5mcrg9om0macp9doqhlsi83g@...`).
+- It can book the room resources (Studio 1–8 / A–F / M1–8 etc.).
+- The Google Cloud OAuth client's consent screen allows it (add as test user if External/Testing).
 
-Do that as soon as the Cloudflare rule in item 21 is fixed — a WAF skip on `/webhook/*`
-plus API access for the runner, or an allowlist for GitHub's ranges. Until then, either
-run `./scripts/backup-live` from the VM (not challenged there) or take a manual snapshot
-before any risky change. See `docs/outages/OUTAGES.md` for the captured challenge response.
-
-**23. After a `ROOM_OCCUPIED` rejection, Jessie re-offers the identical doomed move.**
-Found 2026-09-21 reviewing a live move (execs `9962`, `9971`): Move Booking returned
-`REJECTED / ROOM_OCCUPIED` (Studio 1 taken by `NET-PUSO / JC` in the target window),
-Jessie relayed it correctly — but on the next confirmation it re-presented the *same*
-"Confirm to move" summary and hit the exact same wall, twice. The first rejection's own
-guidance ("offer another time") was ignored because nothing carries the just-failed slot
-across turns. Harmless (the original booking is never touched, `ROOM_OCCUPIED` holds every
-time), but it wastes turns and reads as a loop.
-
-This is our own behavior to fix, not a wait on another system — parked here so it isn't
-lost. Same root as the CLAUDE.md "Not done" note that availability isn't remembered across
-turns. Likely fix: after a `ROOM_OCCUPIED` (or availability) refusal, have Guard Probe /
-the move summary refuse to re-present an unchanged room+window and instead force a
-time/room change — deterministic, in the sub-workflow or Guard Probe, not the prompt. Not
-started; low priority vs. launch items but a clear UX win. Related to the priority-preempt
-consent work in `docs/design/booking-authority-phase2.md` (the "proper" answer to an
-occupied higher-priority slot is to broker the incumbent's move, not just refuse).
-
-**26. The agent can fabricate a preemption ("I've asked the current holder to move") without
-calling Book Session.** Found 2026-09-22 in consent-engine live QA (main exec `10293`): a
-Celebrity Recording request into an occupied Studio F made the agent call *Room Availability*,
-see the room busy, and then reply "Studio F is held by INCUMBENT… I've asked the current holder
-to move" — a claim of a side-effecting action (opening a consent request) that it never
-performed. No Book Session, no Open Consent Request, no PENDING row, no incumbent DM. The
-requester is told a consent request is pending when none exists. Guard Probe's claim-verifier
-catches fabricated "Booked/Cancelled/Moved" but not fabricated preemption offers. Fix (our code,
-not a wait): extend the claim-verifier so a "asked/requesting the holder to move / current holder"
-reply is replaced unless an `Open Consent Request` tool call appears in this turn's
-`intermediateSteps` with success. Same enforcement pattern as the existing claim check. Not
-started.
-
-**27. The agent sometimes double-calls Book Session, opening duplicate consent requests.**
-Found 2026-09-22 (Book Session execs `10306`+`10307`, both `Return Offer` → Open execs
-`10308`+`10309`): one confirmed Celebrity request produced two identical preemptions, DMing the
-incumbent twice. No data corruption here only because both Opens generated the same timestamp
-Request ID (same second) so the second write updated the first row rather than adding a second;
-a sub-second-apart double-call would write two rows, and on resolution the second placement
-would hit `ROOM_OCCUPIED`/`NOT_ELIGIBLE` (no double-book — the guard holds — but a spurious
-"couldn't place" message). Fix options: make `Open Consent Request` idempotent (skip if a PENDING
-row already exists for the same requester+room+window+incumbent), and/or make the incumbent DM
-`executeOnce`. Not started; low risk given the double-book guard, but it spams the incumbent.
-**Also observed 2026-09-22:** the stray second placement surfaced a contradictory "the booking did
-not go through" **after** the requester had already been told "Done - Studio F is yours" — so this
-isn't only incumbent spam, it can confuse the requester with a false failure. Bumps the priority.
-
-**28. Booking over your OWN booking opens a self-consent instead of "you already have this."**
-Raised by Howard 2026-09-22. The preempt branch (`decide.js`/`branch.js`) never checks whether the
-incumbent's booker (`approver`, from the event `ref:`) is the same person as the requester. So when an
-authorized user books a higher-priority session over their *own* existing booking, Jessie opens a
-consent request and DMs *them* asking permission to move their own session — you consent to yourself.
-It works (no double-book), but it's the wrong interaction: it should recognize the booking is yours and
-either say "you already have <title> in <room> at <time> — want to move it?" or just fall through to the
-normal `ROOM_OCCUPIED` refusal (which already names your own booking). Fix (small, our code): in Decide
-Preempt, if `approver === requester` return `offer:false, reason:'SELF_BOOKING'` so it takes the normal
-refusal path — never a self-consent. **Note this also means solo preemption testing is impossible once
-the guard is in** (you can only ever book over your own bookings), which is fine: real preemption QA
-needs a second person owning the incumbent booking. This is a genuine post-launch fix, not a test-only
-artifact. Only reason it opens for Howard today is his HAIST Dev authority makes him an authorized
-preempter; a Standard user booking over their own booking already just gets the plain "room's taken"
-refusal (`NOT_AUTHORIZED` → no preempt). Not started.
-
-**29. Music sessions that require an arranger don't capture one.** Found 2026-09-23 booking a Celebrity
-Recording (Music) — the summary had `Engineer: Drey` and **no Arranger**, and Jessie never asked, even
-though Airtable **Session Types → "Celebrity Recording" → `Engineer Role Required`** lists **Music Engineer,
-Post Engineer, and Music Arranger**. The role data is injected via `Room Table` but this is a prompt-level
-behavior (the "one principle"): the model dropped it. Fix (deterministic): for a session type whose
-`Engineer Role Required` includes **Music Arranger**, Book Session should treat the arranger as a captured
-role — surface an **Arranger** line in the summary and prompt for it (or refuse) when it's missing. Needs a
-new arranger input + a guard, not just a prompt tweak. `Arranger` already exists as a role on the
-`Advertising Projects` table. Not started; normal-booking pre-launch polish.
-
-**30. Celebrity / "pair with a conference room" sessions don't recommend a holding room.** Found 2026-09-23:
-a Celebrity Recording in Studio F was summarized with no suggestion of a holding room, though Airtable
-**Session Types → "Celebrity Recording" → `Room Requirements`** = *"Large, pair with one or more conference
-room as holding areas"* (and celeb-in-F/C is the classic case — Likha/Katha as holding). It's advisory (a
-recommendation, not a hard requirement), so it fits **Guard Probe**: for a session type whose
-`Room Requirements` says "pair with … conference room", append a *"consider adding Likha/Katha as a holding
-room"* line to the summary deterministically, rather than relying on the prompt. Not started; pairs
-naturally with #29 (both read the same `Session Types` data).
+The reconnect itself needs the `calendar@` password, so Howard runs it (can't be scripted).
+Past events keep Howard's name — Google won't change an existing event's creator.
 
 **31. ~~Title initials are blocked, but not auto-corrected to the right person.~~ RESOLVED 2026-09-25 (Book Session v45):** an `All Bookers` read + staff resolver now rewrites engineer/arranger to the canonical Bookers name and initials, and refuses anyone not on the list (`ENGINEER_UNKNOWN`). Original note: Found 2026-09-24: a
 Celebrity Recording titled *BROWSE / Jem Lim / Drey* — the engineer's nickname (Daryl Reyes goes by "Drey",
@@ -568,6 +656,36 @@ has no Bookers data** (only Get Client + Get Booker-for-the-requester). Needs a 
 plumbed in — cleanest via `Room Table`'s `referenceData` (already an input to Book Session), which means
 adding a Bookers read to the context lane. Deferred from QA round 2 (2026-09-24) as a core-path change; the
 guard holds the line meanwhile.
+
+---
+
+## Known constraints (not tasks)
+
+Things that are true of the platform and cost time to rediscover. Nothing to do.
+
+**14. A Code node cannot reference a tool node — it hangs the task runner.**
+
+`$('Book Session')` inside `Guard Probe` blocks until the task runner's 60-second
+timeout, then fails the node with `Unknown error`. Measured repeatedly on
+2026-08-30: 60,007 / 60,008 / 60,015 / 60,026 ms across four runs, against ~70 ms
+for the same node without it.
+
+It is specific to nodes wired to the agent's `ai_tool` port, which produce no
+`main` output — `$('Gate Context')` and `$('Room Table')` are both fine. Isolated
+by shipping the lookup on its own as a diagnostic that rewrote no text.
+
+What it cost: the natural guard against Jessie claiming a booking she never made
+(seen once in 120 runs) had to be built another way. **Solved without needing
+anything from the server** — `returnIntermediateSteps` on the agent node makes it
+report its own tool calls, and those arrive on `Guard Probe`'s input, where no
+lookup is involved. That turned out to be a better check than the one that was
+blocked: it can require a *success status* on this turn, not merely that a node
+executed at some point.
+
+Worth raising with whoever maintains the n8n instance only as a question: whether
+this is expected for `ai_tool` nodes or a bug in the installed version. Nothing
+is blocked on the answer — it is recorded so the next person does not spend an
+evening rediscovering it.
 
 ---
 
