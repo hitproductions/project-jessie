@@ -278,7 +278,7 @@ being *made*; only this one stops one being *claimed*.
 `Book Session` refuses before anything reaches the calendar:
 
 ```
-MISSING_DETAILS · MISSING_CLIENT · TITLE_INITIALS · NO_REFERENCE_DATA · PAST_DATE · NOT_CONFIRMED · DURATION_INVALID
+MISSING_DETAILS · MISSING_CLIENT · ENGINEER_UNKNOWN · ENGINEER_UNVERIFIED · TITLE_INITIALS · NO_REFERENCE_DATA · PAST_DATE · NOT_CONFIRMED · DURATION_INVALID
 ROOM_UNSUITABLE · ROOM_NOT_PRIORITY · NO_ROOM · UNKNOWN_ROOM · ROOM_OCCUPIED · UNVERIFIABLE
 ```
 
@@ -286,8 +286,16 @@ ROOM_UNSUITABLE · ROOM_NOT_PRIORITY · NO_ROOM · UNKNOWN_ROOM · ROOM_OCCUPIED
 (`PROJECT / Client / initials`) must end in initials (`DR` or `DR x PL`), never a name or
 nickname — the model put "Drey" (Daryl Reyes = DR) there and nothing corrected it. Gated on a
 three-segment title alone (internal rooms use 1–2 segments), because the model sometimes omits
-the session type. Book Session has no Bookers data, so it blocks a bad title rather than
-rewriting it; a proper `Drey → DR` rewrite needs a Bookers initials map plumbed in (PENDING).
+the session type. It is now mostly a backstop: the staff resolver below rewrites the initials first.
+
+`ENGINEER_UNKNOWN` / `ENGINEER_UNVERIFIED`: every engineer and arranger the model supplies is
+resolved against the **Bookers** table (read by the `All Bookers` node at the top of Book Session,
+before `Get Client`). An exact `Name`, a "Goes by" alias from `Info`, `Initials`, or a unique first
+name becomes the canonical name, and the title's initials segment is rewritten from Bookers
+`Initials` (`Drey` → `DR`, `Brian Cua` → `BC`). Anything else is refused with suggestions, so an
+engineer not on the staff list is never written. QA 2026-09-25: asked for "Daryl", the model wrote
+"Daryl Javier" (an invented surname) and titled it DJ. If the staff list cannot be read and an
+engineer was given, it refuses (`ENGINEER_UNVERIFIED`) rather than guessing.
 
 `MISSING_CLIENT` guards on-behalf bookings: when a booking is *booked for* a colleague
 (`Booked by: X (for Y)`) and is External, a real client distinct from Y is required — the

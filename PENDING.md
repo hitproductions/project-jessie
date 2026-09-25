@@ -556,7 +556,7 @@ recommendation, not a hard requirement), so it fits **Guard Probe**: for a sessi
 room"* line to the summary deterministically, rather than relying on the prompt. Not started; pairs
 naturally with #29 (both read the same `Session Types` data).
 
-**31. Title initials are blocked, but not auto-corrected to the right person.** Found 2026-09-24: a
+**31. ~~Title initials are blocked, but not auto-corrected to the right person.~~ RESOLVED 2026-09-25 (Book Session v45):** an `All Bookers` read + staff resolver now rewrites engineer/arranger to the canonical Bookers name and initials, and refuses anyone not on the list (`ENGINEER_UNKNOWN`). Original note: Found 2026-09-24: a
 Celebrity Recording titled *BROWSE / Jem Lim / Drey* — the engineer's nickname (Daryl Reyes goes by "Drey",
 initials **DR**) landed in the initials slot instead of `DR`. Book Session now has a `TITLE_INITIALS` guard
 that **blocks** any 3-segment studio title whose last segment is not proper initials (`DR` / `DR x PL`), so a

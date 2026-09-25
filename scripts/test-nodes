@@ -374,6 +374,46 @@ suite('Check Conflicts — booked-for is never the client', ()=>{
   check('bf','on-behalf but Personal (not external) -> CLEAR, guard skipped',run({description:forK,bookingType:'Personal',client:'',summary:'X / Kristine Trocino / TL'})==='CLEAR');
 });
 
+// ── Engineers and arrangers must be real people in Bookers ────────────────────
+suite('Check Conflicts — engineer must be on the staff list', ()=>{
+  const whole=src('Check Conflicts');
+  const i=whole.indexOf('// --- engineer and arranger must be real people in Bookers');
+  const j=whole.indexOf('// --- on-behalf bookings still need');
+  const body=whole.slice(i,j);
+  const STAFF=[
+    {Name:'Daryl Reyes',Initials:'DR',Info:'Music Engineer, Post Engineer, Secondary Loc Engineer. Goes by Daryl, Drei, Drey, DR.'},
+    {Name:'Brian Cua',Initials:'BC',Info:'Music Arranger, Goes by Brian, BC.'},
+    {Name:'Tara Lim',Initials:'TL',Info:'Post Engineer, Goes by Tara, TL.'},
+    {Name:'Letty Sarmiento',Initials:'LS',Info:'Project Manager, Goes by Letty, LS.'},
+    {Name:'Lyn Sajonas',Initials:'LS',Info:'Head of Finance, Goes by Miss Lyn, Lyn, LS.'},
+    {Name:'Dennis Cham',Initials:'DC',Info:'Chairman, Sir Dennis, Dennis, DC.'}];
+  const run=(REQ,staff)=>{ const rows=(staff||STAFF).map(f=>({json:{fields:f}}));
+    const $=name=>({all:()=>name==='All Bookers'?rows:[]});
+    const r=new Function('REQ','$',body+'\nreturn null;')(REQ,$); return {r:r?r[0].json:null,REQ}; };
+  const D=' | Booked by: Camy Caridad | ref: U1';
+  let x=run({engineer:'Daryl Javier (Music Engineer)',description:'Engineer: Daryl Javier (Music Engineer)'+D,summary:'Sushi / Pael / DJ'});
+  check('st','an invented surname is refused (QA: Daryl Javier)',x.r&&x.r.reason==='ENGINEER_UNKNOWN');
+  check('st','and the real person is suggested',x.r&&/Daryl Reyes/.test(x.r.human),x.r&&x.r.human);
+  x=run({engineer:'Daryl (Music Engineer)',description:'Engineer: Daryl (Music Engineer)'+D,summary:'Sushi / Pael / D'});
+  check('st','a unique first name resolves to the full name',!x.r&&x.REQ.engineer==='Daryl Reyes (Music Engineer)',x.REQ.engineer);
+  check('st','and the title initials come from Bookers',x.REQ.summary==='Sushi / Pael / DR',x.REQ.summary);
+  check('st','and the description carries the full name',/Engineer: Daryl Reyes \(Music Engineer\)/.test(x.REQ.description)&&/Booked by: Camy Caridad/.test(x.REQ.description),x.REQ.description);
+  x=run({engineer:'Drey',description:'Engineer: Drey | Arranger: Brian Cua'+D,summary:'BROWSE / Jem Lim / Drey x Brian Cua'});
+  check('st','a nickname and an arranger name become initials (PENDING 31)',!x.r&&x.REQ.summary==='BROWSE / Jem Lim / DR x BC',x.REQ.summary);
+  x=run({engineer:'Tara Lim (Post Engineer)',description:'Engineer: Tara Lim (Post Engineer)'+D,summary:'X / Acme / TL'});
+  check('st','an exact name passes unchanged',!x.r&&x.REQ.engineer==='Tara Lim (Post Engineer)'&&x.REQ.summary==='X / Acme / TL');
+  x=run({engineer:'LS',description:'Engineer: LS'+D,summary:'X / Acme / LS'});
+  check('st','ambiguous initials are refused, both people suggested',x.r&&x.r.reason==='ENGINEER_UNKNOWN'&&/Letty Sarmiento/.test(x.r.human)&&/Lyn Sajonas/.test(x.r.human));
+  x=run({engineer:'Juan Dela Cruz',description:'Engineer: Juan Dela Cruz'+D,summary:'X / Acme / JDC'});
+  check('st','a stranger is refused with no suggestion',x.r&&x.r.reason==='ENGINEER_UNKNOWN'&&!/Did the requester mean/.test(x.r.human));
+  x=run({engineer:'Dennis',description:'Engineer: Dennis'+D,summary:'X / Acme / D'});
+  check('st','an Info with no "Goes by" still yields aliases',!x.r&&x.REQ.engineer==='Dennis Cham');
+  x=run({engineer:'',description:'Booked by: Camy Caridad | ref: U1',summary:'M2 - Camy'});
+  check('st','no engineer, nothing to check',!x.r&&x.REQ.summary==='M2 - Camy');
+  x=run({engineer:'Daryl',description:'Engineer: Daryl'+D,summary:'X / Acme / D'},[]);
+  check('st','an unreadable staff list refuses rather than guesses',x.r&&x.r.reason==='ENGINEER_UNVERIFIED');
+});
+
 // ── Timestamps keep only their ISO text ──────────────────────────────────────
 suite('Check Conflicts — junk glued to a timestamp is dropped', ()=>{
   const line=src('Check Conflicts').split('\n').find(l=>l.startsWith('const isoOnly'));
