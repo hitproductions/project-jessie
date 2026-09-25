@@ -474,7 +474,7 @@ gh workflow enable nightly-backup.yml
 Do that as soon as the Cloudflare rule in item 21 is fixed — a WAF skip on `/webhook/*`
 plus API access for the runner, or an allowlist for GitHub's ranges. Until then, either
 run `./scripts/backup-live` from the VM (not challenged there) or take a manual snapshot
-before any risky change. See `OUTAGES.md` for the captured challenge response.
+before any risky change. See `docs/outages/OUTAGES.md` for the captured challenge response.
 
 **23. After a `ROOM_OCCUPIED` rejection, Jessie re-offers the identical doomed move.**
 Found 2026-09-21 reviewing a live move (execs `9962`, `9971`): Move Booking returned

@@ -3,7 +3,7 @@
 Deploys `scripts/webhook-canary` on the n8n host so Slack→n8n delivery is checked
 continuously instead of being discovered by a person noticing Jessie is quiet.
 
-Background: [OUTAGE-2026-09-02.md](../../OUTAGE-2026-09-02.md). Short version — on
+Background: [OUTAGE-2026-09-02.md](OUTAGE-2026-09-02.md). Short version — on
 2 September Jessie silently rejected every Slack event for hours because the signing
 secret in her n8n credential did not match the Slack app. Nothing looked wrong:
 `/healthz` was 200, the webhook was registered, and an unsigned probe returned the

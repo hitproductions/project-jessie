@@ -49,7 +49,7 @@ Then orient them, in plain language, drawing on *Where things stand* below:
 - what Jessie is, and that launch is **12 October 2026** (dev freeze 23 Sep)
 - the live versions, and whether anything is failing (`./scripts/health`)
 - what changed since the last commit (`git log`)
-- the biggest open risk (the outages — unsolved, see `OUTAGES.md`) and the
+- the biggest open risk (the outages — unsolved, see `docs/outages/OUTAGES.md`) and the
   one or two most pressing items from `PENDING.md`
 
 And whenever you are about to change a workflow, **pull it first and build from
@@ -103,10 +103,10 @@ no valid signature); from a datacenter IP it returned 403. **Cloudflare is treat
 Slack's servers differently from ours.** Whether this also explains 3, 5 and 7–8
 September is unproven, but it fits all of them.
 
-Read `OUTAGES.md` before touching this — it has the ranked causes, the onset window,
+Read `docs/outages/OUTAGES.md` before touching this — it has the ranked causes, the onset window,
 and the one lookup that would settle it. Two theories in it were confidently wrong
 (host DNS, SQLite). A third, Cloudflare, was wrongly *retracted* and cost a week;
-that is written up there too. `MONITOR-SETUP.md` is the external monitor that would
+that is written up there too. `docs/outages/MONITOR-SETUP.md` is the external monitor that would
 timestamp these properly and probe from outside our network. **This is the largest
 open risk, and it is not in the workflows.**
 
@@ -131,7 +131,7 @@ you change anything, commit after every import. Changes go into n8n through
 `PENDING.md` item 12), or by hand through the browser UI as a fallback.
 
 **Taking this over, do this first:** run the session-start checks above, read
-`PENDING.md`, skim `SERVER-NOTES.md`. And before launch, the QA year shift has to go
+`PENDING.md`, skim `docs/outages/SERVER-NOTES.md`. And before launch, the QA year shift has to go
 to zero — see *Before launch*.
 
 ## Before you finish
@@ -419,7 +419,7 @@ booker + engineer.
 [PENDING.md](PENDING.md) — needs a change in Airtable, the Slack app, Google Calendar or the
 n8n server. Each says how it was found and what it breaks.
 
-`SERVER-NOTES.md` is the plain-language version of the server-side fixes (DNS and
+`docs/outages/SERVER-NOTES.md` is the plain-language version of the server-side fixes (DNS and
 the task runner), for whoever has shell access to the box.
 
 ## Gotchas that already cost time

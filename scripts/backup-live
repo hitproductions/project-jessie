@@ -39,7 +39,7 @@ def api(path):
             last = out.stderr.strip()[:200] or "empty response"
         time.sleep(5 * (attempt + 1))
     # Could not get JSON. Capture the status + Cloudflare headers so an outage
-    # records *which* challenge is being served, not just that one is (OUTAGES.md).
+    # records *which* challenge is being served, not just that one is (docs/outages/OUTAGES.md).
     h = subprocess.run(["curl","-sS","-D","-","-o","/dev/null","--max-time","30",
                         "-H","X-N8N-API-KEY: "+key, base+path], capture_output=True, text=True).stdout
     keep = [l for l in h.splitlines() if l[:5]=="HTTP/" or l.split(":")[0].lower() in

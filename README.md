@@ -21,9 +21,9 @@ claude
 |---|---|
 | `CLAUDE.md` | the working brief — how it is built, and the mistakes that already cost days |
 | `PENDING.md` | open items, each waiting on Airtable, Slack, Google or the server |
-| `OUTAGES.md` | the recurring outages: what is ruled out, what is not, and three theories that were wrong |
-| `SERVER-NOTES.md` | the server-side slowness, in plain language |
-| `MONITOR-SETUP.md` | the external uptime monitor, still not in place |
+| `docs/outages/OUTAGES.md` | the recurring outages: what is ruled out, what is not, and three theories that were wrong |
+| `docs/outages/SERVER-NOTES.md` | the server-side slowness, in plain language |
+| `docs/outages/MONITOR-SETUP.md` | the external uptime monitor, still not in place |
 | `workflows/` | the current build of each workflow, plus `live/` — a nightly backup of what n8n is actually running |
 | `scripts/` | read-only tools: check what is deployed, what it ran, whether ids still match |
 

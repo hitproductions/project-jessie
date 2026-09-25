@@ -86,7 +86,7 @@ can. Given #2 (a message lost upstream of the VM), that edge-side check is now c
    event, or did it fail / back off? This is now the most direct lead, and it's free.
 2. **Cloudflare dashboard** for the Sept 3/5 windows and, ideally, the 2:12 AM window —
    did the request reach the edge? Checklist:
-   [docs/runbooks/CLOUDFLARE-CHECK.md](docs/runbooks/CLOUDFLARE-CHECK.md).
+   [CLOUDFLARE-CHECK.md](CLOUDFLARE-CHECK.md).
 3. **DHCP reservation** for `192.168.0.230` — preventive hardening (not a confirmed fix).
 4. **Upgrade `cloudflared`** off `2025.2.1`, and add a second replica **on a different host
    / k8s node** (a same-host replica protects against nothing).
