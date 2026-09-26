@@ -30,6 +30,7 @@ ones move to the bottom instead of being renumbered.
 |---|---|---|
 | 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest) |
 | 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
+| 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
 | 34 | A1: free rooms sometimes left out of an availability answer; never re-verified | Re-test, then build |
 | 26 | Can claim "I've asked the current holder" without doing it | Build |
 | 27 | Can open the same consent request twice | Build |
@@ -399,6 +400,22 @@ from a fresh pull of live v157; 209 checks + 28 scenarios pass. **To ship:** `./
 uVVYVB2M7kxpLleI workflows/project-jessie-v158.json`, then `./scripts/health` after two messages (the first
 refreshes the cache, the second should show no Fetch nodes). Rollback: push v157.
 
+
+**47. Date guard LIVE (main v159 + Book Session v47), 2026-09-26 08:30 UTC.** Fixes QA round 2's wrong-date
+booking (Camille: "next Thursday" resolved to 30 Sep and carried every turn; the model checked and booked 7 Oct).
+Book Session now refuses **DATE_MISMATCH** when a booking's date (in Manila) is not one of Gate Context's
+`datesUnderDiscussion` — every date the requester named in this message, else the one carried from earlier in
+this conversation today. The model never supplies it (`expected_date` is wired from Gate Context, like
+`confirmed`). Empty = no guard; series occurrences exempt; PAST_DATE still fires first.
+To make that safe, Gate Context now also: resolves month-day dates with no year ("oct 5", "5 October",
+"October 7th") using the prompt's year rule — they were not resolved at all before, so a requester changing the
+date that way left the old one carried; lets a written date win over a bare weekday ("Friday Oct 1" = 1 Oct);
+and **drops the carried date** when a message names one it cannot read ("the 30th", "next week").
+**Known cost:** if Jessie offers another day and the requester only says "ok book that", the booking is refused
+once and she asks them to confirm the date — an extra turn, never a wrong booking. Tara chose enforcing over a
+watch-only trial. Verified: `scripts/sim-date-guard.js` 20/20 (Camille's replay, date changes, unreadable dates,
+UTC timestamps, all-day, series, past date), `test-gate` 28/28, `test-nodes` 209/209. **Watch for
+DATE_MISMATCH refusals in QA** — each one is either a caught error or a false refusal worth reporting.
 ---
 
 ## 🟢 Additive: details
