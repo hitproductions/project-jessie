@@ -31,7 +31,7 @@ ones move to the bottom instead of being renumbered.
 | 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest) |
 | 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
-| 49 | Localization client = project code (NET-KUBA, should be NETFLIX); initials half fixed in book v48 | Build (medium) |
+| 49 | Localization booking carried the project code as client — must carry NO client (never the real one: confidential) | Build (small) |
 | 34 | A1: free rooms sometimes left out of an availability answer; never re-verified | Re-test, then build |
 | 26 | Can claim "I've asked the current holder" without doing it | Build |
 | 27 | Can open the same consent request twice | Build |
@@ -457,10 +457,12 @@ initials invented from the name — and that was booked (2027 test event `tgifi2
 rewrites the title's initials from the engineer's Bookers record, but only for three-segment titles; Localization's
 two-segment `Project Code / Initials` was skipped. v48 applies the same correction when the session type is
 Localization or QC. `scripts/sim-title-initials.js` 6/6 (v47 reproduces the bug); test-nodes 209/209.
-**Still open from the same booking:** the model used the project code as the client (`Client: NET-KUBA`, passed to
-Book Session) when Localization Projects returned **Client Name: NETFLIX** — so the client's technical requirements,
-External/Personal and the booking log got "NET-KUBA". Fix would be Book Session taking the client from the
-Localization Projects record for the title's code.
+**Still open from the same booking:** the model put the project code in the client slot (`Client: NET-KUBA` in the
+summary, and `client: NET-KUBA` to Book Session). **Do NOT fix this by using the Localization Projects `Client Name`**
+(NETFLIX here) — Localization clients are confidential and must never be written to the calendar, the description
+or the booking log; that is why Localization titles are `Project Code / Initials` with no client (Tara, 2026-09-26).
+The right behaviour is **no client at all** on a Localization booking: no Client line in the summary, and Book Session
+treating the client as empty for Localization/QC (no client lookup, nothing client-named in the description or log).
 ---
 
 ## 🟢 Additive: details
