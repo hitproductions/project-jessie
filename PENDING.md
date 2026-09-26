@@ -28,6 +28,7 @@ ones move to the bottom instead of being renumbered.
 
 | # | What | Blocked on / owner |
 |---|---|---|
+| 45 | Trimmed prompt (main v157, 38% smaller): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest) |
 | 34 | A1: free rooms sometimes left out of an availability answer; never re-verified | Re-test, then build |
 | 26 | Can claim "I've asked the current holder" without doing it | Build |
 | 27 | Can open the same consent request twice | Build |
@@ -334,6 +335,16 @@ declines moments later, and the event sits on KDC Bookings with the room crossed
 2026-09-23 with the M1 test (Rico's hold). **Fix:** after creating the event, wait a few seconds and re-read
 its attendees; if the room declined, delete the new event and tell the requester the room is taken. It
 matters more once tablets are a booking source (item 42).
+
+**45. Retest the trimmed prompt (main v157) before the SOP starts on 29 Sep.** Raised 2026-09-26. The
+system prompt is cut from 47,084 to 29,223 characters (38%) — duplication, incident anecdotes, and long
+explanations of rules the sub-workflows already enforce. The QA round-2 failures traced to the model, not
+the workflows, and a smaller prompt gives a small model less to drop. Tara is pushing v157; **Howard
+retests** using the conversation list in [`docs/prompt-trim-proposal.md`](docs/prompt-trim-proposal.md), and
+checks the seven decisions listed there, which go live with it (e.g. only the newer `booked_for` "Booked
+by" rule survives; a stale Studio 7/8 fact and a self-contradicting duration clause are removed). Push,
+check and rollback commands are at the top of that file. `test-nodes` passing proves nothing about the
+prompt — only a conversation pass does.
 
 ---
 

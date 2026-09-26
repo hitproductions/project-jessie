@@ -1,6 +1,21 @@
 # Prompt trim — proposal
 
-**Status: draft for Howard's review. Nothing is live.** Prepared 2026-09-26.
+**Status: built as main v157 (candidate). Tara is pushing it; Howard to retest.** Prepared 2026-09-26.
+
+**Howard — what's being asked of you:**
+1. Retest with the conversation list under *Before it goes live* below.
+2. Check the seven *Decisions for Howard*. They go live with v157 — the draft already takes a side on each, so the retest exercises those choices too, not just the trim.
+3. If anything regresses, roll back (command below) and note what broke here.
+
+**The build.** `workflows/project-jessie-v157.json`, built from a fresh pull of live v156 on 2026-09-26. The only node changed is `Jessie AI Agent` (its system prompt); no nodes added or removed, connections identical. All 22 `{{ }}` insertions verified identical and in order, the leading `=` kept. `check-fromai` clean; 209 checks + 28 scenarios pass (these exercise the Code nodes, not the prompt).
+
+```bash
+./scripts/n8n-write put uVVYVB2M7kxpLleI workflows/project-jessie-v157.json   # push
+./scripts/reapply-main-fixes --check                                            # confirm nothing reverted
+./scripts/n8n-write put uVVYVB2M7kxpLleI workflows/project-jessie-v156.json   # rollback
+```
+
+If anyone changes main before this is pushed, v157 is stale: rebuild it from a fresh pull rather than pushing it over their change.
 
 | | Live (main v156) | Draft |
 |---|---|---|
@@ -74,4 +89,4 @@ These came up while reading the whole prompt. The draft takes a position on each
 
 **Timing.** The End User SOP is written 29 Sep – 2 Oct from Jessie's behavior as it stands. Landing this during or after that risks the SOP describing a bot that then changes. Either land it and retest before 29 Sep, or hold it until after launch on 12 Oct.
 
-**Deploying.** Build from a fresh pull of main. Replace the agent node's `systemMessage` with the draft, keeping the leading `=`. Push with `./scripts/n8n-write put`, then run `./scripts/reapply-main-fixes --check`.
+**Deploying.** Already built as v157 — see the top of this file for the push, check and rollback commands.
