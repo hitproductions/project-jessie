@@ -29,7 +29,7 @@ ones move to the bottom instead of being renumbered.
 | # | What | Blocked on / owner |
 |---|---|---|
 | 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest) |
-| 46 | Speed: cache rooms / session types / staff for 10 min (main v158, candidate) — ~15s → ~10s a turn | Howard (review, push) |
+| 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
 | 34 | A1: free rooms sometimes left out of an availability answer; never re-verified | Re-test, then build |
 | 26 | Can claim "I've asked the current holder" without doing it | Build |
 | 27 | Can open the same consent request twice | Build |
@@ -352,7 +352,15 @@ by" rule survives; a stale Studio 7/8 fact and a self-contradicting duration cla
 check and rollback commands are at the top of that file. `test-nodes` passing proves nothing about the
 prompt — only a conversation pass does.
 
-**46. Speed: cache the reference tables (main v158, CANDIDATE — not pushed).** Raised 2026-09-26. Every
+**46. Speed: cache the reference tables (main v158) — FAILED LIVE, ROLLED BACK. Do not push v158.**
+*2026-09-26: pushed 07:4x UTC; the first message (exec 12218) failed in **Ref Store**, which ran 60,026 ms and
+died with "Unknown error" — the task-runner timeout, same signature as gotcha 11. Rolled back to v157 at
+07:49:54 UTC. Only Tara's test message was hit (no reply; its 👀 was never cleared). Ref Cache, which only
+*reads* static data, took 50 ms; the hang is in *writing* the cache. Leading suspect: assigning a large
+nested object to `$getWorkflowStaticData` from the task runner — Gate Context only ever writes small
+strings. The offline simulation passed 17/17 and could not catch this: it is runtime behaviour. Next step:
+prove a fix (e.g. store the cache as one JSON string) on a throwaway webhook workflow before Jessie.*
+Raised 2026-09-26. Every
 message read Rooms & Studios, Session Types and Bookers from Airtable (~1.1s each, one after another), then
 searched Bookers again for the sender (Get Booker, 1.2s typical, 4.8s worst). Median over 25 real turns: ~6s
 of reads before Gemini starts; one turn today spent 9.4s on All Rooms alone. v158:
