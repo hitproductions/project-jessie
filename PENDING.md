@@ -22,7 +22,7 @@ ones move to the bottom instead of being renumbered.
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
 | 22 | Automatic backup off since 16 Sep; manual backups only (last 2026-09-25) | Follows 21 |
-| 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | Re-import revised mirror v2, finish live test, publish |
+| 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | Mirror live-tested; tablet-release delete check, then publish |
 | 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | Apply: pull + `./scripts/fix-studio-e` + put (needs the n8n key; step 1 of 42) |
 
 ### 🟠 Soon: before the SOP is final (by 5 Oct); behaviour real users will hit
@@ -170,8 +170,12 @@ People will book on the door tablets (Envoy Rooms) as well as through Jessie, so
   tablet test booking was copied to KDC Bookings correctly. The file was then revised: successful runs not
   saved (database-fill risk at 720 runs a day), copies take the tablet booking's full room-name location
   (Move Booking compares locations exactly and would not have seen a bare "Studio 7"), and failures turn the
-  run red. **Re-import the revised file, then publish.** Until launch, test Jessie's side with an explicit 2026
-  date: the QA year shift makes "today" 2027, which is why she called Studio 7 free. Known edge case, not
+  run red. **Revised file re-imported 16:35:** both test copies updated to the full room-name location
+  (confirmed on KDC Bookings), and a tablet edit (end time shortened) was followed. Jessie can't be asked
+  about a tablet booking before launch: with the QA year shift "today" is 2027 to her (she called Studio 7
+  free) and an explicit 2026 date is refused as past. Instead her live Room Availability and Move Booking code
+  was run against the real copy: BUSY and ROOM_OCCUPIED (the old bare "Studio 7" copy let the move through).
+  **Left: release a tablet booking → `deletes: 1`, then publish.** Known edge case, not
   fixed: Move Booking's exact-location check still won't see a copy when the booking being moved is a
   two-room booth pairing (its location lists both rooms). Its one weakness is the poll gap (a tablet booking is
   invisible to Jessie for up to one interval). The heavier read-side change

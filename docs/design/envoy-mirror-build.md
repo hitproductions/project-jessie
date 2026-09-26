@@ -57,8 +57,15 @@ What changed from v1, and why:
 (`unreadable: []`), and found nothing to copy (no tablet bookings in the window). A tablet test booking
 ("MIRROR TEST", Studio 7, 16:08-18:00) was then copied correctly to KDC Bookings: right title, time,
 location, no room invite. Jessie answered "Studio 7 is free today" — the **QA year shift**, not the mirror:
-until launch she reads "today" as 2027. Until `YEAR_SHIFT` goes to zero, test Jessie's side with an explicit
-2026 date. Room Availability and Book Session match the copy by location (read from their code).
+until launch she reads "today" as 2027, and an explicit 2026 date is refused as past, so Jessie can't be
+asked about a tablet booking until `YEAR_SHIFT` goes to zero.
+
+**After the re-import (16:35):** `desired: 2`, 2 updates; both copies now carry
+`KDC Plaza-Top Level-Studio 7 (7)`, and a tablet change (MIRROR TEST shortened to end 16:15) was followed.
+Jessie's own code, from the 25 Sep `workflows/live/` snapshot, run offline against the copy exactly as
+Google returned it: Room Availability `BUSY`, Move Booking `Check New Window` `REJECTED ROOM_OCCUPIED`; the
+same move against a bare-`Studio 7` copy came back `CLEAR`, which is the bug the revision closed. Book
+Session's `Check Conflicts` uses the same location substring match as Room Availability.
 
 **Re-importing over the workflow already in n8n** (keeps its id): open *Jessie — Envoy Mirror*, select all
 nodes (Ctrl+A), delete, then ⋯ → Import from File → this file, and Save. Check ⋯ → Settings shows "Save
