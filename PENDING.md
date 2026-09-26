@@ -17,7 +17,6 @@ ones move to the bottom instead of being renumbered.
 
 | # | What | Blocked on / owner |
 |---|---|---|
-| 32 | Tara's thread-reply fix not pushed; then run `reapply-main-fixes --check` | Tara |
 | 33 | Launch switches: year shift, **three** `DEV_REDIRECT`s, HAIST Dev decision | Howard, on 12 Oct |
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
@@ -52,6 +51,7 @@ ones move to the bottom instead of being renumbered.
 | 13, 18, 39 | Speed: first Code node ~3.5s, first outbound call ~4s, new staff-list reads ~1s | Server / later |
 | 40 | Leftover snapshot files from renames in `workflows/live/` | Howard's OK to delete |
 | 41 | `Booked For` notice quotes three words instead of the name | Build (tiny) |
+| 32 | Thread-broadcast duplicate notices error harmlessly (no reply lost); fix built as v156 | Push v156 |
 
 **Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31. **Item 14** is a permanent
 known constraint, not a task.
@@ -60,14 +60,27 @@ known constraint, not a task.
 
 ## 🔴 Urgent: details
 
-**32. Tara's thread-reply fix (`Get Sender`) is not pushed yet.** Found by Tara in QA round 2: a tester
-replied to Jessie's summary **in a thread with "also send to channel" ticked**. Slack sends that as
-`message_changed` / `thread_broadcast`, with the real `user` and `text` nested under `message`, so
-`Get Sender` looks up an empty user id, Slack rejects it, and the reply fails. She said she'd push it; as
-of 2026-09-25 it's in neither git nor live (`Get Sender` still reads only the top-level `user`).
-**When it lands, run `./scripts/reapply-main-fixes --check`.** If her copy predates main v155 it reverts our
-fixes, and the script re-applies them on top of her version (it never imports). `Booked For` already reads
-`message.text`, so on-behalf detection handles thread broadcasts.
+**32. Thread-broadcast errors: harmless duplicates, not lost replies. Fix is v156.** *Corrected
+2026-09-26 — the first write-up of this, which came from Tara's side, was wrong about the impact.*
+
+When a tester replies in a thread with **"also send to channel"** ticked, Slack sends **two** events:
+
+| Event | Sender at top level | What happened (24 Sep, Tricia) |
+|---|---|---|
+| `thread_broadcast` — the reply itself | yes | **processed normally**: execs 10920, 10924, 10929 all succeeded, and Jessie booked and replied |
+| `message_changed` (inner `thread_broadcast`) — Slack's notice that the thread was updated | no | `Get Sender` looked up an empty user id → `user_not_found`: execs 10921, 10925, 10930 |
+
+So **no reply was lost and no booking was missed**. The three errors are the duplicate notice failing. It
+is log noise, not a user-facing failure — downgraded from urgent.
+
+**Do not fix this by making `Get Sender` read the nested `message.user`.** That would send the duplicate
+notice through the agent too, and Jessie would process every thread-broadcast reply **twice**.
+
+**The fix: v156, `DM filter` only.** Two conditions added, dropping `subtype` `message_changed` and
+`message_deleted`; `thread_broadcast` and plain DMs pass exactly as before. Built from a fresh pull of live
+v155, so it reverts nothing. Replayed against the seven real events from 24 Sep: every success still kept,
+every error dropped. 209 checks + 28 scenarios pass. `leftValue` is `$json.subtype || ''` so an absent
+subtype is a string under strict type validation, not undefined.
 
 **33. Launch switches: flip together on 12 Oct.** Full detail and the post-flip checks are in
 [`docs/launch-checklist.md`](docs/launch-checklist.md). In short: `YEAR_SHIFT` → 0 in `Gate Context` together
