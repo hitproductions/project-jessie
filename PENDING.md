@@ -360,6 +360,16 @@ died with "Unknown error" — the task-runner timeout, same signature as gotcha 
 nested object to `$getWorkflowStaticData` from the task runner — Gate Context only ever writes small
 strings. The offline simulation passed 17/17 and could not catch this: it is runtime behaviour. Next step:
 prove a fix (e.g. store the cache as one JSON string) on a throwaway webhook workflow before Jessie.*
+
+*Isolation tests, same day, on a throwaway webhook workflow `ZZ scratch - static data test` (`Sb59OfsUnVmBsjNl`,
+now deactivated). All ran in under 0.5 s unless noted, none hung: writing a 40 KB nested object to static
+data; writing it as a JSON string; storing records read from another node via `$('Emit').all()` raw, as a
+string, and deep-copied; looking the node up through a variable (`$(name)`, as Ref Store did); the same with
+an idle AI agent + tool node present; and finally **v158's exact Fetch Rooms / Fetch Session Types / Fetch
+Bookers + exact Ref Store code** against live Airtable — 7 s, `cached: true`. So the hang happens only inside
+Jessie's workflow and has not been reproduced. The one code difference from all working Jessie nodes: Ref
+Store is the only node, in v157 or v158, that looks a node up through a variable instead of a literal name.
+The n8n container log for 07:45:01–07:46:10 UTC (task runner) should name the real cause.*
 Raised 2026-09-26. Every
 message read Rooms & Studios, Session Types and Bookers from Airtable (~1.1s each, one after another), then
 searched Bookers again for the sender (Get Booker, 1.2s typical, 4.8s worst). Median over 25 real turns: ~6s
