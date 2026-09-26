@@ -230,6 +230,7 @@ only script that writes to n8n.
 | `./scripts/test-nodes` · `--live` | 124 offline checks + 27 gate scenarios, on a candidate file or on what is deployed |
 | `./scripts/test-gate` | the confirmation gate and date resolver on their own |
 | `./scripts/test-consent` · `<file>` · `--live` | the consent engine's `Build Request`: M-booth deadline tiers, the PREEMPT window, and recipient routing (test-nodes does not load the consent workflows) |
+| `./scripts/test-mirror` · `<file>` | the Envoy Mirror's `Plan Changes` offline: create/update/delete, and that a failed room or KDC read never deletes or duplicates (not yet imported, PENDING 42) |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
 | `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
 | `./scripts/verify-ids` | all twelve Jessie workflow ids (incl. the three consent workflows) resolve to **active** workflows with the right names, and the Jessie bot id still points at the live app |

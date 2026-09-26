@@ -22,7 +22,7 @@ ones move to the bottom instead of being renumbered.
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
 | 22 | Automatic backup off since 16 Sep; manual backups only (last 2026-09-25) | Follows 21 |
-| 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | Build (Tel's mirror draft) |
+| 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | Import + live-test mirror v2 (after 43) |
 | 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | Build (small; step 1 of 42) |
 
 ### 🟠 Soon: before the SOP is final (by 5 Oct); behaviour real users will hit
@@ -162,8 +162,10 @@ People will book on the door tablets (Envoy Rooms) as well as through Jessie, so
   never on KDC Bookings, which is all Jessie reads, so she can't see it and could double-book over it.
   Tel's recommendation is the **mirror** ([`docs/design/envoy-mirror-build.md`](docs/design/envoy-mirror-build.md)):
   one scheduled workflow (~2 min) copying Envoy bookings onto KDC Bookings, where every guard already looks.
-  Scaffold at `workflows/envoy-mirror-v1.json`: **untested, never imported**, and unverified whether its
-  Code node can call Google with the credential. Its one weakness is the poll gap (a tablet booking is
+  **v2 built 2026-09-26** (`workflows/envoy-mirror-v2.json`): Google calls moved to HTTP Request nodes with
+  the existing credential, and it fails closed (a failed room read deletes nothing, a failed KDC read writes
+  nothing). Offline-tested (`./scripts/test-mirror`), **never imported**. Import steps are in the design doc.
+  v1 is superseded; don't import it. Its one weakness is the poll gap (a tablet booking is
   invisible to Jessie for up to one interval). The heavier read-side change
   ([`docs/design/envoy-jessie-readside-build.md`](docs/design/envoy-jessie-readside-build.md)) closes that gap
   but rewrites three hot-path workflows; hold it unless the gap bites.

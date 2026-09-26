@@ -1,0 +1,82 @@
+#!/usr/bin/env node
+// test-mirror — offline scenarios for the Envoy Mirror's two Code nodes
+// (`Room Calendars`, `Plan Changes`). No n8n, no Google: the reads are mocked.
+//
+//   ./scripts/test-mirror                          newest workflows/envoy-mirror-v*.json
+//   ./scripts/test-mirror workflows/envoy-mirror-v2.json
+//
+// Covers the v1 failures v2 fixes: a failed room read must not delete that
+// room's copies, a failed or partial KDC read must write nothing.
+const fs = require('fs'), path = require('path'), assert = require('assert');
+const root = path.join(__dirname, '..');
+const FILE = process.argv[2] || (() => {
+  const v = fs.readdirSync(path.join(root, 'workflows')).filter(f => /^envoy-mirror-v\d+\.json$/.test(f))
+    .sort((a, b) => +a.match(/\d+/)[0] - +b.match(/\d+/)[0]);
+  return path.join(root, 'workflows', v[v.length - 1]);
+})();
+console.log('testing', path.relative(root, path.resolve(FILE)));
+const wf = JSON.parse(fs.readFileSync(FILE,'utf8'));
+const code = n => wf.nodes.find(x => x.name === n).parameters.jsCode;
+const run = (src, nodes, input) => new Function('$', '$input', `return (async () => { ${src} })()`)(
+  n => ({ all: () => nodes[n], first: () => nodes[n][0] }), { first: () => input[0], all: () => input });
+const KDC = 'c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com';
+(async () => {
+  const rooms = await run(code('Room Calendars'), {}, []);
+  assert.strictEqual(rooms.length, 27);
+  assert(rooms.find(r => r.json.room === 'Studio E').json.calId.startsWith('c_1888r4bbc2'));
+  const R = rooms.map(r => r.json);
+  const s7 = R.find(r => r.room === 'Studio 7'), s5 = R.find(r => r.room === 'Studio 5');
+  const T = (h) => ({ dateTime: `2026-09-28T${String(h).padStart(2,"0")}:00:00+08:00`, timeZone: 'Asia/Manila' });
+  const envoy = (id, h, title) => ({ id, summary: title, description: 'Created by Envoy', organizer: { email: s7.calId }, start: T(h), end: T(h + 1) });
+  const jessie = { id: 'jess1', summary: 'Studio 7 - X', organizer: { email: KDC }, start: T(10), end: T(11) };
+  const personal = { id: 'p1', summary: 'Via', organizer: { email: 'via@hitproductions.net' }, start: T(12), end: T(13) };
+  const merged = (over) => R.map(r => Object.assign({}, r, { kind: 'calendar#events', items: [] }, over[r.room] || {}));
+  const copy = (id, calId, evId, title, room, h) => ({ id, summary: title, location: room,
+    start: { dateTime: new Date(Date.parse(T(h).dateTime)).toISOString() }, end: { dateTime: new Date(Date.parse(T(h+1).dateTime)).toISOString() },
+    extendedProperties: { private: { envoyMirror: '1', envoyMirrorSource: calId + ':' + evId } } });
+  const P = async (m, kdcItems, kdcExtra = {}) => (await run(code('Plan Changes'),
+    { 'Merge Reads': m.map(j => ({ json: j })), 'Room Calendars': rooms }, [{ json: Object.assign({ items: kdcItems }, kdcExtra) }])).map(i => i.json);
+  const ops = (out, op) => out.filter(o => o.op === op);
+
+  // 1. create only Envoy events; Jessie + personal excluded
+  let out = await P(merged({ 'Studio 7': { items: [envoy('rooms1', 14, 'Walk-in'), jessie, personal] } }), []);
+  assert.strictEqual(out[0].op, 'summary'); assert.strictEqual(ops(out,'create').length, 1);
+  const cr = ops(out,'create')[0];
+  assert.strictEqual(cr.body.summary, 'Studio 7 - Walk-in'); assert.strictEqual(cr.body.location, 'Studio 7');
+  assert(!JSON.stringify(cr.body).includes('attendees')); assert(cr.url.endsWith('/events'));
+  // 2. unchanged copy (same instant, different offset format) -> no op
+  out = await P(merged({ 'Studio 7': { items: [envoy('rooms1', 14, 'Walk-in')] } }), [copy('k1', s7.calId, 'rooms1', 'Studio 7 - Walk-in', 'Studio 7', 14)]);
+  assert.strictEqual(out.length, 1, JSON.stringify(out));
+  // 3. time changed -> update
+  out = await P(merged({ 'Studio 7': { items: [envoy('rooms1', 15, 'Walk-in')] } }), [copy('k1', s7.calId, 'rooms1', 'Studio 7 - Walk-in', 'Studio 7', 14)]);
+  assert.strictEqual(ops(out,'update').length, 1); assert(ops(out,'update')[0].url.endsWith('/k1'));
+  // 4. source gone -> delete
+  out = await P(merged({}), [copy('k1', s7.calId, 'rooms1', 'Studio 7 - Walk-in', 'Studio 7', 14)]);
+  assert.strictEqual(ops(out,'delete').length, 1);
+  // 5. room read errored -> NO delete (v1 bug)
+  out = await P(merged({ 'Studio 7': { items: undefined, error: { message: '404' } } }), [copy('k1', s7.calId, 'rooms1', 'Studio 7 - Walk-in', 'Studio 7', 14)]);
+  assert.strictEqual(ops(out,'delete').length, 0); assert.deepStrictEqual(out[0].unreadable, ['Studio 7']);
+  // 6. room read partial -> creates yes, deletes no
+  out = await P(merged({ 'Studio 7': { items: [envoy('rooms2', 9, 'A')], nextPageToken: 'x' } }), [copy('k1', s7.calId, 'rooms1', 'Studio 7 - Walk-in', 'Studio 7', 14)]);
+  assert.strictEqual(ops(out,'create').length, 1); assert.strictEqual(ops(out,'delete').length, 0);
+  // 7. KDC failed / partial -> throws, nothing written (v1 bug)
+  await assert.rejects(P(merged({}), undefined, { error: { message: 'x' } }));
+  await assert.rejects(P(merged({}), [], { nextPageToken: 'x' }));
+  // 8. pairing mismatch -> no deletes at all
+  const m = merged({}); m.pop();
+  out = await P(m, [copy('k1', s7.calId, 'rooms1', 'Studio 7 - Walk-in', 'Studio 7', 14)]);
+  assert.strictEqual(ops(out,'delete').length, 0); assert.strictEqual(out[0].paired, false);
+  // 9. delete cap
+  const many = Array.from({ length: 30 }, (_, i) => copy('k' + i, s5.calId, 'rooms' + i, 'x', 'Studio 5', 9));
+  out = await P(merged({}), many);
+  assert.strictEqual(ops(out,'delete').length, 0); assert.strictEqual(out[0].deletesHeld, 30);
+  // 10. duplicate copies -> extra removed, even if its room was unreadable
+  out = await P(merged({ 'Studio 7': { items: [envoy('rooms1', 14, 'Walk-in')] } }),
+    [copy('k1', s7.calId, 'rooms1', 'Studio 7 - Walk-in', 'Studio 7', 14), copy('k2', s7.calId, 'rooms1', 'Studio 7 - Walk-in', 'Studio 7', 14)]);
+  assert.strictEqual(ops(out,'delete').length, 1); assert(ops(out,'delete')[0].url.endsWith('/k2'));
+  // 11. cancelled + id-prefix + all-day
+  out = await P(merged({ 'Studio 7': { items: [Object.assign(envoy('rooms9', 9, 'c'), { status: 'cancelled' }),
+    { id: 'roomsX', summary: '', organizer: { email: 'x@y' }, start: { date: '2026-09-29' }, end: { date: '2026-09-30' } }] } }), []);
+  assert.strictEqual(ops(out,'create').length, 1); assert.strictEqual(ops(out,'create')[0].body.summary, 'Studio 7 - Tablet booking');
+  console.log('all 11 scenarios pass');
+})().catch(e => { console.error('FAIL', e); process.exit(1); });

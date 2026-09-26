@@ -1,28 +1,62 @@
 # Draft — Envoy → KDC Bookings mirror (alternative to the read-side change)
 
-Status: **draft, not implemented** · Owner: Tel · Drafted 2026-09-23
+Status: **v2 built 2026-09-26, offline-tested, not yet imported** · Owner: Tel · Drafted 2026-09-23
 
 An alternative (or complement) to the [read-side change](./envoy-jessie-readside-build.md). Instead of
 teaching Jessie to read the resource calendars, this **mirrors Envoy bookings onto KDC Bookings**, so
 they show on the master calendar **and** Jessie sees them there (she already reads KDC Bookings today).
 **Not imported or tested.**
 
-## Scaffold workflow (untested)
+## Build: v2 (built 2026-09-26, not yet imported)
 
-A starting-point workflow is at [`workflows/envoy-mirror-v1.json`](../../workflows/envoy-mirror-v1.json)
-— a Schedule Trigger (every 2 min) → one Code node ("Mirror Envoy to KDC") carrying the full
-create / update / delete / reconcile logic, with Studio E already on the **live** id. Import it and adapt.
+[`workflows/envoy-mirror-v2.json`](../../workflows/envoy-mirror-v2.json) replaces the v1 scaffold. It is
+**offline-tested only** (`./scripts/test-mirror`, 11 scenarios), never imported or run against Google.
 
-**Before it can run, verify/adjust:**
+```
+Every 2 min → Room Calendars (Code, 27 items) → Read Room Calendar (HTTP, per room) ┐
+                           └──────────────────────────────────────────────────────┴→ Merge Reads (by position)
+→ Read KDC Mirrors (HTTP, once) → Plan Changes (Code) → Route Op → Create / Update / Delete Copy (HTTP)
+```
 
-- **Google auth from a Code node.** The node calls `this.helpers.httpRequestWithAuthentication` with the
-  `googleCalendarOAuth2Api` credential. If that isn't usable from a Code node in the installed n8n, the
-  node throws a clear error on the first run — split the Google calls into HTTP Request nodes (same
-  logic, the pattern the other workflows already use). Attach the Google credential either way.
-- **Activate it** — a workflow imported/created via the API can default to inactive (gotcha 0).
-- **Untested** — built with no live pull/test. Run it against a **test** setup first, watch the run
-  summary (`created / updated / deleted / failed`), and confirm no duplicates and correct reconcile
-  (cancel a tablet booking → its KDC copy is removed on the next run) before trusting it.
+What changed from v1, and why:
+
+- **Google calls are HTTP Request nodes** with the existing `Google Calendar account` credential (the
+  pattern Find Booking / Book Session use). v1 called Google from inside a Code node, which has no
+  credential slot and would almost certainly have failed on the first run.
+- **A failed room read no longer deletes that room's copies.** v1 read "that calendar errored" as "every
+  booking there was cancelled", deleted the copies, and recreated them next run, leaving a double-book
+  window in between. v2 skips deletes for any room whose read errored or came back with a `nextPageToken`.
+  If the reads don't pair one-to-one with the rooms, it makes no deletes at all.
+- **A failed or partial KDC read writes nothing.** v1 read it as "no copies yet" and duplicated every
+  tablet booking. v2 stops (errored read) or throws (partial read) before writing anything.
+- **Delete cap:** more than 25 deletes in one run are held rather than applied (`deletesHeld` in the run
+  record), a backstop against an unexpected empty response.
+- **Duplicate copies of one source are removed**, and times are compared as instants, so a different
+  `+08:00` vs `Z` rendering doesn't cause an update every run.
+- `maxResults` 2500 (Google's max) per read; the run record lists any room that still came back partial.
+
+**Run record:** the first item out of `Plan Changes` (`op: summary`): `unreadable`, `incomplete`, `desired`,
+`existing`, `creates`, `updates`, `deletes`, `deletesHeld`, `skippedDeletes`. `unreadable` is also the
+first-run check that the credential can read every room calendar.
+
+### Import and go-live steps
+
+1. Item 43 first (the Studio E id in the five live workflows). The mirror already uses the live Studio E id.
+2. `./scripts/test-mirror` → `./scripts/n8n-write create workflows/envoy-mirror-v2.json` (prints the id),
+   or use Import from File in the browser. The key must be Howard's (gotcha 15).
+3. Open it in n8n and confirm the five HTTP nodes show **Google Calendar account**. The file carries its
+   id, but re-select it if the UI flags it.
+4. **Execute workflow** once by hand. Check `Plan Changes` → summary: `unreadable` should be `[]`.
+   Look at KDC Bookings for the new `<Room> - …` copies.
+5. `./scripts/n8n-write activate <id>`: workflows created through the API start inactive (gotcha 0).
+6. Run the live test plan below on **real, near-term dates**. The window is now → +90 days, so the 2027
+   QA bookings are outside it.
+7. Add the new id to `verify-ids` and the workflow table in `CLAUDE.md`, then pull it back into the repo
+   and commit.
+
+At every 2 minutes this adds ~720 executions a day; the 04:00 pruner covers it. Setting
+`saveDataSuccessExecution: none` would stop successful runs being stored at all, but would also hide them
+from `health`; decide after the first week.
 
 ## Why this covers both goals at once
 
