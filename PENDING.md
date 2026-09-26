@@ -21,8 +21,8 @@ ones move to the bottom instead of being renumbered.
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
 | 22 | Automatic backup off since 16 Sep; manual backups only (last 2026-09-25) | Follows 21 |
-| 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | Build (Tel's mirror draft) |
-| 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | Build (small; step 1 of 42) |
+| 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | Mirror live-tested; tablet-release delete check, then publish |
+| 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | Apply: pull + `./scripts/fix-studio-e` + put (needs the n8n key; step 1 of 42) |
 
 ### 🟠 Soon: before the SOP is final (by 5 Oct); behaviour real users will hit
 
@@ -182,8 +182,22 @@ People will book on the door tablets (Envoy Rooms) as well as through Jessie, so
   never on KDC Bookings, which is all Jessie reads, so she can't see it and could double-book over it.
   Tel's recommendation is the **mirror** ([`docs/design/envoy-mirror-build.md`](docs/design/envoy-mirror-build.md)):
   one scheduled workflow (~2 min) copying Envoy bookings onto KDC Bookings, where every guard already looks.
-  Scaffold at `workflows/envoy-mirror-v1.json`: **untested, never imported**, and unverified whether its
-  Code node can call Google with the credential. Its one weakness is the poll gap (a tablet booking is
+  **v2 built 2026-09-26** (`workflows/envoy-mirror-v2.json`): Google calls moved to HTTP Request nodes with
+  the existing credential, and it fails closed (a failed room read deletes nothing, a failed KDC read writes
+  nothing). Offline-tested (`./scripts/test-mirror`), **never imported**. Import steps are in the design doc.
+  v1 is superseded; don't import it.
+  **2026-09-26:** imported through the browser by Tel (not yet published). Reads all 27 room calendars; a
+  tablet test booking was copied to KDC Bookings correctly. The file was then revised: successful runs not
+  saved (database-fill risk at 720 runs a day), copies take the tablet booking's full room-name location
+  (Move Booking compares locations exactly and would not have seen a bare "Studio 7"), and failures turn the
+  run red. **Revised file re-imported 16:35:** both test copies updated to the full room-name location
+  (confirmed on KDC Bookings), and a tablet edit (end time shortened) was followed. Jessie can't be asked
+  about a tablet booking before launch: with the QA year shift "today" is 2027 to her (she called Studio 7
+  free) and an explicit 2026 date is refused as past. Instead her live Room Availability and Move Booking code
+  was run against the real copy: BUSY and ROOM_OCCUPIED (the old bare "Studio 7" copy let the move through).
+  **Left: release a tablet booking → `deletes: 1`, then publish.** Known edge case, not
+  fixed: Move Booking's exact-location check still won't see a copy when the booking being moved is a
+  two-room booth pairing (its location lists both rooms). Its one weakness is the poll gap (a tablet booking is
   invisible to Jessie for up to one interval). The heavier read-side change
   ([`docs/design/envoy-jessie-readside-build.md`](docs/design/envoy-jessie-readside-build.md)) closes that gap
   but rewrites three hot-path workflows; hold it unless the gap bites.
@@ -209,7 +223,12 @@ room map has `c_18807te03d2sqh0lmtal9sbb04gao`, which returns not found; the rea
 never reaches the real room calendar or its tablet; and Studio E events are never matched to the room, so
 availability can call Studio E free when it isn't. The old id is in **five** live workflows (checked 2026-09-25): Book Session, Room Availability, Move
 Booking, Find Booking and main. Each needs the new id (pull each first; count only the nodes, not n8n's
-`activeVersion` copy, gotcha 8). A small, mechanical change, and step 1 of item 42.
+`activeVersion` copy, gotcha 8). A small, mechanical change, and step 1 of item 42. **2026-09-26: fix built, not applied.**
+`./scripts/fix-studio-e` makes the swap in a fresh pull (nodes only). Dry-run on the 25 Sep backups: 6 places
+(Book Session has two, `Check Conflicts` and `Create Event`), id the only change, `test-nodes` all pass. Main's
+hit is a disabled, unconnected node, so main can wait for its next import. Commands in
+[`docs/design/studio-e-id-fix.md`](docs/design/studio-e-id-fix.md). Also still open: IT to confirm the old id is
+retired rather than hidden from one account.
 
 ---
 

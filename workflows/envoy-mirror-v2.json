@@ -1,0 +1,410 @@
+{
+  "name": "Jessie — Envoy Mirror",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Envoy Mirror v2\nCopies tablet (Envoy) bookings from each room's resource calendar onto KDC Bookings, where Jessie's guards already look. PENDING 42; design: docs/design/envoy-mirror-build.md.\n\n- A copy: `<Room> - <tablet title>`, location `<Room>`, private `envoyMirrorSource`. No `ref:`, so Jessie refuses to cancel/move it. Never invites the room.\n- Fails closed: a room whose read failed gets no deletes; a failed or partial KDC read writes nothing; more than 25 deletes in one run are held.\n- Fails loudly: a failed write, or no room calendar readable at all, turns the run red.\n- Successful runs are **not saved** (Settings), or 720 runs a day would fill the database the way it did on 2-3 Sep. Failed runs and manual test runs are saved.\n- Run record: the first item out of **Plan Changes** (`op: summary`).",
+        "height": 380,
+        "width": 520,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -380
+      ],
+      "id": "mirror-note",
+      "name": "Lane note"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "mirror-cron",
+      "name": "Every 2 min"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Jessie — Envoy Mirror v2 · Room Calendars\n// One item per room resource calendar, read by `Read Room Calendar`.\n// Studio E uses the LIVE id; the workflows' old c_18807te... is dead\n// (docs/design/studio-e-id-fix.md, PENDING 43).\nconst ROOMS = {\n  'Studio 1':'hitproductions.net_3737303833303637363538@resource.calendar.google.com',\n  'Studio 2':'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com',\n  'Studio 3':'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com',\n  'Studio 4':'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com',\n  'Studio 5':'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com',\n  'Studio 6':'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com',\n  'Studio 7':'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com',\n  'Studio 8':'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com',\n  'Studio A':'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com',\n  'Studio B':'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com',\n  'Studio C':'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com',\n  'Studio D':'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com',\n  'Studio E':'c_1888r4bbc2lhqgndmprism70nft64@resource.calendar.google.com',\n  'Studio F':'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com',\n  'Studio M':'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com',\n  'M1':'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com',\n  'M2':'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com',\n  'M3':'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com',\n  'M4':'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com',\n  'M5':'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com',\n  'M6':'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com',\n  'M7':'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com',\n  'M8':'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com',\n  'Salin':'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com',\n  'Katha':'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com',\n  'Likha':'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com',\n  'Lobby':'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com'\n};\n\n// Same window for the room reads and the KDC read, so reconcile compares like\n// with like. Real dates: QA's 2027 year-shifted bookings fall outside it.\nconst now = Date.now();\nconst timeMin = new Date(now - 24 * 3600 * 1000).toISOString();\nconst timeMax = new Date(now + 90 * 24 * 3600 * 1000).toISOString();\n\nreturn Object.keys(ROOMS).map(room => ({ json: { room, calId: ROOMS[room], timeMin, timeMax } }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "mirror-rooms",
+      "name": "Room Calendars"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent($json.calId) }}/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "timeMin",
+              "value": "={{ $json.timeMin }}"
+            },
+            {
+              "name": "timeMax",
+              "value": "={{ $json.timeMax }}"
+            },
+            {
+              "name": "singleEvents",
+              "value": "true"
+            },
+            {
+              "name": "showDeleted",
+              "value": "false"
+            },
+            {
+              "name": "maxResults",
+              "value": "2500"
+            },
+            {
+              "name": "fields",
+              "value": "items(id,status,summary,description,location,start,end,organizer/email),nextPageToken"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        120
+      ],
+      "id": "mirror-read-room",
+      "name": "Read Room Calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        660,
+        0
+      ],
+      "id": "mirror-merge",
+      "name": "Merge Reads"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "timeMin",
+              "value": "={{ $('Room Calendars').first().json.timeMin }}"
+            },
+            {
+              "name": "timeMax",
+              "value": "={{ $('Room Calendars').first().json.timeMax }}"
+            },
+            {
+              "name": "singleEvents",
+              "value": "true"
+            },
+            {
+              "name": "privateExtendedProperty",
+              "value": "envoyMirror=1"
+            },
+            {
+              "name": "maxResults",
+              "value": "2500"
+            },
+            {
+              "name": "fields",
+              "value": "items(id,status,summary,location,start,end,extendedProperties),nextPageToken"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "id": "mirror-read-kdc",
+      "name": "Read KDC Mirrors",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Jessie — Envoy Mirror v2 · Plan Changes\n// Compares the Envoy bookings on the room calendars with the mirror copies on\n// KDC Bookings and emits one item per write: create / update / delete, plus a\n// leading `summary` item that is never written (it is the run's record).\n//\n// Fails CLOSED, the two ways v1 did not:\n//  - a room whose read errored, or came back incomplete, gets no deletes this\n//    run (v1 read a failed room as \"every booking cancelled\" and deleted them);\n//  - a KDC read that is incomplete throws, so nothing is written (v1 read a\n//    failed KDC list as \"no copies yet\" and duplicated everything).\n//    A KDC read that errors stops the workflow before this node.\n// And fails LOUDLY when no room calendar could be read at all (an expired or\n// revoked Google credential): the run goes red instead of green-and-idle.\nconst KDC = 'c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com';\nconst DELETE_CAP = 25;   // more deletes than this in one run: hold them all, report\n\nconst reads = $('Merge Reads').all().map(i => i.json);\nconst rooms = $('Room Calendars').all().map(i => i.json);\nconst kdc = $input.first().json;\n\nif (kdc.error) throw new Error('KDC Bookings read failed; nothing written: ' + JSON.stringify(kdc.error).slice(0, 300));\nif (!Array.isArray(kdc.items)) throw new Error('KDC Bookings read returned no items array; nothing written.');\nif (kdc.nextPageToken) throw new Error('KDC Bookings read was incomplete (more than one page); nothing written.');\n\nconst isoOf = (x) => (x && (x.dateTime || x.date)) || '';\nconst sameTime = (a, b) => {\n  if (!a || !b) return false;\n  if (a.dateTime && b.dateTime) return Date.parse(a.dateTime) === Date.parse(b.dateTime);\n  return isoOf(a) === isoOf(b);\n};\n\n// Narrow scope: Envoy-origin only. Jessie's own bookings sit on a room calendar\n// organized by KDC Bookings, so they are excluded first; personal-calendar\n// bookings are organized by a person and carry no Envoy marker.\nconst isEnvoy = (ev, calId) => {\n  const org = String((ev.organizer || {}).email || '').toLowerCase();\n  if (org === KDC) return false;\n  return /created by envoy/i.test(String(ev.description || ''))\n      || /^rooms/.test(String(ev.id || ''))\n      || org === String(calId).toLowerCase();\n};\n\n// Pairing by position is only safe when every room produced exactly one read.\nconst paired = reads.length === rooms.length;\n\nconst desired = {};        // sourceKey -> { room, calId, summary, start, end }\nconst unreadable = [], incomplete = [];\nconst readOk = {};         // calId -> true when that room's list is complete\nreads.forEach((r, idx) => {\n  const room = r.room || (rooms[idx] || {}).room || '?';\n  const calId = r.calId || (rooms[idx] || {}).calId || '';\n  if (!paired || r.error || !Array.isArray(r.items)) { unreadable.push(room); return; }\n  if (r.nextPageToken) incomplete.push(room); else readOk[calId] = true;\n  for (const ev of r.items) {\n    if (!ev || ev.status === 'cancelled' || !ev.start || !ev.end) continue;\n    if (!isEnvoy(ev, calId)) continue;\n    // Location: the tablet booking's own, which is the room resource's full name\n    // (\"KDC Plaza-Top Level-Studio 7 (7)\"), the same string Google puts on Jessie's\n    // bookings. Move Booking's Check New Window compares locations EXACTLY, so a\n    // bare \"Studio 7\" would not clash with a Jessie booking being moved onto it.\n    const srcLoc = String(ev.location || '').trim();\n    const location = srcLoc && srcLoc.toLowerCase().indexOf(room.toLowerCase()) !== -1 ? srcLoc : room;\n    desired[calId + ':' + ev.id] = { room, calId, location,\n      summary: String(ev.summary || '').trim() || 'Tablet booking', start: ev.start, end: ev.end };\n  }\n});\n\nif (!paired)\n  throw new Error('Room reads did not pair with rooms (' + reads.length + ' reads, ' + rooms.length\n    + ' rooms); Merge Reads is misbehaving. Nothing written.');\nif (rooms.length && unreadable.length === rooms.length)\n  throw new Error('No room calendar could be read (' + rooms.length + ' of ' + rooms.length\n    + '); check the Google Calendar credential. Nothing written.');\n\nconst existing = {};       // sourceKey -> { id, summary, location, start, end }\nlet strays = 0;            // mirror copies with no source key; left alone\nfor (const ev of kdc.items) {\n  if (!ev || ev.status === 'cancelled') continue;\n  const p = (ev.extendedProperties && ev.extendedProperties.private) || {};\n  if (!p.envoyMirrorSource) { strays++; continue; }\n  if (existing[p.envoyMirrorSource]) {   // a duplicate copy: keep the first, remove the rest\n    existing[p.envoyMirrorSource + '#dup#' + ev.id] = { id: ev.id, dup: true, source: p.envoyMirrorSource };\n    continue;\n  }\n  existing[p.envoyMirrorSource] = { id: ev.id, summary: ev.summary || '',\n    location: ev.location || '', start: ev.start, end: ev.end };\n}\n\nconst titleOf = (d) => d.room + ' - ' + d.summary;\nconst bodyFor = (d, sourceKey) => ({\n  summary: titleOf(d),\n  location: d.location,\n  description: 'Created by Envoy (mirrored). Manage this booking in Envoy.\\nsource: ' + sourceKey,\n  start: d.start,\n  end: d.end,\n  transparency: 'opaque',\n  reminders: { useDefault: false },\n  extendedProperties: { private: { envoyMirror: '1', envoyMirrorSource: sourceKey } }\n});\nconst evUrl = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(KDC) + '/events';\n\nconst creates = [], updates = [], deletes = [];\nfor (const sk of Object.keys(desired)) {\n  const d = desired[sk], ex = existing[sk];\n  if (!ex) creates.push({ op: 'create', url: evUrl, room: d.room, sourceKey: sk, body: bodyFor(d, sk) });\n  else if (ex.summary !== titleOf(d) || ex.location !== d.location\n        || !sameTime(ex.start, d.start) || !sameTime(ex.end, d.end))\n    updates.push({ op: 'update', url: evUrl + '/' + encodeURIComponent(ex.id), eventId: ex.id,\n      room: d.room, sourceKey: sk, body: bodyFor(d, sk) });\n}\nlet skippedDeletes = 0;\nfor (const key of Object.keys(existing)) {\n  const ex = existing[key];\n  const sk = ex.dup ? ex.source : key;\n  if (!ex.dup && desired[sk]) continue;\n  const calId = sk.slice(0, sk.indexOf(':'));   // calendar ids and event ids carry no ':'\n  // No delete unless the source room was read completely this run. A source\n  // key naming a room no longer in the list is left for a human.\n  if (!ex.dup && !readOk[calId]) { skippedDeletes++; continue; }\n  deletes.push({ op: 'delete', url: evUrl + '/' + encodeURIComponent(ex.id), eventId: ex.id, sourceKey: sk,\n    duplicate: !!ex.dup });\n}\nconst deletesHeld = deletes.length > DELETE_CAP;\n\nconst summary = {\n  op: 'summary', ran: new Date().toISOString(), rooms: rooms.length, paired,\n  unreadable, incomplete, desired: Object.keys(desired).length,\n  existing: Object.keys(existing).length, strays,\n  creates: creates.length, updates: updates.length,\n  deletes: deletesHeld ? 0 : deletes.length, deletesHeld: deletesHeld ? deletes.length : 0,\n  skippedDeletes\n};\n\nreturn [summary, ...creates, ...updates, ...(deletesHeld ? [] : deletes)].map(json => ({ json }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "mirror-plan",
+      "name": "Plan Changes"
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 4,
+        "output": "={{ ({ create: 0, update: 1, delete: 2 })[$json.op] ?? 3 }}"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1320,
+        0
+      ],
+      "id": "mirror-route",
+      "name": "Route Op"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        -160
+      ],
+      "id": "mirror-create",
+      "name": "Create Copy",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        0
+      ],
+      "id": "mirror-update",
+      "name": "Update Copy",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        160
+      ],
+      "id": "mirror-delete",
+      "name": "Delete Copy",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "Every 2 min": {
+      "main": [
+        [
+          {
+            "node": "Room Calendars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Room Calendars": {
+      "main": [
+        [
+          {
+            "node": "Read Room Calendar",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Reads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Room Calendar": {
+      "main": [
+        [
+          {
+            "node": "Merge Reads",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Reads": {
+      "main": [
+        [
+          {
+            "node": "Read KDC Mirrors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read KDC Mirrors": {
+      "main": [
+        [
+          {
+            "node": "Plan Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Changes": {
+      "main": [
+        [
+          {
+            "node": "Route Op",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Op": {
+      "main": [
+        [
+          {
+            "node": "Create Copy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Copy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete Copy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Manila",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true
+  },
+  "pinData": {}
+}

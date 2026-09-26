@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Replace Studio E's dead resource id with the live one in pulled workflow files (PENDING 43).
+
+  ./scripts/fix-studio-e <file>...          rewrite each file in place, nodes only
+  ./scripts/fix-studio-e --check <file>...  report only; exit 1 if any node still has the dead id
+
+Only `nodes` is touched: a pulled file's `activeVersion` block is n8n's copy of the
+previous version and still carries the old id (gotcha 8). That is expected, and it
+is not sent on import. Run it on FRESH pulls, never on an old file:
+
+  ./scripts/n8n pull EUG3sGXkfsJSYIMz workflows/book-session-vNN.json   # and the other four
+  ./scripts/fix-studio-e workflows/book-session-vNN.json ...
+
+Where the id was on 2026-09-25 (workflows/live/): Book Session (Check Conflicts,
+Create Event), Room Availability (Compute Availability), Move Booking (Resolve
+Booking), Find Booking (Shape Results, reverse-keyed), main (Create Event, a
+disabled tool node wired to nothing).
+"""
+import json, sys
+
+OLD = 'c_18807te03d2sqh0lmtal9sbb04gao'   # returns not found; retired
+NEW = 'c_1888r4bbc2lhqgndmprism70nft64'   # "Studio E (5)" in Admin, organized by KDC Bookings
+
+args = sys.argv[1:]
+check = bool(args) and args[0] == '--check'
+files = args[1:] if check else args
+if not files:
+    sys.exit(__doc__)
+
+bad = 0
+for f in files:
+    w = json.load(open(f))
+    if not isinstance(w.get('nodes'), list):
+        print(f'{f}: no nodes array, not a workflow export'); bad += 1; continue
+    hits = []
+    for i, n in enumerate(w['nodes']):
+        s = json.dumps(n, ensure_ascii=False)
+        k = s.count(OLD)
+        if k:
+            hits.append((n.get('name'), k))
+            if not check:
+                w['nodes'][i] = json.loads(s.replace(OLD, NEW))
+    live = sum(json.dumps(n, ensure_ascii=False).count(NEW) for n in w['nodes'])
+    name = w.get('name', '?')
+    if check:
+        state = 'DEAD ID in ' + ', '.join(f'{a} ({b})' for a, b in hits) if hits else 'clean'
+        print(f'{f} [{name}]: {state}; live id in {live} place(s)')
+        bad += bool(hits)
+    elif hits:
+        json.dump(w, open(f, 'w'), indent=2, ensure_ascii=False)
+        open(f, 'a').write('\n')
+        print(f'{f} [{name}]: replaced in ' + ', '.join(f'{a} ({b})' for a, b in hits))
+    else:
+        print(f'{f} [{name}]: no dead id in nodes, unchanged')
+sys.exit(1 if bad else 0)
