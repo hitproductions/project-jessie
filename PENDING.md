@@ -51,16 +51,15 @@ ones move to the bottom instead of being renumbered.
 | 13, 18, 39 | Speed: first Code node ~3.5s, first outbound call ~4s, new staff-list reads ~1s | Server / later |
 | 40 | Leftover snapshot files from renames in `workflows/live/` | Howard's OK to delete |
 | 41 | `Booked For` notice quotes three words instead of the name | Build (tiny) |
-| 32 | Thread-broadcast duplicate notices error harmlessly (no reply lost); fix built as v156 | Push v156 |
 
-**Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31. **Item 14** is a permanent
+**Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31, 32. **Item 14** is a permanent
 known constraint, not a task.
 
 ---
 
 ## 🔴 Urgent: details
 
-**32. Thread-broadcast errors: harmless duplicates, not lost replies. Fix is v156.** *Corrected
+**32. Thread-broadcast errors: harmless duplicates, not lost replies. RESOLVED — v156 LIVE 2026-09-26.** *Corrected
 2026-09-26 — the first write-up of this, which came from Tara's side, was wrong about the impact.*
 
 When a tester replies in a thread with **"also send to channel"** ticked, Slack sends **two** events:
@@ -81,6 +80,10 @@ notice through the agent too, and Jessie would process every thread-broadcast re
 v155, so it reverts nothing. Replayed against the seven real events from 24 Sep: every success still kept,
 every error dropped. 209 checks + 28 scenarios pass. `leftValue` is `$json.subtype || ''` so an absent
 subtype is a string under strict type validation, not undefined.
+
+**Pushed 2026-09-26 03:41 UTC and smoke-tested live:** Tara's plain "test" DM (exec 12116) passed `DM filter`,
+ran 24 nodes and got a reply; Jessie's own echo (12117) passed `DM filter` and stopped at `Loop filter` as
+designed. `reapply-main-fixes --check`: all v151–v155 fixes present.
 
 **33. Launch switches: flip together on 12 Oct.** Full detail and the post-flip checks are in
 [`docs/launch-checklist.md`](docs/launch-checklist.md). In short: `YEAR_SHIFT` → 0 in `Gate Context` together
