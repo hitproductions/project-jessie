@@ -48,6 +48,8 @@ const OB_NEW_END = "and empty for a self-booking.";
 const OB_OLD_START = " When the requester books on behalf of another person (for example";
 const OB_OLD_END = "rather than a colleague.";
 const OB_ANCHOR = "That is still three segments.";
+// main v157 trimmed the prompt and reworded the on-behalf guidance; this is its marker.
+const OB_TRIM = "so the event reads `Booked by: <you> (for <them>)`";
 
 const report = [];
 let changed = false, toggle = false, manual = false;
@@ -109,7 +111,7 @@ const FIXES = [
     apply: wf => { const t = node(wf, 'Book Series'); if (!t) return 'Book Series tool missing';
       if (desc(REF, 'Book Series').includes("$('Booked For')") && !node(wf, 'Booked For')) return 'reference expression needs the Booked For node';
       t.parameters.workflowInputs.value.description = desc(REF, 'Book Series'); toggle = true; return ''; } },
-  { id: 'v152 on-behalf prompt guidance', present: wf => sys(wf).includes(OB_NEW_START),
+  { id: 'v152 on-behalf prompt guidance', present: wf => sys(wf).includes(OB_NEW_START) || sys(wf).includes(OB_TRIM),
     apply: wf => { const r = sys(REF), a = r.indexOf(OB_NEW_START), b = r.indexOf(OB_NEW_END, a);
       if (a < 0 || b < 0) return 'reference sentence not found';
       const sentence = r.slice(a, b + OB_NEW_END.length);

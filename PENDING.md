@@ -342,7 +342,7 @@ matters more once tablets are a booking source (item 42).
 **`reapply-main-fixes --check` now reports "v152 on-behalf prompt guidance MISSING" — a false alarm.** The
 guidance is present (`booked_for`, "Booked by: <you> (for <them>)", not the client, never in the title), just
 reworded; the check looks for the exact old phrase " Booking on behalf of a colleague:". Don't re-apply it —
-update the check to the new wording instead. Raised 2026-09-26. The
+update the check to the new wording instead. *(Done 2026-09-26: the check accepts either wording; `--check` is clean again.)* Raised 2026-09-26. The
 system prompt is cut from 47,084 to 29,223 characters (38%) — duplication, incident anecdotes, and long
 explanations of rules the sub-workflows already enforce. The QA round-2 failures traced to the model, not
 the workflows, and a smaller prompt gives a small model less to drop. Tara is pushing v157; **Howard
