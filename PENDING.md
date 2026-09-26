@@ -23,7 +23,7 @@ ones move to the bottom instead of being renumbered.
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
 | 22 | Automatic backup off since 16 Sep; manual backups only (last 2026-09-25) | Follows 21 |
 | 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | Import + live-test mirror v2 (after 43) |
-| 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | Build (small; step 1 of 42) |
+| 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | Apply: pull + `./scripts/fix-studio-e` + put (needs the n8n key; step 1 of 42) |
 
 ### 🟠 Soon: before the SOP is final (by 5 Oct); behaviour real users will hit
 
@@ -191,7 +191,12 @@ room map has `c_18807te03d2sqh0lmtal9sbb04gao`, which returns not found; the rea
 never reaches the real room calendar or its tablet; and Studio E events are never matched to the room, so
 availability can call Studio E free when it isn't. The old id is in **five** live workflows (checked 2026-09-25): Book Session, Room Availability, Move
 Booking, Find Booking and main. Each needs the new id (pull each first; count only the nodes, not n8n's
-`activeVersion` copy, gotcha 8). A small, mechanical change, and step 1 of item 42.
+`activeVersion` copy, gotcha 8). A small, mechanical change, and step 1 of item 42. **2026-09-26: fix built, not applied.**
+`./scripts/fix-studio-e` makes the swap in a fresh pull (nodes only). Dry-run on the 25 Sep backups: 6 places
+(Book Session has two, `Check Conflicts` and `Create Event`), id the only change, `test-nodes` all pass. Main's
+hit is a disabled, unconnected node, so main can wait for its next import. Commands in
+[`docs/design/studio-e-id-fix.md`](docs/design/studio-e-id-fix.md). Also still open: IT to confirm the old id is
+retired rather than hidden from one account.
 
 ---
 
