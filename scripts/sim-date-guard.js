@@ -5,7 +5,7 @@
 const fs = require('fs');
 const node = (f, n) => JSON.parse(fs.readFileSync(f, 'utf8')).nodes.find(x => x.name === n).parameters.jsCode;
 const GATE = node(process.env.MAIN || 'workflows/project-jessie-v160.json', 'Gate Context');
-const CHECK = node('workflows/book-session-v47.json', 'Check Conflicts');
+const CHECK = node(process.env.BOOK || 'workflows/book-session-v48.json', 'Check Conflicts');
 let fails = 0;
 const ok = (c, m) => { console.log((c ? '  ok    ' : '  FAIL  ') + m); if (!c) fails++; };
 
