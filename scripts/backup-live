@@ -66,6 +66,9 @@ except Unreachable as e:
 index = []
 for w in data:
     full = api("/api/v1/workflows/" + w["id"])
+    # Main v158's Ref Store caches the rooms / session types / staff tables in static
+    # data. It churns every 10 minutes and is not configuration, so it stays out of git.
+    ((full.get("staticData") or {}).get("global") or {}).pop("refCache", None)
     fn = "%s__%s.json" % (slug(w.get("name","untitled")), w["id"])
     with open("workflows/live/"+fn, "w") as f:
         json.dump(full, f, indent=2, ensure_ascii=False, sort_keys=True)

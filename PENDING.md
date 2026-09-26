@@ -17,7 +17,6 @@ ones move to the bottom instead of being renumbered.
 
 | # | What | Blocked on / owner |
 |---|---|---|
-| 32 | Tara's thread-reply fix not pushed; then run `reapply-main-fixes --check` | Tara |
 | 33 | Launch switches: year shift, **three** `DEV_REDIRECT`s, HAIST Dev decision | Howard, on 12 Oct |
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
@@ -29,6 +28,10 @@ ones move to the bottom instead of being renumbered.
 
 | # | What | Blocked on / owner |
 |---|---|---|
+| 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest) |
+| 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
+| 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
+| 48 | "Next week" computed by the model — answered Oct 4–11 for Sep 27–Oct 3; resolve week phrases in Gate Context | Build (small) |
 | 34 | A1: free rooms sometimes left out of an availability answer; never re-verified | Re-test, then build |
 | 26 | Can claim "I've asked the current holder" without doing it | Build |
 | 27 | Can open the same consent request twice | Build |
@@ -53,21 +56,38 @@ ones move to the bottom instead of being renumbered.
 | 40 | Leftover snapshot files from renames in `workflows/live/` | Howard's OK to delete |
 | 41 | `Booked For` notice quotes three words instead of the name | Build (tiny) |
 
-**Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31. **Item 14** is a permanent
+**Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31, 32. **Item 14** is a permanent
 known constraint, not a task.
 
 ---
 
 ## 🔴 Urgent: details
 
-**32. Tara's thread-reply fix (`Get Sender`) is not pushed yet.** Found by Tara in QA round 2: a tester
-replied to Jessie's summary **in a thread with "also send to channel" ticked**. Slack sends that as
-`message_changed` / `thread_broadcast`, with the real `user` and `text` nested under `message`, so
-`Get Sender` looks up an empty user id, Slack rejects it, and the reply fails. She said she'd push it; as
-of 2026-09-25 it's in neither git nor live (`Get Sender` still reads only the top-level `user`).
-**When it lands, run `./scripts/reapply-main-fixes --check`.** If her copy predates main v155 it reverts our
-fixes, and the script re-applies them on top of her version (it never imports). `Booked For` already reads
-`message.text`, so on-behalf detection handles thread broadcasts.
+**32. Thread-broadcast errors: harmless duplicates, not lost replies. RESOLVED — v156 LIVE 2026-09-26.** *Corrected
+2026-09-26 — the first write-up of this, which came from Tara's side, was wrong about the impact.*
+
+When a tester replies in a thread with **"also send to channel"** ticked, Slack sends **two** events:
+
+| Event | Sender at top level | What happened (24 Sep, Tricia) |
+|---|---|---|
+| `thread_broadcast` — the reply itself | yes | **processed normally**: execs 10920, 10924, 10929 all succeeded, and Jessie booked and replied |
+| `message_changed` (inner `thread_broadcast`) — Slack's notice that the thread was updated | no | `Get Sender` looked up an empty user id → `user_not_found`: execs 10921, 10925, 10930 |
+
+So **no reply was lost and no booking was missed**. The three errors are the duplicate notice failing. It
+is log noise, not a user-facing failure — downgraded from urgent.
+
+**Do not fix this by making `Get Sender` read the nested `message.user`.** That would send the duplicate
+notice through the agent too, and Jessie would process every thread-broadcast reply **twice**.
+
+**The fix: v156, `DM filter` only.** Two conditions added, dropping `subtype` `message_changed` and
+`message_deleted`; `thread_broadcast` and plain DMs pass exactly as before. Built from a fresh pull of live
+v155, so it reverts nothing. Replayed against the seven real events from 24 Sep: every success still kept,
+every error dropped. 209 checks + 28 scenarios pass. `leftValue` is `$json.subtype || ''` so an absent
+subtype is a string under strict type validation, not undefined.
+
+**Pushed 2026-09-26 03:41 UTC and smoke-tested live:** Tara's plain "test" DM (exec 12116) passed `DM filter`,
+ran 24 nodes and got a reply; Jessie's own echo (12117) passed `DM filter` and stopped at `Loop filter` as
+designed. `reapply-main-fixes --check`: all v151–v155 fixes present.
 
 **33. Launch switches: flip together on 12 Oct.** Full detail and the post-flip checks are in
 [`docs/launch-checklist.md`](docs/launch-checklist.md). In short: `YEAR_SHIFT` → 0 in `Gate Context` together
@@ -338,6 +358,93 @@ declines moments later, and the event sits on KDC Bookings with the room crossed
 its attendees; if the room declined, delete the new event and tell the requester the room is taken. It
 matters more once tablets are a booking source (item 42).
 
+**45. Retest the trimmed prompt (main v157) before the SOP starts on 29 Sep.** *v157 is LIVE — pushed
+2026-09-26 ~07:05 UTC; first real turn (exec 12158) replied normally. The retest is still owed.*
+**`reapply-main-fixes --check` now reports "v152 on-behalf prompt guidance MISSING" — a false alarm.** The
+guidance is present (`booked_for`, "Booked by: <you> (for <them>)", not the client, never in the title), just
+reworded; the check looks for the exact old phrase " Booking on behalf of a colleague:". Don't re-apply it —
+update the check to the new wording instead. *(Done 2026-09-26: the check accepts either wording; `--check` is clean again.)* Raised 2026-09-26. The
+system prompt is cut from 47,084 to 29,223 characters (38%) — duplication, incident anecdotes, and long
+explanations of rules the sub-workflows already enforce. The QA round-2 failures traced to the model, not
+the workflows, and a smaller prompt gives a small model less to drop. Tara is pushing v157; **Howard
+retests** using the conversation list in [`docs/prompt-trim-proposal.md`](docs/prompt-trim-proposal.md), and
+checks the seven decisions listed there, which go live with it (e.g. only the newer `booked_for` "Booked
+by" rule survives; a stale Studio 7/8 fact and a self-contradicting duration clause are removed). Push,
+check and rollback commands are at the top of that file. `test-nodes` passing proves nothing about the
+prompt — only a conversation pass does.
+
+**46. Speed: cache the reference tables (main v158) — FAILED LIVE, ROLLED BACK. Do not push v158.**
+*2026-09-26: pushed 07:4x UTC; the first message (exec 12218) failed in **Ref Store**, which ran 60,026 ms and
+died with "Unknown error" — the task-runner timeout, same signature as gotcha 11. Rolled back to v157 at
+07:49:54 UTC. Only Tara's test message was hit (no reply; its 👀 was never cleared). Ref Cache, which only
+*reads* static data, took 50 ms; the hang is in *writing* the cache. Leading suspect: assigning a large
+nested object to `$getWorkflowStaticData` from the task runner — Gate Context only ever writes small
+strings. The offline simulation passed 17/17 and could not catch this: it is runtime behaviour. Next step:
+prove a fix (e.g. store the cache as one JSON string) on a throwaway webhook workflow before Jessie.*
+
+*Isolation tests, same day, on a throwaway webhook workflow `ZZ scratch - static data test` (`Sb59OfsUnVmBsjNl`,
+now deactivated). All ran in under 0.5 s unless noted, none hung: writing a 40 KB nested object to static
+data; writing it as a JSON string; storing records read from another node via `$('Emit').all()` raw, as a
+string, and deep-copied; looking the node up through a variable (`$(name)`, as Ref Store did); the same with
+an idle AI agent + tool node present; and finally **v158's exact Fetch Rooms / Fetch Session Types / Fetch
+Bookers + exact Ref Store code** against live Airtable — 7 s, `cached: true`. So the hang happens only inside
+Jessie's workflow and has not been reproduced. The one code difference from all working Jessie nodes: Ref
+Store is the only node, in v157 or v158, that looks a node up through a variable instead of a literal name.
+The n8n container log for 07:45:01–07:46:10 UTC (task runner) should name the real cause.*
+Raised 2026-09-26. Every
+message read Rooms & Studios, Session Types and Bookers from Airtable (~1.1s each, one after another), then
+searched Bookers again for the sender (Get Booker, 1.2s typical, 4.8s worst). Median over 25 real turns: ~6s
+of reads before Gemini starts; one turn today spent 9.4s on All Rooms alone. v158:
+
+- **Ref Cache** checks for a copy of the three tables under 10 minutes old; **Cache Fresh?** skips the
+  Airtable reads when there is one. On a miss the reads run as before (renamed **Fetch Rooms / Fetch Session
+  Types / Fetch Bookers**) and **Ref Store** saves them — only a complete read, so a failed read never
+  replaces a good cache.
+- Code nodes now carry the old names **All Rooms, All Session Types, All Bookers** and emit the same
+  `{id, createdTime, fields}` items, so Room Table, Booked For, `test-nodes` mocks and `reapply-main-fixes`
+  are unchanged.
+- **Get Booker** is now a Code node reading the sender from All Bookers instead of a second search — same
+  name, same output (one empty item when the sender isn't in Bookers), so its ~20 references are untouched.
+- Staff **Email is left out of the cache** (nothing reads it). `scripts/n8n pull` and `scripts/backup-live`
+  strip `staticData.global.refCache` so the cache never lands in git.
+
+Expected: ~4.5s off a typical turn (~15s → ~10s), and far fewer spikes. **Trade-off:** an Airtable edit (new
+room, renamed session type, new staff member) reaches Jessie up to 10 minutes late. **Known small risk:**
+n8n saves static data whole at the end of an execution, so a cache refresh that overlaps another user's
+turn can drop that turn's `epoch_*` memory write (or vice versa) — the same last-writer-wins race Gate
+Context's epochs already have, now slightly more frequent (once per 10 minutes).
+
+Verified offline against the real data from exec 12158: cold start, warm cache, expiry, a failed Airtable
+read, an unknown sender, and Booked For producing byte-identical output on the cached path — 17/17. Built
+from a fresh pull of live v157; 209 checks + 28 scenarios pass. **To ship:** `./scripts/n8n-write put
+uVVYVB2M7kxpLleI workflows/project-jessie-v158.json`, then `./scripts/health` after two messages (the first
+refreshes the cache, the second should show no Fetch nodes). Rollback: push v157.
+
+
+**47. Date guard LIVE (main v159 + Book Session v47), 2026-09-26 08:30 UTC.** Fixes QA round 2's wrong-date
+booking (Camille: "next Thursday" resolved to 30 Sep and carried every turn; the model checked and booked 7 Oct).
+Book Session now refuses **DATE_MISMATCH** when a booking's date (in Manila) is not one of Gate Context's
+`datesUnderDiscussion` — every date the requester named in this message, else the one carried from earlier in
+this conversation today. The model never supplies it (`expected_date` is wired from Gate Context, like
+`confirmed`). Empty = no guard; series occurrences exempt; PAST_DATE still fires first.
+To make that safe, Gate Context now also: resolves month-day dates with no year ("oct 5", "5 October",
+"October 7th") using the prompt's year rule — they were not resolved at all before, so a requester changing the
+date that way left the old one carried; lets a written date win over a bare weekday ("Friday Oct 1" = 1 Oct);
+and **drops the carried date** when a message names one it cannot read ("the 30th", "next week").
+**Known cost:** if Jessie offers another day and the requester only says "ok book that", the booking is refused
+once and she asks them to confirm the date — an extra turn, never a wrong booking. Tara chose enforcing over a
+watch-only trial. Verified: `scripts/sim-date-guard.js` 20/20 (Camille's replay, date changes, unreadable dates,
+UTC timestamps, all-day, series, past date), `test-gate` 28/28, `test-nodes` 209/209. **Watch for
+DATE_MISMATCH refusals in QA** — each one is either a caught error or a false refusal worth reporting.
+
+**48. "Next week" is worked out by the model, and it got it wrong.** Found 2026-09-26 (exec 12258). Asked
+"show my bookings next week" on Sunday 26 Sep 2027 (Jessie's calendar), she answered for **Oct 4–11** — next week
+is **Sep 27 – Oct 3** (weeks start Monday, Tara's rule). Same class as the QA round-2 date bug: Gate Context
+resolves weekdays, today/tomorrow and written dates, but not week or month phrases, so the model computes them.
+**Fix:** have Gate Context resolve "this week", "next week" (and "this/next weekend", "next month") into an
+explicit Monday–Sunday range in `dateNotice`, like it does for "next Thursday". Note the v159 date guard currently
+*drops* the carried date on those phrases (they're unreadable to it); once resolved, the range could feed the guard
+too. Also from the same session: the reply range was 8 days (Oct 4–11), not 7.
 ---
 
 ## 🟢 Additive: details

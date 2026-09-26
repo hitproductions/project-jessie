@@ -36,7 +36,11 @@ for w in json.load(sys.stdin).get("data", []):
     ;;
   pull)
     id="${1:?workflow id}"; out="${2:?output file}"
-    api "$N8N_BASE_URL/api/v1/workflows/$id" | python3 -m json.tool > "$out"
+    # Drops staticData.global.refCache: main v158's Ref Store caches the rooms, session
+    # types and staff tables there. It churns every 10 minutes and is not config.
+    api "$N8N_BASE_URL/api/v1/workflows/$id" | python3 -c 'import json,sys
+d=json.load(sys.stdin); ((d.get("staticData") or {}).get("global") or {}).pop("refCache",None)
+json.dump(d,sys.stdout,indent=4); print()' > "$out"
     echo "saved $out"
     ;;
   execs)
