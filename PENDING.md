@@ -31,6 +31,7 @@ ones move to the bottom instead of being renumbered.
 | 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest) |
 | 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
+| 48 | "Next week" computed by the model — answered Oct 4–11 for Sep 27–Oct 3; resolve week phrases in Gate Context | Build (small) |
 | 34 | A1: free rooms sometimes left out of an availability answer; never re-verified | Re-test, then build |
 | 26 | Can claim "I've asked the current holder" without doing it | Build |
 | 27 | Can open the same consent request twice | Build |
@@ -416,6 +417,15 @@ once and she asks them to confirm the date — an extra turn, never a wrong book
 watch-only trial. Verified: `scripts/sim-date-guard.js` 20/20 (Camille's replay, date changes, unreadable dates,
 UTC timestamps, all-day, series, past date), `test-gate` 28/28, `test-nodes` 209/209. **Watch for
 DATE_MISMATCH refusals in QA** — each one is either a caught error or a false refusal worth reporting.
+
+**48. "Next week" is worked out by the model, and it got it wrong.** Found 2026-09-26 (exec 12258). Asked
+"show my bookings next week" on Sunday 26 Sep 2027 (Jessie's calendar), she answered for **Oct 4–11** — next week
+is **Sep 27 – Oct 3** (weeks start Monday, Tara's rule). Same class as the QA round-2 date bug: Gate Context
+resolves weekdays, today/tomorrow and written dates, but not week or month phrases, so the model computes them.
+**Fix:** have Gate Context resolve "this week", "next week" (and "this/next weekend", "next month") into an
+explicit Monday–Sunday range in `dateNotice`, like it does for "next Thursday". Note the v159 date guard currently
+*drops* the carried date on those phrases (they're unreadable to it); once resolved, the range could feed the guard
+too. Also from the same session: the reply range was 8 days (Oct 4–11), not 7.
 ---
 
 ## 🟢 Additive: details
