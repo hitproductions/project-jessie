@@ -1,6 +1,6 @@
 # Draft — Envoy → KDC Bookings mirror (alternative to the read-side change)
 
-Status: **v2 built 2026-09-26, offline-tested, not yet imported** · Owner: Tel · Drafted 2026-09-23
+Status: **v2 imported 2026-09-26 (browser, not yet published); revised the same day after the first live run — re-import** · Owner: Tel · Drafted 2026-09-23
 
 An alternative (or complement) to the [read-side change](./envoy-jessie-readside-build.md). Instead of
 teaching Jessie to read the resource calendars, this **mirrors Envoy bookings onto KDC Bookings**, so
@@ -34,6 +34,35 @@ What changed from v1, and why:
 - **Duplicate copies of one source are removed**, and times are compared as instants, so a different
   `+08:00` vs `Z` rendering doesn't cause an update every run.
 - `maxResults` 2500 (Google's max) per read; the run record lists any room that still came back partial.
+
+**Revised 2026-09-26, after the first live run** (same file, same node names):
+
+- **Successful runs are not saved** (`saveDataSuccessExecution: none`; failed and manual runs still are).
+  At 720 runs a day, each holding 27 calendar reads, saved runs would outpace the 04:00 pruner (7-day
+  keep, 800 deletes a night) and fill SQLite, which is what stopped Jessie and Posty on 2-3 Sep.
+  Reads also ask Google only for the fields the mirror uses (`fields=`), so each run moves less.
+- **A copy takes the tablet booking's own location**: the room resource's full name, e.g.
+  `KDC Plaza-Top Level-Studio 7 (7)`, which is what Google puts on Jessie's bookings too (Book Session's
+  Create Event sets no location). v2 wrote a bare `Studio 7`: Book Session and Room Availability still
+  matched it (substring), but Move Booking's `Check New Window` compares locations **exactly**, so a Jessie
+  booking could have been *moved* onto a tablet booking. Falls back to the bare room name if the tablet
+  booking's location doesn't name the room. Existing copies are updated to the full name on the next run.
+- **Fails loudly:** the three write nodes stop on error (with one retry) instead of continuing green, and
+  `Plan Changes` throws if no room calendar could be read (an expired credential) or the reads don't pair
+  with the rooms. The room *reads* still continue on error, which is what keeps a single failed room from
+  deleting its copies.
+- `./scripts/test-mirror` now has 16 scenarios, including these.
+
+**Live results so far (2026-09-26):** the first manual run read all 27 room calendars and KDC Bookings
+(`unreadable: []`), and found nothing to copy (no tablet bookings in the window). A tablet test booking
+("MIRROR TEST", Studio 7, 16:08-18:00) was then copied correctly to KDC Bookings: right title, time,
+location, no room invite. Jessie answered "Studio 7 is free today" — the **QA year shift**, not the mirror:
+until launch she reads "today" as 2027. Until `YEAR_SHIFT` goes to zero, test Jessie's side with an explicit
+2026 date. Room Availability and Book Session match the copy by location (read from their code).
+
+**Re-importing over the workflow already in n8n** (keeps its id): open *Jessie — Envoy Mirror*, select all
+nodes (Ctrl+A), delete, then ⋯ → Import from File → this file, and Save. Check ⋯ → Settings shows "Save
+successful production executions: Do not save".
 
 **Run record:** the first item out of `Plan Changes` (`op: summary`): `unreadable`, `incomplete`, `desired`,
 `existing`, `creates`, `updates`, `deletes`, `deletesHeld`, `skippedDeletes`. `unreadable` is also the

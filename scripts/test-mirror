@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // test-mirror — offline scenarios for the Envoy Mirror's two Code nodes
-// (`Room Calendars`, `Plan Changes`). No n8n, no Google: the reads are mocked.
+// (`Room Calendars`, `Plan Changes`) and its settings. No n8n, no Google: the reads are mocked.
 //
 //   ./scripts/test-mirror                          newest workflows/envoy-mirror-v*.json
 //   ./scripts/test-mirror workflows/envoy-mirror-v2.json
@@ -62,10 +62,9 @@ const KDC = 'c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com';
   // 7. KDC failed / partial -> throws, nothing written (v1 bug)
   await assert.rejects(P(merged({}), undefined, { error: { message: 'x' } }));
   await assert.rejects(P(merged({}), [], { nextPageToken: 'x' }));
-  // 8. pairing mismatch -> no deletes at all
+  // 8. pairing mismatch -> treated as nothing readable: throws, nothing written
   const m = merged({}); m.pop();
-  out = await P(m, [copy('k1', s7.calId, 'rooms1', 'Studio 7 - Walk-in', 'Studio 7', 14)]);
-  assert.strictEqual(ops(out,'delete').length, 0); assert.strictEqual(out[0].paired, false);
+  await assert.rejects(P(m, [copy('k1', s7.calId, 'rooms1', 'Studio 7 - Walk-in', 'Studio 7', 14)]));
   // 9. delete cap
   const many = Array.from({ length: 30 }, (_, i) => copy('k' + i, s5.calId, 'rooms' + i, 'x', 'Studio 5', 9));
   out = await P(merged({}), many);
@@ -78,5 +77,23 @@ const KDC = 'c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com';
   out = await P(merged({ 'Studio 7': { items: [Object.assign(envoy('rooms9', 9, 'c'), { status: 'cancelled' }),
     { id: 'roomsX', summary: '', organizer: { email: 'x@y' }, start: { date: '2026-09-29' }, end: { date: '2026-09-30' } }] } }), []);
   assert.strictEqual(ops(out,'create').length, 1); assert.strictEqual(ops(out,'create')[0].body.summary, 'Studio 7 - Tablet booking');
-  console.log('all 11 scenarios pass');
+  // 12. every room unreadable (expired credential) -> throws, run goes red
+  const dead = merged({}).map(r => Object.assign(r, { items: undefined, error: { message: '401' } }));
+  await assert.rejects(P(dead, []), /No room calendar could be read/);
+  // 13. copy takes the tablet booking's full location, which Move Booking compares exactly
+  const FULL = 'KDC Plaza-Top Level-Studio 7 (7)';
+  out = await P(merged({ 'Studio 7': { items: [Object.assign(envoy('rooms1', 14, 'Walk-in'), { location: FULL })] } }), []);
+  assert.strictEqual(ops(out,'create')[0].body.location, FULL);
+  // 14. a copy written with the old bare "Studio 7" location is updated to the full one
+  out = await P(merged({ 'Studio 7': { items: [Object.assign(envoy('rooms1', 14, 'Walk-in'), { location: FULL })] } }),
+    [copy('k1', s7.calId, 'rooms1', 'Studio 7 - Walk-in', 'Studio 7', 14)]);
+  assert.strictEqual(ops(out,'update').length, 1); assert.strictEqual(ops(out,'update')[0].body.location, FULL);
+  // 15. a source location that doesn't name the room falls back to the room
+  out = await P(merged({ 'Studio 7': { items: [Object.assign(envoy('rooms1', 14, 'Walk-in'), { location: 'Level 3' })] } }), []);
+  assert.strictEqual(ops(out,'create')[0].body.location, 'Studio 7');
+  // 16. v2 settings: successful runs not saved (the 2-3 Sep database fill)
+  assert.strictEqual(wf.settings.saveDataSuccessExecution, 'none');
+  for (const n of ['Create Copy', 'Update Copy', 'Delete Copy'])
+    assert(!wf.nodes.find(x => x.name === n).onError, n + ' must fail loudly');
+  console.log('all 16 scenarios pass');
 })().catch(e => { console.error('FAIL', e); process.exit(1); });

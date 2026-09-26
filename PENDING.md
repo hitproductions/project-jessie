@@ -22,7 +22,7 @@ ones move to the bottom instead of being renumbered.
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
 | 22 | Automatic backup off since 16 Sep; manual backups only (last 2026-09-25) | Follows 21 |
-| 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | Import + live-test mirror v2 (after 43) |
+| 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | Re-import revised mirror v2, finish live test, publish |
 | 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | Apply: pull + `./scripts/fix-studio-e` + put (needs the n8n key; step 1 of 42) |
 
 ### 🟠 Soon: before the SOP is final (by 5 Oct); behaviour real users will hit
@@ -165,7 +165,15 @@ People will book on the door tablets (Envoy Rooms) as well as through Jessie, so
   **v2 built 2026-09-26** (`workflows/envoy-mirror-v2.json`): Google calls moved to HTTP Request nodes with
   the existing credential, and it fails closed (a failed room read deletes nothing, a failed KDC read writes
   nothing). Offline-tested (`./scripts/test-mirror`), **never imported**. Import steps are in the design doc.
-  v1 is superseded; don't import it. Its one weakness is the poll gap (a tablet booking is
+  v1 is superseded; don't import it.
+  **2026-09-26:** imported through the browser by Tel (not yet published). Reads all 27 room calendars; a
+  tablet test booking was copied to KDC Bookings correctly. The file was then revised: successful runs not
+  saved (database-fill risk at 720 runs a day), copies take the tablet booking's full room-name location
+  (Move Booking compares locations exactly and would not have seen a bare "Studio 7"), and failures turn the
+  run red. **Re-import the revised file, then publish.** Until launch, test Jessie's side with an explicit 2026
+  date: the QA year shift makes "today" 2027, which is why she called Studio 7 free. Known edge case, not
+  fixed: Move Booking's exact-location check still won't see a copy when the booking being moved is a
+  two-room booth pairing (its location lists both rooms). Its one weakness is the poll gap (a tablet booking is
   invisible to Jessie for up to one interval). The heavier read-side change
   ([`docs/design/envoy-jessie-readside-build.md`](docs/design/envoy-jessie-readside-build.md)) closes that gap
   but rewrites three hot-path workflows; hold it unless the gap bites.
