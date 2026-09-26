@@ -4,7 +4,7 @@
 //   node scripts/sim-date-guard.js
 const fs = require('fs');
 const node = (f, n) => JSON.parse(fs.readFileSync(f, 'utf8')).nodes.find(x => x.name === n).parameters.jsCode;
-const GATE = node('workflows/project-jessie-v159.json', 'Gate Context');
+const GATE = node(process.env.MAIN || 'workflows/project-jessie-v160.json', 'Gate Context');
 const CHECK = node('workflows/book-session-v47.json', 'Check Conflicts');
 let fails = 0;
 const ok = (c, m) => { console.log((c ? '  ok    ' : '  FAIL  ') + m); if (!c) fails++; };
@@ -42,6 +42,23 @@ const t3g = gate('yes', []);
 ok(t3g.datesUnderDiscussion === '', '...and the next turn does not revive the old date -> "' + t3g.datesUnderDiscussion + '"');
 const t3h = gate('book studio 5 for the may session', []);
 ok(t3h.datesUnderDiscussion === '', '"may" as a word with no day is not a date -> "' + t3h.datesUnderDiscussion + '"');
+console.log('Gate Context - week and month phrases');
+const saveNow = Date.now;
+Date.now = () => Date.UTC(2026, 8, 26, 8, 30, 0);  // Sat 26 Sep 2026 16:30 Manila = Jessie's Sunday 26 Sep 2027
+const w1 = gate('show my bookings next week', []);
+ok(/Monday, 27 September 2027.*to Sunday, 3 October 2027/.test(w1.dateNotice), '"next week" on Sunday 26 Sep = 27 Sep - 3 Oct');
+ok(w1.datesUnderDiscussion.split(',').length === 7 && w1.datesUnderDiscussion.startsWith('2027-09-27'), '...all seven days count for the guard');
+const w2 = gate('anything free this week', []);
+ok(/Monday, 20 September 2027.*to Sunday, 26 September 2027/.test(w2.dateNotice), '"this week" = 20 - 26 Sep');
+const w3 = gate('book the lobby next weekend', []);
+ok(/Saturday, 2 October 2027.*to Sunday, 3 October 2027/.test(w3.dateNotice), '"next weekend" = 2 - 3 Oct');
+const w4 = gate('what do i have next month', []);
+ok(/Friday, 1 October 2027.*to Sunday, 31 October 2027/.test(w4.dateNotice), '"next month" = 1 - 31 Oct');
+gate('book studio 3 next thursday 10am', []);
+const w5 = gate('show me next week', []);
+const w6 = gate('yes', []);
+ok(w6.datesUnderDiscussion === '', 'a range is never carried: the turn after "next week" tracks nothing');
+Date.now = saveNow;
 const t4 = gate('reset', []);
 const t5 = gate('hi', []);
 ok(t5.datesUnderDiscussion === '', 'after reset nothing is tracked -> "' + t5.datesUnderDiscussion + '"');
