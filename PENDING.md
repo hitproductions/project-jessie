@@ -28,7 +28,8 @@ ones move to the bottom instead of being renumbered.
 
 | # | What | Blocked on / owner |
 |---|---|---|
-| 45 | Trimmed prompt (main v157, 38% smaller): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest) |
+| 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest) |
+| 46 | Speed: cache rooms / session types / staff for 10 min (main v158, candidate) — ~15s → ~10s a turn | Howard (review, push) |
 | 34 | A1: free rooms sometimes left out of an availability answer; never re-verified | Re-test, then build |
 | 26 | Can claim "I've asked the current holder" without doing it | Build |
 | 27 | Can open the same consent request twice | Build |
@@ -336,7 +337,12 @@ declines moments later, and the event sits on KDC Bookings with the room crossed
 its attendees; if the room declined, delete the new event and tell the requester the room is taken. It
 matters more once tablets are a booking source (item 42).
 
-**45. Retest the trimmed prompt (main v157) before the SOP starts on 29 Sep.** Raised 2026-09-26. The
+**45. Retest the trimmed prompt (main v157) before the SOP starts on 29 Sep.** *v157 is LIVE — pushed
+2026-09-26 ~07:05 UTC; first real turn (exec 12158) replied normally. The retest is still owed.*
+**`reapply-main-fixes --check` now reports "v152 on-behalf prompt guidance MISSING" — a false alarm.** The
+guidance is present (`booked_for`, "Booked by: <you> (for <them>)", not the client, never in the title), just
+reworded; the check looks for the exact old phrase " Booking on behalf of a colleague:". Don't re-apply it —
+update the check to the new wording instead. Raised 2026-09-26. The
 system prompt is cut from 47,084 to 29,223 characters (38%) — duplication, incident anecdotes, and long
 explanations of rules the sub-workflows already enforce. The QA round-2 failures traced to the model, not
 the workflows, and a smaller prompt gives a small model less to drop. Tara is pushing v157; **Howard
@@ -345,6 +351,35 @@ checks the seven decisions listed there, which go live with it (e.g. only the ne
 by" rule survives; a stale Studio 7/8 fact and a self-contradicting duration clause are removed). Push,
 check and rollback commands are at the top of that file. `test-nodes` passing proves nothing about the
 prompt — only a conversation pass does.
+
+**46. Speed: cache the reference tables (main v158, CANDIDATE — not pushed).** Raised 2026-09-26. Every
+message read Rooms & Studios, Session Types and Bookers from Airtable (~1.1s each, one after another), then
+searched Bookers again for the sender (Get Booker, 1.2s typical, 4.8s worst). Median over 25 real turns: ~6s
+of reads before Gemini starts; one turn today spent 9.4s on All Rooms alone. v158:
+
+- **Ref Cache** checks for a copy of the three tables under 10 minutes old; **Cache Fresh?** skips the
+  Airtable reads when there is one. On a miss the reads run as before (renamed **Fetch Rooms / Fetch Session
+  Types / Fetch Bookers**) and **Ref Store** saves them — only a complete read, so a failed read never
+  replaces a good cache.
+- Code nodes now carry the old names **All Rooms, All Session Types, All Bookers** and emit the same
+  `{id, createdTime, fields}` items, so Room Table, Booked For, `test-nodes` mocks and `reapply-main-fixes`
+  are unchanged.
+- **Get Booker** is now a Code node reading the sender from All Bookers instead of a second search — same
+  name, same output (one empty item when the sender isn't in Bookers), so its ~20 references are untouched.
+- Staff **Email is left out of the cache** (nothing reads it). `scripts/n8n pull` and `scripts/backup-live`
+  strip `staticData.global.refCache` so the cache never lands in git.
+
+Expected: ~4.5s off a typical turn (~15s → ~10s), and far fewer spikes. **Trade-off:** an Airtable edit (new
+room, renamed session type, new staff member) reaches Jessie up to 10 minutes late. **Known small risk:**
+n8n saves static data whole at the end of an execution, so a cache refresh that overlaps another user's
+turn can drop that turn's `epoch_*` memory write (or vice versa) — the same last-writer-wins race Gate
+Context's epochs already have, now slightly more frequent (once per 10 minutes).
+
+Verified offline against the real data from exec 12158: cold start, warm cache, expiry, a failed Airtable
+read, an unknown sender, and Booked For producing byte-identical output on the cached path — 17/17. Built
+from a fresh pull of live v157; 209 checks + 28 scenarios pass. **To ship:** `./scripts/n8n-write put
+uVVYVB2M7kxpLleI workflows/project-jessie-v158.json`, then `./scripts/health` after two messages (the first
+refreshes the cache, the second should show no Fetch nodes). Rollback: push v157.
 
 ---
 

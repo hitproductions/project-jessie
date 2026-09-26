@@ -1,6 +1,9 @@
 # Prompt trim — proposal
 
-**Status: built as main v157 (candidate). Tara is pushing it; Howard to retest.** Prepared 2026-09-26.
+**Status: v157 is LIVE (pushed 2026-09-26 ~07:05 UTC). Howard to retest.** Prepared 2026-09-26.
+
+After the push, `reapply-main-fixes --check` reports "v152 on-behalf prompt guidance MISSING". That's a false
+alarm: the guidance is in the prompt, reworded, and the check looks for the exact old phrase. See PENDING 45.
 
 **Howard — what's being asked of you:**
 1. Retest with the conversation list under *Before it goes live* below.
