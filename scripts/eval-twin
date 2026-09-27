@@ -32,6 +32,7 @@ const REPLY = "={{ JSON.stringify({ ok: true, reply: $('Guard Probe').first().js
   + "modelDraft: $('Jessie AI Agent').first().json.output, steps: $('Jessie AI Agent').first().json.intermediateSteps || [], "
   + "gate: { confirmed: $('Gate Context').first().json.confirmed, dateNotice: $('Gate Context').first().json.dateNotice, epoch: $('Gate Context').first().json.epoch }, "
   + "bookedFor: ($('Booked For').first().json || {}).bookedFor || '', "
+  + "roomNames: $('Room Table').first().json.roomNames || '', referenceData: $('Room Table').first().json.referenceData || '', "
   + "staff: $('All Bookers').all().map(i => i.json.fields || {}).filter(f => f.Name).map(f => ({ name: f.Name, initials: String(f.Initials || '').trim(), info: f.Info || '' })) }) }}";
 const ERROR = "={{ JSON.stringify({ ok: false, error: $json }) }}";
 

@@ -90,7 +90,7 @@ function score(sc, res) {
   const inStaff = n => staff.some(p => norm(p.name) === norm(n));
   if (!R.ok) { add('reply', 'fail', 'no reply: ' + String(R.error && (R.error.message || JSON.stringify(R.error)) || '').slice(0, 160)); return out; }
   if (/^(booked|cancelled|moved)/i.test(String(R.claimProbe || ''))) add('claim', 'fail', 'claimed ' + R.claimProbe);
-  const wantsSummary = !E.mustAsk && !E.a1 && !E.engineerMustNotBe;
+  const wantsSummary = !E.mustAsk && !E.a1 && !E.engineerMustNotBe && !E.noSummaryExpected;
   if (wantsSummary && !F.isSummary) add('summary', 'fail', 'no summary: ' + reply.slice(0, 140).replace(/\n/g, ' '));
   if (E.engineer) {
     if (!F.isSummary) add('engineer', 'na');
@@ -102,11 +102,19 @@ function score(sc, res) {
     const leaked = norm(reply).includes(norm(E.engineerMustNotBe)) && (F.isSummary || /\*?Engineer:\*?/i.test(reply));
     add('engineerUnknown', leaked ? 'fail' : 'pass', leaked ? 'wrote a non-staff engineer: ' + E.engineerMustNotBe : '');
   }
-  if (E.initials && F.isSummary) {
+  // The calendar title is what gets booked; a summary without it asks the requester to approve something
+  // they cannot see (found in the 2026-09-27 baseline: "*Project Title:* NOVA" and no title line at all).
+  if (F.isSummary) add('titleShown', F.title ? 'pass' : 'fail', F.title ? '' : 'summary shows no calendar title');
+  if (E.initials && F.isSummary && !F.title) add('initials', 'na', 'no title line');
+  else if (E.initials && F.isSummary) {
     const seg = F.title.split(' / '); const ini = (seg[seg.length - 1] || '').split(' x ')[0].trim();
     add('initials', ini === E.initials ? 'pass' : 'fail', ini === E.initials ? '' : 'title "' + F.title + '"');
   }
-  if (E.project && F.isSummary) add('project', F.title.toUpperCase().includes(E.project.toUpperCase()) ? 'pass' : 'fail', 'title "' + F.title + '"');
+  if (E.project && F.isSummary) {
+    const projLine = (reply.match(/\*?Project(?: Title| Code)?:\*?[ \t]*([^\n]+)/i) || [])[1] || '';
+    const hay = (F.title + ' ' + projLine).toUpperCase();
+    add('project', hay.includes(E.project.toUpperCase()) ? 'pass' : 'fail', 'title "' + F.title + '", project "' + projLine.replace(/\*/g, '').trim() + '"');
+  }
   if (E.client && F.isSummary) {
     const seg = F.title.split(' / '); const c = F.client || (seg.length === 3 ? seg[1] : '');
     add('client', E.client.some(x => norm(x) === norm(c)) ? 'pass' : 'fail', 'client "' + c + '"');
@@ -135,6 +143,86 @@ function score(sc, res) {
       add('a1', missing.length ? 'fail' : 'pass', missing.length ? 'left out ' + missing.length + '/' + ra.free_rooms.length + ': ' + missing.join(', ') : '');
     }
   }
+  // ---- QA-sheet checks (2026-09-27): each scored against the data this turn's tools returned ------------
+  const obsOf = name => { const out2 = []; for (const st of R.steps || []) if (toolName(st) === name) { try { const o = JSON.parse(st.observation); (Array.isArray(o) ? o : [o]).forEach(x => out2.push(x)); } catch (e) {} } return out2; };
+  const named = n => new RegExp('\\b' + String(n).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(reply);
+  const roomNames = String(R.roomNames || '').split(' · ').map(x => x.trim()).filter(Boolean);
+  let ref = {}; try { ref = JSON.parse(R.referenceData || '{}'); } catch (e) {}
+  const roomById = Object.fromEntries((ref.rooms || []).map(r => [r.id, r]));
+  const roomLine = F.isSummary ? (reply.match(/\*?Room:\*?[ \t]*([^\n]+)/i) || [])[1] || '' : '';
+  if (E.listAll) {
+    const missing = roomNames.filter(n => !named(n));
+    const invented = [...new Set((reply.match(/\b(Studio [A-Z0-9]{1,2}|M\d{1,2})\b/g) || []))].filter(n => !roomNames.some(r => norm(r) === norm(n)));
+    add('listRooms', missing.length || invented.length ? 'fail' : 'pass', (missing.length ? 'missing ' + missing.join(', ') : '') + (invented.length ? ' invented ' + invented.join(', ') : ''));
+  }
+  if (E.vocalBooths) {
+    const booths = (ref.rooms || []).filter(r => r.vocalBooth).map(r => r.name), missing = booths.filter(n => !named(n));
+    add('vocalBooths', missing.length ? 'fail' : 'pass', missing.length ? 'left out ' + missing.join(', ') + ' of ' + booths.join(', ') : '');
+  }
+  if (E.fivePointOne) {
+    const recs = obsOf('rooms and studios').map(x => x.fields || x).filter(f => f['Room Name']);
+    if (!recs.length) add('fivePointOne', 'fail', 'answered without reading Rooms and Studios');
+    else {
+      const has = f => /5\.1/.test(JSON.stringify(f['Recording Format'] || ''));
+      const truth = recs.filter(has).map(f => f['Room Name'].trim());
+      const trap = recs.filter(f => !has(f) && /5\.1/.test(JSON.stringify(f['Room Type'] || ''))).map(f => f['Room Name'].trim());
+      const missing = truth.filter(n => !named(n)), wrong = trap.filter(n => named(n));
+      add('fivePointOne', missing.length || wrong.length ? 'fail' : 'pass', (missing.length ? 'missing ' + missing.join(', ') : '') + (wrong.length ? ' named from Room Type (stereo only): ' + wrong.join(', ') : ''));
+    }
+  }
+  if (E.mentions) { const ok = E.mentions.every(rx => new RegExp(rx, 'i').test(reply)); add('mentions', ok ? 'pass' : 'fail', ok ? '' : 'expected /' + E.mentions.join('/, /') + '/: ' + reply.slice(0, 140).replace(/\n/g, ' ')); }
+  if (E.boothIncluded) {
+    if (!F.isSummary) add('boothIncluded', 'na');
+    else { const inc = (ref.rooms || []).some(r => (r.booth || r.vocalBooth) && named(r.name) && roomLine.toLowerCase().includes(r.name.toLowerCase()));
+      add('boothIncluded', inc ? 'pass' : 'fail', 'Room "' + roomLine + '"'); }
+  }
+  if (E.priorityFor) {
+    if (!F.isSummary) add('priorityRoom', 'na');
+    else { const t = (ref.types || []).find(x => norm(x.type) === norm(E.priorityFor)); const pri = t ? t.priority.map(id => (roomById[id] || {}).name).filter(Boolean) : [];
+      const ok = pri.some(n => roomLine.toLowerCase().includes(n.toLowerCase())); add('priorityRoom', ok ? 'pass' : 'fail', 'Room "' + roomLine + '" vs priority ' + pri.join(', ')); }
+  }
+  if (E.typicalFor && F.isSummary) {
+    const t = obsOf('session types').map(x => x.fields || x).find(f => norm(f['Session Type'] || f['Name'] || f['Type']) === norm(E.typicalFor));
+    const tm = reply.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\s*[-–—]\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i);
+    const to24 = (h, ap) => (/pm/i.test(ap) ? (+h % 12) + 12 : (+h % 12));
+    const mins = tm ? (to24(tm[4], tm[6]) * 60 + (+tm[5] || 0)) - (to24(tm[1], tm[3]) * 60 + (+tm[2] || 0)) : null;
+    if (t && t['Typical Duration']) add('typicalDuration', mins === +t['Typical Duration'] ? 'pass' : 'fail', mins + ' min vs Typical Duration ' + t['Typical Duration']);
+    else add('typicalDuration', 'na', 'Session Types not read this turn; length ' + mins + ' min');
+  }
+  if (E.room) {
+    const ok = F.isSummary ? E.room.some(r => roomLine.toLowerCase().includes(r.toLowerCase())) : (E.roomOrAsk && /\?/.test(reply));
+    add('room', ok ? 'pass' : 'fail', F.isSummary ? 'Room "' + roomLine + '"' : 'no summary: ' + reply.slice(0, 100).replace(/\n/g, ' '));
+  }
+  if (E.refusesPast) add('refusesPast', !F.isSummary && /(past|passed|already happened|gone by)/i.test(reply) ? 'pass' : 'fail', reply.slice(0, 120).replace(/\n/g, ' '));
+  if (E.notFound) add('notFound', !/^(cancell?ed)/i.test(String(R.claimProbe || '')) && /(could ?n.?t find|can.?t find|cannot find|no booking|not find|don.?t see|not seeing|no .*booking|nothing booked)/i.test(reply) ? 'pass' : 'fail', reply.slice(0, 120).replace(/\n/g, ' '));
+  if (E.seriesWeekday) {
+    const ds = [...reply.matchAll(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})/g)].map(m => new Date(Date.UTC(+m[3], MONTHS.indexOf(m[1].toLowerCase()), +m[2])));
+    const days = [...new Set(ds.map(d => d.toISOString().slice(0, 10)))];
+    const wd = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'].indexOf(E.seriesWeekday.toLowerCase());
+    const wrong = days.filter(d => new Date(d + 'T00:00:00Z').getUTCDay() !== wd);
+    add('series', days.length >= (E.seriesMin || 4) && !wrong.length ? 'pass' : 'fail', days.length + ' dates' + (wrong.length ? ', not ' + E.seriesWeekday + ': ' + wrong.join(', ') : ''));
+  }
+  if (E.lookupOnly) {
+    const titles = [...obsOf('find booking'), ...obsOf('list events')].flatMap(x => (x.bookings || x.events || (x.summary ? [x] : [])).map(b => b.title || b.summary)).filter(Boolean);
+    const shown = [...reply.matchAll(/([A-Z0-9][A-Z0-9 &'-]{1,}\s\/\s[^\n*]+?)(?=\*|\n|$| on | from | at )/g)].map(m => m[1].trim());
+    const invented = shown.filter(t => !titles.some(x => norm(x).startsWith(norm(t).slice(0, 12))));
+    add('lookup', invented.length ? 'fail' : 'pass', invented.length ? 'not in the tool results: ' + invented.join(' | ') : titles.length + ' bookings from tools, ' + shown.length + ' shown');
+  }
+  if (E.roomStatusFor) {
+    const ra = obsOf('room availability').map(x => x.asked).filter(a => a && norm(a.room) === norm(E.roomStatusFor)).pop();
+    if (!ra) add('roomStatus', 'fail', 'no availability check for ' + E.roomStatusFor);
+    else { const saysFree = /\b(is free|is available|available|open)\b/i.test(reply) && !/\b(not free|not available|taken|booked|busy)\b/i.test(reply);
+      const free = /^FREE/.test(ra.status); add('roomStatus', saysFree === free ? 'pass' : 'fail', 'tool said ' + ra.status + '; reply ' + reply.slice(0, 100).replace(/\n/g, ' ')); }
+  }
+  if (E.onlyTimeChanges && res.turns.length >= 2) {
+    const A = summaryFields(res.turns[0].reply), B = F; const same = k => norm(A[k]) === norm(B[k]);
+    const t0 = (String(res.turns[0].reply).match(/\*?Time:\*?[ \t]*([^\n]+)/i) || [])[1] || '', t1 = (reply.match(/\*?Time:\*?[ \t]*([^\n]+)/i) || [])[1] || '';
+    const r0 = (String(res.turns[0].reply).match(/\*?Room:\*?[ \t]*([^\n]+)/i) || [])[1] || '';
+    const ok = A.isSummary && B.isSummary && same('engineer') && same('date') && norm(r0) === norm(roomLine) && norm(t0) !== norm(t1) && new RegExp(E.onlyTimeChanges, 'i').test(t1);
+    add('onlyTimeChanges', ok ? 'pass' : 'fail', 'before "' + t0 + '" / ' + A.engineer + ' / ' + r0 + ' -> after "' + t1 + '" / ' + B.engineer + ' / ' + roomLine);
+  }
+  if (E.room2 && F.isSummary) add('secondRequest', E.room2.some(r => roomLine.toLowerCase().includes(r.toLowerCase())) && F.title.toUpperCase().includes(E.project2) ? 'pass' : 'fail', 'Room "' + roomLine + '", title "' + F.title + '"');
+  if (E.repliesNormally) add('repliesNormally', R.ok && reply.length > 10 ? 'pass' : 'fail');
   return out;
 }
 
@@ -152,7 +240,8 @@ function score(sc, res) {
     for (const s of list) for (let r = 1; r <= REPEAT; r++) {
       const res = await conversation(s, r);
       const checks = score(s, res);
-      results.push({ id: s.id, class: s.class, rep: r, turns: res.turns, checks, reply: res.last && res.last.reply, bookedFor: res.last && res.last.bookedFor });
+      const keep = res.last ? Object.assign({}, res.last, { staff: undefined, referenceData: undefined }) : null;
+      results.push({ id: s.id, class: s.class, rep: r, turns: res.turns, checks, reply: res.last && res.last.reply, bookedFor: res.last && res.last.bookedFor, last: keep });
       const f = checks.filter(c => c.verdict === 'fail');
       console.log(`${s.id}#${r}  ${res.turns.map(t => t.secs.toFixed(1) + 's').join(' + ')}  ${f.length ? 'FAIL ' + f.map(c => c.check + (c.detail ? ' (' + c.detail + ')' : '')).join('; ') : 'ok'}`);
     }
@@ -167,6 +256,13 @@ function score(sc, res) {
   const L = ['# Eval run ' + stamp, '', 'Live main ' + (JSON.parse(fs.readFileSync(path.join(EVAL, 'twin.meta.json'), 'utf8')).liveUpdatedAt || '?') + ' · ' + results.length + ' conversations · turn time median ' + q(.5) + 's, p90 ' + q(.9) + 's' + (aborted ? '\n\n**ABORTED:** ' + aborted : ''), '',
     '| check | pass | fail | rate of failure |', '|---|---|---|---|'];
   for (const [k, v] of Object.entries(by)) { const n = v.pass + v.fail; L.push(`| ${k} | ${v.pass} | ${v.fail} | ${n ? Math.round(100 * v.fail / n) + '%' : '-'} |`); }
+  // Consistency (QA D1/D2): the same request should land on the same room, time and engineer every repeat.
+  const byId = {}; for (const r of results) { const f = summaryFields(r.reply); if (!f.isSummary) continue;
+    const room = (String(r.reply).match(/\*?Room:\*?[ \t]*([^\n]+)/i) || [])[1] || '', time = (String(r.reply).match(/\*?Time:\*?[ \t]*([^\n]+)/i) || [])[1] || '';
+    (byId[r.id] = byId[r.id] || new Set()).add([norm(room), norm(time), norm(f.engineer), norm(f.date)].join(' | ')); }
+  const incon = Object.entries(byId).filter(([, v]) => v.size > 1);
+  L.push('', '## Consistency across repeats', '', Object.keys(byId).length + ' scenarios produced summaries; ' + incon.length + ' gave different room / time / engineer / date between repeats.');
+  incon.forEach(([id, v]) => L.push('- ' + id + ': ' + [...v].join('  ||  ')));
   L.push('', '## Failures');
   for (const [k, v] of Object.entries(by)) if (v.fails.length) { L.push('', '### ' + k); v.fails.forEach(f => L.push('- ' + f)); }
   fs.mkdirSync(path.join(EVAL, 'results'), { recursive: true });

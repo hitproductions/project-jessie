@@ -2,82 +2,631 @@
   "_about": "Hallucination eval scenarios for ./scripts/eval-run (2026-09-27). Each scenario is one conversation, played through the eval twin from a fresh reset; 'turns' are the requester's messages in order. Never include a bare yes/confirm: the runner refuses it, so nothing can be booked. 'expect' keys are scored only when the reply is a booking summary, except mustAsk/a1/headsUp which apply to any reply.",
   "user": "U08V3CKDGJF",
   "scenarios": [
-    { "id": "ENG-1", "class": "engineer", "note": "first name only (QA: Daryl -> 'Daryl Javier')",
-      "turns": ["Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Daryl"],
-      "expect": { "engineer": "Daryl Reyes", "initials": "DR", "project": "ORBIT", "client": ["Jem Lim"], "date": "next Friday" } },
-    { "id": "ENG-2", "class": "engineer", "note": "nickname",
-      "turns": ["Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Drey"],
-      "expect": { "engineer": "Daryl Reyes", "initials": "DR", "project": "ORBIT", "client": ["Jem Lim"] } },
-    { "id": "ENG-3", "class": "engineer", "note": "lowercase nickname",
-      "turns": ["book studio 8 next friday 10am to 12pm for a vo recording, project lumen, client sasa, engineer topet"],
-      "expect": { "engineer": "Topet Concepcion", "initials": "TC", "project": "LUMEN", "client": ["Sasa Abella", "Sasa"] } },
-    { "id": "ENG-4", "class": "engineer", "note": "initials as the engineer",
-      "turns": ["Book Studio 7 next Tuesday 1pm to 3pm, VO recording, project KITE, client Jem Lim, engineer RG"],
-      "expect": { "engineer": "Richard Genabe", "initials": "RG", "project": "KITE" } },
-    { "id": "ENG-5", "class": "engineer", "note": "short nickname",
-      "turns": ["Book Studio 8 next Wednesday 9am to 11am, VO recording, project PRISM, client Jem Lim, engineer Eli"],
-      "expect": { "engineer": "Alec Elijah Gan", "initials": "AEG", "project": "PRISM" } },
-    { "id": "ENG-6", "class": "engineer", "note": "full name",
-      "turns": ["Book Studio 7 next Thursday 3pm to 5pm, VO recording, project HALO, client Jem Lim, engineer Tara Lim"],
-      "expect": { "engineer": "Tara Lim", "initials": "TL", "project": "HALO" } },
-    { "id": "ENG-7", "class": "engineer", "note": "someone NOT in Bookers: must not be written",
-      "turns": ["Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Juan Dela Cruz"],
-      "expect": { "engineerMustNotBe": "Juan Dela Cruz" } },
-    { "id": "ENG-8", "class": "engineer", "note": "music session: engineer and arranger by first name",
-      "turns": ["Book Studio F next Thursday 1pm to 4pm, band recording, project ECHO, client Pael, engineer Daryl, arranger Brian"],
-      "expect": { "engineer": "Daryl Reyes", "initials": "DR", "client": ["Pael Laurena", "Pael"] } },
-
-    { "id": "CLI-1", "class": "client", "note": "client known to Airtable by first name",
-      "turns": ["Book Studio 7 next Friday 11am to 1pm, VO recording, project NOVA, client Pael, engineer Tara Lim"],
-      "expect": { "client": ["Pael Laurena", "Pael"], "project": "NOVA", "engineer": "Tara Lim" } },
-    { "id": "CLI-2", "class": "client", "note": "a new client: keep as given, invent nothing",
-      "turns": ["Book Studio 8 next Friday 3pm to 5pm, VO recording, project ATLAS, client Acme Records, engineer Tara Lim"],
-      "expect": { "client": ["Acme Records"], "project": "ATLAS", "engineer": "Tara Lim" } },
-    { "id": "CLI-3", "class": "client", "note": "client by full name",
-      "turns": ["Book Studio 7 next Monday 10am to 12pm, VO recording, project TIDE, client Sasa Abella, engineer Richard"],
-      "expect": { "client": ["Sasa Abella"], "project": "TIDE", "engineer": "Richard Genabe" } },
-
-    { "id": "DATE-1", "class": "date", "turns": ["Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"],
-      "expect": { "date": "next Friday", "engineer": "Tara Lim" } },
-    { "id": "DATE-2", "class": "date", "turns": ["Book Studio 8 this Thursday 10am to 12pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"],
-      "expect": { "date": "this Thursday" } },
-    { "id": "DATE-3", "class": "date", "turns": ["Book Studio 7 on October 14 from 1pm to 3pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"],
-      "expect": { "date": "October 14" } },
-    { "id": "DATE-4", "class": "date", "turns": ["Book Studio 7 tomorrow 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"],
-      "expect": { "date": "tomorrow" } },
-    { "id": "DATE-5", "class": "date", "turns": ["Book Studio 8 next Tuesday 9am to 11am, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"],
-      "expect": { "date": "next Tuesday" } },
-
-    { "id": "FOR-1", "class": "bookedFor", "note": "QA B2",
-      "turns": ["Book Studio F for Japs next Thursday from 1pm to 4pm, music vocal recording, project SUSHI, client Pael, engineer Daryl"],
-      "expect": { "bookedFor": "Japs Concepcion", "client": ["Pael Laurena", "Pael"], "engineer": "Daryl Reyes" } },
-    { "id": "FOR-2", "class": "bookedFor", "turns": ["Book Studio 7 on behalf of Kristine next Friday 1pm to 3pm, VO recording, project PULSE, client Jem Lim, engineer Tara Lim"],
-      "expect": { "bookedFor": "Kristine Trocino", "client": ["Jem Lim"] } },
-    { "id": "FOR-3", "class": "bookedFor", "note": "'for <client>' must stay the client",
-      "turns": ["Book Studio 7 for Jem Lim next Friday 2pm to 4pm, VO recording, project ORBIT, engineer Tara Lim"],
-      "expect": { "bookedFor": "", "client": ["Jem Lim"] } },
-
-    { "id": "DUR-1", "class": "duration", "note": "QA M5, long",
-      "turns": ["book a VO session next Friday 9am to 6pm in studio 8, project YELLOW, client sasa, engineer topet"],
-      "expect": { "headsUp": true, "engineer": "Topet Concepcion" } },
-    { "id": "DUR-2", "class": "duration", "note": "QA M5, short",
-      "turns": ["book a VO session next Friday 2pm to 2:15pm in studio 8, project STAR, client sasa, engineer richard"],
-      "expect": { "headsUp": true, "engineer": "Richard Genabe" } },
-    { "id": "DUR-3", "class": "duration", "note": "a normal length: no heads-up",
-      "turns": ["book a VO session next Friday 2pm to 4pm in studio 8, project STAR, client sasa, engineer richard"],
-      "expect": { "headsUp": false } },
-
-    { "id": "A1-1", "class": "availability", "note": "PENDING 34: a general free-rooms question",
-      "turns": ["What rooms are free next Friday from 2pm to 5pm?"], "expect": { "a1": true } },
-    { "id": "A1-2", "class": "availability", "turns": ["which studios are open next thursday 10am to 1pm?"], "expect": { "a1": true } },
-    { "id": "A1-3", "class": "availability", "turns": ["Anything free tomorrow from 3 to 6pm?"], "expect": { "a1": true } },
-
-    { "id": "ASK-1", "class": "missingInfo", "note": "almost nothing given: must ask, invent nothing",
-      "turns": ["Book a VO session next Friday"], "expect": { "mustAsk": true } },
-    { "id": "ASK-2", "class": "missingInfo", "note": "no project/client/engineer",
-      "turns": ["book studio 8 tomorrow 3 to 5pm"], "expect": { "mustAsk": true } },
-    { "id": "ASK-3", "class": "missingInfo", "note": "two turns: details arrive after the question",
-      "turns": ["I need Studio 7 next Friday 2pm to 4pm for a VO recording", "project ORBIT, client Jem Lim, engineer Daryl"],
-      "expect": { "engineer": "Daryl Reyes", "initials": "DR", "project": "ORBIT", "client": ["Jem Lim"] } }
+    {
+      "id": "ENG-1",
+      "class": "engineer",
+      "note": "first name only (QA: Daryl -> 'Daryl Javier')",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Daryl"
+      ],
+      "expect": {
+        "engineer": "Daryl Reyes",
+        "initials": "DR",
+        "project": "ORBIT",
+        "client": [
+          "Jem Lim"
+        ],
+        "date": "next Friday"
+      }
+    },
+    {
+      "id": "ENG-2",
+      "class": "engineer",
+      "note": "nickname",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Drey"
+      ],
+      "expect": {
+        "engineer": "Daryl Reyes",
+        "initials": "DR",
+        "project": "ORBIT",
+        "client": [
+          "Jem Lim"
+        ]
+      }
+    },
+    {
+      "id": "ENG-3",
+      "class": "engineer",
+      "note": "lowercase nickname",
+      "turns": [
+        "book studio 8 next friday 10am to 12pm for a vo recording, project lumen, client sasa, engineer topet"
+      ],
+      "expect": {
+        "engineer": "Topet Concepcion",
+        "initials": "TC",
+        "project": "LUMEN",
+        "client": [
+          "Sasa Abella",
+          "Sasa"
+        ]
+      }
+    },
+    {
+      "id": "ENG-4",
+      "class": "engineer",
+      "note": "initials as the engineer",
+      "turns": [
+        "Book Studio 7 next Tuesday 1pm to 3pm, VO recording, project KITE, client Jem Lim, engineer RG"
+      ],
+      "expect": {
+        "engineer": "Richard Genabe",
+        "initials": "RG",
+        "project": "KITE"
+      }
+    },
+    {
+      "id": "ENG-5",
+      "class": "engineer",
+      "note": "short nickname",
+      "turns": [
+        "Book Studio 8 next Wednesday 9am to 11am, VO recording, project PRISM, client Jem Lim, engineer Eli"
+      ],
+      "expect": {
+        "engineer": "Alec Elijah Gan",
+        "initials": "AEG",
+        "project": "PRISM"
+      }
+    },
+    {
+      "id": "ENG-6",
+      "class": "engineer",
+      "note": "full name",
+      "turns": [
+        "Book Studio 7 next Thursday 3pm to 5pm, VO recording, project HALO, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "engineer": "Tara Lim",
+        "initials": "TL",
+        "project": "HALO"
+      }
+    },
+    {
+      "id": "ENG-7",
+      "class": "engineer",
+      "note": "someone NOT in Bookers: must not be written",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Juan Dela Cruz"
+      ],
+      "expect": {
+        "engineerMustNotBe": "Juan Dela Cruz"
+      }
+    },
+    {
+      "id": "ENG-8",
+      "class": "engineer",
+      "note": "music session: engineer and arranger by first name",
+      "turns": [
+        "Book Studio F next Thursday 1pm to 4pm, band recording, project ECHO, client Pael, engineer Daryl, arranger Brian"
+      ],
+      "expect": {
+        "engineer": "Daryl Reyes",
+        "initials": "DR",
+        "client": [
+          "Pael Laurena",
+          "Pael"
+        ]
+      }
+    },
+    {
+      "id": "CLI-1",
+      "class": "client",
+      "note": "client known to Airtable by first name",
+      "turns": [
+        "Book Studio 7 next Friday 11am to 1pm, VO recording, project NOVA, client Pael, engineer Tara Lim"
+      ],
+      "expect": {
+        "client": [
+          "Pael Laurena",
+          "Pael"
+        ],
+        "project": "NOVA",
+        "engineer": "Tara Lim"
+      }
+    },
+    {
+      "id": "CLI-2",
+      "class": "client",
+      "note": "a new client: keep as given, invent nothing",
+      "turns": [
+        "Book Studio 8 next Friday 3pm to 5pm, VO recording, project ATLAS, client Acme Records, engineer Tara Lim"
+      ],
+      "expect": {
+        "client": [
+          "Acme Records"
+        ],
+        "project": "ATLAS",
+        "engineer": "Tara Lim"
+      }
+    },
+    {
+      "id": "CLI-3",
+      "class": "client",
+      "note": "client by full name",
+      "turns": [
+        "Book Studio 7 next Monday 10am to 12pm, VO recording, project TIDE, client Sasa Abella, engineer Richard"
+      ],
+      "expect": {
+        "client": [
+          "Sasa Abella"
+        ],
+        "project": "TIDE",
+        "engineer": "Richard Genabe"
+      }
+    },
+    {
+      "id": "DATE-1",
+      "class": "date",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "date": "next Friday",
+        "engineer": "Tara Lim"
+      }
+    },
+    {
+      "id": "DATE-2",
+      "class": "date",
+      "turns": [
+        "Book Studio 8 this Thursday 10am to 12pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "date": "this Thursday"
+      }
+    },
+    {
+      "id": "DATE-3",
+      "class": "date",
+      "turns": [
+        "Book Studio 7 on October 14 from 1pm to 3pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "date": "October 14"
+      }
+    },
+    {
+      "id": "DATE-4",
+      "class": "date",
+      "turns": [
+        "Book Studio 7 tomorrow 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "date": "tomorrow"
+      }
+    },
+    {
+      "id": "DATE-5",
+      "class": "date",
+      "turns": [
+        "Book Studio 8 next Tuesday 9am to 11am, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "date": "next Tuesday"
+      }
+    },
+    {
+      "id": "FOR-1",
+      "class": "bookedFor",
+      "note": "QA B2",
+      "turns": [
+        "Book Studio F for Japs next Thursday from 1pm to 4pm, music vocal recording, project SUSHI, client Pael, engineer Daryl"
+      ],
+      "expect": {
+        "bookedFor": "Japs Concepcion",
+        "client": [
+          "Pael Laurena",
+          "Pael"
+        ],
+        "engineer": "Daryl Reyes"
+      }
+    },
+    {
+      "id": "FOR-2",
+      "class": "bookedFor",
+      "turns": [
+        "Book Studio 7 on behalf of Kristine next Friday 1pm to 3pm, VO recording, project PULSE, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "bookedFor": "Kristine Trocino",
+        "client": [
+          "Jem Lim"
+        ]
+      }
+    },
+    {
+      "id": "FOR-3",
+      "class": "bookedFor",
+      "note": "'for <client>' must stay the client",
+      "turns": [
+        "Book Studio 7 for Jem Lim next Friday 2pm to 4pm, VO recording, project ORBIT, engineer Tara Lim"
+      ],
+      "expect": {
+        "bookedFor": "",
+        "client": [
+          "Jem Lim"
+        ]
+      }
+    },
+    {
+      "id": "DUR-1",
+      "class": "duration",
+      "note": "QA M5, long",
+      "turns": [
+        "book a VO session next Friday 9am to 6pm in studio 8, project YELLOW, client sasa, engineer topet"
+      ],
+      "expect": {
+        "headsUp": true,
+        "engineer": "Topet Concepcion"
+      }
+    },
+    {
+      "id": "DUR-2",
+      "class": "duration",
+      "note": "QA M5, short",
+      "turns": [
+        "book a VO session next Friday 2pm to 2:15pm in studio 8, project STAR, client sasa, engineer richard"
+      ],
+      "expect": {
+        "headsUp": true,
+        "engineer": "Richard Genabe"
+      }
+    },
+    {
+      "id": "DUR-3",
+      "class": "duration",
+      "note": "a normal length: no heads-up",
+      "turns": [
+        "book a VO session next Friday 2pm to 4pm in studio 8, project STAR, client sasa, engineer richard"
+      ],
+      "expect": {
+        "headsUp": false
+      }
+    },
+    {
+      "id": "A1-1",
+      "class": "availability",
+      "note": "PENDING 34: a general free-rooms question",
+      "turns": [
+        "What rooms are free next Friday from 2pm to 5pm?"
+      ],
+      "expect": {
+        "a1": true
+      }
+    },
+    {
+      "id": "A1-2",
+      "class": "availability",
+      "turns": [
+        "which studios are open next thursday 10am to 1pm?"
+      ],
+      "expect": {
+        "a1": true
+      }
+    },
+    {
+      "id": "A1-3",
+      "class": "availability",
+      "turns": [
+        "Anything free tomorrow from 3 to 6pm?"
+      ],
+      "expect": {
+        "a1": true
+      }
+    },
+    {
+      "id": "ASK-1",
+      "class": "missingInfo",
+      "note": "almost nothing given: must ask, invent nothing",
+      "turns": [
+        "Book a VO session next Friday"
+      ],
+      "expect": {
+        "mustAsk": true
+      }
+    },
+    {
+      "id": "ASK-2",
+      "class": "missingInfo",
+      "note": "no project/client/engineer",
+      "turns": [
+        "book studio 8 tomorrow 3 to 5pm"
+      ],
+      "expect": {
+        "mustAsk": true
+      }
+    },
+    {
+      "id": "ASK-3",
+      "class": "missingInfo",
+      "note": "two turns: details arrive after the question",
+      "turns": [
+        "I need Studio 7 next Friday 2pm to 4pm for a VO recording",
+        "project ORBIT, client Jem Lim, engineer Daryl"
+      ],
+      "expect": {
+        "engineer": "Daryl Reyes",
+        "initials": "DR",
+        "project": "ORBIT",
+        "client": [
+          "Jem Lim"
+        ]
+      }
+    },
+    {
+      "id": "QA-A2",
+      "class": "knowledge",
+      "note": "QA A2",
+      "turns": [
+        "List all the rooms"
+      ],
+      "expect": {
+        "listAll": true,
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "QA-A3",
+      "class": "knowledge",
+      "note": "QA A3",
+      "turns": [
+        "Which rooms are vocal booths? And which ones record vocals in the room itself?"
+      ],
+      "expect": {
+        "vocalBooths": true,
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "QA-A4",
+      "class": "knowledge",
+      "note": "QA A4: must read Recording Format, not Room Type",
+      "turns": [
+        "Which rooms can do 5.1?"
+      ],
+      "expect": {
+        "fivePointOne": true,
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "QA-M1",
+      "class": "sessionRules",
+      "note": "QA M1: Studio 3 has no booth, ask whether to add one",
+      "turns": [
+        "I need to record VO in Studio 3 next Thursday from 2pm to 5pm"
+      ],
+      "expect": {
+        "mentions": [
+          "booth",
+          "\\?"
+        ],
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "QA-M2",
+      "class": "sessionRules",
+      "note": "QA M2: dubbing always gets a separate booth",
+      "turns": [
+        "Book a Localization Dubbing session next Monday from 10am to 12pm for project KUBA, engineer Jek"
+      ],
+      "expect": {
+        "boothIncluded": true,
+        "engineer": "Jek Panganiban"
+      }
+    },
+    {
+      "id": "QA-M3",
+      "class": "sessionRules",
+      "note": "QA M3: offer the Airtable priority room",
+      "turns": [
+        "Book a room for a celebrity recording next Monday from 2pm to 5pm, project GLOW, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "priorityFor": "Celebrity Recording"
+      }
+    },
+    {
+      "id": "QA-M4",
+      "class": "sessionRules",
+      "note": "QA M4: start only, use Typical Duration",
+      "turns": [
+        "Book a voiceover session next Wednesday at 2pm in Studio 7, project TIDE, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "typicalFor": "VO Recording"
+      }
+    },
+    {
+      "id": "QA-M7",
+      "class": "knowledge",
+      "note": "QA M7: Spotify needs three studios",
+      "turns": [
+        "Book a session for Spotify next Tuesday from 2pm to 5pm"
+      ],
+      "expect": {
+        "mentions": [
+          "(\\b3\\b|three)"
+        ],
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "QA-B3",
+      "class": "conversation",
+      "note": "QA B3: a second request while one awaits confirmation is new, not a yes",
+      "turns": [
+        "Book Studio 8 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim",
+        "Book Studio 3 next Monday 10am to 12pm, VO recording, project TIDE, client Sasa Abella, engineer Richard"
+      ],
+      "expect": {
+        "room2": [
+          "Studio 3"
+        ],
+        "project2": "TIDE"
+      }
+    },
+    {
+      "id": "QA-N2",
+      "class": "conversation",
+      "note": "QA N2: change only the time",
+      "turns": [
+        "Book Studio 8 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim",
+        "actually make it 3pm instead"
+      ],
+      "expect": {
+        "onlyTimeChanges": "3:00\\s*PM"
+      }
+    },
+    {
+      "id": "QA-F1a",
+      "class": "lookup",
+      "note": "QA F1 part 1",
+      "turns": [
+        "What's booked in Studio 4 next Thursday?"
+      ],
+      "expect": {
+        "lookupOnly": true,
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "QA-F1b",
+      "class": "lookup",
+      "note": "QA F1 part 2",
+      "turns": [
+        "Is Studio 7 free next Thursday at 2pm?"
+      ],
+      "expect": {
+        "roomStatusFor": "Studio 7",
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "QA-F2",
+      "class": "lookup",
+      "note": "QA F2: only my bookings, nothing invented",
+      "turns": [
+        "What do I have booked this week?"
+      ],
+      "expect": {
+        "lookupOnly": true,
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "QA-X4",
+      "class": "cancel",
+      "note": "QA X4: cancel something that does not exist",
+      "turns": [
+        "Cancel my Studio 7 booking on October 20"
+      ],
+      "expect": {
+        "notFound": true,
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "QA-C7",
+      "class": "recurring",
+      "note": "QA C7",
+      "turns": [
+        "Book Studio 7 every Tuesday from 2pm to 5pm for the next month, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "seriesWeekday": "Tuesday",
+        "seriesMin": 4
+      }
+    },
+    {
+      "id": "QA-E1",
+      "class": "missingInfo",
+      "note": "QA E1: no day given, must ask, not assume today",
+      "turns": [
+        "Book Studio 7 from 2pm to 5pm"
+      ],
+      "expect": {
+        "mustAsk": true,
+        "mentions": [
+          "(day|date|when)"
+        ]
+      }
+    },
+    {
+      "id": "QA-E2",
+      "class": "date",
+      "note": "QA E2: a past date",
+      "turns": [
+        "Book Studio 7 last Monday from 2pm to 5pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "refusesPast": true,
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "QA-E3a",
+      "class": "rooms",
+      "note": "QA E3: 'studio one'",
+      "turns": [
+        "Book studio one next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "room": [
+          "Studio 1"
+        ]
+      }
+    },
+    {
+      "id": "QA-E3b",
+      "class": "rooms",
+      "note": "QA E3: 'std 3'",
+      "turns": [
+        "Book std 3 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "room": [
+          "Studio 3"
+        ]
+      }
+    },
+    {
+      "id": "QA-E3c",
+      "class": "rooms",
+      "note": "QA E3: 'the big room' = Likha, or ask",
+      "turns": [
+        "Book the big room next Friday 2pm to 4pm for a meeting"
+      ],
+      "expect": {
+        "room": [
+          "Likha"
+        ],
+        "roomOrAsk": true,
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "QA-E4",
+      "class": "robustness",
+      "note": "QA E4: an apostrophe",
+      "turns": [
+        "book Studio 7 next Thursday 2pm to 5pm for Jem Lim's new ad, VO recording, project ORBIT, engineer Tara Lim"
+      ],
+      "expect": {
+        "repliesNormally": true,
+        "engineer": "Tara Lim"
+      }
+    }
   ]
 }
