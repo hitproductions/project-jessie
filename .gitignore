@@ -4,4 +4,4 @@
 diagnostics/
 .claude/settings.local.json
 docs/outages/logs/
-eval/
+/eval/

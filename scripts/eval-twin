@@ -31,7 +31,8 @@ const respond = expr => ({ type: 'n8n-nodes-base.respondToWebhook', typeVersion:
 const REPLY = "={{ JSON.stringify({ ok: true, reply: $('Guard Probe').first().json.output, claimProbe: $('Guard Probe').first().json.claimProbe, "
   + "modelDraft: $('Jessie AI Agent').first().json.output, steps: $('Jessie AI Agent').first().json.intermediateSteps || [], "
   + "gate: { confirmed: $('Gate Context').first().json.confirmed, dateNotice: $('Gate Context').first().json.dateNotice, epoch: $('Gate Context').first().json.epoch }, "
-  + "bookedFor: ($('Booked For').first().json || {}).bookedFor || '' }) }}";
+  + "bookedFor: ($('Booked For').first().json || {}).bookedFor || '', "
+  + "staff: $('All Bookers').all().map(i => i.json.fields || {}).filter(f => f.Name).map(f => ({ name: f.Name, initials: String(f.Initials || '').trim(), info: f.Info || '' })) }) }}";
 const ERROR = "={{ JSON.stringify({ ok: false, error: $json }) }}";
 
 // name -> replacement (type/typeVersion/parameters). Everything not listed must stay byte-identical.

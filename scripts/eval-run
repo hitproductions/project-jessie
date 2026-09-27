@@ -1,0 +1,177 @@
+#!/usr/bin/env node
+// Plays the hallucination-eval scenarios through the eval twin and scores every reply (2026-09-27).
+//
+//   ./scripts/eval-run                         all scenarios x 5, rebuild the twin from live first
+//   ./scripts/eval-run --repeat 2 --only ENG   a subset, fewer repeats
+//   ./scripts/eval-run --no-build              reuse the twin as stored (still guard-checked)
+//
+// One conversation at a time: Gate Context keeps each user's reset epoch in workflow static data, so two
+// conversations for the same user in parallel would share it. Each conversation starts from a synthetic
+// "reset" (exactly what a requester types), which gives it its own epoch and so its own memory and carried
+// date. The twin is switched on only for the run and always switched off afterwards.
+//
+// Safety: a scenario turn that reads as a yes/confirmation is refused, so the confirmation gate can never
+// pass; and if any reply ever shows a booking, cancellation or move tool succeeding, the run aborts at once.
+// Results (raw + report) go to eval/results/, which is git-ignored.
+const fs = require('fs'), path = require('path'), { execSync } = require('child_process');
+const ROOT = path.resolve(__dirname, '..');
+const EVAL = path.join(ROOT, 'eval');
+const env = Object.fromEntries(fs.readFileSync(path.join(ROOT, '.env'), 'utf8').split('\n')
+  .filter(l => /^\s*[A-Z0-9_]+=/.test(l)).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^['"]|['"]$/g, '')]; }));
+const arg = (k, d) => { const i = process.argv.indexOf(k); return i === -1 ? d : process.argv[i + 1]; };
+const REPEAT = Number(arg('--repeat', 5)), ONLY = arg('--only', ''), BUILD = !process.argv.includes('--no-build');
+const SCEN = JSON.parse(fs.readFileSync(arg('--scenarios', path.join(ROOT, 'docs/eval/scenarios.json')), 'utf8'));
+const TWIN = fs.readFileSync(path.join(EVAL, '.twin-id'), 'utf8').trim();
+const sh = c => execSync(c, { cwd: ROOT, stdio: ['ignore', 'pipe', 'inherit'] }).toString();
+
+const YES = /^\s*(yes|y|yep|yeah|yup|sure|ok|okay|go|go ahead|confirm(ed)?|book it|do it|approve(d)?|proceed)\b[\s.!]*$/i;
+const WRITE_OK = [['book session', /"CREATED"/], ['book series', /"BOOKED_SERIES"/], ['cancel booking', /"CANCELLED"/], ['move booking', /"MOVED"|"PARTIAL"/]];
+const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+const toolName = st => String(((st || {}).action || {}).tool || '').replace(/[_\s]+/g, ' ').toLowerCase();
+
+let lastTs = 0;
+const nextTs = () => { lastTs = Math.max(Date.now() / 1000, lastTs + 1); return lastTs; };
+const fmt = t => t.toFixed(6);
+
+async function post(body) {
+  const meta = JSON.parse(fs.readFileSync(path.join(EVAL, 'twin.meta.json'), 'utf8'));
+  const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 150000);
+  const t0 = Date.now();
+  try {
+    const r = await fetch(env.N8N_BASE_URL + '/webhook/' + meta.webhookPath, { method: 'POST', signal: ctl.signal,
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const text = await r.text(); let json; try { json = JSON.parse(text); } catch (e) { json = { ok: false, error: 'non-JSON reply: ' + text.slice(0, 200) }; }
+    return { json, secs: (Date.now() - t0) / 1000, http: r.status };
+  } catch (e) { return { json: { ok: false, error: String(e) }, secs: (Date.now() - t0) / 1000, http: 0 }; }
+  finally { clearTimeout(timer); }
+}
+
+async function conversation(sc, rep) {
+  const user = sc.user || SCEN.user;
+  const reset = { type: 'message', user, text: 'reset', ts: fmt(nextTs()) };
+  const history = [reset];            // newest first, as Slack returns it
+  let last = null; const turns = [];
+  for (const text of sc.turns) {
+    const ts = fmt(nextTs());
+    const res = await post({ user, text, ts, evalCase: sc.id + '#' + rep, history: history.slice() });
+    turns.push({ text, secs: res.secs, http: res.http, ok: res.json.ok, reply: res.json.reply, error: res.json.error });
+    for (const st of res.json.steps || []) for (const [tool, re] of WRITE_OK)
+      if (toolName(st) === tool && re.test(String(st.observation || ''))) throw new Error('ABORT: ' + tool + ' reported success in ' + sc.id + ' - bookings must be impossible here');
+    history.unshift({ type: 'message', user, text, ts });
+    history.unshift({ type: 'message', bot_id: 'BEVAL', text: String(res.json.reply || ''), ts: fmt(nextTs()) });
+    last = res.json;
+  }
+  return { last, turns };
+}
+
+// ---- scoring --------------------------------------------------------------------------------------------
+const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+function summaryFields(reply) {
+  const r = String(reply || '');
+  const line = k => { const m = r.match(new RegExp('\\*?' + k + ':\\*?[ \\t]*([^\\n]+)', 'i')); return m ? m[1].replace(/\*/g, '').trim() : ''; };
+  const tm = r.match(/^\s*\*?([^*\n]+?\s\/\s[^*\n]+?)\*?\s*$/m);
+  return { isSummary: /Confirm to book\.\s*$/i.test(r), engineer: line('Engineer').replace(/\s*\(.*$/, '').trim(), client: line('Client'),
+    date: line('Date'), bookedBy: line('Booked by'), title: tm ? tm[1].trim() : '' };
+}
+function expectedDate(dateNotice, phrase) {
+  const re = /"([^"]+)"\s*=\s*\w+,\s*(\d{1,2})\s+(\w+)\s+(\d{4})/g; let m;
+  while ((m = re.exec(String(dateNotice || '')))) if (norm(m[1]).includes(norm(phrase)) || norm(phrase).includes(norm(m[1])))
+    return { d: +m[2], mo: MONTHS.indexOf(m[3].toLowerCase()), y: +m[4] };
+  return null;
+}
+function parseSummaryDate(s) {
+  const m = String(s).match(/(\w+)\s+(\d{1,2}),?\s+(\d{4})/); if (!m) return null;
+  return { d: +m[2], mo: MONTHS.indexOf(m[1].toLowerCase()), y: +m[3] };
+}
+function score(sc, res) {
+  const E = sc.expect || {}, R = res.last || {}, reply = String(R.reply || ''), F = summaryFields(reply), out = [];
+  const add = (check, verdict, detail) => out.push({ check, verdict, detail: detail || '' });
+  const staff = R.staff || [];
+  const inStaff = n => staff.some(p => norm(p.name) === norm(n));
+  if (!R.ok) { add('reply', 'fail', 'no reply: ' + String(R.error && (R.error.message || JSON.stringify(R.error)) || '').slice(0, 160)); return out; }
+  if (/^(booked|cancelled|moved)/i.test(String(R.claimProbe || ''))) add('claim', 'fail', 'claimed ' + R.claimProbe);
+  const wantsSummary = !E.mustAsk && !E.a1 && !E.engineerMustNotBe;
+  if (wantsSummary && !F.isSummary) add('summary', 'fail', 'no summary: ' + reply.slice(0, 140).replace(/\n/g, ' '));
+  if (E.engineer) {
+    if (!F.isSummary) add('engineer', 'na');
+    else if (!F.engineer) add('engineer', 'fail', 'summary has no Engineer line');
+    else if (norm(F.engineer) === norm(E.engineer)) add('engineer', 'pass');
+    else add('engineer', 'fail', (inStaff(F.engineer) ? 'wrong person: ' : 'INVENTED (not in Bookers): ') + F.engineer);
+  }
+  if (E.engineerMustNotBe) {
+    const leaked = norm(reply).includes(norm(E.engineerMustNotBe)) && (F.isSummary || /\*?Engineer:\*?/i.test(reply));
+    add('engineerUnknown', leaked ? 'fail' : 'pass', leaked ? 'wrote a non-staff engineer: ' + E.engineerMustNotBe : '');
+  }
+  if (E.initials && F.isSummary) {
+    const seg = F.title.split(' / '); const ini = (seg[seg.length - 1] || '').split(' x ')[0].trim();
+    add('initials', ini === E.initials ? 'pass' : 'fail', ini === E.initials ? '' : 'title "' + F.title + '"');
+  }
+  if (E.project && F.isSummary) add('project', F.title.toUpperCase().includes(E.project.toUpperCase()) ? 'pass' : 'fail', 'title "' + F.title + '"');
+  if (E.client && F.isSummary) {
+    const seg = F.title.split(' / '); const c = F.client || (seg.length === 3 ? seg[1] : '');
+    add('client', E.client.some(x => norm(x) === norm(c)) ? 'pass' : 'fail', 'client "' + c + '"');
+  }
+  if (E.date && F.isSummary) {
+    const want = expectedDate(R.gate && R.gate.dateNotice, E.date), got = parseSummaryDate(F.date);
+    if (!want) add('date', 'na', 'Gate Context did not resolve "' + E.date + '"');
+    else add('date', got && got.d === want.d && got.mo === want.mo && got.y === want.y ? 'pass' : 'fail', 'summary "' + F.date + '" vs ' + JSON.stringify(want));
+  }
+  if ('bookedFor' in E) {
+    add('bookedForDetect', norm(R.bookedFor) === norm(E.bookedFor) ? 'pass' : 'fail', 'detected "' + (R.bookedFor || '') + '"');
+    if (F.isSummary) {
+      const shows = /\(for /i.test(F.bookedBy);
+      if (E.bookedFor) add('bookedForSummary', norm(F.bookedBy).includes('(for ' + norm(E.bookedFor)) ? 'pass' : 'fail', 'Booked by "' + F.bookedBy + '"');
+      else add('bookedForSummary', shows ? 'fail' : 'pass', shows ? 'Booked by "' + F.bookedBy + '"' : '');
+    }
+  }
+  if ('headsUp' in E && F.isSummary) add('headsUp', /Heads up:/.test(reply) === E.headsUp ? 'pass' : 'fail');
+  if (E.mustAsk) add('mustAsk', !F.isSummary && /\?/.test(reply) ? 'pass' : 'fail', F.isSummary ? 'summarised with details never given' : '');
+  if (E.a1) {
+    let ra = null;
+    for (const st of R.steps || []) if (toolName(st) === 'room availability') { try { const o = JSON.parse(st.observation); const x = Array.isArray(o) ? o[0] : o; if (x && x.free_rooms) ra = x; } catch (e) {} }
+    if (!ra) add('a1', 'fail', 'no availability check this turn');
+    else {
+      const missing = ra.free_rooms.filter(n => !new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(reply));
+      add('a1', missing.length ? 'fail' : 'pass', missing.length ? 'left out ' + missing.length + '/' + ra.free_rooms.length + ': ' + missing.join(', ') : '');
+    }
+  }
+  return out;
+}
+
+// ---- main -----------------------------------------------------------------------------------------------
+(async () => {
+  const list = SCEN.scenarios.filter(s => !ONLY || s.id.startsWith(ONLY));
+  for (const s of list) for (const t of s.turns) if (YES.test(t)) { console.error('REFUSED: scenario ' + s.id + ' has a confirmation turn ("' + t + '")'); process.exit(3); }
+  if (BUILD) { process.stdout.write(sh('./scripts/eval-twin build')); sh(`./scripts/n8n-write put ${TWIN} eval/twin.json`); }
+  sh(`./scripts/n8n pull ${TWIN} /tmp/eval-twin-stored.json`);
+  sh(`./scripts/eval-twin guard /tmp/eval-twin-stored.json eval/live-main.json`);
+  console.log('twin stored + guard clean. ' + list.length + ' scenarios x ' + REPEAT + ' = ' + list.length * REPEAT + ' conversations\n');
+  sh(`./scripts/n8n-write activate ${TWIN}`);
+  const results = []; let aborted = '';
+  try {
+    for (const s of list) for (let r = 1; r <= REPEAT; r++) {
+      const res = await conversation(s, r);
+      const checks = score(s, res);
+      results.push({ id: s.id, class: s.class, rep: r, turns: res.turns, checks, reply: res.last && res.last.reply, bookedFor: res.last && res.last.bookedFor });
+      const f = checks.filter(c => c.verdict === 'fail');
+      console.log(`${s.id}#${r}  ${res.turns.map(t => t.secs.toFixed(1) + 's').join(' + ')}  ${f.length ? 'FAIL ' + f.map(c => c.check + (c.detail ? ' (' + c.detail + ')' : '')).join('; ') : 'ok'}`);
+    }
+  } catch (e) { aborted = String(e.message || e); console.error('\n' + aborted); }
+  finally { sh(`./scripts/n8n-write deactivate ${TWIN}`); console.log('\ntwin switched off'); }
+
+  // ---- report
+  const by = {}; const times = [];
+  for (const r of results) { for (const t of r.turns) times.push(t.secs); for (const c of r.checks) { const k = c.check; by[k] = by[k] || { pass: 0, fail: 0, na: 0, fails: [] }; by[k][c.verdict]++; if (c.verdict === 'fail') by[k].fails.push(r.id + '#' + r.rep + ': ' + c.detail); } }
+  times.sort((a, b) => a - b); const q = p => times.length ? times[Math.min(times.length - 1, Math.floor(p * times.length))].toFixed(1) : '-';
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const L = ['# Eval run ' + stamp, '', 'Live main ' + (JSON.parse(fs.readFileSync(path.join(EVAL, 'twin.meta.json'), 'utf8')).liveUpdatedAt || '?') + ' · ' + results.length + ' conversations · turn time median ' + q(.5) + 's, p90 ' + q(.9) + 's' + (aborted ? '\n\n**ABORTED:** ' + aborted : ''), '',
+    '| check | pass | fail | rate of failure |', '|---|---|---|---|'];
+  for (const [k, v] of Object.entries(by)) { const n = v.pass + v.fail; L.push(`| ${k} | ${v.pass} | ${v.fail} | ${n ? Math.round(100 * v.fail / n) + '%' : '-'} |`); }
+  L.push('', '## Failures');
+  for (const [k, v] of Object.entries(by)) if (v.fails.length) { L.push('', '### ' + k); v.fails.forEach(f => L.push('- ' + f)); }
+  fs.mkdirSync(path.join(EVAL, 'results'), { recursive: true });
+  fs.writeFileSync(path.join(EVAL, 'results', 'run-' + stamp + '.json'), JSON.stringify({ stamp, results }, null, 1));
+  fs.writeFileSync(path.join(EVAL, 'results', 'run-' + stamp + '.md'), L.join('\n') + '\n');
+  console.log('\n' + L.join('\n') + '\n\nsaved eval/results/run-' + stamp + '.{md,json}');
+  process.exit(aborted ? 4 : 0);
+})();
