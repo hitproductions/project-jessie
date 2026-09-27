@@ -99,7 +99,14 @@ function guard(twin, live) {
     for (const k of new Set([...Object.keys(lc), ...Object.keys(tc)]))
       if (JSON.stringify(lc[k]) !== JSON.stringify(tc[k])) problems.push('connections differ at: ' + k);
   }
-  if (JSON.stringify(live.settings || {}) !== JSON.stringify(twin.settings || {})) problems.push('settings differ');
+  // Only settings that change how the workflow RUNS are compared. The public API refuses the rest on create
+  // (binaryMode, availableInMCP, timeSavedMode, callerPolicy: storage, admin and analytics flags), so a stored
+  // twin never carries them; that difference is expected and harmless.
+  const RUN = ['executionOrder', 'timezone', 'executionTimeout', 'errorWorkflow'];
+  for (const k of RUN) {
+    const lv = (live.settings || {})[k], tv = (twin.settings || {})[k];
+    if (JSON.stringify(lv) !== JSON.stringify(tv)) problems.push('setting differs: ' + k + ' (live ' + JSON.stringify(lv) + ', twin ' + JSON.stringify(tv) + ')');
+  }
   // No node in the twin may still write to Slack or the consent sheet.
   for (const n of twin.nodes) {
     if (n.type === 'n8n-nodes-base.slackTrigger') problems.push('twin still has a Slack trigger: ' + n.name);
