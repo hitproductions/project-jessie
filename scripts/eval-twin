@@ -1,0 +1,134 @@
+#!/usr/bin/env node
+// Builds the eval twin: a test copy of Jessie's main workflow that takes its input from a webhook instead
+// of Slack, and returns the reply plus every tool call instead of posting to Slack. Built 2026-09-27 for the
+// hallucination eval (PENDING 45 retest, many requests).
+//
+//   ./scripts/eval-twin build [live.json]      pull live main (or use the file) -> eval/twin.json + report
+//   ./scripts/eval-twin guard <twin> <live>    re-check that a twin differs from live only where allowed
+//
+// Fidelity rule: the twin is REGENERATED from live main every time, never hand-edited. Only the Slack- and
+// consent-facing nodes below are swapped, each under its exact original name (so every connection and every
+// $('Node') reference elsewhere still resolves), plus one added input node. The guard refuses a twin where
+// anything else differs from live - prompt, Gate Context, Booked For, Room Table, Guard Probe, the model,
+// the tools, the memory. The tools are the SAME live sub-workflows (Room Availability, Book Session, ...),
+// reading the same Airtable and calendar.
+//
+// Safety: nothing is sent to Slack; consent rows are never read or written; Finalize is never called. A
+// booking cannot be created because the confirmation gate only passes after a Jessie summary AND a "yes" in
+// the supplied history, which eval scenarios never contain (the runner also refuses such scenarios).
+// The webhook path is random per build and the twin is only active while a run is in progress.
+const fs = require('fs'), path = require('path'), crypto = require('crypto'), { execSync } = require('child_process');
+const ROOT = path.resolve(__dirname, '..');
+const OUTDIR = path.join(ROOT, 'eval');
+const MAIN_ID = 'uVVYVB2M7kxpLleI';
+const TWIN_NAME = 'ZZ Jessie Eval Twin (test copy - do not use)';
+
+const code = (name, js) => ({ type: 'n8n-nodes-base.code', typeVersion: 2, parameters: { jsCode: js } });
+const passthrough = js => code(null, js || 'return $input.all();');
+const respond = expr => ({ type: 'n8n-nodes-base.respondToWebhook', typeVersion: 1.1,
+  parameters: { respondWith: 'json', responseBody: expr, options: {} } });
+
+const REPLY = "={{ JSON.stringify({ ok: true, reply: $('Guard Probe').first().json.output, claimProbe: $('Guard Probe').first().json.claimProbe, "
+  + "modelDraft: $('Jessie AI Agent').first().json.output, steps: $('Jessie AI Agent').first().json.intermediateSteps || [], "
+  + "gate: { confirmed: $('Gate Context').first().json.confirmed, dateNotice: $('Gate Context').first().json.dateNotice, epoch: $('Gate Context').first().json.epoch }, "
+  + "bookedFor: ($('Booked For').first().json || {}).bookedFor || '' }) }}";
+const ERROR = "={{ JSON.stringify({ ok: false, error: $json }) }}";
+
+// name -> replacement (type/typeVersion/parameters). Everything not listed must stay byte-identical.
+const SWAP = {
+  'Slack Trigger': code(null, `// EVAL TWIN: stands in for the Slack trigger. Shapes the webhook body like a Slack DM event.
+const b = ($('Eval In').first().json || {}).body || {};
+if (!b.user || !b.ts) throw new Error('eval input needs user and ts');
+return [{ json: { type: 'message', channel_type: 'im', channel: 'DEVAL', user: String(b.user), text: String(b.text || ''),
+  ts: String(b.ts), event_ts: String(b.ts), evalCase: String(b.evalCase || '') } }];`),
+  'Get Recent Messages': code(null, `// EVAL TWIN: stands in for Slack channel history. Newest first, the current message included (as Slack returns it).
+const b = ($('Eval In').first().json || {}).body || {};
+const cur = { type: 'message', user: String(b.user), text: String(b.text || ''), ts: String(b.ts) };
+const hist = Array.isArray(b.history) ? b.history : [];
+return [cur].concat(hist).map(m => ({ json: m }));`),
+  'Ack Reaction': passthrough(),
+  'Clear Ack': passthrough(),
+  'Send Reply': respond(REPLY),
+  'Error message': respond(ERROR),
+  'Notify Requester': passthrough(),
+  'Reply Incumbent': passthrough(),
+  'Read Pending Consent': code(null, '// EVAL TWIN: never read the real consent sheet. An empty row = nothing pending (what the live read returns).\nreturn [{ json: {} }];'),
+  'Mark Rejected': passthrough(),
+  'Call Finalize MBOOTH': passthrough(),
+};
+const ADDED = 'Eval In';
+
+function build(live) {
+  const twin = JSON.parse(JSON.stringify(live));
+  twin.name = TWIN_NAME;
+  delete twin.id; delete twin.activeVersion; delete twin.versionId; delete twin.shared; delete twin.tags;
+  for (const [name, rep] of Object.entries(SWAP)) {
+    const n = twin.nodes.find(x => x.name === name);
+    if (!n) throw new Error('live main has no node named ' + JSON.stringify(name) + ' - update SWAP');
+    const keep = { id: n.id, name: n.name, position: n.position };
+    for (const k of Object.keys(n)) delete n[k];
+    Object.assign(n, keep, JSON.parse(JSON.stringify(rep)));
+    if (name === 'Read Pending Consent') n.alwaysOutputData = true;
+  }
+  const trig = twin.nodes.find(x => x.name === 'Slack Trigger');
+  const webhookPath = 'eval-' + crypto.randomUUID();
+  twin.nodes.push({ id: crypto.randomUUID(), name: ADDED, type: 'n8n-nodes-base.webhook', typeVersion: 2,
+    position: [trig.position[0] - 220, trig.position[1]], webhookId: crypto.randomUUID(),
+    parameters: { httpMethod: 'POST', path: webhookPath, responseMode: 'responseNode', options: {} } });
+  twin.connections[ADDED] = { main: [[{ node: 'Slack Trigger', type: 'main', index: 0 }]] };
+  return { twin, webhookPath };
+}
+
+function guard(twin, live) {
+  const problems = [];
+  const stable = n => JSON.stringify({ type: n.type, typeVersion: n.typeVersion, parameters: n.parameters, credentials: n.credentials,
+    disabled: n.disabled, onError: n.onError, alwaysOutputData: n.alwaysOutputData, executeOnce: n.executeOnce,
+    retryOnFail: n.retryOnFail, maxTries: n.maxTries, waitBetweenTries: n.waitBetweenTries });
+  const L = Object.fromEntries(live.nodes.map(n => [n.name, n])), T = Object.fromEntries(twin.nodes.map(n => [n.name, n]));
+  let identical = 0;
+  for (const name of Object.keys(L)) {
+    if (!T[name]) { problems.push('missing from twin: ' + name); continue; }
+    if (SWAP[name]) continue;
+    if (stable(L[name]) !== stable(T[name])) problems.push('differs from live but is not an allowed swap: ' + name);
+    else identical++;
+  }
+  for (const name of Object.keys(T)) if (!L[name] && name !== ADDED) problems.push('extra node in twin: ' + name);
+  const lc = JSON.parse(JSON.stringify(live.connections)), tc = JSON.parse(JSON.stringify(twin.connections));
+  delete tc[ADDED];
+  if (JSON.stringify(lc, Object.keys(lc).sort()) !== JSON.stringify(tc, Object.keys(tc).sort())) {
+    for (const k of new Set([...Object.keys(lc), ...Object.keys(tc)]))
+      if (JSON.stringify(lc[k]) !== JSON.stringify(tc[k])) problems.push('connections differ at: ' + k);
+  }
+  if (JSON.stringify(live.settings || {}) !== JSON.stringify(twin.settings || {})) problems.push('settings differ');
+  // No node in the twin may still write to Slack or the consent sheet.
+  for (const n of twin.nodes) {
+    if (n.type === 'n8n-nodes-base.slackTrigger') problems.push('twin still has a Slack trigger: ' + n.name);
+    if (n.type === 'n8n-nodes-base.slack' && !(n.parameters && n.parameters.resource === 'user')) problems.push('twin still has a Slack write node: ' + n.name);
+    if (n.type === 'n8n-nodes-base.googleSheets') problems.push('twin still touches Google Sheets: ' + n.name);
+    if (n.type === 'n8n-nodes-base.executeWorkflow' && /Finalize/i.test(n.name)) problems.push('twin can still call Finalize: ' + n.name);
+  }
+  return { problems, identical, swapped: Object.keys(SWAP).length };
+}
+
+const [cmd, a1, a2] = process.argv.slice(2);
+if (cmd === 'build') {
+  fs.mkdirSync(OUTDIR, { recursive: true });
+  let livePath = a1;
+  if (!livePath) { livePath = path.join(OUTDIR, 'live-main.json'); execSync(`"${ROOT}/scripts/n8n" pull ${MAIN_ID} "${livePath}"`, { stdio: ['ignore', 'ignore', 'inherit'] }); }
+  const live = JSON.parse(fs.readFileSync(livePath, 'utf8'));
+  const { twin, webhookPath } = build(live);
+  const g = guard(twin, live);
+  console.log('live main: ' + (live.versionId || '?') + ' updated ' + (live.updatedAt || '?') + ', ' + live.nodes.length + ' nodes');
+  console.log('twin: ' + g.identical + ' nodes identical to live, ' + g.swapped + ' Slack/consent nodes swapped, 1 added (' + ADDED + ')');
+  console.log('swapped: ' + Object.keys(SWAP).join(', '));
+  if (g.problems.length) { console.log('\nGUARD FAILED - twin not written:'); g.problems.forEach(p => console.log('  - ' + p)); process.exit(2); }
+  fs.writeFileSync(path.join(OUTDIR, 'twin.json'), JSON.stringify(twin, null, 2) + '\n');
+  fs.writeFileSync(path.join(OUTDIR, 'twin.meta.json'), JSON.stringify({ webhookPath, builtAt: new Date().toISOString(), liveVersionId: live.versionId || '', liveUpdatedAt: live.updatedAt || '' }, null, 2) + '\n');
+  console.log('\nguard: clean. wrote eval/twin.json (not committed - eval/ is git-ignored)');
+} else if (cmd === 'guard') {
+  const g = guard(JSON.parse(fs.readFileSync(a1, 'utf8')), JSON.parse(fs.readFileSync(a2, 'utf8')));
+  console.log(g.problems.length ? 'GUARD FAILED:\n  - ' + g.problems.join('\n  - ') : 'guard: clean (' + g.identical + ' identical, ' + g.swapped + ' swapped)');
+  process.exit(g.problems.length ? 2 : 0);
+} else {
+  console.log('usage: ./scripts/eval-twin build [live.json] | guard <twin.json> <live.json>'); process.exit(64);
+}
