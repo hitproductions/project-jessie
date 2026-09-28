@@ -362,7 +362,7 @@ its attendees; if the room declined, delete the new event and tell the requester
 matters more once tablets are a booking source (item 42).
 
 **45. Retest the trimmed prompt (main v157) before the SOP starts on 29 Sep. RESOLVED 2026-09-28** — retested by
-Howard's eval twin, 27–28 Sep (900+ real-Gemini conversations; see [`docs/eval/eval-report-2026-09-27.md`](docs/eval/eval-report-2026-09-27.md)); the
+the eval twin, 27–28 Sep (900+ real-Gemini conversations; see [`docs/eval/eval-report-2026-09-27.md`](docs/eval/eval-report-2026-09-27.md)); the
 prompt-trim checklist is scenarios TC-1..10, all passing on v165. The "Dhang" example leak it found is removed. *v157 is LIVE — pushed
 2026-09-26 ~07:05 UTC; first real turn (exec 12158) replied normally. The retest is still owed.*
 **`reapply-main-fixes --check` now reports "v152 on-behalf prompt guidance MISSING" — a false alarm.** The
