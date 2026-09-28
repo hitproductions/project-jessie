@@ -201,12 +201,38 @@ lookups briefly took 2–7 s instead of about 1 s; Gemini's timing was unchanged
   a Clients field that was deleted; QA-M3 and QA-M1 expectations predate the arranger question and the room ranking.
 - **Data (PENDING 53):** duplicate and mistyped names in Clients, and nicknames missing from Bookers `Info`.
 
-## Next steps
+## Next steps (29 Sep)
 
-1. The weekly New Clients reminder to Tel.
-2. Prepared summaries for recurring series and moves (after launch).
-3. Re-run this eval after any change to the prompt or a guard. The full set takes about 35 minutes unattended:
-   `./scripts/eval-run` (or `--main <file>` for a candidate).
+**Before the next eval**
+1. **Make the test copy fully dry.** Its booking tools go prepare-only, so it can never create anything. A single M
+   booth books without a yes by design; no scenario asks for one, but if the model booked one by itself during a
+   run, a real event could be made before the run aborts. No loss of coverage, since the eval never tests the yes path.
+2. **One generic guard against leaked tool instructions.** A reply to a user should never say "the requester", so it
+   is rewritten to "you" and the "Nothing was prepared –" prefix dropped. It catches leaks not seen yet, where today's
+   guards only strip the phrases already seen.
+3. **Keep test bookings off the eval's slots** (Studio 7 and 8 on the "next Friday / Thursday / Monday" dates in
+   2027; November 2027 is safe). A real booking there makes scenarios fail on "room taken", as happened on 28 Sep.
+
+**The full eval, on live:** `./scripts/eval-run --repeat 3`, about 50 minutes, off-peak. The known scorer mismatches
+are listed under *Still open*.
+
+**Manual live tests.** The eval stops at the summary, so anything that needs a real yes or a real Slack DM is tested
+by hand, on November 2027 dates, cancelling each after:
+- [x] Book a session with a yes, including a new client (28 Sep)
+- [x] Cancel your own booking (28 Sep)
+- [ ] Move a booking with a yes, including to a room that is taken
+- [ ] A recurring series with a yes
+- [ ] An M booth booking, including one with a standing hold (the consent DM goes to the dev inbox during QA)
+- [ ] A priority request needing the incumbent's consent (never run live)
+- [ ] Memory: "actually cancel that" right after a booking; then "reset"
+- [ ] A clash at the yes: the room booked by someone else between the summary and the yes
+- [ ] Slack basics: the reaction appears and clears; replies within about 20 s
+
+**Later**
+- The weekly New Clients reminder to Tel.
+- Prepared summaries for recurring series and moves (after launch).
+- Re-run this eval after any change to the prompt or a guard: `./scripts/eval-run` (or `--main <file>` for a
+  candidate, before importing it).
 
 ## Appendix: running it again
 
