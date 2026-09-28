@@ -194,8 +194,22 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['usual length','an unusual length, said BEFORE the yes'],
     ['v162','v162 \\(Howard, 2026-09-28\\)'],
     ['v164','v164 \\(QA E1\\)'],
+    ['v167','v167 \\(eval 2026-09-28\\)'],
   ];
   const t2=[
+    // v167 (eval 2026-09-28): the free list is completed; leaked refusal instructions are removed
+    ['v167','adds the free rooms a list left out (the M booths, A1-2)','Free studios next Thursday: Studio 1, Studio 2, Studio 4, Studio 7, Studio C',{steps:[{action:{tool:'Room_Availability'},observation:"[{\"status\":\"OK\",\"asked\":null,\"scope\":\"studios\",\"free_rooms\":[\"M2\",\"M3\",\"Studio 1\",\"Studio 2\",\"Studio 4\",\"Studio 7\",\"Studio C\"]}]"}]},
+      x=>/\nAlso free: M2, M3\.$/.test(x.output)],
+    ['v167','a complete list is left alone','Free: M2, M3, Studio 1, Studio 2, Studio 4, Studio 7, Studio C',{steps:[{action:{tool:'Room_Availability'},observation:"[{\"status\":\"OK\",\"asked\":null,\"scope\":\"studios\",\"free_rooms\":[\"M2\",\"M3\",\"Studio 1\",\"Studio 2\",\"Studio 4\",\"Studio 7\",\"Studio C\"]}]"}]},
+      x=>!/Also free/.test(x.output)],
+    ['v167','"Studio C, 4 and 7" counts as naming them','Free studios: Studio 1, 2, Studio C, 4 and 7, M2 and M3.',{steps:[{action:{tool:'Room_Availability'},observation:"[{\"status\":\"OK\",\"asked\":null,\"scope\":\"studios\",\"free_rooms\":[\"M2\",\"M3\",\"Studio 1\",\"Studio 2\",\"Studio 4\",\"Studio 7\",\"Studio C\"]}]"}]},
+      x=>!/Also free/.test(x.output)],
+    ['v167','a reply about one room is not padded','Studio 7 is free then. Want me to hold it?',{steps:[{action:{tool:'Room_Availability'},observation:"[{\"status\":\"OK\",\"asked\":null,\"scope\":\"studios\",\"free_rooms\":[\"M2\",\"M3\",\"Studio 1\",\"Studio 2\",\"Studio 4\",\"Studio 7\",\"Studio C\"]}]"}]},
+      x=>!/Also free/.test(x.output)],
+    ['v167','no availability step, nothing added','Free studios: Studio 1, Studio 2, Studio 4',{steps:[]},
+      x=>!/Also free/.test(x.output)],
+    ['v167','the refusal instructions never reach the requester','Nothing was booked. "Daryl Aquino" is not on the Hit Productions staff list, so they cannot be the engineer. Did the requester mean Daryl Reyes? Confirm the engineer with the requester, then present the summary again using the exact name from the staff list. Never add a surname they did not give.',{},
+      x=>/Did you mean Daryl Reyes\?/.test(x.output)&&!/Confirm the engineer|Never add|requester mean/.test(x.output)],
     // a date with no year — both older patterns need one
     ['undated weekday','fixes an undated weekday','Studio 7 is taken next Wednesday, September 9.',ctx2027,
       x=>/next Thursday, September 9/.test(x.output)],
@@ -589,6 +603,30 @@ suite('Check Conflicts — engineer must be on the staff list', ()=>{
   check('st','ambiguous initials are refused, both people suggested',x.r&&x.r.reason==='ENGINEER_UNKNOWN'&&/Letty Sarmiento/.test(x.r.human)&&/Lyn Sajonas/.test(x.r.human));
   x=run({engineer:'Juan Dela Cruz',description:'Engineer: Juan Dela Cruz'+D,summary:'X / Acme / JDC'});
   check('st','a stranger is refused with no suggestion',x.r&&x.r.reason==='ENGINEER_UNKNOWN'&&!/Did the requester mean/.test(x.r.human));
+  if(body.indexOf('_fromSaid')>=0){
+    // v55 (eval 2026-09-28): resolve from what the requester typed when the model added words they never typed
+    x=run({engineer:'Andrian "Drey" Sison (Post Engineer)',description:'Engineer: Andrian "Drey" Sison (Post Engineer)'+D,summary:'ORBIT / Jem Lim / AS',requester_text:'Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Drey'});
+    check('v55','an invented full name around a typed nickname resolves to the real person',!x.r&&x.REQ.engineer==='Daryl Reyes (Post Engineer)'&&x.REQ.summary==='ORBIT / Jem Lim / DR',JSON.stringify(x.r||x.REQ.engineer+' '+x.REQ.summary));
+    x=run({engineer:'Daryl Aquino',description:'Engineer: Daryl Aquino (Music Engineer)'+D,summary:'SUSHI / Pael / DA',requester_text:'Book Studio F for Japs next Thursday, client Pael, engineer Daryl, no arranger'});
+    check('v55','an invented surname on a typed first name is dropped',!x.r&&/^Daryl Reyes/.test(x.REQ.engineer)&&x.REQ.summary==='SUSHI / Pael / DR',JSON.stringify(x.r||x.REQ.engineer));
+    x=run({engineer:'Daryll',description:'Engineer: Daryll'+D,summary:'ORBIT / Jem Lim / D',requester_text:'project ORBIT, client Jem Lim, engineer Daryl'});
+    check('v55','a letter the model added to a typed name is ignored',!x.r&&x.REQ.engineer==='Daryl Reyes',JSON.stringify(x.r||x.REQ.engineer));
+    x=run({engineer:'Daryl Aquino',description:'Engineer: Daryl Aquino'+D,summary:'X / Acme / DA',requester_text:'engineer Daryl Aquino'});
+    check('v55','a name the requester typed in full is still refused',x.r&&x.r.reason==='ENGINEER_UNKNOWN');
+    x=run({engineer:'Andrian Sison',description:'Engineer: Andrian Sison'+D,summary:'X / Acme / AS',requester_text:'Book Studio F for Tara, engineer Andrian'});
+    check('v55','someone else named in the message is never borrowed',x.r&&x.r.reason==='ENGINEER_UNKNOWN');
+    x=run({engineer:'Daryl Aquino',description:'Engineer: Daryl Aquino'+D,summary:'X / Acme / DA'});
+    x=run({engineer:'Drey',department:'Audio Post',description:'Engineer: Drey'+D,summary:'ORBIT / Jem Lim / Drey'});
+    check('v55','no role given: the one for the department comes from Bookers',!x.r&&x.REQ.engineer==='Daryl Reyes (Post Engineer)'&&/Engineer: Daryl Reyes \(Post Engineer\)/.test(x.REQ.description)&&x.REQ.summary==='ORBIT / Jem Lim / DR',x.REQ.engineer+' | '+x.REQ.summary);
+    x=run({engineer:'Daryl',department:'Localization',description:'Engineer: Daryl'+D,summary:'NET-KUBA / D',session_type:'Localization Dubbing'});
+    check('v55','"Secondary Loc Engineer" is written as Loc Engineer',!x.r&&x.REQ.engineer==='Daryl Reyes (Loc Engineer)',x.REQ.engineer);
+    x=run({engineer:'Tara Lim (Post Engineer)',department:'Music',description:'Engineer: Tara Lim (Post Engineer)'+D,summary:'X / Acme / TL'});
+    check('v55','a role that was given is kept',!x.r&&x.REQ.engineer==='Tara Lim (Post Engineer)');
+    x=run({engineer:'Tara',department:'Music',description:'Engineer: Tara'+D,summary:'X / Acme / T'});
+    check('v55','no matching role in Info: the name alone, nothing invented',!x.r&&x.REQ.engineer==='Tara Lim',x.REQ.engineer);
+    x=run({engineer:'Daryl Aquino',description:'Engineer: Daryl Aquino'+D,summary:'X / Acme / DA'});
+    check('v55','the refusal carries no instructions for the model',x.r&&/Did you mean Daryl Reyes\?/.test(x.r.human)&&!/Confirm the|Never add|present the summary/.test(x.r.human),x.r&&x.r.human);
+  }
   x=run({engineer:'Dennis',description:'Engineer: Dennis'+D,summary:'X / Acme / D'});
   check('st','an Info with no "Goes by" still yields aliases',!x.r&&x.REQ.engineer==='Dennis Cham');
   x=run({engineer:'Daryl',session_type:'VO Recording',description:'Engineer: Daryl'+D,summary:'ORANGE / D'});
@@ -710,6 +748,14 @@ suite('Check Conflicts — department, booking type, Localization title (v52)', 
     check('d53','exact duplicates (two identical records) are one client',!run3(Object.assign({},P,{client:'Ino Magno'}),[{id:'x',fields:{Name:'Ino Magno','Client Type':['External']}},{id:'y',fields:{Name:'Ino Magno','Client Type':['External']}}]).reason);
     check('d53','a new client with no type said: ask External or Personal once',run3(Object.assign({},P,{client:'Brightline Media'}),[],ALL).reason==='NEED_BOOKING_TYPE');
     check('d53','no client and no type said: ask too',run3(Object.assign({},P,{client:''}),[],ALL).reason==='NEED_BOOKING_TYPE');
+    if(whole.indexOf('askClient')>=0){
+      r=run3(Object.assign({},P,{client:'',summary:'ORANGE / TL'}),[],ALL);
+      check('v55','no client and no type: both asked in one message (eval NC-2)',r.askClient===true&&/who the client is/.test(r.human)&&/External/.test(r.human),r.human);
+      r=run3(Object.assign({},P,{client:'',summary:'ORANGE / TL',requester_text:'no client'}),[],ALL);
+      check('v55','"no client" said: only the booking type is asked',r.reason==='NEED_BOOKING_TYPE'&&r.askClient===false);
+      r=run3(Object.assign({},P,{client:'Brightline Media'}),[],ALL);
+      check('v55','a client given: only the booking type is asked',r.askClient===false);
+    }
     check('d53','"my own project" means Personal',run3(Object.assign({},P,{client:'',requester_text:'this is my own project'}),[],ALL).REQ.bookingType==='Personal');
     check('d53','a type they gave is kept',run3(Object.assign({},P,{client:'Brightline Media',bookingType:'External'}),[],ALL).REQ.bookingType==='External');
     check('d53','both types on the record: ask',run3(Object.assign({},P,{client:'Sharon Ambas'}),[{id:'s',fields:{Name:'Sharon Ambas','Client Type':['External','Personal']}}]).reason==='NEED_BOOKING_TYPE');
