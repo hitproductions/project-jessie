@@ -141,6 +141,9 @@ Anything learned goes into a file, or the next session rediscovers it the hard w
 - a new failure mode, or anything that cost real time → a numbered gotcha below
 - blocked on Airtable, Slack, Google or the server → `PENDING.md`
 - a build that was imported and confirmed → say so in the commit message
+- every new build → a row in [`VERSIONS.md`](VERSIONS.md): what it fixes and **which version had the problem**.
+  Numbers only go up; a fix to v166 is v167 labelled "fixes v166: …", never a renamed file (scripts sort by the
+  number, and `verify-ids` / `backup-live` key on the n8n workflow names, which do not change)
 
 Then commit and push. One shared n8n instance means the folder is the only place
 knowledge accumulates.
@@ -634,7 +637,7 @@ the task runner), for whoever has shell access to the box.
 
 ## The record
 
-This file, `PENDING.md`, and the seven current workflow files are the whole working
+This file, `PENDING.md`, `VERSIONS.md` (which build fixed what) and the current workflow files are the whole working
 tree. Every superseded build, every old handoff, and the reasoning behind each fix
 live in git history — `git log` is the record of why things are the way they are,
 and the commit messages are long on purpose. `workflows/live/` is the nightly
