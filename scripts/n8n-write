@@ -4,6 +4,10 @@
 #   ./scripts/n8n-write put <id> <file>      import a workflow JSON
 #   ./scripts/n8n-write create <file>        create a new workflow, prints its id
 #   ./scripts/n8n-write activate <id>        activate a workflow
+#   ./scripts/n8n-write activate <id> "<version name>" ["<description>"]
+#                                            publish, naming the version in n8n's history, e.g.
+#                                            "v168 - v167 fixed" (VERSIONS.md). The workflow's own name
+#                                            never changes, so verify-ids and backup-live are unaffected.
 #   ./scripts/n8n-write deactivate <id>      deactivate a workflow
 #   ./scripts/n8n-write delete <id>          delete a workflow (irreversible)
 #
@@ -68,8 +72,14 @@ PY
       -o /dev/null -w "PUT %{http_code}\n"
     ;;
   activate|deactivate)
-    curl -sS -X POST -H "X-N8N-API-KEY: $N8N_API_KEY" \
-      "$N8N_BASE_URL/api/v1/workflows/$id/$cmd" -o /dev/null -w "$cmd %{http_code}\n"
+    if [ "$cmd" = activate ] && [ -n "${3:-}" ]; then
+      vbody="$(python3 -c 'import json,sys; d={"name":sys.argv[1]}; sys.argv[2:] and sys.argv[2] and d.update(description=sys.argv[2]); print(json.dumps(d))' "$3" "${4:-}")"
+      curl -sS -X POST -H "X-N8N-API-KEY: $N8N_API_KEY" -H "Content-Type: application/json" --data "$vbody" \
+        "$N8N_BASE_URL/api/v1/workflows/$id/activate" -o /dev/null -w "activate %{http_code} (version named: $3)\n"
+    else
+      curl -sS -X POST -H "X-N8N-API-KEY: $N8N_API_KEY" \
+        "$N8N_BASE_URL/api/v1/workflows/$id/$cmd" -o /dev/null -w "$cmd %{http_code}\n"
+    fi
     ;;
   delete)
     # Destructive and irreversible. Use only on your own throwaway workflows.

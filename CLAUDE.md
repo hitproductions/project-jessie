@@ -144,6 +144,9 @@ Anything learned goes into a file, or the next session rediscovers it the hard w
 - every new build → a row in [`VERSIONS.md`](VERSIONS.md): what it fixes and **which version had the problem**.
   Numbers only go up; a fix to v166 is v167 labelled "fixes v166: …", never a renamed file (scripts sort by the
   number, and `verify-ids` / `backup-live` key on the n8n workflow names, which do not change)
+- every import → publish it with a **version name** in n8n: `./scripts/n8n-write activate <id> "v169 - v168 fixed"
+  "<one line>"` (the "fixed" label goes in the version name, not only the description). This also does the
+  Active toggle that reloads tool inputs
 
 Then commit and push. One shared n8n instance means the folder is the only place
 knowledge accumulates.

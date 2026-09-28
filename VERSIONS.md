@@ -8,6 +8,10 @@ in `workflows/` and the titles of the commits that imported them. n8n itself kee
   to when it appeared and when it was fixed. Detail (tests, eval numbers) stays in the commit messages.
 - **Live** is the time (UTC) it was imported and confirmed; *candidate* means built and tested, not imported.
 - Numbers only go up. A fix to a build is the next number, labelled with what it fixes; never a renamed file.
+- **In n8n, the version itself carries the label.** Each import is published with a version name, e.g.
+  **"v168 - v167 fixed"** (`./scripts/n8n-write activate <id> "v168 - v167 fixed" "<one-line description>"`), so
+  n8n's own version history shows which build fixed which. The workflow name ("Project Jessie v2") never changes:
+  `verify-ids` and `backup-live` key on it. Labelled from v168 on; earlier versions keep n8n's unnamed entries.
 
 Started 2026-09-28. Earlier builds are in `git log`.
 
@@ -15,7 +19,7 @@ Started 2026-09-28. Earlier builds are in `git log`.
 
 | Version | Live | Fixes (found in) | Adds |
 |---|---|---|---|
-| v168 | *candidate* | After a "no", the refused summary re-sent unchanged instead of asking what to change (v167, live test) | — |
+| v168 | 2026-09-28 10:25 | After a "no", the refused summary re-sent unchanged instead of asking what to change (v167, live test) | — |
 | v167 | 2026-09-28 09:52 | Invented engineer names (v166 and earlier: the prompt asked for a full name, role and initials); garbled project / client copies; "which studios" leaving out the M booths (v165); a refusal's instructions pasted into the reply (v165); "10am-12nn" booked as 10–11 (v166); "no client, it's client work" read as a client called "work" (v167 draft) | Engineer, arranger, project, client and times read from the requester's own words |
 | v166 | 2026-09-28 08:28 | Claimed "I've asked the holder" with nothing behind it (PENDING 26) | **Prepare Booking on for everyone** (built across v163–v165); the in-house arranger notice |
 | v165 | *candidate → v166* | The Booked For notice quoting three words (PENDING 41) | Client check and booking type in the prepared summary; the holding-room note (PENDING 30) |
