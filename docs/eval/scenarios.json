@@ -627,6 +627,79 @@
         "repliesNormally": true,
         "engineer": "Tara Lim"
       }
+    },
+    {
+      "id": "NC-1",
+      "class": "noClient",
+      "note": "v161: no client, said up front - books with PROJECT / initials",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORANGE, engineer Tara Lim, no client"
+      ],
+      "expect": {
+        "noClient": true,
+        "engineer": "Tara Lim",
+        "project": "ORANGE"
+      }
+    },
+    {
+      "id": "NC-2",
+      "class": "noClient",
+      "note": "v161: client not mentioned - Jessie must still ask for it",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORANGE, engineer Tara Lim"
+      ],
+      "expect": {
+        "mustAsk": true,
+        "mentions": [
+          "client"
+        ]
+      }
+    },
+    {
+      "id": "NC-3",
+      "class": "noClient",
+      "note": "v161: asked for a client, answers there is none",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORANGE, engineer Tara Lim",
+        "there is no client for this one"
+      ],
+      "expect": {
+        "noClient": true,
+        "engineer": "Tara Lim",
+        "project": "ORANGE"
+      }
+    },
+    {
+      "id": "NC-4",
+      "class": "newClient",
+      "note": "v161: advertising client not in Airtable - proceeds, notes it is new",
+      "turns": [
+        "Book Studio 8 next Friday 3pm to 5pm, VO recording, project ATLAS, client Brightline Media, engineer Tara Lim"
+      ],
+      "expect": {
+        "client": [
+          "Brightline Media"
+        ],
+        "project": "ATLAS",
+        "engineer": "Tara Lim",
+        "mentions": [
+          "(new|not (yet )?in|isn.t in|flag|review)"
+        ]
+      }
+    },
+    {
+      "id": "NC-5",
+      "class": "newClient",
+      "note": "v161: localization client not in Airtable - proceeds",
+      "turns": [
+        "Book a Localization Dubbing session next Wednesday from 2pm to 4pm for project KUBA, engineer Jek, client Nimbus Streaming"
+      ],
+      "expect": {
+        "engineer": "Jek Panganiban",
+        "mentions": [
+          "(new|not (yet )?in|isn.t in|flag|review)"
+        ]
+      }
     }
   ]
 }

@@ -4,6 +4,8 @@
 //   ./scripts/eval-run                         all scenarios x 5, rebuild the twin from live first
 //   ./scripts/eval-run --repeat 2 --only ENG   a subset, fewer repeats
 //   ./scripts/eval-run --no-build              reuse the twin as stored (still guard-checked)
+//   ./scripts/eval-run --main workflows/x.json build the twin from a CANDIDATE main instead of live, to test a
+//                                              prompt before importing it. Sub-workflows are still the live ones.
 //
 // One conversation at a time: Gate Context keeps each user's reset epoch in workflow static data, so two
 // conversations for the same user in parallel would share it. Each conversation starts from a synthetic
@@ -20,6 +22,7 @@ const env = Object.fromEntries(fs.readFileSync(path.join(ROOT, '.env'), 'utf8').
   .filter(l => /^\s*[A-Z0-9_]+=/.test(l)).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^['"]|['"]$/g, '')]; }));
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i === -1 ? d : process.argv[i + 1]; };
 const REPEAT = Number(arg('--repeat', 5)), ONLY = arg('--only', ''), BUILD = !process.argv.includes('--no-build');
+const MAIN_FILE = arg('--main', '');   // a candidate main to build from; guarded against that file, not live
 const SCEN = JSON.parse(fs.readFileSync(arg('--scenarios', path.join(ROOT, 'docs/eval/scenarios.json')), 'utf8'));
 const TWIN = fs.readFileSync(path.join(EVAL, '.twin-id'), 'utf8').trim();
 const sh = c => execSync(c, { cwd: ROOT, stdio: ['ignore', 'pipe', 'inherit'] }).toString();
@@ -132,6 +135,15 @@ function score(sc, res) {
       else add('bookedForSummary', shows ? 'fail' : 'pass', shows ? 'Booked by "' + F.bookedBy + '"' : '');
     }
   }
+  // v161: clients are optional. With none, the summary says "Client: None" and the title drops the segment.
+  if (E.noClient) {
+    if (!F.isSummary) add('noClient', 'fail', 'no summary: ' + reply.slice(0, 120).replace(/\n/g, ' '));
+    else { const segs = F.title ? F.title.split(' / ').length : 0; const cl = norm(F.client);
+      const ok = (!F.title || segs === 2) && (!cl || cl === 'none' || cl === 'n/a' || cl === '-');
+      add('noClient', ok ? 'pass' : 'fail', 'title "' + F.title + '", client "' + F.client + '"'); }
+  }
+  // v161: client preferences are gone. Nothing may mention a preferred or usual room, or the old prompt example.
+  { const leak = reply.match(/preferred room|usual room|\bDhang\b/i); add('noPreference', leak ? 'fail' : 'pass', leak ? '"' + leak[0] + '": ' + reply.slice(0, 120).replace(/\n/g, ' ') : ''); }
   if ('headsUp' in E && F.isSummary) add('headsUp', /Heads up:/.test(reply) === E.headsUp ? 'pass' : 'fail');
   if (E.mustAsk) add('mustAsk', !F.isSummary && /\?/.test(reply) ? 'pass' : 'fail', F.isSummary ? 'summarised with details never given' : '');
   if (E.a1) {
@@ -228,11 +240,14 @@ function score(sc, res) {
 
 // ---- main -----------------------------------------------------------------------------------------------
 (async () => {
-  const list = SCEN.scenarios.filter(s => !ONLY || s.id.startsWith(ONLY));
+  const list = SCEN.scenarios.filter(s => !ONLY || ONLY.split(',').some(p => s.id.startsWith(p.trim())));
   for (const s of list) for (const t of s.turns) if (YES.test(t)) { console.error('REFUSED: scenario ' + s.id + ' has a confirmation turn ("' + t + '")'); process.exit(3); }
-  if (BUILD) { process.stdout.write(sh('./scripts/eval-twin build')); sh(`./scripts/n8n-write put ${TWIN} eval/twin.json`); }
+  if (MAIN_FILE && !BUILD) { console.error('--main needs a build; drop --no-build'); process.exit(64); }
+  const SRC = MAIN_FILE ? path.resolve(MAIN_FILE) : path.join(EVAL, 'live-main.json');
+  if (BUILD) { process.stdout.write(sh(MAIN_FILE ? `./scripts/eval-twin build "${SRC}"` : './scripts/eval-twin build')); sh(`./scripts/n8n-write put ${TWIN} eval/twin.json`); }
+  if (MAIN_FILE) console.log('CANDIDATE main: ' + MAIN_FILE + ' (sub-workflows are live)');
   sh(`./scripts/n8n pull ${TWIN} /tmp/eval-twin-stored.json`);
-  sh(`./scripts/eval-twin guard /tmp/eval-twin-stored.json eval/live-main.json`);
+  sh(`./scripts/eval-twin guard /tmp/eval-twin-stored.json "${SRC}"`);
   console.log('twin stored + guard clean. ' + list.length + ' scenarios x ' + REPEAT + ' = ' + list.length * REPEAT + ' conversations\n');
   sh(`./scripts/n8n-write activate ${TWIN}`);
   const results = []; let aborted = '';

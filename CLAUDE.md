@@ -232,6 +232,8 @@ only script that writes to n8n.
 | `./scripts/test-consent` · `<file>` · `--live` | the consent engine's `Build Request`: M-booth deadline tiers, the PREEMPT window, and recipient routing (test-nodes does not load the consent workflows) |
 | `./scripts/test-mirror` · `<file>` | the Envoy Mirror's `Plan Changes` offline: create/update/delete, and that a failed room or KDC read never deletes or duplicates (not yet imported, PENDING 42) |
 | `./scripts/fix-studio-e <file>...` · `--check` | swaps Studio E's dead resource id for the live one in freshly pulled files, nodes only (PENDING 43) |
+| `./scripts/eval-run` · `--only A,B` · `--repeat n` · `--main <file>` | the hallucination eval: plays `docs/eval/scenarios.json` through the **eval twin** (a guarded test copy of main, real Gemini + live sub-workflows, no Slack, never a yes) and scores every reply against tool output and Airtable. `--main` tests a candidate prompt before import. Raw results in git-ignored `eval/`. Report: `docs/eval/eval-report-2026-09-27.md` |
+| `./scripts/eval-twin build [file]` · `guard <twin> <src>` | builds / re-checks the eval twin (`KRZmVfKIwCiLREjz`, inactive except during a run) |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
 | `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
 | `./scripts/verify-ids` | all twelve Jessie workflow ids (incl. the three consent workflows) resolve to **active** workflows with the right names, and the Jessie bot id still points at the live app |
@@ -287,11 +289,13 @@ MISSING_DETAILS · MISSING_CLIENT · ENGINEER_UNKNOWN · ENGINEER_UNVERIFIED · 
 ROOM_UNSUITABLE · ROOM_NOT_PRIORITY · NO_ROOM · UNKNOWN_ROOM · ROOM_OCCUPIED · UNVERIFIABLE
 ```
 
-`TITLE_INITIALS` enforces the title convention: a three-segment studio title
-(`PROJECT / Client / initials`) must end in initials (`DR` or `DR x PL`), never a name or
-nickname — the model put "Drey" (Daryl Reyes = DR) there and nothing corrected it. Gated on a
-three-segment title alone (internal rooms use 1–2 segments), because the model sometimes omits
-the session type. It is now mostly a backstop: the staff resolver below rewrites the initials first.
+`TITLE_INITIALS` enforces the title convention: a studio title (`PROJECT / Client / initials`, or
+`PROJECT / initials` when there is no client — clients are optional since main v161 / Book v49,
+2026-09-28) must end in initials (`DR` or `DR x PL`), never a name or nickname — the model put "Drey"
+(Daryl Reyes = DR) there and nothing corrected it. It checks any three-segment title, and a two-segment
+one when a session type was given (no-client studio titles and Localization's `Project Code / initials`);
+internal rooms use " - " and carry no session type. It is now mostly a backstop: the staff resolver below
+rewrites the initials first, on both title shapes.
 
 `ENGINEER_UNKNOWN` / `ENGINEER_UNVERIFIED`: every engineer and arranger the model supplies is
 resolved against the **Bookers** table (read by the `All Bookers` node at the top of Book Session,
@@ -303,10 +307,20 @@ engineer not on the staff list is never written. QA 2026-09-25: asked for "Daryl
 engineer was given, it refuses (`ENGINEER_UNVERIFIED`) rather than guessing.
 
 `MISSING_CLIENT` guards on-behalf bookings: when a booking is *booked for* a colleague
-(`Booked by: X (for Y)`) and is External, a real client distinct from Y is required — the
-person it is booked for is never the client and never the title's Client segment. Prompt-only
-rules did not hold (the model laundered the booked-for name into the client/title), so this is
-enforced in `Check Conflicts`. See the `booked_for` tool input and `(for …)` in `Guard Probe`/summary.
+(`Booked by: X (for Y)`) and is External, Y is never the client and never the title's Client segment.
+Prompt-only rules did not hold (the model laundered the booked-for name into the client/title), so this is
+enforced in `Check Conflicts`. Since Book v49 a booking with **no client at all** passes (title
+`PROJECT / initials`); only Y standing in as the client is refused. See the `booked_for` tool input and
+`(for …)` in `Guard Probe`/summary.
+
+**Clients are optional, and new clients are welcome** (main v161 / Book v49, decided 2026-09-28). Jessie
+still always asks for a client, but a booking can go ahead without one, and a client who is not in the
+Clients table is booked as typed — for every department, Advertising and Localization included. Book Session
+then writes the client to the **`New Clients` tab of the Jessie Log spreadsheet** (`New Client?` → `New
+Client Row` → `Log New Client`, one row per client, `appendOrUpdate` on `Client`, Status `For Review`) for Tel
+to add to Airtable: only Tel can write Airtable, and the service account behind `Log to Sheet` already
+writes that spreadsheet. A lookup that errored, and a Localization Project Code in the client slot, are not
+logged. The sheet write can never fail a booking (`continueRegularOutput`).
 
 **Who a booking is *for* is decided deterministically** (main v154). The `Booked For` node (between
 `All Bookers` and `Room Table`) scans the requester's messages for the current booking, newest first,
@@ -382,7 +396,10 @@ Known contradictions in Rooms & Studios, and which field Jessie trusts:
   including two whose own Equipment says "stereo only".
 - **`Vocal Booth` is the flag, not the `Recording Booth` room type.**
 - **`Room Requirements` is a capability string**, not a room list. The ranking is the list.
-- `Clients.Preferred Rooms` returns record ids and is not sent to the agent. See PENDING.
+- **Client room preferences are not used** (dropped 2026-09-28, Tara/Howard). Rooms come from the session-type
+  ranking only. The Clients table's `Preferred Rooms` / `Preferred Room Name` / `Preferred Room Names` fields
+  (the last is a *link*, so it returned record ids) are being removed by Tel; nothing in the workflows reads
+  them, and the Clients tool returns whatever fields exist, so removing them cannot break a lookup.
 
 ## Before launch
 
@@ -511,6 +528,14 @@ the task runner), for whoever has shell access to the box.
     anything but zero or five paths. In zsh, pass the paths literally: an unquoted `$VAR` holding
     several paths is ONE argument (zsh does not word-split).
 
+18. **A calendar query that errors reads as "every room free".** Found by the eval on 2026-09-27: the
+    model pads a timestamp (`…+08:00hq`), Room Availability sends it raw to Google, Google answers 400, the
+    HTTP node carries on (`continueRegularOutput`), and the code reads "no events" as "all free". 79 of 199
+    checks in the eval, 4 of 27 live. `isoOnly()` (gotcha 16) cleaned the value *after* the query. Book
+    Session's conflict query has the same shape (a padded start falls back to now + 24 h). Any node that
+    queries with a model-supplied value must clean it *before* the query and fail closed on an error —
+    PENDING 51.
+
 ## Not done
 
 - Titles are composed by the model; a wrong project title becomes a wrong calendar title.
@@ -521,10 +546,6 @@ the task runner), for whoever has shell access to the box.
   Closing it properly means remembering availability across turns in static data.
 - She sometimes asks for a date already given, and has invented a justification for a room
   choice. Both are free-text failures with nothing binding them to a source.
-- **Preferred-room proposal is wired but not reliable.** The Clients tool returns `Preferred Room
-  Names` and the prompt directs Jessie to lead with the client's preferred room, but she often still
-  proposes from the generic ranking (a prompt-level behavior). Decision 2026-09-21: leave best-effort;
-  make it deterministic later. The data unlock is done; the guards keep bookings correct regardless.
 - **The model corrupts strings it is copying.** Three times in ~60 turns on 2026-08-30:
   "Tara Lim" → "Tara Inf", and "REASON1" → "REazon1" twice. The summary line and the title
   resolution are now defended, but nothing stops it happening somewhere new.

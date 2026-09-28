@@ -7,7 +7,7 @@ known behaviour gaps, and pre-launch work. Each item says how it was found and w
 **Item numbers are permanent**; other docs cite "PENDING 15". New items get the next number, and resolved
 ones move to the bottom instead of being renumbered.
 
-**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-25 (Envoy 42/43 urgent; 44 added the same evening).
+**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-28 (50 clients optional / new-clients sheet; 51 padded timestamps).
 
 ---
 
@@ -28,7 +28,9 @@ ones move to the bottom instead of being renumbered.
 
 | # | What | Blocked on / owner |
 |---|---|---|
-| 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest) |
+| 51 | **Padded timestamp reads as "every room free"** (eval 27 Sep): Room Availability 40% of checks; Book Session's conflict query has the same gap | Build (small); go-ahead |
+| 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | Tel: delete the 3 preference fields, reword Jem Lim's Technical Requirements |
+| 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest). Eval run 27 Sep, see `docs/eval/` |
 | 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
 | 34 | A1: free rooms sometimes left out of an availability answer; never re-verified | Re-test, then build |
@@ -457,6 +459,40 @@ rewrites the title's initials from the engineer's Bookers record, but only for t
 two-segment `Project Code / Initials` was skipped. v48 applies the same correction when the session type is
 Localization or QC. `scripts/sim-title-initials.js` 6/6 (v47 reproduces the bug); test-nodes 209/209.
 The project code in the Localization client slot (`Client: NET-KUBA`) is intended — the department works by project code (Tara, 2026-09-26). Not a bug.
+**50. Clients are optional; new clients go to a review sheet; client room preferences are dropped.** Decided
+2026-09-28 (Howard with Tara). **LIVE: main v161 + Book Session v49, imported 2026-09-28 02:58 UTC** (test-nodes --live 221/221 + 28, verify-ids clean). `New Clients` tab created by Howard, headers checked.
+- *Prompt (v161):* still always ask for a client, but a booking goes ahead without one — title `PROJECT /
+  initials`, summary `Client: None`. A client not in Clients is a new client for every department (Advertising
+  and Localization included): booked as typed, one line saying it will be flagged for review, never blocked. The
+  "lead with the client's preferred room" rule and its "Studio 8, Dhang's usual room" example are gone (the eval
+  caught the model copying the example into real replies, and the field reached it as record ids).
+- *Book Session (v49):* `MISSING_CLIENT` no longer refuses a missing client (it still refuses the booked-for
+  colleague as the client); `TITLE_INITIALS` and the staff resolver's initials rewrite cover the two-segment
+  `PROJECT / initials` title. After a CREATED booking, `New Client?` → `New Client Row` → `Log New Client` writes
+  the client to the **`New Clients`** tab of the Jessie Log spreadsheet (`appendOrUpdate` on `Client`, one row per
+  client, Status `For Review`) — Tel reviews it and adds the client to Airtable, since only Tel can write Airtable.
+  The write never fails a booking.
+- *Needs:* **Howard** — add a tab named exactly `New Clients` to the Jessie Log spreadsheet with this header row:
+  `Client | Status | Booked by | Project | Session Type | Department | Booking Date | Room(s) | Calendar Title |
+  Event ID | Added`. Until it exists the write fails silently and the booking still goes through. **Tel** — delete
+  `Preferred Rooms`, `Preferred Room Name` and `Preferred Room Names` from Clients (their inverse fields in Rooms &
+  Studios, `Booking Profiles` and `Booking Profiles copy`, go with them; nothing in Jessie reads either). Nothing in
+  the workflows reads the three fields and the Clients tool returns whatever exists, so the deletion cannot break a
+  lookup. Re-check the Clients schema afterwards.
+- Tests: `test-nodes` 221/221 + 28 gate scenarios (the old files fail exactly the four new checks); eval with
+  `./scripts/eval-run --main workflows/project-jessie-v161.json --only NC,CLI,FOR,ASK,ENG-1,ENG-2,ENG-8,QA-M3`.
+
+**51. A padded timestamp makes the calendar query fail, and the failure reads as "every room free".** Found by
+the hallucination eval, 2026-09-27 (`docs/eval/eval-report-2026-09-27.md`, finding 1; gotcha 18). The model glues
+junk onto a timestamp (`…+08:00hq`, `…p`, `…Cllr`, U+FE0F, Khmer letters). *Room Availability* sends it raw to
+Google, gets a 400, carries on (`continueRegularOutput`), and `Compute Availability` reads no events as all free —
+`isoOnly()` runs after the query. 79 of 199 checks in the eval, 4 of 27 live since 24 Sep; Jessie offered a booked
+Studio F 7 times in 10. *Book Session*'s `Get Events In Window` has the same shape: a padded start is NaN, so it
+queries now → now+24 h and `Check Conflicts` compares against the wrong day; `Create Event` then gets the raw
+value (fails, or books over a session — unverified). 0 of 14 live write calls were padded. *Move Booking*'s `Get
+New Window` follows the pattern (see also 35). **Fix:** clean every model-supplied timestamp before the query, and
+fail closed on a calendar error ("couldn't check" / refuse). Small, no speed cost; awaiting the go-ahead.
+
 ---
 
 ## 🟢 Additive: details

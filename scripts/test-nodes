@@ -65,6 +65,11 @@ for f,names in want.items():
     for n in w["nodes"]:
         if n["name"] in names:
             open(os.path.join(t,n["name"].replace(" ","_")+".js"),"w").write(n["parameters"]["jsCode"])
+    if f=="book.json":
+        for n in w["nodes"]:
+            if n["name"]=="New Client?":
+                e=n["parameters"]["conditions"]["conditions"][0]["leftValue"].strip()
+                open(os.path.join(t,"New_Client_expr.js"),"w").write(e[3:-2] if e.startswith("={{") else e)
 PY
 
 node - "$tmp" <<'JS'
@@ -402,7 +407,9 @@ suite('Check Conflicts — booked-for is never the client', ()=>{
   const body=whole.slice(i,j);
   const run=REQ=>{ const r=new Function('REQ',body+'\nreturn null;')(REQ); return r?r[0].json.reason:'CLEAR'; };
   const forK='Engineer: Tara Lim (Post Engineer) | Booked by: Howard Luistro (for Kristine Trocino) | ref: U1';
-  check('bf','on-behalf external, no client -> MISSING_CLIENT',run({description:forK,bookingType:'External',client:'',summary:'SMOKETEST2 / Kristine Trocino / TL'})==='MISSING_CLIENT');
+  check('bf','on-behalf external, no client but booked-for in the title -> MISSING_CLIENT',run({description:forK,bookingType:'External',client:'',summary:'SMOKETEST2 / Kristine Trocino / TL'})==='MISSING_CLIENT');
+  // v49: no client at all is allowed; the title drops the client segment
+  check('bf','on-behalf external, no client, PROJECT / initials -> CLEAR',run({description:forK,bookingType:'External',client:'',summary:'SMOKETEST2 / TL'})==='CLEAR');
   check('bf','on-behalf external, client IS the booked-for -> MISSING_CLIENT',run({description:forK,bookingType:'External',client:'Kristine Trocino',summary:'X / Kristine Trocino / TL'})==='MISSING_CLIENT');
   check('bf','on-behalf external, booked-for in the title client slot -> MISSING_CLIENT',run({description:forK,bookingType:'External',client:'Acme Records',summary:'X / Kristine Trocino / TL'})==='MISSING_CLIENT');
   check('bf','on-behalf external, distinct real client -> CLEAR',run({description:forK,bookingType:'External',client:'Acme Records',summary:'SMOKETEST2 / Acme Records / TL'})==='CLEAR');
@@ -516,10 +523,28 @@ suite('Check Conflicts — engineer must be on the staff list', ()=>{
   check('st','a stranger is refused with no suggestion',x.r&&x.r.reason==='ENGINEER_UNKNOWN'&&!/Did the requester mean/.test(x.r.human));
   x=run({engineer:'Dennis',description:'Engineer: Dennis'+D,summary:'X / Acme / D'});
   check('st','an Info with no "Goes by" still yields aliases',!x.r&&x.REQ.engineer==='Dennis Cham');
+  x=run({engineer:'Daryl',session_type:'VO Recording',description:'Engineer: Daryl'+D,summary:'ORANGE / D'});
+  check('st','a no-client title gets its initials from Bookers too (v49)',!x.r&&x.REQ.summary==='ORANGE / DR',x.REQ.summary);
+  x=run({engineer:'Daryl',session_type:'Localization Dubbing',description:'Engineer: Daryl'+D,summary:'NET-KUBA / JP'});
+  check('st','Localization initials are still corrected (PENDING 49)',!x.r&&x.REQ.summary==='NET-KUBA / DR',x.REQ.summary);
   x=run({engineer:'',description:'Booked by: Camy Caridad | ref: U1',summary:'M2 - Camy'});
   check('st','no engineer, nothing to check',!x.r&&x.REQ.summary==='M2 - Camy');
   x=run({engineer:'Daryl',description:'Engineer: Daryl'+D,summary:'X / Acme / D'},[]);
   check('st','an unreadable staff list refuses rather than guesses',x.r&&x.r.reason==='ENGINEER_UNVERIFIED');
+});
+
+// ── New clients are logged for review, not refused (v49) ────────────────────
+suite('Book Session — a client not in Airtable is flagged as new', ()=>{
+  const p=path.join(T,'New_Client_expr.js');
+  if(!fs.existsSync(p)){ check('nc','Book Session has a New Client? node',false); return; }
+  const expr=fs.readFileSync(p,'utf8');
+  const run=(REQ,rows)=>new Function('$','return '+expr)(name=>({first:()=>({json:REQ}),all:()=>name==='Get Client'?rows.map(r=>({json:r})):[]}));
+  check('nc','an unknown client is new',run({client:'Acme Records',summary:'ATLAS / Acme Records / TL'},[{}])===true);
+  check('nc','a client found in Airtable is not new',run({client:'Pael',summary:'SUSHI / Pael / DR'},[{id:'rec1',fields:{Name:'Pael Laurena'}}])===false);
+  check('nc','no client is not new',run({client:'',summary:'ORANGE / HL'},[{}])===false);
+  check('nc','the title client counts when the input is empty',run({client:'',summary:'ATLAS / Acme Records / TL'},[{}])===true);
+  check('nc','a lookup that errored is not evidence',run({client:'Acme',summary:'X / Acme / TL'},[{error:'timeout'}])===false);
+  check('nc','a Localization project code in the client slot is not a client',run({client:'NET-KUBA',summary:'NET-KUBA / FP',session_type:'Localization Dubbing'},[{}])===false);
 });
 
 // ── Timestamps keep only their ISO text ──────────────────────────────────────
@@ -547,7 +572,11 @@ suite('Check Conflicts — title initials are strictly initials', ()=>{
   check('ti','proper single initials pass',run({session_type:'VO Recording',summary:'X / Acme / DR'})==='CLEAR');
   check('ti','engineer x arranger initials pass',run({session_type:'Band Recording',summary:'X / Acme / DR x PL'})==='CLEAR');
   check('ti','internal 1-segment title is skipped',run({session_type:'',summary:'M2 - Peemo'})==='CLEAR');
-  check('ti','a two-segment title is skipped',run({session_type:'VO Recording',summary:'X / Acme'})==='CLEAR');
+  // v49: clients are optional, so a studio title may be PROJECT / initials (Howard, 2026-09-28)
+  check('ti','no-client studio title PROJECT / initials passes',run({session_type:'VO Recording',summary:'ORANGE / HL'})==='CLEAR');
+  check('ti','no-client studio title with a name in the initials slot is refused',run({session_type:'VO Recording',summary:'X / Acme'})==='TITLE_INITIALS');
+  check('ti','Localization Project Code / initials passes',run({session_type:'Localization Dubbing',summary:'NET-KUBA / FP'})==='CLEAR');
+  check('ti','a two-segment title with no session type is skipped',run({session_type:'',summary:'X / Acme'})==='CLEAR');
 });
 
 // ── Confirmation gate ───────────────────────────────────────────────────────
