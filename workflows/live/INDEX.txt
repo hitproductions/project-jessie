@@ -5,6 +5,7 @@ Jessie — Book Series                       active   jessie-book-series__UAwFoi
 Jessie — Book Session                      active   jessie-book-session__EUG3sGXkfsJSYIMz.json
 Jessie — Cancel Booking                    active   jessie-cancel-booking__bAyDw7udhmY0NL38.json
 Jessie — Consent Sweep                     active   jessie-consent-sweep__QHHDevaWhMk8gSBX.json
+Jessie — Envoy Mirror                      inactive jessie-envoy-mirror__atJ87j360xVKHHzD.json
 Jessie — Expand Series                     active   jessie-expand-series__hkx9PXcgW9nrzY2a.json
 Jessie — Finalize Consent                  active   jessie-finalize-consent__TO1UnZTZ2LhtE9J3.json
 Jessie — Find Booking                      active   jessie-find-booking__yzirq12O227VTFp8.json
@@ -12,12 +13,14 @@ Jessie — Move Booking                      active   jessie-move-booking__t7lwR
 Jessie — Open Consent Request              active   jessie-open-consent-request__nEHnCMMXS0am59Zy.json
 Jessie — Prune Executions                  active   jessie-prune-executions__K2tPBykMwKcQGMub.json
 Jessie — Room Availability                 active   jessie-room-availability__e7tBQB458nstrqei.json
+Music Projects - Intake                    active   music-projects-intake__BAXIPFh7JKaye7qY.json
 My workflow                                inactive my-workflow__JAGZ1SDEVg1ZHRQr.json
 Posty — Error Alert                        active   posty-error-alert__jl8vbMIWx399ixgJ.json
 Posty — Events Endpoint                    active   posty-events-endpoint__eFNMRnaN4yGvmqhc.json
 Posty — Index Refresh                      active   posty-index-refresh__DItjvgnQPf5aEsIq.json
 Posty — Weekly Digest                      active   posty-weekly-digest__7cG9CRcCoT5UvTTi.json
 Posty — Xero Typo Check                    active   posty-xero-typo-check__cXsAqwMXa6c8yATc.json
+Posty — one-off: mark QU-180333 deleted (2026-09-28) inactive posty-one-off-mark-qu-180333-deleted-2026-09-28__Xqpmo4l8Sv4y2JUV.json
 Project Jessie v2                          active   project-jessie-v2__uVVYVB2M7kxpLleI.json
 Project Jessie v2 BACKUP aug17_502pm       inactive project-jessie-v2-backup-aug17-502pm__1GcIAeLdJZLeB8js.json
 Project Jessie v2 backup 0814.513pm        inactive project-jessie-v2-backup-0814-513pm__jtNid6MGQiIsWL51.json
@@ -28,4 +31,5 @@ TMP — Airtable schema probe                inactive tmp-airtable-schema-probe_
 TMP — Fix QUERY formula                    inactive tmp-fix-query-formula__9hNruLSVaM18nDMO.json
 Tel Proj                                   inactive tel-proj__GGGboD7zwOe9G6sC.json
 Timesheet Sync — Engineer Tabs to Post Logsheet active   timesheet-sync-engineer-tabs-to-post-logsheet__2S5mMSKZNRMGEtea.json
+ZZ Jessie Eval Twin (test copy - do not use) active   zz-jessie-eval-twin-test-copy-do-not-use__KRZmVfKIwCiLREjz.json
 slack ids                                  inactive slack-ids__EeSu7YekB1R7FYki.json

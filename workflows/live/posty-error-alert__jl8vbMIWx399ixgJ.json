@@ -16,18 +16,34 @@
         ]
       }
     },
-    "createdAt": "2026-09-05T21:34:22.277Z",
+    "createdAt": "2026-09-28T08:13:09.362Z",
     "description": null,
     "name": null,
     "nodeGroups": [],
     "nodes": [
       {
+        "id": "section-1",
+        "name": "Section — Error alert — any Posty workflow that crashes",
+        "parameters": {
+          "color": 3,
+          "content": "## Error alert — any Posty workflow that crashes\nSet as the error workflow on W1, W2, W3 and W5. DMs Tara the workflow, node and error.",
+          "height": 320,
+          "width": 480
+        },
+        "position": [
+          -50,
+          0
+        ],
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1
+      },
+      {
         "id": "pe-trigger",
         "name": "On Error",
         "parameters": {},
         "position": [
-          400,
-          300
+          0,
+          150
         ],
         "type": "n8n-nodes-base.errorTrigger",
         "typeVersion": 1
@@ -55,29 +71,29 @@
           "text": "=🔔 A Posty workflow errored.\n*Workflow:* {{ $json.workflow.name }}\n*Failed at:* {{ $json.execution.lastNodeExecuted }}\n*Error:* {{ $json.execution.error.message }}\n{{ $json.execution.url }}"
         },
         "position": [
-          640,
-          300
+          280,
+          150
         ],
         "type": "n8n-nodes-base.slack",
         "typeVersion": 2.4,
         "webhookId": "09605d3b-cf18-489c-82b8-2bef6c16358c"
       }
     ],
-    "updatedAt": "2026-09-05T21:34:22.277Z",
-    "versionId": "1abf5bdc-deee-4c01-bae8-bc98da4117b5",
+    "updatedAt": "2026-09-28T08:13:09.362Z",
+    "versionId": "8a412895-c559-4671-a680-44bef4acee8d",
     "workflowId": "jl8vbMIWx399ixgJ",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-09-05T21:34:36.327Z",
+        "createdAt": "2026-09-28T08:13:09.683Z",
         "event": "activated",
-        "id": 677,
+        "id": 1331,
         "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
-        "versionId": "1abf5bdc-deee-4c01-bae8-bc98da4117b5",
+        "versionId": "8a412895-c559-4671-a680-44bef4acee8d",
         "workflowId": "jl8vbMIWx399ixgJ"
       }
     ]
   },
-  "activeVersionId": "1abf5bdc-deee-4c01-bae8-bc98da4117b5",
+  "activeVersionId": "8a412895-c559-4671-a680-44bef4acee8d",
   "connections": {
     "On Error": {
       "main": [
@@ -100,12 +116,28 @@
   "nodeGroups": [],
   "nodes": [
     {
+      "id": "section-1",
+      "name": "Section — Error alert — any Posty workflow that crashes",
+      "parameters": {
+        "color": 3,
+        "content": "## Error alert — any Posty workflow that crashes\nSet as the error workflow on W1, W2, W3 and W5. DMs Tara the workflow, node and error.",
+        "height": 320,
+        "width": 480
+      },
+      "position": [
+        -50,
+        0
+      ],
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1
+    },
+    {
       "id": "pe-trigger",
       "name": "On Error",
       "parameters": {},
       "position": [
-        400,
-        300
+        0,
+        150
       ],
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1
@@ -133,8 +165,8 @@
         "text": "=🔔 A Posty workflow errored.\n*Workflow:* {{ $json.workflow.name }}\n*Failed at:* {{ $json.execution.lastNodeExecuted }}\n*Error:* {{ $json.execution.error.message }}\n{{ $json.execution.url }}"
       },
       "position": [
-        640,
-        300
+        280,
+        150
       ],
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.4,
@@ -170,7 +202,7 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 0,
-  "updatedAt": "2026-09-05T21:37:10.627Z",
-  "versionCounter": 1,
-  "versionId": "1abf5bdc-deee-4c01-bae8-bc98da4117b5"
+  "updatedAt": "2026-09-28T08:13:09.358Z",
+  "versionCounter": 2,
+  "versionId": "8a412895-c559-4671-a680-44bef4acee8d"
 }

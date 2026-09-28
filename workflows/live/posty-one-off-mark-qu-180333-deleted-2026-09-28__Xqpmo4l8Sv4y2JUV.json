@@ -1,0 +1,139 @@
+{
+  "active": false,
+  "activeVersion": null,
+  "activeVersionId": null,
+  "connections": {
+    "Hook": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Row",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Row": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Mark Row Deleted",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-09-28T09:24:05.971Z",
+  "description": null,
+  "id": "Xqpmo4l8Sv4y2JUV",
+  "isArchived": false,
+  "meta": null,
+  "name": "Posty — one-off: mark QU-180333 deleted (2026-09-28)",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "h",
+      "name": "Hook",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "posty-oneoff-80d1bcb4633ee719",
+        "responseMode": "lastNode"
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "posty-oneoff-80d1bcb4633ee719"
+    },
+    {
+      "id": "c",
+      "name": "Row",
+      "parameters": {
+        "jsCode": "// Same fields Emit Deletion writes. Approved by Tara 2026-09-28: the post was deleted before the tombstone fix.\nreturn [{ json: { qu_number: '180333', status: 'DELETED', last_seen: new Date().toISOString() } }];"
+      },
+      "position": [
+        220,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Fgoi5qTg907ugiVG",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "m",
+      "name": "Mark Row Deleted",
+      "parameters": {
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "qu_number"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1thh9BE4fM7-KwHXpp_4eQ_7KzhKA87EbqPtXdOlS2b8"
+        },
+        "operation": "appendOrUpdate",
+        "options": {
+          "cellFormat": "RAW"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posty_qu_index"
+        }
+      },
+      "position": [
+        440,
+        0
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5
+    }
+  ],
+  "pinData": null,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-28T09:24:05.983Z",
+      "project": {
+        "createdAt": "2026-09-04T06:28:22.466Z",
+        "creatorId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "zkz4JuokdGopHd2A",
+        "name": "Tara Lim <tara@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-04T07:14:04.840Z"
+      },
+      "projectId": "zkz4JuokdGopHd2A",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-28T09:24:05.983Z",
+      "workflowId": "Xqpmo4l8Sv4y2JUV"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-09-28T09:24:05.971Z",
+  "versionCounter": 1,
+  "versionId": "fb8f2a2a-6e35-4f05-a120-80fadfe44381"
+}

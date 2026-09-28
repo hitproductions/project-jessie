@@ -1,0 +1,1167 @@
+{
+  "active": true,
+  "activeVersion": {
+    "authors": "Joaquin Santos",
+    "autosaved": true,
+    "connections": {
+      "Is new project post": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Composers",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Mock Slack Post": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Read Composers",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Parse Post": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Upsert Project",
+              "type": "main"
+            },
+            {
+              "index": 0,
+              "node": "Split Assignments",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Read Composers": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Parse Post",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Slack Trigger": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Is new project post",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Split Assignments": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Upsert Assignments",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Upsert Project": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Send a message",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "When clicking ‘Execute workflow’": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Mock Slack Post",
+              "type": "main"
+            }
+          ]
+        ]
+      }
+    },
+    "createdAt": "2026-09-26T04:24:14.828Z",
+    "description": "",
+    "name": "v3 - test slack",
+    "nodeGroups": [],
+    "nodes": [
+      {
+        "id": "5f51dceb-8f2e-47f1-9f36-ddc5d72c0e06",
+        "name": "When clicking ‘Execute workflow’",
+        "parameters": {},
+        "position": [
+          0,
+          0
+        ],
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1
+      },
+      {
+        "credentials": {
+          "googleApi": {
+            "id": "bvoRaQXkt9EEQBIe",
+            "name": "Google Service Account account"
+          }
+        },
+        "id": "181d5b90-f5b0-4f4a-acf0-498117de6d4c",
+        "name": "Read Composers",
+        "parameters": {
+          "authentication": "serviceAccount",
+          "documentId": {
+            "__rl": true,
+            "cachedResultName": "Music Project Database",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w/edit?usp=drivesdk",
+            "mode": "list",
+            "value": "1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w"
+          },
+          "filtersUI": {
+            "values": []
+          },
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "cachedResultName": "COMPOSERS",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w/edit#gid=533569217",
+            "mode": "list",
+            "value": 533569217
+          }
+        },
+        "position": [
+          336,
+          0
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7
+      },
+      {
+        "credentials": {
+          "googleApi": {
+            "id": "bvoRaQXkt9EEQBIe",
+            "name": "Google Service Account account"
+          }
+        },
+        "id": "19bdc78c-b5bf-4109-a324-06c20196e981",
+        "name": "Upsert Project",
+        "parameters": {
+          "authentication": "serviceAccount",
+          "columns": {
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false,
+            "mappingMode": "defineBelow",
+            "matchingColumns": [
+              "QU"
+            ],
+            "schema": [
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "QU",
+                "id": "QU",
+                "removed": false,
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "DATE POSTED",
+                "id": "DATE POSTED",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "PROJECT TITLE",
+                "id": "PROJECT TITLE",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "FORMAT / LENGTH",
+                "id": "FORMAT / LENGTH",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "COMPOSER",
+                "id": "COMPOSER",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "PRODUCER",
+                "id": "PRODUCER",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "AGENCY",
+                "id": "AGENCY",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "PRODUCT",
+                "id": "PRODUCT",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "TALENTS",
+                "id": "TALENTS",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "STATUS",
+                "id": "STATUS",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "BID AGAINST",
+                "id": "BID AGAINST",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "NOTES",
+                "id": "NOTES",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "Submitted By",
+                "id": "Submitted By",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "Slack Link",
+                "id": "Slack Link",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "Slack TS",
+                "id": "Slack TS",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "canBeUsedToMatch": true,
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "Last Updated",
+                "id": "Last Updated",
+                "required": false,
+                "type": "string"
+              }
+            ],
+            "value": {
+              "AGENCY": "={{ $json.project['AGENCY'] }}",
+              "BID AGAINST": "={{ $json.project['BID AGAINST'] }}",
+              "COMPOSER": "={{ $json.project['COMPOSER'] }}",
+              "DATE POSTED": "={{ $json.project['DATE POSTED'] }}",
+              "FORMAT / LENGTH": "={{ $json.project['FORMAT / LENGTH'] }}",
+              "Last Updated": "={{ $json.project['Last Updated'] }}",
+              "NOTES": "={{ $json.project['NOTES'] }}",
+              "PRODUCER": "={{ $json.project['PRODUCER'] }}",
+              "PRODUCT": "={{ $json.project['PRODUCT'] }}",
+              "PROJECT TITLE": "={{ $json.project['PROJECT TITLE'] }}",
+              "QU": "={{ $json.project['QU'] }}",
+              "STATUS": "={{ $json.project['STATUS'] }}",
+              "Slack Link": "={{ $json.project['Slack Link'] }}",
+              "Slack TS": "={{ $json.project['Slack TS'] }}",
+              "Submitted By": "={{ $json.project['Submitted By'] }}",
+              "TALENTS": "={{ $json.project['TALENTS'] }}"
+            }
+          },
+          "documentId": {
+            "__rl": true,
+            "cachedResultName": "Music Project Database",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w/edit?usp=drivesdk",
+            "mode": "list",
+            "value": "1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w"
+          },
+          "operation": "appendOrUpdate",
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "cachedResultName": "PROJECTS",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w/edit#gid=0",
+            "mode": "list",
+            "value": "gid=0"
+          }
+        },
+        "position": [
+          896,
+          0
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7
+      },
+      {
+        "id": "7090420d-8b16-4d7f-a885-41bdc3404c76",
+        "name": "Mock Slack Post",
+        "parameters": {
+          "jsCode": "return [{ json: {\n  channel: 'C0TEST',\n  ts: String(Date.now() / 1000),\n  text: `🎵 NEW MUSIC PROJECT\nQU: QU-99999\nProject Title: TEST Jollibee \"Hapag\"\nFormat / Length: 1x60s TVC, 2x15s Edit Downs\nProduct: Jollibee\nAgency: Ogilvy\nProducer: Sasa Abella\nComposers: Joaquin/BP, Arnold\nTalents: 2 singers\nBid Against: Studio X\nSubmitted by: Letty\nNotes: This is a test post.\nPlease delete after testing.`\n}}];"
+        },
+        "position": [
+          176,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "89e5f3fc-a3fb-4a0e-9b59-1ae8980ebe66",
+        "name": "Parse Post",
+        "parameters": {
+          "jsCode": "let t;\ntry { t = $('Slack Trigger').first().json; }\ncatch (e) { t = $('Mock Slack Post').first().json; }\nconst ev = t.event || t;\nconst text = (ev.text || '').replace(/[*_]/g, '');\n\nconst field = (label) => {\n  const m = text.match(new RegExp('^\\\\s*' + label + '\\\\s*:\\\\s*(.*)$', 'im'));\n  return m ? m[1].trim() : '';\n};\nconst notesMatch = text.match(/^\\s*Notes\\s*:\\s*([\\s\\S]*)$/im);\nconst notes = notesMatch ? notesMatch[1].trim() : '';\n\nconst q = field('QU').match(/QU[\\s-]*(\\d{4,6})/i) || text.match(/QU[\\s-]*(\\d{4,6})/i);\nif (!q) return [];\nconst qu = 'QU-' + q[1];\n\nconst roster = $input.all().map(i => i.json)\n  .filter(r => r['Name'] && String(r['Active']).toLowerCase() === 'yes');\nconst find = (s) => {\n  const id = (s.match(/<@(\\w+)>/) || [])[1];\n  if (id) return roster.find(r => r['Slack User ID'] === id);\n  const n = s.toLowerCase();\n  return roster.find(r => r['Name'].toLowerCase() === n ||\n                          r['Name'].toLowerCase().split(' ')[0] === n);\n};\n\n// \",\" = bidding against each other, \"/\" = collaboration\nconst teams = field('Composers').split(',')\n  .map(entry => entry.split('/').map(s => s.trim()).filter(Boolean)\n    .map(raw => ({ raw, c: find(raw) })))\n  .filter(team => team.length);\n\nconst teamLabel = (team) => team.map(m => m.c ? m.c['Name'] : m.raw).join(' / ');\nconst unknown = teams.flat().filter(m => !m.c).map(m => m.raw);\nconst bidding = teams.length > 1;\n\nconst STATUS = 'ON-GOING';\nconst postedAt = DateTime.fromSeconds(parseFloat(ev.ts)).setZone('Asia/Manila').toFormat('yyyy-MM-dd HH:mm');\nconst now = DateTime.now().setZone('Asia/Manila').toFormat('yyyy-MM-dd HH:mm');\nconst submittedBy = field('Submitted by');\n\nconst assignments = [];\nteams.forEach(team => {\n  const type = team.length > 1 ? 'Collaboration' : 'Solo';\n  team.filter(m => m.c).forEach(m => {\n    assignments.push({\n      'Assignment Key': `${qu}|${m.c['Person ID']}`,\n      'QU': qu,\n      'Composer': m.c['Name'],\n      'Person ID': m.c['Person ID'],\n      'Role': 'COMPOSER',\n      'Assignment Type': type,\n      'Team': teamLabel(team),\n      'Status': bidding ? 'BIDDING' : STATUS,\n      'Assigned At': postedAt,\n      'Assigned By': submittedBy,\n    });\n  });\n});\n\nconst summary = !teams.length ? 'none'\n  : bidding ? 'Bidding: ' + teams.map((tm, i) => `(${i + 1}) ${teamLabel(tm)}`).join('  ·  ')\n  : (teams[0].length > 1 ? 'Collaboration: ' : 'Composer: ') + teamLabel(teams[0]);\n\nreturn [{ json: {\n  channel: ev.channel,\n  ts: ev.ts,\n  unknown,\n  summary,\n  project: {\n    'QU': qu,\n    'DATE POSTED': postedAt,\n    'PROJECT TITLE': field('Project Title'),\n    'FORMAT / LENGTH': field('Format / Length'),\n    'COMPOSER': teams.map(teamLabel).join(', '),\n    'PRODUCER': field('Producer'),\n    'AGENCY': field('Agency'),\n    'PRODUCT': field('Product'),\n    'TALENTS': field('Talents'),\n    'STATUS': STATUS,\n    'BID AGAINST': field('Bid Against'),\n    'NOTES': notes,\n    'Submitted By': submittedBy,\n    'Slack Link': `https://hitproductions.slack.com/archives/${ev.channel}/p${ev.ts.replace('.', '')}`,\n    'Slack TS': ev.ts,\n    'Last Updated': now,\n  },\n  assignments,\n}}];"
+        },
+        "position": [
+          544,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "670024e8-ee18-4607-be69-67008cdda134",
+        "name": "Split Assignments",
+        "parameters": {
+          "fieldToSplitOut": "assignments",
+          "options": {}
+        },
+        "position": [
+          720,
+          208
+        ],
+        "type": "n8n-nodes-base.splitOut",
+        "typeVersion": 1
+      },
+      {
+        "credentials": {
+          "googleApi": {
+            "id": "bvoRaQXkt9EEQBIe",
+            "name": "Google Service Account account"
+          }
+        },
+        "id": "b3f4652b-cdfb-4022-b759-37ca129b7592",
+        "name": "Upsert Assignments",
+        "parameters": {
+          "authentication": "serviceAccount",
+          "columns": {
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false,
+            "mappingMode": "autoMapInputData",
+            "matchingColumns": [],
+            "schema": [],
+            "value": {}
+          },
+          "documentId": {
+            "__rl": true,
+            "cachedResultName": "Music Project Database",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w/edit?usp=drivesdk",
+            "mode": "list",
+            "value": "1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w"
+          },
+          "operation": "appendOrUpdate",
+          "options": {},
+          "sheetName": {
+            "__rl": true,
+            "cachedResultName": "COMPOSER ASSIGNMENTS",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w/edit#gid=1024267005",
+            "mode": "list",
+            "value": 1024267005
+          }
+        },
+        "position": [
+          896,
+          208
+        ],
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "tjKiXW9AwIwDPwp5",
+            "name": "Melody"
+          }
+        },
+        "id": "1590d60b-3780-4480-9899-1be60c9704e2",
+        "name": "Slack Trigger",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "C0C4MLQCHA6"
+          },
+          "options": {},
+          "trigger": [
+            "message"
+          ]
+        },
+        "position": [
+          -32,
+          240
+        ],
+        "type": "n8n-nodes-base.slackTrigger",
+        "typeVersion": 1,
+        "webhookId": "bc4cd4b9-0c46-47ba-a455-a7cb1edc7ee3"
+      },
+      {
+        "id": "a826ad35-fa6e-4016-86de-5875f08921b8",
+        "name": "Is new project post",
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "1cc1c90d-121c-41a9-85c7-957221177e68",
+                "leftValue": "={{ $json.text }}",
+                "operator": {
+                  "operation": "contains",
+                  "type": "string"
+                },
+                "rightValue": "QU:"
+              },
+              {
+                "id": "88bf755f-f292-43c0-9b80-b8448346a239",
+                "leftValue": "={{ $json.thread_ts }}",
+                "operator": {
+                  "operation": "notExists",
+                  "singleValue": true,
+                  "type": "string"
+                },
+                "rightValue": ""
+              },
+              {
+                "id": "f24c64c3-0b26-49b2-a643-f9b7e5fe9070",
+                "leftValue": "={{ $json.subtype }}",
+                "operator": {
+                  "operation": "notEquals",
+                  "type": "string"
+                },
+                "rightValue": "message_changed"
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 3
+            }
+          },
+          "looseTypeValidation": true,
+          "options": {}
+        },
+        "position": [
+          176,
+          240
+        ],
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3
+      },
+      {
+        "credentials": {
+          "slackApi": {
+            "id": "tjKiXW9AwIwDPwp5",
+            "name": "Melody"
+          }
+        },
+        "id": "3ca5c34e-e7ae-4159-9e65-7b92087c5cbc",
+        "name": "Send a message",
+        "parameters": {
+          "channelId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "C0C4MLQCHA6"
+          },
+          "otherOptions": {
+            "thread_ts": {
+              "replyValues": {
+                "thread_ts": "={{ $('Parse Post').first().json.ts }}"
+              }
+            }
+          },
+          "select": "channel",
+          "text": "=✅ Logged {{ $('Parse Post').first().json.project['QU'] }} to the Music Project List. {{ $('Parse Post').first().json.summary }} {{ $('Parse Post').first().json.unknown.length ? '⚠️ Not in the composer list: ' + $('Parse Post').first().json.unknown.join(', ') + ', please check spelling.' : '' }}"
+        },
+        "position": [
+          1104,
+          0
+        ],
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.5,
+        "webhookId": "5255595b-a520-4d12-bc86-76b546a06050"
+      }
+    ],
+    "updatedAt": "2026-09-26T04:34:38.000Z",
+    "versionId": "45fb155e-aa57-4a31-97a4-f79097aa570a",
+    "workflowId": "BAXIPFh7JKaye7qY",
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-26T04:34:38.872Z",
+        "event": "activated",
+        "id": 1219,
+        "userId": "20e5b4ed-7dd9-4744-a9d3-f744384366cf",
+        "versionId": "45fb155e-aa57-4a31-97a4-f79097aa570a",
+        "workflowId": "BAXIPFh7JKaye7qY"
+      }
+    ]
+  },
+  "activeVersionId": "45fb155e-aa57-4a31-97a4-f79097aa570a",
+  "connections": {
+    "Is new project post": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Composers",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Mock Slack Post": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Composers",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Parse Post": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Upsert Project",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Split Assignments",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Composers": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Parse Post",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Is new project post",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Split Assignments": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Upsert Assignments",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Upsert Project": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send a message",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Mock Slack Post",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-09-26T02:09:12.845Z",
+  "description": null,
+  "id": "BAXIPFh7JKaye7qY",
+  "isArchived": false,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Music Projects - Intake",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "5f51dceb-8f2e-47f1-9f36-ddc5d72c0e06",
+      "name": "When clicking ‘Execute workflow’",
+      "parameters": {},
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
+    },
+    {
+      "credentials": {
+        "googleApi": {
+          "id": "bvoRaQXkt9EEQBIe",
+          "name": "Google Service Account account"
+        }
+      },
+      "id": "181d5b90-f5b0-4f4a-acf0-498117de6d4c",
+      "name": "Read Composers",
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "cachedResultName": "Music Project Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w/edit?usp=drivesdk",
+          "mode": "list",
+          "value": "1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "cachedResultName": "COMPOSERS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w/edit#gid=533569217",
+          "mode": "list",
+          "value": 533569217
+        }
+      },
+      "position": [
+        336,
+        0
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7
+    },
+    {
+      "credentials": {
+        "googleApi": {
+          "id": "bvoRaQXkt9EEQBIe",
+          "name": "Google Service Account account"
+        }
+      },
+      "id": "19bdc78c-b5bf-4109-a324-06c20196e981",
+      "name": "Upsert Project",
+      "parameters": {
+        "authentication": "serviceAccount",
+        "columns": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "QU"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "QU",
+              "id": "QU",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "DATE POSTED",
+              "id": "DATE POSTED",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "PROJECT TITLE",
+              "id": "PROJECT TITLE",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "FORMAT / LENGTH",
+              "id": "FORMAT / LENGTH",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "COMPOSER",
+              "id": "COMPOSER",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "PRODUCER",
+              "id": "PRODUCER",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "AGENCY",
+              "id": "AGENCY",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "PRODUCT",
+              "id": "PRODUCT",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "TALENTS",
+              "id": "TALENTS",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "STATUS",
+              "id": "STATUS",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "BID AGAINST",
+              "id": "BID AGAINST",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "NOTES",
+              "id": "NOTES",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Submitted By",
+              "id": "Submitted By",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Slack Link",
+              "id": "Slack Link",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Slack TS",
+              "id": "Slack TS",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Last Updated",
+              "id": "Last Updated",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "AGENCY": "={{ $json.project['AGENCY'] }}",
+            "BID AGAINST": "={{ $json.project['BID AGAINST'] }}",
+            "COMPOSER": "={{ $json.project['COMPOSER'] }}",
+            "DATE POSTED": "={{ $json.project['DATE POSTED'] }}",
+            "FORMAT / LENGTH": "={{ $json.project['FORMAT / LENGTH'] }}",
+            "Last Updated": "={{ $json.project['Last Updated'] }}",
+            "NOTES": "={{ $json.project['NOTES'] }}",
+            "PRODUCER": "={{ $json.project['PRODUCER'] }}",
+            "PRODUCT": "={{ $json.project['PRODUCT'] }}",
+            "PROJECT TITLE": "={{ $json.project['PROJECT TITLE'] }}",
+            "QU": "={{ $json.project['QU'] }}",
+            "STATUS": "={{ $json.project['STATUS'] }}",
+            "Slack Link": "={{ $json.project['Slack Link'] }}",
+            "Slack TS": "={{ $json.project['Slack TS'] }}",
+            "Submitted By": "={{ $json.project['Submitted By'] }}",
+            "TALENTS": "={{ $json.project['TALENTS'] }}"
+          }
+        },
+        "documentId": {
+          "__rl": true,
+          "cachedResultName": "Music Project Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w/edit?usp=drivesdk",
+          "mode": "list",
+          "value": "1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w"
+        },
+        "operation": "appendOrUpdate",
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "cachedResultName": "PROJECTS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w/edit#gid=0",
+          "mode": "list",
+          "value": "gid=0"
+        }
+      },
+      "position": [
+        896,
+        0
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7
+    },
+    {
+      "id": "7090420d-8b16-4d7f-a885-41bdc3404c76",
+      "name": "Mock Slack Post",
+      "parameters": {
+        "jsCode": "return [{ json: {\n  channel: 'C0TEST',\n  ts: String(Date.now() / 1000),\n  text: `🎵 NEW MUSIC PROJECT\nQU: QU-99999\nProject Title: TEST Jollibee \"Hapag\"\nFormat / Length: 1x60s TVC, 2x15s Edit Downs\nProduct: Jollibee\nAgency: Ogilvy\nProducer: Sasa Abella\nComposers: Joaquin/BP, Arnold\nTalents: 2 singers\nBid Against: Studio X\nSubmitted by: Letty\nNotes: This is a test post.\nPlease delete after testing.`\n}}];"
+      },
+      "position": [
+        176,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "89e5f3fc-a3fb-4a0e-9b59-1ae8980ebe66",
+      "name": "Parse Post",
+      "parameters": {
+        "jsCode": "let t;\ntry { t = $('Slack Trigger').first().json; }\ncatch (e) { t = $('Mock Slack Post').first().json; }\nconst ev = t.event || t;\nconst text = (ev.text || '').replace(/[*_]/g, '');\n\nconst field = (label) => {\n  const m = text.match(new RegExp('^\\\\s*' + label + '\\\\s*:\\\\s*(.*)$', 'im'));\n  return m ? m[1].trim() : '';\n};\nconst notesMatch = text.match(/^\\s*Notes\\s*:\\s*([\\s\\S]*)$/im);\nconst notes = notesMatch ? notesMatch[1].trim() : '';\n\nconst q = field('QU').match(/QU[\\s-]*(\\d{4,6})/i) || text.match(/QU[\\s-]*(\\d{4,6})/i);\nif (!q) return [];\nconst qu = 'QU-' + q[1];\n\nconst roster = $input.all().map(i => i.json)\n  .filter(r => r['Name'] && String(r['Active']).toLowerCase() === 'yes');\nconst find = (s) => {\n  const id = (s.match(/<@(\\w+)>/) || [])[1];\n  if (id) return roster.find(r => r['Slack User ID'] === id);\n  const n = s.toLowerCase();\n  return roster.find(r => r['Name'].toLowerCase() === n ||\n                          r['Name'].toLowerCase().split(' ')[0] === n);\n};\n\n// \",\" = bidding against each other, \"/\" = collaboration\nconst teams = field('Composers').split(',')\n  .map(entry => entry.split('/').map(s => s.trim()).filter(Boolean)\n    .map(raw => ({ raw, c: find(raw) })))\n  .filter(team => team.length);\n\nconst teamLabel = (team) => team.map(m => m.c ? m.c['Name'] : m.raw).join(' / ');\nconst unknown = teams.flat().filter(m => !m.c).map(m => m.raw);\nconst bidding = teams.length > 1;\n\nconst STATUS = 'ON-GOING';\nconst postedAt = DateTime.fromSeconds(parseFloat(ev.ts)).setZone('Asia/Manila').toFormat('yyyy-MM-dd HH:mm');\nconst now = DateTime.now().setZone('Asia/Manila').toFormat('yyyy-MM-dd HH:mm');\nconst submittedBy = field('Submitted by');\n\nconst assignments = [];\nteams.forEach(team => {\n  const type = team.length > 1 ? 'Collaboration' : 'Solo';\n  team.filter(m => m.c).forEach(m => {\n    assignments.push({\n      'Assignment Key': `${qu}|${m.c['Person ID']}`,\n      'QU': qu,\n      'Composer': m.c['Name'],\n      'Person ID': m.c['Person ID'],\n      'Role': 'COMPOSER',\n      'Assignment Type': type,\n      'Team': teamLabel(team),\n      'Status': bidding ? 'BIDDING' : STATUS,\n      'Assigned At': postedAt,\n      'Assigned By': submittedBy,\n    });\n  });\n});\n\nconst summary = !teams.length ? 'none'\n  : bidding ? 'Bidding: ' + teams.map((tm, i) => `(${i + 1}) ${teamLabel(tm)}`).join('  ·  ')\n  : (teams[0].length > 1 ? 'Collaboration: ' : 'Composer: ') + teamLabel(teams[0]);\n\nreturn [{ json: {\n  channel: ev.channel,\n  ts: ev.ts,\n  unknown,\n  summary,\n  project: {\n    'QU': qu,\n    'DATE POSTED': postedAt,\n    'PROJECT TITLE': field('Project Title'),\n    'FORMAT / LENGTH': field('Format / Length'),\n    'COMPOSER': teams.map(teamLabel).join(', '),\n    'PRODUCER': field('Producer'),\n    'AGENCY': field('Agency'),\n    'PRODUCT': field('Product'),\n    'TALENTS': field('Talents'),\n    'STATUS': STATUS,\n    'BID AGAINST': field('Bid Against'),\n    'NOTES': notes,\n    'Submitted By': submittedBy,\n    'Slack Link': `https://hitproductions.slack.com/archives/${ev.channel}/p${ev.ts.replace('.', '')}`,\n    'Slack TS': ev.ts,\n    'Last Updated': now,\n  },\n  assignments,\n}}];"
+      },
+      "position": [
+        544,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "670024e8-ee18-4607-be69-67008cdda134",
+      "name": "Split Assignments",
+      "parameters": {
+        "fieldToSplitOut": "assignments",
+        "options": {}
+      },
+      "position": [
+        720,
+        208
+      ],
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1
+    },
+    {
+      "credentials": {
+        "googleApi": {
+          "id": "bvoRaQXkt9EEQBIe",
+          "name": "Google Service Account account"
+        }
+      },
+      "id": "b3f4652b-cdfb-4022-b759-37ca129b7592",
+      "name": "Upsert Assignments",
+      "parameters": {
+        "authentication": "serviceAccount",
+        "columns": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [],
+          "schema": [],
+          "value": {}
+        },
+        "documentId": {
+          "__rl": true,
+          "cachedResultName": "Music Project Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w/edit?usp=drivesdk",
+          "mode": "list",
+          "value": "1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w"
+        },
+        "operation": "appendOrUpdate",
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "cachedResultName": "COMPOSER ASSIGNMENTS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sii1BNNg17fqlV5tjne2EL2bFEE5XntaOrJh9a2142w/edit#gid=1024267005",
+          "mode": "list",
+          "value": 1024267005
+        }
+      },
+      "position": [
+        896,
+        208
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "tjKiXW9AwIwDPwp5",
+          "name": "Melody"
+        }
+      },
+      "id": "1590d60b-3780-4480-9899-1be60c9704e2",
+      "name": "Slack Trigger",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "C0C4MLQCHA6"
+        },
+        "options": {},
+        "trigger": [
+          "message"
+        ]
+      },
+      "position": [
+        -32,
+        240
+      ],
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "webhookId": "bc4cd4b9-0c46-47ba-a455-a7cb1edc7ee3"
+    },
+    {
+      "id": "a826ad35-fa6e-4016-86de-5875f08921b8",
+      "name": "Is new project post",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1cc1c90d-121c-41a9-85c7-957221177e68",
+              "leftValue": "={{ $json.text }}",
+              "operator": {
+                "operation": "contains",
+                "type": "string"
+              },
+              "rightValue": "QU:"
+            },
+            {
+              "id": "88bf755f-f292-43c0-9b80-b8448346a239",
+              "leftValue": "={{ $json.thread_ts }}",
+              "operator": {
+                "operation": "notExists",
+                "singleValue": true,
+                "type": "string"
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "f24c64c3-0b26-49b2-a643-f9b7e5fe9070",
+              "leftValue": "={{ $json.subtype }}",
+              "operator": {
+                "operation": "notEquals",
+                "type": "string"
+              },
+              "rightValue": "message_changed"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          }
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "position": [
+        176,
+        240
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3
+    },
+    {
+      "credentials": {
+        "slackApi": {
+          "id": "tjKiXW9AwIwDPwp5",
+          "name": "Melody"
+        }
+      },
+      "id": "3ca5c34e-e7ae-4159-9e65-7b92087c5cbc",
+      "name": "Send a message",
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "C0C4MLQCHA6"
+        },
+        "otherOptions": {
+          "thread_ts": {
+            "replyValues": {
+              "thread_ts": "={{ $('Parse Post').first().json.ts }}"
+            }
+          }
+        },
+        "select": "channel",
+        "text": "=✅ Logged {{ $('Parse Post').first().json.project['QU'] }} to the Music Project List. {{ $('Parse Post').first().json.summary }} {{ $('Parse Post').first().json.unknown.length ? '⚠️ Not in the composer list: ' + $('Parse Post').first().json.unknown.join(', ') + ', please check spelling.' : '' }}"
+      },
+      "position": [
+        1104,
+        0
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "webhookId": "5255595b-a520-4d12-bc86-76b546a06050"
+    }
+  ],
+  "pinData": {},
+  "settings": {
+    "availableInMCP": false,
+    "binaryMode": "separate",
+    "executionOrder": "v1"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-26T02:09:12.854Z",
+      "project": {
+        "createdAt": "2026-09-25T05:48:28.418Z",
+        "creatorId": "20e5b4ed-7dd9-4744-a9d3-f744384366cf",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "OIPEtJ8tbKv2CQH0",
+        "name": "Joaquin Santos <joaquin@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-09-25T05:52:07.186Z"
+      },
+      "projectId": "OIPEtJ8tbKv2CQH0",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-26T02:09:12.854Z",
+      "workflowId": "BAXIPFh7JKaye7qY"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-09-26T04:24:14.822Z",
+  "versionCounter": 109,
+  "versionId": "45fb155e-aa57-4a31-97a4-f79097aa570a"
+}

@@ -612,6 +612,9 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
       check('v167','a lower-case client',E('I need Studio 4 next Tuesday 10am to 1pm for a vo recording, project lumen, client sasa, engineer topet').client==='sasa');
       check('v167','"the client is Brightline Media (new)"',E('Book Studio 7 tomorrow 2-4pm, the client is Brightline Media (new)').client==='Brightline Media');
       check('v167','"producer is Ana"',E('Book Studio 7 tomorrow 2-4pm, producer is Ana Cruz').client==='Ana Cruz');
+      check('v167','"no client, it\'s client work" names nobody (eval NC-1)',E("Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORANGE, engineer Tara Lim, no client, it's client work").client==='');
+      check('v167','"client work" is not a client called work',E('Book Studio 7 tomorrow 2-4pm, project ORBIT, it is client work').client==='');
+      check('v167','"client project for Acme" is not a client called project',E('Book Studio 7 tomorrow 2-4pm, a client project, client Acme Corp').client==='Acme Corp');
       check('v167','"no client" names nobody',E('Book Studio 7 tomorrow 2-4pm, project ORANGE, no client, engineer Tara').client==='');
       check('v167','a Localization project code',E('Book Studio 1 next Monday 10am to 1pm, Localization Dubbing, NET-KUBA, engineer Daryl').projectCode==='NET-KUBA');
       const T=t=>{const q=E(t);return q.timeStart+'-'+q.timeEnd;};

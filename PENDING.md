@@ -17,7 +17,7 @@ ones move to the bottom instead of being renumbered.
 
 | # | What | Blocked on / owner |
 |---|---|---|
-| 33 | Launch switches: year shift, **three** `DEV_REDIRECT`s, HAIST Dev decision | Howard, on 12 Oct |
+| 33 | Launch switches: year shift, **three** `DEV_REDIRECT`s, drop `TEST_COORD` (the tag is live on Howard). **HAIST Dev stays** for now as an emergency backup (Howard, 28 Sep) | Howard, on 12 Oct |
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
 | 22 | Automatic backup off since 16 Sep; manual backups only (last 2026-09-25) | Follows 21 |
@@ -57,7 +57,7 @@ ones move to the bottom instead of being renumbered.
 | 10 | Backfill each new window (Jan onward); optionally match the alt-email column | Per window |
 | 11 | Explore an n8n update | Server |
 | 13, 18, 39 | Speed: first Code node ~3.5s, first outbound call ~4s, new staff-list reads ~1s | Server / later |
-| 40 | Leftover snapshot files from renames in `workflows/live/` | Howard's OK to delete |
+| 40 | Leftover snapshot files from renames in `workflows/live/` | **Done 28 Sep:** Howard OK'd; current snapshots refreshed first, then the 5 old-name files removed (all 5 ids still active under their current names) |
 | 41 | `Booked For` notice quotes three words instead of the name | **LIVE 28 Sep 08:28 UTC** (main v166) |
 
 **Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31, 32. **Item 14** is a permanent

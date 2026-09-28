@@ -71,7 +71,7 @@
         ]
       }
     },
-    "createdAt": "2026-09-23T12:33:15.733Z",
+    "createdAt": "2026-09-25T09:08:34.036Z",
     "description": null,
     "name": null,
     "nodeGroups": [],
@@ -146,7 +146,7 @@
         "id": "2aa2cfa3-1a77-438b-afea-58fcba79ed2d",
         "name": "Build Request",
         "parameters": {
-          "jsCode": "// Inlined from workflows/drafts/consent/open-request.js (offline-tested). See consent-engine.md.\nconst c = $('When Executed by Another Workflow').first().json || {};\nfunction computeDeadline(now,start,cfg){const n=new Date(now).getTime();const s=new Date(start).getTime();const w=(cfg&&cfg.maxWindowH?cfg.maxWindowH:24)*3600*1000;const l=(cfg&&cfg.minLeadMin?cfg.minLeadMin:60)*60*1000;return new Date(Math.max(n,Math.min(n+w,s-l))).toISOString();}\n// TEST GATE (mirrors Cancel/Move DEV_REDIRECT): don't ping real non-dev people during\n// testing. Every consent recipient (Approver/Requester stored on the row, which all the\n// downstream DMs read) is rerouted to Howard UNLESS they are a HAIST dev. Set DEV_REDIRECT=''\n// at launch to restore real DMs. The tail hook matches on Incumbent Event Id, not Approver,\n// so the REAL booking is still the one moved/placed.\nconst DEV_REDIRECT = 'U08V3CKDGJF';                        // '' at launch\nconst ALLOW = ['U08V3CKDGJF','U098UFMKQHZ','U08JL17A50A','U0B4S0EKSAY','U098UFLG70B','U026N6E1R','U045A3VQER3']; // QA round 2 2026-09-24: Howard,Trish,Camy,Jess,Tel,Tara,Genzo. '' at launch via DEV_REDIRECT.\nconst route = (id) => (!DEV_REDIRECT || ALLOW.indexOf(String(id)) !== -1) ? id : DEV_REDIRECT;\nconst now = new Date().toISOString();\nconst stamp = now.replace(/[-:T.]/g,'').slice(0,14);\nconst id = stamp + '-' + String(c.requester||'unknown');\nconst deadline = computeDeadline(now, c.reqStart, {maxWindowH:24, minLeadMin:60});\nreturn [{ json: {\n  'Request ID': id, 'Status': 'PENDING', 'Kind': (c.kind || 'PREEMPT'),\n  'Requester': route(c.requester||''), 'Requester Name': c.requesterName||'',\n  'Approver': route(c.approver||''), 'Approver Name': c.approverName||'',\n  'Room/Booth': c.room||'', 'Req Start': c.reqStart||'', 'Req End': c.reqEnd||'',\n  'Incumbent Event Id': c.incumbentEventId||'', 'Incumbent Title': c.incumbentTitle||'',\n  'Incumbent New Start': '', 'Incumbent New End': '',\n  'Req Priority': (c.reqPriority==null?'':c.reqPriority), 'Inc Priority': (c.incPriority==null?'':c.incPriority),\n  'Deadline': deadline,\n  'Requester DM': c.requesterDM||'', 'Approver DM': c.approverDM||'',\n  'Log Thread TS': '', 'Resolved Via': '', 'Attested By': '', 'Decided At': '',\n  'Req Payload': (c.reqPayload==null?'':(typeof c.reqPayload==='string'?c.reqPayload:JSON.stringify(c.reqPayload)))\n}}];\n"
+          "jsCode": "// Inlined from workflows/drafts/consent/open-request.js (offline-tested). See consent-engine.md.\nconst c = $('When Executed by Another Workflow').first().json || {};\nfunction computeDeadline(now,start,cfg){const n=new Date(now).getTime();const s=new Date(start).getTime();const w=(cfg&&cfg.maxWindowH?cfg.maxWindowH:24)*3600*1000;const l=(cfg&&cfg.minLeadMin?cfg.minLeadMin:60)*60*1000;return new Date(Math.max(n,Math.min(n+w,s-l))).toISOString();}\n// TEST GATE (mirrors Cancel/Move DEV_REDIRECT): don't ping real non-dev people during\n// testing. Every consent recipient (Approver/Requester stored on the row, which all the\n// downstream DMs read) is rerouted to Howard UNLESS they are a HAIST dev. Set DEV_REDIRECT=''\n// at launch to restore real DMs. The tail hook matches on Incumbent Event Id, not Approver,\n// so the REAL booking is still the one moved/placed.\nconst DEV_REDIRECT = 'U08V3CKDGJF';                        // '' at launch\nconst ALLOW = ['U08V3CKDGJF','U098UFMKQHZ','U08JL17A50A','U0B4S0EKSAY','U098UFLG70B','U026N6E1R','U045A3VQER3']; // QA round 2 2026-09-24: Howard,Trish,Camy,Jess,Tel,Tara,Genzo. '' at launch via DEV_REDIRECT.\nconst route = (id) => (!DEV_REDIRECT || ALLOW.indexOf(String(id)) !== -1) ? id : DEV_REDIRECT;\nconst now = new Date().toISOString();\nconst stamp = now.replace(/[-:T.]/g,'').slice(0,14);\nconst id = stamp + '-' + String(c.requester||'unknown');\n// M-booth response window - tiers CONFIRMED by Howard 2026-09-22 (docs/design/mbooth-approval.md),\n// ported verbatim from workflows/drafts/mbooth/logic.js on 2026-09-25: they had never reached live, which\n// used the 24h / 1h-lead rule below for every kind. Asia/Manila calendar days:\n//   2+ days away -> now + 24h;  tomorrow -> 10:00 AM Manila on the booking day;  same day -> now + 3h.\n// Always floored at now and capped at the session start. PREEMPT keeps the consent-engine rule\n// (\"earlier of now + window and start - lead\", docs/design/consent-engine.md).\nconst MNL_TZ = 8 * 3600 * 1000;\nfunction manilaDayIndex(ms) { return Math.floor((ms + MNL_TZ) / 86400000); }\nfunction mboothDeadline(nowISO, startISO, cfg) {\n  const k = cfg || {};\n  const sameDayH = k.sameDayH == null ? 3 : k.sameDayH;\n  const farWindowH = k.farWindowH == null ? 24 : k.farWindowH;\n  const dayBeforeHour = k.dayBeforeHour == null ? 10 : k.dayBeforeHour;\n  const now = new Date(nowISO).getTime();\n  const start = new Date(startISO).getTime();\n  const daysAhead = manilaDayIndex(start) - manilaDayIndex(now);\n  let deadline;\n  if (daysAhead >= 2) deadline = now + farWindowH * 3600 * 1000;\n  else if (daysAhead === 1) deadline = (manilaDayIndex(start) * 86400000 - MNL_TZ) + dayBeforeHour * 3600 * 1000;\n  else deadline = now + sameDayH * 3600 * 1000;\n  deadline = Math.max(now, Math.min(deadline, start));\n  return new Date(deadline).toISOString();\n}\nconst deadline = String(c.kind || '').toUpperCase() === 'MBOOTH'\n  ? mboothDeadline(now, c.reqStart)\n  : computeDeadline(now, c.reqStart, {maxWindowH:24, minLeadMin:60});\nreturn [{ json: {\n  'Request ID': id, 'Status': 'PENDING', 'Kind': (c.kind || 'PREEMPT'),\n  'Requester': route(c.requester||''), 'Requester Name': c.requesterName||'',\n  'Approver': route(c.approver||''), 'Approver Name': c.approverName||'',\n  'Room/Booth': c.room||'', 'Req Start': c.reqStart||'', 'Req End': c.reqEnd||'',\n  'Incumbent Event Id': c.incumbentEventId||'', 'Incumbent Title': c.incumbentTitle||'',\n  'Incumbent New Start': '', 'Incumbent New End': '',\n  'Req Priority': (c.reqPriority==null?'':c.reqPriority), 'Inc Priority': (c.incPriority==null?'':c.incPriority),\n  'Deadline': deadline,\n  'Requester DM': c.requesterDM||'', 'Approver DM': c.approverDM||'',\n  'Log Thread TS': '', 'Resolved Via': '', 'Attested By': '', 'Decided At': '',\n  'Req Payload': (c.reqPayload==null?'':(typeof c.reqPayload==='string'?c.reqPayload:JSON.stringify(c.reqPayload)))\n}}];\n"
         },
         "position": [
           220,
@@ -295,29 +295,29 @@
         "typeVersion": 1
       }
     ],
-    "updatedAt": "2026-09-23T12:33:15.733Z",
-    "versionId": "17824544-ae85-48ae-8149-96a756ea386b",
+    "updatedAt": "2026-09-25T09:08:34.036Z",
+    "versionId": "a603774c-2854-4df9-874c-4c5a0586528d",
     "workflowId": "nEHnCMMXS0am59Zy",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-09-23T12:33:15.868Z",
+        "createdAt": "2026-09-25T09:08:34.172Z",
         "event": "activated",
-        "id": 1050,
+        "id": 1120,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "17824544-ae85-48ae-8149-96a756ea386b",
+        "versionId": "a603774c-2854-4df9-874c-4c5a0586528d",
         "workflowId": "nEHnCMMXS0am59Zy"
       },
       {
-        "createdAt": "2026-09-23T12:33:15.838Z",
+        "createdAt": "2026-09-25T09:08:34.141Z",
         "event": "deactivated",
-        "id": 1049,
+        "id": 1119,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "17824544-ae85-48ae-8149-96a756ea386b",
+        "versionId": "a603774c-2854-4df9-874c-4c5a0586528d",
         "workflowId": "nEHnCMMXS0am59Zy"
       }
     ]
   },
-  "activeVersionId": "17824544-ae85-48ae-8149-96a756ea386b",
+  "activeVersionId": "a603774c-2854-4df9-874c-4c5a0586528d",
   "connections": {
     "Build Messages": {
       "main": [
@@ -464,7 +464,7 @@
       "id": "2aa2cfa3-1a77-438b-afea-58fcba79ed2d",
       "name": "Build Request",
       "parameters": {
-        "jsCode": "// Inlined from workflows/drafts/consent/open-request.js (offline-tested). See consent-engine.md.\nconst c = $('When Executed by Another Workflow').first().json || {};\nfunction computeDeadline(now,start,cfg){const n=new Date(now).getTime();const s=new Date(start).getTime();const w=(cfg&&cfg.maxWindowH?cfg.maxWindowH:24)*3600*1000;const l=(cfg&&cfg.minLeadMin?cfg.minLeadMin:60)*60*1000;return new Date(Math.max(n,Math.min(n+w,s-l))).toISOString();}\n// TEST GATE (mirrors Cancel/Move DEV_REDIRECT): don't ping real non-dev people during\n// testing. Every consent recipient (Approver/Requester stored on the row, which all the\n// downstream DMs read) is rerouted to Howard UNLESS they are a HAIST dev. Set DEV_REDIRECT=''\n// at launch to restore real DMs. The tail hook matches on Incumbent Event Id, not Approver,\n// so the REAL booking is still the one moved/placed.\nconst DEV_REDIRECT = 'U08V3CKDGJF';                        // '' at launch\nconst ALLOW = ['U08V3CKDGJF','U098UFMKQHZ','U08JL17A50A','U0B4S0EKSAY','U098UFLG70B','U026N6E1R','U045A3VQER3']; // QA round 2 2026-09-24: Howard,Trish,Camy,Jess,Tel,Tara,Genzo. '' at launch via DEV_REDIRECT.\nconst route = (id) => (!DEV_REDIRECT || ALLOW.indexOf(String(id)) !== -1) ? id : DEV_REDIRECT;\nconst now = new Date().toISOString();\nconst stamp = now.replace(/[-:T.]/g,'').slice(0,14);\nconst id = stamp + '-' + String(c.requester||'unknown');\nconst deadline = computeDeadline(now, c.reqStart, {maxWindowH:24, minLeadMin:60});\nreturn [{ json: {\n  'Request ID': id, 'Status': 'PENDING', 'Kind': (c.kind || 'PREEMPT'),\n  'Requester': route(c.requester||''), 'Requester Name': c.requesterName||'',\n  'Approver': route(c.approver||''), 'Approver Name': c.approverName||'',\n  'Room/Booth': c.room||'', 'Req Start': c.reqStart||'', 'Req End': c.reqEnd||'',\n  'Incumbent Event Id': c.incumbentEventId||'', 'Incumbent Title': c.incumbentTitle||'',\n  'Incumbent New Start': '', 'Incumbent New End': '',\n  'Req Priority': (c.reqPriority==null?'':c.reqPriority), 'Inc Priority': (c.incPriority==null?'':c.incPriority),\n  'Deadline': deadline,\n  'Requester DM': c.requesterDM||'', 'Approver DM': c.approverDM||'',\n  'Log Thread TS': '', 'Resolved Via': '', 'Attested By': '', 'Decided At': '',\n  'Req Payload': (c.reqPayload==null?'':(typeof c.reqPayload==='string'?c.reqPayload:JSON.stringify(c.reqPayload)))\n}}];\n"
+        "jsCode": "// Inlined from workflows/drafts/consent/open-request.js (offline-tested). See consent-engine.md.\nconst c = $('When Executed by Another Workflow').first().json || {};\nfunction computeDeadline(now,start,cfg){const n=new Date(now).getTime();const s=new Date(start).getTime();const w=(cfg&&cfg.maxWindowH?cfg.maxWindowH:24)*3600*1000;const l=(cfg&&cfg.minLeadMin?cfg.minLeadMin:60)*60*1000;return new Date(Math.max(n,Math.min(n+w,s-l))).toISOString();}\n// TEST GATE (mirrors Cancel/Move DEV_REDIRECT): don't ping real non-dev people during\n// testing. Every consent recipient (Approver/Requester stored on the row, which all the\n// downstream DMs read) is rerouted to Howard UNLESS they are a HAIST dev. Set DEV_REDIRECT=''\n// at launch to restore real DMs. The tail hook matches on Incumbent Event Id, not Approver,\n// so the REAL booking is still the one moved/placed.\nconst DEV_REDIRECT = 'U08V3CKDGJF';                        // '' at launch\nconst ALLOW = ['U08V3CKDGJF','U098UFMKQHZ','U08JL17A50A','U0B4S0EKSAY','U098UFLG70B','U026N6E1R','U045A3VQER3']; // QA round 2 2026-09-24: Howard,Trish,Camy,Jess,Tel,Tara,Genzo. '' at launch via DEV_REDIRECT.\nconst route = (id) => (!DEV_REDIRECT || ALLOW.indexOf(String(id)) !== -1) ? id : DEV_REDIRECT;\nconst now = new Date().toISOString();\nconst stamp = now.replace(/[-:T.]/g,'').slice(0,14);\nconst id = stamp + '-' + String(c.requester||'unknown');\n// M-booth response window - tiers CONFIRMED by Howard 2026-09-22 (docs/design/mbooth-approval.md),\n// ported verbatim from workflows/drafts/mbooth/logic.js on 2026-09-25: they had never reached live, which\n// used the 24h / 1h-lead rule below for every kind. Asia/Manila calendar days:\n//   2+ days away -> now + 24h;  tomorrow -> 10:00 AM Manila on the booking day;  same day -> now + 3h.\n// Always floored at now and capped at the session start. PREEMPT keeps the consent-engine rule\n// (\"earlier of now + window and start - lead\", docs/design/consent-engine.md).\nconst MNL_TZ = 8 * 3600 * 1000;\nfunction manilaDayIndex(ms) { return Math.floor((ms + MNL_TZ) / 86400000); }\nfunction mboothDeadline(nowISO, startISO, cfg) {\n  const k = cfg || {};\n  const sameDayH = k.sameDayH == null ? 3 : k.sameDayH;\n  const farWindowH = k.farWindowH == null ? 24 : k.farWindowH;\n  const dayBeforeHour = k.dayBeforeHour == null ? 10 : k.dayBeforeHour;\n  const now = new Date(nowISO).getTime();\n  const start = new Date(startISO).getTime();\n  const daysAhead = manilaDayIndex(start) - manilaDayIndex(now);\n  let deadline;\n  if (daysAhead >= 2) deadline = now + farWindowH * 3600 * 1000;\n  else if (daysAhead === 1) deadline = (manilaDayIndex(start) * 86400000 - MNL_TZ) + dayBeforeHour * 3600 * 1000;\n  else deadline = now + sameDayH * 3600 * 1000;\n  deadline = Math.max(now, Math.min(deadline, start));\n  return new Date(deadline).toISOString();\n}\nconst deadline = String(c.kind || '').toUpperCase() === 'MBOOTH'\n  ? mboothDeadline(now, c.reqStart)\n  : computeDeadline(now, c.reqStart, {maxWindowH:24, minLeadMin:60});\nreturn [{ json: {\n  'Request ID': id, 'Status': 'PENDING', 'Kind': (c.kind || 'PREEMPT'),\n  'Requester': route(c.requester||''), 'Requester Name': c.requesterName||'',\n  'Approver': route(c.approver||''), 'Approver Name': c.approverName||'',\n  'Room/Booth': c.room||'', 'Req Start': c.reqStart||'', 'Req End': c.reqEnd||'',\n  'Incumbent Event Id': c.incumbentEventId||'', 'Incumbent Title': c.incumbentTitle||'',\n  'Incumbent New Start': '', 'Incumbent New End': '',\n  'Req Priority': (c.reqPriority==null?'':c.reqPriority), 'Inc Priority': (c.incPriority==null?'':c.incPriority),\n  'Deadline': deadline,\n  'Requester DM': c.requesterDM||'', 'Approver DM': c.approverDM||'',\n  'Log Thread TS': '', 'Resolved Via': '', 'Attested By': '', 'Decided At': '',\n  'Req Payload': (c.reqPayload==null?'':(typeof c.reqPayload==='string'?c.reqPayload:JSON.stringify(c.reqPayload)))\n}}];\n"
       },
       "position": [
         220,
@@ -641,7 +641,7 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 0,
-  "updatedAt": "2026-09-23T12:33:15.728Z",
-  "versionCounter": 10,
-  "versionId": "17824544-ae85-48ae-8149-96a756ea386b"
+  "updatedAt": "2026-09-25T09:08:34.032Z",
+  "versionCounter": 11,
+  "versionId": "a603774c-2854-4df9-874c-4c5a0586528d"
 }
