@@ -53,7 +53,7 @@ booking log keeps their BOOKED rows — the 7 deleted directly from the calendar
 - **Bug 1 → main v170, live 22:49 PHT.** A verified yes to a prepared summary books in code (Book Direct), Gemini not called. Verified live twice (B3 1 and 2): "Booked." in ~14 s, calendar entry carries "Booked by … | ref:". `scripts/sim-book-direct.js` checks the direct path sends Book Session exactly what the tool would.
 - v169 (22:36–22:46) dropped the booker reference and was rolled back; see its commit.
 
-- **Bug 4 → main v171, live 23:16 PHT.** AI Agent upgraded 1.7 → 2.2 with *Enable Fallback Model*; a second model node **Gemini Fallback** (`models/gemini-2.5-flash`, same credential and retries) takes over when Flash Lite fails. Proven live: with the primary model name deliberately broken for one message (exec 15884), both primary calls failed and the fallback answered correctly with a tool call; v171 restored 27 s later. Normal turn on v171 (exec 15881): tools, memory, Guard Probe and intermediate steps all working, primary only.
+- **Bug 4 → main v171, live 23:16 PHT.** AI Agent upgraded 1.7 → 2.2 with *Enable Fallback Model*; a second model node **Gemini Fallback** (`models/gemini-3.8-flash` since v172, 23:20 PHT — first `gemini-2.5-flash`, swapped because Google limits 2.5 access and recommends 3.8 Flash; same credential and retries) takes over when Flash Lite fails. Proven live: with the primary model name deliberately broken for one message (exec 15884), both primary calls failed and the fallback answered correctly with a tool call; v171 restored 27 s later. Normal turn on v171 (exec 15881): tools, memory, Guard Probe and intermediate steps all working, primary only.
 
 ## Worth deciding
 
