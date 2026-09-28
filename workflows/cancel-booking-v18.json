@@ -357,7 +357,7 @@
           },
           "conditions": [
             {
-              "id": "55f6df06-f2c5-4960-817d-a04e913093aa",
+              "id": "a0e152c6-d727-43e5-bb25-843925755bc1",
               "leftValue": "={{ $json.verdict }}",
               "rightValue": "PREPARED",
               "operator": {
@@ -377,7 +377,7 @@
         -912,
         -640
       ],
-      "id": "00b0ccee-1866-4a4b-ac61-50c9b5865e58",
+      "id": "ea498a96-72d2-4e14-930e-ae3ee1822efe",
       "name": "Prepared?"
     },
     {
@@ -385,7 +385,7 @@
         "mode": "runOnceForAllItems",
         "jsCode": "const c = $input.first().json || {};\nreturn [{ json: { status: 'PREPARED', event_id: c.event_id, title: c.title, card_text: c.card_text, human: c.human } }];"
       },
-      "id": "cfadf470-7660-45f1-b735-2007bc9d6219",
+      "id": "b76f3782-68ee-4a15-ba81-22c4f17029b1",
       "name": "Return Prepared",
       "position": [
         -688,
