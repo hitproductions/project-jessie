@@ -962,6 +962,136 @@
         ],
         "bookedFor": "Brian Cua"
       }
+    },
+    {
+      "id": "CORR-1",
+      "note": "v167: a correction with the word engineer wins over the first message",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Drey",
+        "change the engineer to Tara"
+      ],
+      "expect": {
+        "engineer": "Tara Lim",
+        "project": "ORBIT",
+        "time": "2:00\\s*PM.*4:00\\s*PM"
+      }
+    },
+    {
+      "id": "CORR-2",
+      "note": "v167: a correction without the word engineer - the model's typed name stands",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Drey",
+        "actually make it Tara instead"
+      ],
+      "expect": {
+        "engineer": "Tara Lim",
+        "project": "ORBIT"
+      }
+    },
+    {
+      "id": "CORR-3",
+      "note": "v167: a new project in a later message wins",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim",
+        "sorry, the project is LUMEN"
+      ],
+      "expect": {
+        "project": "LUMEN",
+        "engineer": "Tara Lim"
+      }
+    },
+    {
+      "id": "SHIFT-1",
+      "note": "v167: a shift keeps the model's new times (no typed range forced back)",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim",
+        "make it an hour later"
+      ],
+      "expect": {
+        "time": "3:00\\s*PM.*5:00\\s*PM",
+        "engineer": "Tara Lim"
+      }
+    },
+    {
+      "id": "SHIFT-2",
+      "note": "v167: extending the end",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim",
+        "can we extend it to 5pm"
+      ],
+      "expect": {
+        "time": "2:00\\s*PM.*5:00\\s*PM"
+      }
+    },
+    {
+      "id": "DYM-1",
+      "note": "v167: a 'Did you mean' answered - the name Jessie offered counts as said",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Daryll",
+        "yes, that's him"
+      ],
+      "expect": {
+        "engineer": "Daryl Reyes",
+        "initials": "DR"
+      }
+    },
+    {
+      "id": "DYM-2",
+      "note": "v167: a client 'Did you mean' answered with the first option",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Limm, engineer Tara Lim, client work",
+        "yes, the first one - the existing client"
+      ],
+      "expect": {
+        "client": [
+          "Jem Lim"
+        ],
+        "project": "ORBIT"
+      }
+    },
+    {
+      "id": "TIME-1",
+      "note": "v167: 'from 1:30 to 3pm'",
+      "turns": [
+        "Book Studio 7 next Friday from 1:30 to 3pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "time": "1:30\\s*PM.*3:00\\s*PM",
+        "project": "ORBIT"
+      }
+    },
+    {
+      "id": "TIME-2",
+      "note": "v167: '11 to 1pm' is 11am",
+      "turns": [
+        "Book Studio 7 next Friday 11 to 1pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "time": "11:00\\s*AM.*1:00\\s*PM"
+      }
+    },
+    {
+      "id": "TIME-3",
+      "note": "v167: '10am-12nn'",
+      "turns": [
+        "Book Studio 7 next Friday 10am-12nn, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "time": "10:00\\s*AM.*12:00\\s*PM"
+      }
+    },
+    {
+      "id": "PROJ-1",
+      "note": "v167: multi-word project title",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project title is Blue Sky, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "project": "BLUE SKY",
+        "client": [
+          "Jem Lim"
+        ]
+      }
     }
   ]
 }

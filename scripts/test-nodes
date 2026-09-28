@@ -484,7 +484,13 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
     {Name:'Camy Caridad',Initials:'CC',Info:'Voice Caster, Goes by Camy, Camille, CC.'},
     {Name:'John Cutangco',Initials:'JC',Info:'Loc Engineer, Goes by John, Pusa, JC.'},
     {Name:'John Rivera',Initials:'JR',Info:'Goes by Johnny, JR.'},
-    {Name:'Dennis Cham',Initials:'DC',Info:'Chairman, Sir Dennis, Dennis, DC.'}];
+    {Name:'Dennis Cham',Initials:'DC',Info:'Chairman, Sir Dennis, Dennis, DC.'},
+    {Name:'Daryl Reyes',Initials:'DR',Info:'Music Engineer, Post Engineer, Secondary Loc Engineer. Goes by Daryl, Drei, Drey, DR.'},
+    {Name:'Tara Lim',Initials:'TL',Info:'Post Engineer, Goes by Tara, TL.'},
+    {Name:'Richard Genabe',Initials:'RG',Info:'Post Engineer, Goes by Richard, Chard, RG.'},
+    {Name:'Letty Sarmiento',Initials:'LS',Info:'Project Manager, Goes by Letty, LS.'},
+    {Name:'Lyn Sajonas',Initials:'LS',Info:'Head of Finance, Goes by Miss Lyn, Lyn, LS.'},
+    {Name:'Brian Cua',Initials:'BC',Info:'Music Arranger, Goes by Brian, BC.'}];
   const BOT={bot_id:'B1'};
   // msgs newest first; the last element of hist is the oldest.
   const run=(trigger,hist,opts={})=>{
@@ -568,7 +574,118 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
   check('bfc','"what rooms" keeps every room',r.roomScope==='all');
   h=[U(9,'new client'),J(8,'Did you mean Jem Lim, or is Jem Limm a new client?'),U(7,'Book Studio 7 tomorrow 2-4pm VO, project X, client Jem Limm')];
   r=run(h[0],h);
+  if(/saidWords/.test(code)){ let r,h;
+    // v167 (eval 2026-09-28): the engineer and arranger come from what the requester typed
+    const E=t=>run(U(2,t),[]);
+    r=E('Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Drey');
+    check('v167','"engineer Drey" is Daryl Reyes, and the model is told so',r.engineer==='Daryl Reyes'&&r.engineerResolved===true&&/THE ENGINEER IS Daryl Reyes/.test(r.notice),JSON.stringify([r.engineer,r.notice]));
+    check('v167','"engineer: Daryl"',E('Book Studio 7 tomorrow 2-4pm, engineer: Daryl').engineer==='Daryl Reyes');
+    check('v167','"the engineer is Tara"',E('Book Studio 7 tomorrow 2-4pm, the engineer is Tara').engineer==='Tara Lim');
+    check('v167','"Drey is engineering"',E('Book Studio 7 tomorrow 2-4pm, Drey is engineering').engineer==='Daryl Reyes');
+    check('v167','"engineered by RG" (initials in capitals)',E('Book Studio 7 tomorrow 2-4pm engineered by RG').engineer==='Richard Genabe');
+    check('v167','"engineer Drey next Friday": the date is not part of the name',E('Book Studio 7, engineer Drey next Friday 2-4pm').engineer==='Daryl Reyes');
+    check('v167','the full name',E('Book Studio 7 tomorrow, engineer Tara Lim, VO').engineer==='Tara Lim');
+    r=E('Book Studio 7 tomorrow 2-4pm, engineer LS');
+    check('v167','initials two people share are passed as typed, not picked',r.engineer==='LS'&&!r.engineerResolved&&!/THE ENGINEER/.test(r.notice),JSON.stringify(r.engineer));
+    r=E('Book Studio 7 tomorrow 2-4pm, engineer Daryl Aquino');
+    check('v167','a surname no staff member has is passed as typed (Book Session asks)',r.engineer==='Daryl Aquino'&&!r.engineerResolved,r.engineer);
+    check('v167','a stranger is passed as typed',E('Book Studio 7 tomorrow 2-4pm, engineer Juan').engineer==='Juan');
+    check('v167','"engineer: none" names nobody',E('Book Studio 7 tomorrow 2-4pm, engineer: none').engineer==='');
+    check('v167','"no engineer yet" names nobody',E('Book Studio 7 tomorrow 2-4pm, no engineer yet').engineer==='');
+    check('v167','lower-case initials are not guessed',E('Book Studio 7 tomorrow 2-4pm, engineer rg').engineer==='');
+    r=E('Book Studio C tomorrow 2-5pm, band recording, engineer Daryl, arranger Brian');
+    check('v167','the arranger too',r.engineer==='Daryl Reyes'&&r.arranger==='Brian Cua'&&/THE ARRANGER IS Brian Cua/.test(r.notice),JSON.stringify([r.engineer,r.arranger]));
+    r=E('Book Studio F for Tara next Thursday 1-4pm, engineer Drey');
+    check('v167','booked for one colleague, engineered by another',r.bookedFor==='Tara Lim'&&r.engineer==='Daryl Reyes',JSON.stringify([r.bookedFor,r.engineer]));
+    h=[U(9,'change the engineer to Tara'),J(8,'*ORBIT / Jem Lim / DR* ... Confirm to book.'),U(7,'Book Studio 7 tomorrow 2-4pm VO, project ORBIT, client Jem Lim, engineer Drey')];
+    r=run(h[0],h);
+    check('v167','a correction in a newer message wins',r.engineer==='Tara Lim',r.engineer);
+    check('v167','saidWords holds what they typed, lower case',/\bdrey\b/.test(r.saidWords)&&/\btara\b/.test(r.saidWords),r.saidWords);
+    check('v167','a message with no engineer leaves it empty',E('which studios are free tomorrow 2-4pm?').engineer==='');
+    if(/timesMentioned/.test(code)){
+      // project, client, times
+      r=E('Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Drey');
+      check('v167','project, client and times are read',r.project==='ORBIT'&&r.client==='Jem Lim'&&r.timeStart==='14:00'&&r.timeEnd==='16:00',JSON.stringify([r.project,r.client,r.timeStart,r.timeEnd]));
+      check('v167','and the model is told to use them as written',/FROM THE REQUESTER.S OWN WORDS: project ORBIT; client Jem Lim; time 2pm to 4pm/.test(r.notice),r.notice);
+      check('v167','"Project Sushi." loses the full stop',E('Book Studio F tomorrow 1-4pm. Project Sushi. Client is Pael.').project==='Sushi');
+      check('v167','a multi-word project stops at the next detail',E('Book Studio 7 tomorrow 2-4pm, project title is Blue Sky Campaign next week, client Acme').project==='Blue Sky Campaign');
+      check('v167','a lower-case client',E('I need Studio 4 next Tuesday 10am to 1pm for a vo recording, project lumen, client sasa, engineer topet').client==='sasa');
+      check('v167','"the client is Brightline Media (new)"',E('Book Studio 7 tomorrow 2-4pm, the client is Brightline Media (new)').client==='Brightline Media');
+      check('v167','"producer is Ana"',E('Book Studio 7 tomorrow 2-4pm, producer is Ana Cruz').client==='Ana Cruz');
+      check('v167','"no client" names nobody',E('Book Studio 7 tomorrow 2-4pm, project ORANGE, no client, engineer Tara').client==='');
+      check('v167','a Localization project code',E('Book Studio 1 next Monday 10am to 1pm, Localization Dubbing, NET-KUBA, engineer Daryl').projectCode==='NET-KUBA');
+      const T=t=>{const q=E(t);return q.timeStart+'-'+q.timeEnd;};
+      check('v167','"2-4pm"',T('Book Studio 7 tomorrow 2-4pm')==='14:00-16:00');
+      check('v167','"from 1:30 to 3pm"',T('Book Studio 7 tomorrow from 1:30 to 3pm')==='13:30-15:00');
+      check('v167','"11 to 1pm" is 11am',T('Book Studio 7 tomorrow 11 to 1pm')==='11:00-13:00');
+      check('v167','"10am-12nn"',T('Book Studio 7 tomorrow 10am-12nn')==='10:00-12:00');
+      check('v167','"9 to 5" with no am/pm is not guessed',T('Book Studio 7 tomorrow 9 to 5')==='-');
+      check('v167','a start alone is not a range (QA M4)',T('book studio 6 tomorrow at 2pm')==='-');
+      check('v167','"Studio 1 - 2pm" is not 1 to 2pm',T('Book Studio 1 - 2pm tomorrow')==='-');
+      h=[U(9,'make it an hour later'),J(8,'*ORBIT / Jem Lim / DR* ... 2:00 PM - 4:00 PM ... Confirm to book.'),U(7,'Book Studio 7 tomorrow 2-4pm VO, project ORBIT, client Jem Lim, engineer Drey')];
+      r=run(h[0],h);
+      check('v167','a later shift ("an hour later") means no typed range is forced',r.timeStart==='',r.timeStart);
+      h=[U(9,'ok'),J(8,'Studio 7 is taken then. It is free 5:00 PM - 7:00 PM - want that?'),U(7,'Book Studio 7 tomorrow 2-4pm VO, project ORBIT, client Jem Lim, engineer Drey')];
+      r=run(h[0],h);
+      check('v167','times Jessie offered count as mentioned',r.timesMentioned.includes('17:00')&&r.timesMentioned.includes('19:00')&&r.timesMentioned.includes('14:00'),JSON.stringify(r.timesMentioned));
+      h=[U(9,'yes'),J(8,'"Andre Cabuay" is not on the staff list. Did you mean Daryl Reyes?'),U(7,'engineer Drey')];
+      r=run(h[0],h);
+      check('v167','offered words skip a quoted, refused name',/\bdaryl reyes\b/.test(r.offeredWords)&&!/andre/.test(r.offeredWords),r.offeredWords);
+    }
+  }
   check('bfc','botText holds Jessie\'s messages in this booking (v165)',r.botText===undefined||/Did you mean Jem Lim/.test(r.botText),JSON.stringify(r.botText));
+});
+
+// ── v167: the booking tools prefer the requester's engineer / arranger ────────────────────
+suite('Booking tools — engineer and arranger from what the requester typed (v167)', ()=>{
+  const W=JSON.parse(fs.readFileSync(path.join(T,'main.json'),'utf8'));
+  const first=(v,key)=>{ const i=v.indexOf('{{'), j=v.indexOf(' }}'); let e=v.slice(i+2,j).trim();
+    const k=e.indexOf("$fromAI('"+key+"'"), end=e.indexOf(", 'string', '')",k)+", 'string', '')".length;
+    return e.slice(0,k)+'__m'+e.slice(end); };
+  const n0=W.nodes.find(n=>n.name==='Prepare Booking');
+  if(!n0||!/saidWords/.test(JSON.stringify(n0.parameters))){ console.log('  skip  not in this build'); return; }
+  for(const [name,ek,dk] of [['Prepare Booking','engineer','description'],['Book Session','engineer','description'],['Book Series','series_engineer','series_description']]){
+    const v=W.nodes.find(n=>n.name===name).parameters.workflowInputs.value;
+    const mk=e=>(bf,m)=>new Function('$','__m','return ('+e+');')(nm=>({first:()=>({json:nm==='Booked For'?bf:(nm==='Prepared Booking'?{use:false}:{})})}),m);
+    const eng=mk(first(v.engineer,ek)), desc=mk(first(v.description,dk));
+    const B={engineer:'Daryl Reyes',arranger:'Brian Cua',saidWords:'book studio c tomorrow engineer drey arranger brian'};
+    check('v167',name+': an invented engineer is replaced by the one they typed',eng(B,'Andre Cabuay')==='Daryl Reyes');
+    check('v167',name+': a full name for the nickname they typed is replaced too (same person)',eng(B,'Daryl Reyes (Music Engineer)')==='Daryl Reyes');
+    check('v167',name+': a name they typed stays',eng(B,'Drey')==='Drey');
+    check('v167',name+': a correction they typed without the word engineer stays',eng(Object.assign({},B,{saidWords:B.saidWords+' actually make it tara'}),'Tara')==='Tara');
+    check('v167',name+': an empty engineer is filled in',eng(B,'')==='Daryl Reyes');
+    check('v167',name+': nothing found in their words, the model\'s stands',eng({saidWords:'x'},'Tara Lim')==='Tara Lim');
+    check('v167',name+': an invented arranger is replaced',desc(B,'Engineer: Drey | Arranger: Bryan Cruz')==='Engineer: Drey | Arranger: Brian Cua',desc(B,'Engineer: Drey | Arranger: Bryan Cruz'));
+    check('v167',name+': a missing arranger is added',desc(B,'Engineer: Drey')==='Engineer: Drey | Arranger: Brian Cua',desc(B,'Engineer: Drey'));
+    check('v167',name+': a typed arranger stays',desc(B,'Engineer: Drey | Arranger: Brian')==='Engineer: Drey | Arranger: Brian');
+    check('v167',name+': no arranger in their words, the description stands',desc({saidWords:'x'},'Engineer: Drey')==='Engineer: Drey');
+    if(!/timesMentioned/.test(JSON.stringify(v))) continue;
+    const sk=name==='Book Series'?['series_summary','series_client']:['summary','client'];
+    const title=mk(first(v.summary,sk[0])), cli=mk(first(v.client,sk[1]));
+    const P={project:'REASON1',client:'Jem Lim',saidWords:'book studio 7 project reason1 client jem lim engineer drey',offeredWords:'',timesMentioned:['14:00','16:00'],timeStart:'14:00',timeEnd:'16:00'};
+    check('v167',name+': a corrupted project is put back (REazon1)',title(P,'REAZON1 / Jem Lim / DR')==='REASON1 / Jem Lim / DR',title(P,'REAZON1 / Jem Lim / DR'));
+    check('v167',name+': a corrupted client in the title is put back',title(P,'REASON1 / Jem Limm / DR')==='REASON1 / Jem Lim / DR');
+    check('v167',name+': a typed title stays',title(P,'REASON1 / Jem Lim / DR')==='REASON1 / Jem Lim / DR');
+    check('v167',name+': a no-client title keeps its shape',title(Object.assign({},P,{client:''}),'REAZON1 / DR')==='REASON1 / DR');
+    check('v167',name+': an internal title is untouched',title(P,'KATHA - Marketing x BD')==='KATHA - Marketing x BD');
+    check('v167',name+': a Localization code is put back',title({projectCode:'NET-KUBA',saidWords:'net kuba',timesMentioned:[]},'NET-KUBAA / FP')==='NET-KUBA / FP');
+    check('v167',name+': nothing typed, the model\'s title stands',title({saidWords:'x'},'ORBIT / Jem Lim / DR')==='ORBIT / Jem Lim / DR');
+    check('v167',name+': a corrupted client is put back ("Tara Inf")',cli(Object.assign({},P,{client:'Tara Lim',saidWords:'client tara lim'}),'Tara Inf')==='Tara Lim');
+    check('v167',name+': a note on the client is not a corruption',cli(P,'Jem Lim (new client)')==='Jem Lim (new client)');
+    check('v167',name+': the full name Jessie offered and they accepted stays',cli(Object.assign({},P,{client:'Pael',saidWords:'client pael',offeredWords:'did you mean pael laurena'}),'Pael Laurena')==='Pael Laurena');
+    if(name==='Book Series'){
+      const ts=mk(first(v.time_start,'series_time_start')), te=mk(first(v.time_end,'series_time_end'));
+      check('v167',name+': a start time nobody said is put back',ts(P,'15:00')==='14:00'&&te(P,'16:00')==='16:00');
+    } else {
+      const st=mk(first(v.start_iso,'start')), en=mk(first(v.end_iso,'end'));
+      check('v167',name+': a start time nobody said is put back, the date kept',st(P,'2027-10-08T15:00:00+08:00')==='2027-10-08T14:00:00+08:00',st(P,'2027-10-08T15:00:00+08:00'));
+      check('v167',name+': a padded time is rebuilt clean',en(P,'2027-10-08T17:00:00+08:00hq')==='2027-10-08T16:00:00+08:00');
+      check('v167',name+': a time that was said stays',st(P,'2027-10-08T14:00:00+08:00')==='2027-10-08T14:00:00+08:00');
+      check('v167',name+': a time Jessie offered stays',st(Object.assign({},P,{timesMentioned:['14:00','16:00','17:00']}),'2027-10-08T17:00:00+08:00')==='2027-10-08T17:00:00+08:00');
+      check('v167',name+': no typed range, the model\'s time stands',st({timesMentioned:[]},'2027-10-08T15:00:00+08:00')==='2027-10-08T15:00:00+08:00');
+      check('v167',name+': an all-day date is untouched',en(P,'2027-10-09')==='2027-10-09');
+    }
+  }
 });
 
 // ── Engineers and arrangers must be real people in Bookers ────────────────────

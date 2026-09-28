@@ -129,6 +129,11 @@ function score(sc, res) {
     if (!want) add('date', 'na', 'Gate Context did not resolve "' + E.date + '"');
     else add('date', got && got.d === want.d && got.mo === want.mo && got.y === want.y ? 'pass' : 'fail', 'summary "' + F.date + '" vs ' + JSON.stringify(want));
   }
+  // v167: the Time line, e.g. "2:00\\s*PM.*4:00\\s*PM"
+  if (E.time && F.isSummary) {
+    const tl = (reply.match(/\*?Time:\*?[ \t]*([^\n]+)/i) || [])[1] || '';
+    add('time', new RegExp(E.time, 'i').test(tl) ? 'pass' : 'fail', 'Time "' + tl.trim() + '"');
+  }
   if ('bookedFor' in E) {
     add('bookedForDetect', norm(R.bookedFor) === norm(E.bookedFor) ? 'pass' : 'fail', 'detected "' + (R.bookedFor || '') + '"');
     if (F.isSummary) {
