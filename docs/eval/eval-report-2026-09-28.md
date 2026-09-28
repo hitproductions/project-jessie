@@ -1,13 +1,13 @@
 # Jessie hallucination test, round 2: what changed and what it shows
 
 *Runs on 28 September 2026, the day after the first test ([27 Sep report](eval-report-2026-09-27.md)).
-Internal: it contains staff and client names.* **DRAFT** — the last run on main v167 and its import are
-marked *to fill in*.
+Internal: it contains staff and client names.* Everything below is **live** as of 28 Sep, 10:40 UTC
+(main v168, Book Session v55).
 
 ## The short version
 
-- Every issue from the 27 Sep test, the follow-up discussion and the runs in between is **fixed, or built and
-  tested and waiting for one import**. Nothing on the list is left open. The table in
+- Every issue from the 27 Sep test, the follow-up discussion and the runs in between is **fixed and live**,
+  confirmed with real Gemini before and after the import and with live test bookings. Nothing on the list is left open. The table in
   [Issue by issue](#issue-by-issue) has each one with its before and after numbers.
 - **Invented and garbled names are closed at the source.** The prompt was asking Gemini for an engineer's full
   name, role and initials it often did not have, so given "Drey" it made up a surname. The prompt now asks for the
@@ -29,7 +29,8 @@ marked *to fill in*.
 | 03:33 | main v162 + every sub-workflow | The four decisions from the 27 Sep report; the padded-time fix everywhere a time reaches the calendar |
 | 05:58–07:20 | Book Session v51–v53, Room Availability v10, Move v21, Find v5 | The Prepare Booking engine; client checks; Studio E's calendar id; real free alternatives when a room is taken |
 | **08:28** | **main v166, Book Session v54, Move v22** | **Prepare Booking on for everyone**; the arranger always asked; in-house arrangers; no self-consent |
-| *to fill in* | main v167, Book Session v55 (built, tested) | Names and details from the requester's words; complete free-room lists; one combined client question |
+| 09:52 | main v167, Book Session v55 | Names and details from the requester's words; complete free-room lists; one combined client question; "10am-12nn"; "last Monday" |
+| 10:39 | main v168 | After a "no", the refused summary is no longer re-sent |
 
 ## How we tested
 
@@ -54,12 +55,14 @@ Music and arranger cases, and tonight's corrections, time shifts, "Did you mean�
 | 28 Sep 04:02 | main v162 (live) | 162 | After the padded-time fix and the four decisions |
 | 28 Sep 06:38 | main v163 (candidate) | 162 | First Prepare Booking build |
 | 28 Sep 08:02 | main v165 (candidate) | 207 | The build that became v166 |
-| 28 Sep evening | main v167 (candidate), several runs | 54 + 27 + 50 + *to fill in* | Names from the requester's words |
+| 28 Sep evening | main v167 / v168 (candidates), several runs | 54 + 27 + 50 + 72 + 20 + 9 | Names from the requester's words; the fixes below |
+| 28 Sep, after each import | live | 6 + 6 + 2 | Every called sub-workflow answering; roles, M booths, past date, combined question |
+| 28 Sep 10:16 | live, by hand | 1 summary + "no" | ROLETEST: title, 10:00–12:00 from "10am-12nn", Engineer Daryl Reyes (Post Engineer) from "Drey" |
 | 28 Sep 09:14 | live, by hand | 1 booking + cancel | The yes path and the New Clients row |
 
 ## Issue by issue
 
-**Status:** *Live* = running now. *v167* = built and tested, goes live with the next import.
+**Status:** *Live* = live before tonight's imports. *v167* / *v168* = live since 09:52 / 10:39 UTC, 28 Sep.
 
 ### From the 27 Sep test
 
@@ -102,7 +105,9 @@ Music and arranger cases, and tonight's corrections, time shifts, "Did you mean�
 | A refusal pasted its instructions into the reply ("Confirm the engineer with the requester…") | v165 run | Stripped, and the refusal rewritten to be relayed as is | v167 |
 | No client: External/Personal and the client asked one turn apart | v165 run | Asked together | v167 (Book Session v55) |
 | "no client, it's client work" read as a client called "work" | v167 run | "client work", "client project" and the like are not names; a message saying "no client" names none | v167, fixed the same evening |
-| "last Monday" once answered "Let's get that booked" | v167 run | Past-date refusal still stops it; *being looked at* | *to fill in* |
+| "last Monday" answered "Let's get that booked" (it was read as a missing date) | v167 run | "That date is in the past — Monday, September 27 has already passed" (live) | v167 (Book Session v55) |
+| "10am-12nn" booked as 10–11 ("12nn" not read as an end time) | v167 run | 10:00 AM – 12:00 PM, 3 of 3 and live | v167 |
+| After a "no", the refused summary sent again | Live test | "No problem - nothing was booked. What would you like to change?" (3 of 3) | v168 |
 
 ## Invented names in detail
 
@@ -133,9 +138,9 @@ The same approach covers the project, the client and the time range. It respects
 | | 27 Sep | v165 | v167 |
 |---|---|---|---|
 | Invented engineer booked | 0 | 0 | 0 |
-| Invented engineer name *written* by the model | Not measured | 3 of 207 conversations | 0 so far (engineer 30 of 30, typed as given 27 of 27) |
-| Project correct | 46 of 47 | 42 of 42 | 27 of 27 so far |
-| Client correct | 40 of 44 | 45 of 45 | 21 of 21 so far |
+| Invented engineer name *written* by the model | Not measured | 3 of 207 conversations | **0** (engineer 48 of 48, typed as given 27 of 27) |
+| Project correct | 46 of 47 | 42 of 42 | 53 of 53 |
+| Client correct | 40 of 44 | 45 of 45 | 39 of 39 |
 
 **One dependency:** Jessie can now only recognise a nickname that is listed in that person's Bookers `Info`
 ("Goes by …"). A nickname people use that is missing there is asked about, not guessed.
@@ -182,8 +187,11 @@ lookups briefly took 2–7 s instead of about 1 s; Gemini's timing was unchanged
 
 - **Recurring-series and move summaries are still written by the model.** The guards still check what is booked;
   prepared summaries for both are on the after-launch list.
-- **Free-text slips:** an invented reason for a room choice, re-asking for a date already given, and the "last
-  Monday" wording above. They are in the reply text, not the booking details, and cannot produce a wrong booking.
+- **Free-text slips:** an invented reason for a room choice, or re-asking for a date already given. They are in the
+  reply text, not the booking details, and cannot produce a wrong booking.
+- **Past dates during QA:** the past-date check compares with the real today (2026), so on year-shifted 2027 test
+  dates only the wording ("last Monday", "yesterday") triggers it. At launch, with the shift at zero, it applies
+  to every past date as before.
 - **Scorer mismatches, not Jessie:** internal-room titles use " - "; "Wednesday next week" is read as the following
   week; a session type's "usual rooms" are not a client preference; the three-studio rule for one client came from
   a Clients field that was deleted; QA-M3 and QA-M1 expectations predate the arranger question and the room ranking.
@@ -191,11 +199,9 @@ lookups briefly took 2–7 s instead of about 1 s; Gemini's timing was unchanged
 
 ## Next steps
 
-1. Finish the last v167 run → **import Book Session v55 and main v167 together**, then a short live eval, the live
-   checks and one more hand booking with "engineer Drey" (to see the role filled in).
-2. Update this report's *to fill in* cells.
-3. The weekly New Clients reminder to Tel.
-4. Re-run this eval after any change to the prompt or a guard. The full set takes about 35 minutes unattended:
+1. The weekly New Clients reminder to Tel.
+2. Prepared summaries for recurring series and moves (after launch).
+3. Re-run this eval after any change to the prompt or a guard. The full set takes about 35 minutes unattended:
    `./scripts/eval-run` (or `--main <file>` for a candidate).
 
 ## Appendix: running it again

@@ -7,7 +7,7 @@ known behaviour gaps, and pre-launch work. Each item says how it was found and w
 **Item numbers are permanent**; other docs cite "PENDING 15". New items get the next number, and resolved
 ones move to the bottom instead of being renumbered.
 
-**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-28 evening (Prepare Booking LIVE 08:28 UTC; 26/28/29/30/41 live; 54 built in main v167 / Book Session v55).
+**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-28 evening (Prepare Booking LIVE 08:28 UTC; 26/28/29/30/41 live; 34 and 54 LIVE 09:52 in main v167 / Book Session v55, v168 10:39).
 
 ---
 
@@ -33,9 +33,9 @@ ones move to the bottom instead of being renumbered.
 | 52 | M2 and M6 had `Active / Bookable` unticked, so Jessie never listed or offered them | **Done 28 Sep:** Tel ticked both; live room list 25 → 27 at 03:35 UTC |
 | 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | **Done 28 Sep:** Tel deleted the hidden fields; Clients = Name, Importance, Notes, Booker Type, Client Type; live lookups confirmed |
 | 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
-| 54 | **Gemini invents staff names and corrupts copied details.** v165 eval: "Andrian \"Drey\" Sison", "Daryl Aquino" for "Drey"/"Daryl" (refused, a wasted turn, and the refusal leaked its instructions); earlier "REASON1" → "REazon1", "Tara Inf". Cause: four places asked the model for a full name, role and initials it did not have | **Built 28 Sep** (main v167 + Book Session v55, NOT imported): the prompt asks for names as typed (27/27 in the eval twin, was 0/2); engineer, arranger, project, client and times are read from the requester's own words and win over the model's; v55 fills name, role and initials from Bookers |
+| 54 | **Gemini invents staff names and corrupts copied details.** v165 eval: "Andrian \"Drey\" Sison", "Daryl Aquino" for "Drey"/"Daryl" (refused, a wasted turn, and the refusal leaked its instructions); earlier "REASON1" → "REazon1", "Tara Inf". Cause: four places asked the model for a full name, role and initials it did not have | **LIVE 28 Sep 09:52 UTC** (main v167 + Book Session v55; v168 10:39): the prompt asks for names as typed (27/27 in the eval twin, was 0/2); engineer, arranger, project, client and times are read from the requester's own words and win over the model's; v55 fills name, role and initials from Bookers |
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
-| 34 | A1: free rooms sometimes left out of an availability answer | v165 eval: "which studios" dropped the M booths 3/3. **Built 28 Sep** (main v167 Guard Probe adds any free room the reply left out); eval twin 2/2 |
+| 34 | A1: free rooms sometimes left out of an availability answer | v165 eval: "which studios" dropped the M booths 3/3. **LIVE 28 Sep 09:52 UTC** (main v167 Guard Probe adds any free room the reply left out); live eval: M booths listed |
 | 26 | Can claim "I've asked the current holder" without doing it | **LIVE 28 Sep 08:28 UTC** (main v166 Guard Probe: withdrawn unless Book Session / Move opened it that turn) |
 | 27 | Can open the same consent request twice | Build |
 | 28 | Booking over your own booking asks *you* for consent | **LIVE 28 Sep 08:28 UTC** (Book Session v54, Move v22: SELF_BOOKING → "you already have it") |
