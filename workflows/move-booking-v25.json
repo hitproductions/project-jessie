@@ -645,9 +645,9 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// v25 (review 29 Sep): the move freed a room a consent request was waiting for. Record that on the row; Consent\n// Sweep -> Finalize places the requester (one writer). The move itself already succeeded.\nreturn [{ json: { 'Request ID': ($json.matched || {})['Request ID'] || '', 'Decision': 'INCUMBENT_MOVED', 'Decision At': new Date().toISOString() } }];"
+        "jsCode": "// v25 (review 29 Sep): the move freed a room a consent request was waiting for. Record that on the row, then Finalize\n// places the requester; if that call does not finish, Consent Sweep retries from the recorded decision.\nreturn [{ json: { 'Request ID': ($json.matched || {})['Request ID'] || '', 'Decision': 'INCUMBENT_MOVED', 'Decision At': new Date().toISOString() } }];"
       },
-      "id": "adb87c62-ef81-45a0-9efa-3bccb02b297e",
+      "id": "7932ed5a-abc2-41e2-8a7c-73ad11f1d8fd",
       "name": "Incumbent Moved Row",
       "position": [
         -528,
@@ -694,7 +694,37 @@
           "name": "Google Sheets - Jessie Log"
         }
       },
-      "id": "e8e0b6ba-9f53-43f4-bd45-6d4bcdd96ae3",
+      "id": "65d54a7f-bcaf-43f0-bd00-9694976b8529",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "TO1UnZTZ2LhtE9J3",
+          "mode": "id",
+          "cachedResultName": "Finalize Consent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "request_id": "={{ $('Incumbent Moved Row').first().json['Request ID'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -176,
+        -544
+      ],
+      "id": "6b82e03a-f3bd-45fe-a6b8-b0cd2c41bfd0",
+      "name": "Call Finalize",
       "onError": "continueRegularOutput"
     }
   ],
@@ -991,6 +1021,17 @@
       ]
     },
     "Record Incumbent Moved": {
+      "main": [
+        [
+          {
+            "node": "Call Finalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Finalize": {
       "main": [
         [
           {

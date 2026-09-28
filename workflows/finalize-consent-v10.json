@@ -54,51 +54,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        3808,
+        896,
         0
       ],
       "id": "fb209065-2f44-4a19-bd82-a33945b91a9e"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "t7lwR2km4tfN8DbM",
-          "mode": "id",
-          "cachedResultName": "Jessie - Move Booking"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "title": "={{ $('Plan').first().json.placePayload.title }}",
-            "event_id": "={{ $('Plan').first().json.placePayload.event_id }}",
-            "booking_date": "={{ $('Plan').first().json.placePayload.booking_date }}",
-            "new_start_iso": "={{ $('Plan').first().json.placePayload.new_start_iso }}",
-            "new_end_iso": "={{ $('Plan').first().json.placePayload.new_end_iso }}",
-            "new_rooms": "={{ $('Plan').first().json.placePayload.new_rooms }}",
-            "requester": "={{ $('Plan').first().json.placePayload.requester }}",
-            "requester_name": "={{ $('Plan').first().json.placePayload.requester_name }}",
-            "confirmed": "={{ true }}",
-            "authority": "",
-            "department": ""
-          },
-          "matchingColumns": [],
-          "schema": [],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true
-        },
-        "mode": "once",
-        "options": {}
-      },
-      "name": "Move Requester",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [
-        4032,
-        -176
-      ],
-      "id": "3b255a17-7da6-49c7-8770-107998bbaa48",
-      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -139,7 +98,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        4032,
+        1120,
         176
       ],
       "id": "d4e7f99e-2746-4cba-b843-61552289ce3c",
@@ -147,7 +106,48 @@
     },
     {
       "parameters": {
-        "content": "## Finalize Consent v10\nCalled only by Consent Sweep, one Request ID at a time. Re-reads the row; Stage records progress (HOLD_SNAPSHOT, HOLD_DELETED, PLACING, PLACED) so the next sweep finishes or unwinds a run that died. The hold is copied to the row before it is deleted, the booking is checked, and a failed booking restores the hold; if that fails the row is NEEDS_ATTENTION and #approvals is told.",
+        "workflowId": {
+          "__rl": true,
+          "value": "t7lwR2km4tfN8DbM",
+          "mode": "id",
+          "cachedResultName": "Jessie - Move Booking"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title": "={{ $('Plan').first().json.placePayload.title }}",
+            "event_id": "={{ $('Plan').first().json.placePayload.event_id }}",
+            "booking_date": "={{ $('Plan').first().json.placePayload.booking_date }}",
+            "new_start_iso": "={{ $('Plan').first().json.placePayload.new_start_iso }}",
+            "new_end_iso": "={{ $('Plan').first().json.placePayload.new_end_iso }}",
+            "new_rooms": "={{ $('Plan').first().json.placePayload.new_rooms }}",
+            "requester": "={{ $('Plan').first().json.placePayload.requester }}",
+            "requester_name": "={{ $('Plan').first().json.placePayload.requester_name }}",
+            "confirmed": "={{ true }}",
+            "authority": "",
+            "department": ""
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "name": "Move Requester",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        -176
+      ],
+      "id": "3b255a17-7da6-49c7-8770-107998bbaa48",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Finalize Consent v10\nRe-reads the row by Request ID, books the requester (a standing hold is \"Show as available\" and only that exact hold is ignored), and records the outcome only if the row is still PENDING. Nothing is deleted except this request's own declined booking. Called by main (a recorded yes / no), Move (incumbent moved) and Consent Sweep (timeouts and retries).",
         "height": 300,
         "width": 460
       },
@@ -183,7 +183,7 @@
         224,
         0
       ],
-      "id": "226da2b6-e146-4161-85f1-8aa5fe2f60f5",
+      "id": "ba8b6699-5e4c-4ed6-ad8b-f7d86ea29b58",
       "name": "Read Rows",
       "alwaysOutputData": true,
       "credentials": {
@@ -196,9 +196,9 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Finalize Plan (v10, review 29 Sep). Re-reads the row by Request ID and decides from ITS state, never from what\n// the caller passed. Only Consent Sweep calls this, one row at a time. Stages persist progress so a run that dies\n// half-way is finished (or safely unwound) by the next sweep:\n//   '' -> HOLD_SNAPSHOT (hold copied to the row) -> HOLD_DELETED -> PLACING -> PLACED -> Status DONE\nfunction whenPhrase(s,e){try{if(/^\\d{4}-\\d{2}-\\d{2}$/.test(String(s||''))){return new Date(s+'T00:00:00+08:00').toLocaleDateString('en-US',{timeZone:'Asia/Manila',month:'short',day:'numeric'})+' (all day)';}const o={timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'};const a=new Date(s).toLocaleString('en-US',o);const b=e?new Date(e).toLocaleTimeString('en-US',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'}):'';return b?(a+'–'+b):a;}catch(_){return String(s||'');}}\nconst IN = $('When Executed by Another Workflow').first().json || {};\nconst id = String(IN.request_id || '').trim();\nconst U = s => String(s || '').toUpperCase().trim();\nconst rows = $('Read Rows').all().map(i => (i && i.json) || {}).filter(r => String(r['Request ID'] || '').trim() === id && id);\nconst out = o => [{ json: Object.assign({ requestId: id }, o) }];\nif (!id) return out({ route: 'outcome', outcome: 'skip', reason: 'NO_REQUEST_ID' });\nif (rows.length !== 1) return out({ route: 'outcome', outcome: 'skip', reason: rows.length ? 'DUPLICATE_ROWS' : 'NOT_FOUND' });\nconst row = rows[0];\nif (U(row['Status']) !== 'PENDING') return out({ route: 'outcome', outcome: 'skip', reason: 'ALREADY_' + U(row['Status']) });\nconst kind = U(row['Kind']) || 'PREEMPT', stage = U(row['Stage']), decision = U(row['Decision']);\nconst dl = Date.parse(row['Deadline'] || ''), due = isFinite(dl) && Date.now() >= dl;\nconst holdId = String(row['Incumbent Event Id'] || '').trim();\nconst via = decision === 'APPROVED' ? 'mbooth-approve' : decision === 'INCUMBENT_MOVED' ? 'move-hook' : 'sweep-timeout';\nconst base = { kind, stage, via, holdId, room: row['Room/Booth'] || '', reqStart: row['Req Start'] || '', reqEnd: row['Req End'] || '',\n  approver: row['Approver'] || '', approverName: row['Approver Name'] || 'the holder', requester: row['Requester'] || '',\n  requesterName: row['Requester Name'] || 'the requester', incTitle: row['Incumbent Title'] || '', when: whenPhrase(row['Req Start'], row['Req End']),\n  hadSnapshot: !!String(row['Hold Snapshot'] || '').trim() };\nif (stage === 'RESTORE_FAILED') return out(Object.assign(base, { route: 'outcome', outcome: 'skip', reason: 'NEEDS_A_PERSON' }));\nif (stage === 'PLACED') return out(Object.assign(base, { route: 'outcome', outcome: 'finish', placementId: row['Placement Event Id'] || '' }));\nlet route;\nif (stage === 'HOLD_SNAPSHOT' || stage === 'HOLD_DELETED') route = 'hold';\nelse if (stage === 'PLACING') route = 'place';\nelse if (decision === 'REJECTED') return out(Object.assign(base, { route: 'outcome', outcome: 'reject' }));\nelse if (kind === 'MBOOTH') { if (decision !== 'APPROVED' && !due) return out(Object.assign(base, { route: 'outcome', outcome: 'skip', reason: 'NOT_DUE' })); route = holdId ? 'hold' : 'place'; }\nelse { if (decision === 'INCUMBENT_MOVED') route = 'place';\n       else if (due) return out(Object.assign(base, { route: 'outcome', outcome: 'expire' }));   // PREEMPT timeout: nobody is moved\n       else return out(Object.assign(base, { route: 'outcome', outcome: 'skip', reason: 'NOT_DUE' })); }\nfunction safeParse(s) { if (s && typeof s === 'object') return s; try { return JSON.parse(s || ''); } catch (_) { return null; } }\nconst req = safeParse(row['Req Payload']);\nif (!row['Req Start'] || !row['Req End'] || !row['Room/Booth'] || !req) return out(Object.assign(base, { route: 'outcome', outcome: 'fail', reason: 'MISSING_REQ_DETAILS' }));\nconst dateOf = iso => { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso)); } catch (_) { return ''; } };\nconst placeTarget = req.kind === 'move' ? 'move' : 'book';\n// The marker lets a retry recognise a placement that already went through (Book Session hands it back on a clash).\nconst mark = ' | consent: ' + id;\nconst placePayload = placeTarget === 'move'\n  ? { title: req.title || '', event_id: req.event_id || '', booking_date: req.booking_date || dateOf(row['Req Start']), new_start_iso: req.new_start_iso || row['Req Start'],\n      new_end_iso: req.new_end_iso || row['Req End'], new_rooms: req.new_rooms || row['Room/Booth'] || '', requester: req.requester || row['Requester'] || '',\n      requester_name: req.requester_name || row['Requester Name'] || '' }\n  : Object.assign({}, req, { rooms: req.rooms || row['Room/Booth'] || '', start_iso: req.start_iso || row['Req Start'], end_iso: req.end_iso || row['Req End'],\n      description: String(req.description || '').indexOf('consent: ' + id) === -1 ? String(req.description || '') + mark : String(req.description || ''),\n      // Exactly the approved hold may be ignored, and only because it is being released for this booking.\n      exclude_event_id: kind === 'MBOOTH' ? holdId : '' });\nreturn out(Object.assign(base, { route, placeTarget, placePayload,\n  weDeleted: stage === 'HOLD_DELETED' || ((stage === 'HOLD_SNAPSHOT' || stage === 'PLACING') && base.hadSnapshot) }));"
+        "jsCode": "// Finalize Plan (v10, review 29 Sep). Re-reads the row by Request ID and decides from ITS state, never from what\n// the caller passed. Nothing is deleted any more: a standing M-booth hold is \"Show as available\", so the requester\n// is booked alongside it, and only that exact hold is ignored by the clash check (exclude_event_id).\nfunction whenPhrase(s,e){try{if(/^\\d{4}-\\d{2}-\\d{2}$/.test(String(s||''))){return new Date(s+'T00:00:00+08:00').toLocaleDateString('en-US',{timeZone:'Asia/Manila',month:'short',day:'numeric'})+' (all day)';}const o={timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'};const a=new Date(s).toLocaleString('en-US',o);const b=e?new Date(e).toLocaleTimeString('en-US',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'}):'';return b?(a+'–'+b):a;}catch(_){return String(s||'');}}\nconst IN = $('When Executed by Another Workflow').first().json || {};\nconst id = String(IN.request_id || '').trim();\nconst U = s => String(s || '').toUpperCase().trim();\nconst rows = $('Read Rows').all().map(i => (i && i.json) || {}).filter(r => id && String(r['Request ID'] || '').trim() === id);\nconst out = o => [{ json: Object.assign({ requestId: id }, o) }];\nif (!id) return out({ act: 'skip', reason: 'NO_REQUEST_ID' });\nif (rows.length !== 1) return out({ act: 'skip', reason: rows.length ? 'DUPLICATE_ROWS' : 'NOT_FOUND' });\nconst row = rows[0];\nif (U(row['Status']) !== 'PENDING') return out({ act: 'skip', reason: 'ALREADY_' + U(row['Status']) });\nconst kind = U(row['Kind']) || 'PREEMPT', decision = U(row['Decision']);\nconst dl = Date.parse(row['Deadline'] || ''), due = isFinite(dl) && Date.now() >= dl;\nconst holdId = String(row['Incumbent Event Id'] || '').trim();\nconst via = decision === 'APPROVED' ? 'mbooth-approve' : decision === 'INCUMBENT_MOVED' ? 'move-hook' : decision === 'REJECTED' ? 'reply-no' : 'sweep-timeout';\nconst base = { kind, via, holdId, room: row['Room/Booth'] || '', approver: row['Approver'] || '', approverName: row['Approver Name'] || 'the holder',\n  requester: row['Requester'] || '', requesterName: row['Requester Name'] || 'the requester', incTitle: row['Incumbent Title'] || '',\n  when: whenPhrase(row['Req Start'], row['Req End']) };\nlet act;\nif (decision === 'REJECTED') act = 'reject';\nelse if (kind === 'MBOOTH') act = (decision === 'APPROVED' || due) ? 'place' : 'skip';       // MBOOTH timeout still books\nelse act = decision === 'INCUMBENT_MOVED' ? 'place' : due ? 'expire' : 'skip';              // PREEMPT timeout: nobody moved\nif (act !== 'place') return out(Object.assign(base, { act, reason: act === 'skip' ? 'NOT_DUE' : '' }));\nfunction safeParse(s) { if (s && typeof s === 'object') return s; try { return JSON.parse(s || ''); } catch (_) { return null; } }\nconst req = safeParse(row['Req Payload']);\nif (!row['Req Start'] || !row['Req End'] || !row['Room/Booth'] || !req) return out(Object.assign(base, { act: 'fail', reason: 'MISSING_REQ_DETAILS' }));\nconst dateOf = iso => { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso)); } catch (_) { return ''; } };\nconst placeTarget = req.kind === 'move' ? 'move' : 'book';\n// The marker lets a second run recognise a booking the first already made (Book Session hands it back on a clash).\nconst mark = ' | consent: ' + id;\nconst placePayload = placeTarget === 'move'\n  ? { title: req.title || '', event_id: req.event_id || '', booking_date: req.booking_date || dateOf(row['Req Start']), new_start_iso: req.new_start_iso || row['Req Start'],\n      new_end_iso: req.new_end_iso || row['Req End'], new_rooms: req.new_rooms || row['Room/Booth'] || '', requester: req.requester || row['Requester'] || '',\n      requester_name: req.requester_name || row['Requester Name'] || '' }\n  : Object.assign({}, req, { rooms: req.rooms || row['Room/Booth'] || '', start_iso: req.start_iso || row['Req Start'], end_iso: req.end_iso || row['Req End'],\n      description: String(req.description || '').indexOf('consent: ' + id) === -1 ? String(req.description || '') + mark : String(req.description || ''),\n      exclude_event_id: kind === 'MBOOTH' ? holdId : '' });\nreturn out(Object.assign(base, { act, placeTarget, placePayload }));"
       },
-      "id": "67f8750f-1b43-45c9-be91-330e1debef20",
+      "id": "a676f3ec-43e1-4a6d-95af-f387971e128a",
       "name": "Plan",
       "position": [
         448,
@@ -213,41 +213,8 @@
           "combinator": "and",
           "conditions": [
             {
-              "id": "c8e905a5-235a-4bc5-b7c7-5deec90c88c6",
-              "leftValue": "={{ $json.route }}",
-              "operator": {
-                "name": "filter.operator.equals",
-                "operation": "equals",
-                "type": "string"
-              },
-              "rightValue": "hold"
-            }
-          ],
-          "options": {
-            "caseSensitive": true,
-            "typeValidation": "strict",
-            "version": 3
-          }
-        },
-        "options": {}
-      },
-      "name": "Hold?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        672,
-        0
-      ],
-      "id": "56d6a163-311c-439c-b573-6bde1af381d6"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "combinator": "and",
-          "conditions": [
-            {
-              "id": "ded89b42-15fd-4996-90dc-b60056c7b8c9",
-              "leftValue": "={{ $('Plan').first().json.route }}",
+              "id": "9f3a39b7-377c-4768-9a81-c650541390f3",
+              "leftValue": "={{ $json.act }}",
               "operator": {
                 "name": "filter.operator.equals",
                 "operation": "equals",
@@ -268,45 +235,21 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        896,
-        176
+        672,
+        0
       ],
-      "id": "2457c16e-52ed-4fac-8dbf-f99caf3e4f95"
-    },
-    {
-      "parameters": {
-        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent($('Plan').first().json.holdId) }}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleCalendarOAuth2Api",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        896,
-        -176
-      ],
-      "id": "ede6bbfb-48a5-4a00-b996-44133e4f7a7f",
-      "name": "Get Hold",
-      "onError": "continueRegularOutput",
-      "credentials": {
-        "googleCalendarOAuth2Api": {
-          "id": "6D1r3kaq6KaFdL0a",
-          "name": "Google Calendar account"
-        }
-      },
-      "alwaysOutputData": true
+      "id": "3c9e4d74-4e3e-47ad-8716-41af8538ddaa"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Check Hold: what is the approved hold's state right now? Only a confirmed instance in the requested booth and\n// window is deleted; a hold that has changed is left alone and the request fails with nothing changed.\nconst P = $('Plan').first().json;\nconst g = $input.first().json || {};\nconst errTxt = g.error ? JSON.stringify(g.error) : '';\nconst gone = g.status === 'cancelled' || /\\b(404|410)\\b|not ?found|deleted|gone/i.test(errTxt);\nif (!g.id && !gone) return [{ json: { next: 'outcome', outcome: 'retry', reason: 'HOLD_READ_FAILED' } }];\nif (gone) return [{ json: { next: 'place', weDeleted: !!P.weDeleted, reason: P.weDeleted ? 'HOLD_ALREADY_DELETED_BY_US' : 'HOLD_ALREADY_GONE' } }];\nconst room = String(P.room || '').toLowerCase();\nconst inRoom = (g.attendees || []).some(a => String(a.displayName || '').toLowerCase().indexOf(room) !== -1) || String(g.location || '').toLowerCase().indexOf(room) !== -1 || String(g.summary || '').toLowerCase().indexOf(room) === 0;\nconst ms = v => { const s = String(v || ''); return /^\\d{4}-\\d{2}-\\d{2}$/.test(s) ? Date.parse(s + 'T00:00:00+08:00') : Date.parse(s); };\nconst hs = ms(g.start && (g.start.dateTime || g.start.date)), he = ms(g.end && (g.end.dateTime || g.end.date));\nconst overlaps = hs < ms(P.reqEnd) && he > ms(P.reqStart);\nif (!inRoom || !overlaps) return [{ json: { next: 'outcome', outcome: 'fail', reason: 'HOLD_CHANGED' } }];\nconst snap = { id: g.id, recurringEventId: g.recurringEventId || '', summary: g.summary || '', start: g.start, end: g.end,\n  location: g.location || '', description: g.description || '', attendees: (g.attendees || []).map(a => ({ email: a.email, resource: !!a.resource })), status: g.status };\nreturn [{ json: { next: 'delete', snapshot: snap } }];"
+        "jsCode": "// Check Placed: CREATED / MOVED, or a clash with THIS request's own earlier booking (the consent marker - another\n// run got there first) counts as placed. A booking the booth declined, or created at the wrong time, is ours and\n// is removed so the calendar is left as it was. A call that errored is uncertain and is left for the next sweep.\nconst r = $input.first().json || {};\nconst st = String(r.status || '').toUpperCase();\nif (st === 'CREATED' || st === 'MOVED') return [{ json: { next: 'placed', placementId: r.event_id || r.new_event_id || '' } }];\nif (r.consent_placed_id) return [{ json: { next: 'placed', placementId: r.consent_placed_id, already: true } }];\nif (r.error || !st) return [{ json: { next: 'outcome', outcome: 'retry', reason: 'PLACEMENT_UNCERTAIN' } }];\nif (r.event_id) return [{ json: { next: 'remove', ownEventId: r.event_id, reason: 'PLACE_FAILED:' + st } }];\nreturn [{ json: { next: 'outcome', outcome: 'fail', reason: 'PLACE_FAILED:' + (r.reason || st) } }];"
       },
-      "id": "ac77a879-0846-4b8c-9aec-85b885504bfc",
-      "name": "Check Hold",
+      "id": "f8d3a30e-d409-483f-8d13-07ff4c847a29",
+      "name": "Check Placed",
       "position": [
-        1120,
-        -176
+        1344,
+        0
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
@@ -317,14 +260,14 @@
           "combinator": "and",
           "conditions": [
             {
-              "id": "5d968808-b89e-4909-bcf9-09884af24f10",
+              "id": "db17abca-03e8-47d0-89c9-7a60a1d92632",
               "leftValue": "={{ $json.next }}",
               "operator": {
                 "name": "filter.operator.equals",
                 "operation": "equals",
                 "type": "string"
               },
-              "rightValue": "delete"
+              "rightValue": "remove"
             }
           ],
           "options": {
@@ -335,105 +278,18 @@
         },
         "options": {}
       },
-      "name": "Delete Hold?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        1344,
-        -176
-      ],
-      "id": "5e25959a-3ab9-47a2-9eb3-0f6d62b1f8f1"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "combinator": "and",
-          "conditions": [
-            {
-              "id": "2fe5def5-1298-40b4-a368-4c2763d320b6",
-              "leftValue": "={{ $('Check Hold').first().json.next }}",
-              "operator": {
-                "name": "filter.operator.equals",
-                "operation": "equals",
-                "type": "string"
-              },
-              "rightValue": "place"
-            }
-          ],
-          "options": {
-            "caseSensitive": true,
-            "typeValidation": "strict",
-            "version": 3
-          }
-        },
-        "options": {}
-      },
-      "name": "Place After Check?",
+      "name": "Remove Own?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
         1568,
         0
       ],
-      "id": "4868c72e-a50e-461f-a9bb-dcfde83fecb8"
+      "id": "35a2bd1b-c1f4-442a-aae8-a390b2aaf1ad"
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const P = $('Plan').first().json;\nreturn [{ json: { 'Request ID': P.requestId, 'Stage': 'HOLD_SNAPSHOT', 'Hold Snapshot': JSON.stringify($('Check Hold').first().json.snapshot) } }];"
-      },
-      "id": "0df5fb3b-3d51-4609-af80-08e6a2212f46",
-      "name": "Snapshot Row",
-      "position": [
-        1568,
-        -352
-      ],
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2
-    },
-    {
-      "parameters": {
-        "authentication": "serviceAccount",
-        "operation": "update",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "list",
-          "value": "431550013",
-          "cachedResultName": "Consent Requests"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "matchingColumns": [
-            "Request ID"
-          ],
-          "value": {},
-          "schema": []
-        },
-        "options": {}
-      },
-      "name": "Write Snapshot",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        1792,
-        -352
-      ],
-      "credentials": {
-        "googleApi": {
-          "id": "DU75rLW4KHlVhcK1",
-          "name": "Google Sheets - Jessie Log"
-        }
-      },
-      "id": "73d54e4e-13cb-4440-94ec-03892e9a4073"
-    },
-    {
-      "parameters": {
-        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent($('Plan').first().json.holdId) }}",
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent($('Check Placed').first().json.ownEventId) }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleCalendarOAuth2Api",
         "options": {},
@@ -442,355 +298,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2016,
-        -352
-      ],
-      "id": "1eb4c2c9-b125-44f9-b6f1-cf13a7a7e45e",
-      "name": "Delete Hold",
-      "onError": "continueRegularOutput",
-      "credentials": {
-        "googleCalendarOAuth2Api": {
-          "id": "6D1r3kaq6KaFdL0a",
-          "name": "Google Calendar account"
-        }
-      },
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent($('Plan').first().json.holdId) }}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleCalendarOAuth2Api",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2240,
-        -352
-      ],
-      "id": "d4046a47-b50f-4f19-b9c4-7ca725af91c6",
-      "name": "Recheck Hold",
-      "onError": "continueRegularOutput",
-      "credentials": {
-        "googleCalendarOAuth2Api": {
-          "id": "6D1r3kaq6KaFdL0a",
-          "name": "Google Calendar account"
-        }
-      },
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// Check Delete: re-read the hold after DELETE. Deleted -> place. Still there -> the delete failed and nothing changed\n// (verified). Unreadable -> leave it for the next sweep, which re-reads the hold before doing anything.\nconst g = $input.first().json || {};\nconst errTxt = g.error ? JSON.stringify(g.error) : '';\nif (g.status === 'cancelled' || /\\b(404|410)\\b|not ?found|deleted|gone/i.test(errTxt)) return [{ json: { next: 'place' } }];\nif (g.id && g.status && g.status !== 'cancelled') return [{ json: { next: 'outcome', outcome: 'fail', reason: 'DELETE_FAILED' } }];\nreturn [{ json: { next: 'outcome', outcome: 'retry', reason: 'DELETE_UNVERIFIED' } }];"
-      },
-      "id": "545f9fe6-b64e-4dba-850d-bcb91cfab79a",
-      "name": "Check Delete",
-      "position": [
-        2464,
-        -352
-      ],
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "combinator": "and",
-          "conditions": [
-            {
-              "id": "c2a0327d-b5db-4ba4-8e38-c7d0b90d7e52",
-              "leftValue": "={{ $json.next }}",
-              "operator": {
-                "name": "filter.operator.equals",
-                "operation": "equals",
-                "type": "string"
-              },
-              "rightValue": "place"
-            }
-          ],
-          "options": {
-            "caseSensitive": true,
-            "typeValidation": "strict",
-            "version": 3
-          }
-        },
-        "options": {}
-      },
-      "name": "Deleted?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        2688,
-        -352
-      ],
-      "id": "c411a516-9cb2-4952-b4b4-3178a0c6ee19"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "return [{ json: { 'Request ID': $('Plan').first().json.requestId, 'Stage': 'HOLD_DELETED' } }];"
-      },
-      "id": "1e16ba03-82ae-40a0-8e2e-71103324587b",
-      "name": "Deleted Row",
-      "position": [
-        2912,
-        -352
-      ],
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2
-    },
-    {
-      "parameters": {
-        "authentication": "serviceAccount",
-        "operation": "update",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "list",
-          "value": "431550013",
-          "cachedResultName": "Consent Requests"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "matchingColumns": [
-            "Request ID"
-          ],
-          "value": {},
-          "schema": []
-        },
-        "options": {}
-      },
-      "name": "Write Deleted",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        3136,
-        -352
-      ],
-      "credentials": {
-        "googleApi": {
-          "id": "DU75rLW4KHlVhcK1",
-          "name": "Google Sheets - Jessie Log"
-        }
-      },
-      "id": "94cc17ab-2ed2-46bd-905b-70b2b3e3c3d1",
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "return [{ json: { 'Request ID': $('Plan').first().json.requestId, 'Stage': 'PLACING' } }];"
-      },
-      "id": "2736f739-d359-4037-9d73-5fbb1de76ae9",
-      "name": "Placing Row",
-      "position": [
-        3360,
-        0
-      ],
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2
-    },
-    {
-      "parameters": {
-        "authentication": "serviceAccount",
-        "operation": "update",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "list",
-          "value": "431550013",
-          "cachedResultName": "Consent Requests"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "matchingColumns": [
-            "Request ID"
-          ],
-          "value": {},
-          "schema": []
-        },
-        "options": {}
-      },
-      "name": "Write Placing",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        3584,
-        0
-      ],
-      "credentials": {
-        "googleApi": {
-          "id": "DU75rLW4KHlVhcK1",
-          "name": "Google Sheets - Jessie Log"
-        }
-      },
-      "id": "76b8932e-2d8a-41df-8a03-199aa7135fe9",
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// Check Placed: did the requester's booking go in? CREATED / MOVED, or Book Session reports a clash with OUR earlier\n// placement (the consent marker) - a retry after a run that died after booking. A call that errored is uncertain:\n// left at PLACING for the next sweep, whose attempt either finds our booking or fails cleanly.\nconst P = $('Plan').first().json;\nconst r = $input.first().json || {};\nconst ran = n => { try { $(n).first(); return true; } catch (e) { return false; } };\nconst weDeleted = !!P.weDeleted || ran('Check Delete') || (ran('Check Hold') && !!$('Check Hold').first().json.weDeleted);\nconst st = String(r.status || '').toUpperCase();\nif (st === 'CREATED' || st === 'MOVED' || r.consent_placed_id) return [{ json: { next: 'placed', weDeleted, placementId: r.event_id || r.new_event_id || r.consent_placed_id || '' } }];\nif (r.error || !st) return [{ json: { next: 'outcome', outcome: 'retry', weDeleted, reason: 'PLACEMENT_UNCERTAIN' } }];\nreturn [{ json: { next: weDeleted ? 'restore' : 'outcome', outcome: 'fail', weDeleted, reason: 'PLACE_FAILED:' + (r.reason || st) } }];"
-      },
-      "id": "282a543d-203c-48dd-9500-ffd942d26cda",
-      "name": "Check Placed",
-      "position": [
-        4256,
-        0
-      ],
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "combinator": "and",
-          "conditions": [
-            {
-              "id": "42e4f56a-99b3-4258-a5b2-0c71334dfc7a",
-              "leftValue": "={{ $json.next }}",
-              "operator": {
-                "name": "filter.operator.equals",
-                "operation": "equals",
-                "type": "string"
-              },
-              "rightValue": "placed"
-            }
-          ],
-          "options": {
-            "caseSensitive": true,
-            "typeValidation": "strict",
-            "version": 3
-          }
-        },
-        "options": {}
-      },
-      "name": "Placed?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        4480,
-        0
-      ],
-      "id": "fe7308e4-ce2f-4572-815a-811bcb537329"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "return [{ json: { 'Request ID': $('Plan').first().json.requestId, 'Stage': 'PLACED', 'Placement Event Id': $('Check Placed').first().json.placementId || '' } }];"
-      },
-      "id": "a9a74a4b-b270-4328-8dea-41504e5312dd",
-      "name": "Placed Row",
-      "position": [
-        4704,
+        1568,
         -176
       ],
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2
-    },
-    {
-      "parameters": {
-        "authentication": "serviceAccount",
-        "operation": "update",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "list",
-          "value": "431550013",
-          "cachedResultName": "Consent Requests"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "matchingColumns": [
-            "Request ID"
-          ],
-          "value": {},
-          "schema": []
-        },
-        "options": {}
-      },
-      "name": "Write Placed",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        4928,
-        -176
-      ],
-      "credentials": {
-        "googleApi": {
-          "id": "DU75rLW4KHlVhcK1",
-          "name": "Google Sheets - Jessie Log"
-        }
-      },
-      "id": "faf633fb-bfc0-4a21-b61b-0b0ef0829a3e",
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "combinator": "and",
-          "conditions": [
-            {
-              "id": "9dbb61f5-0618-429f-b499-680605d16fdc",
-              "leftValue": "={{ $('Check Placed').first().json.next }}",
-              "operator": {
-                "name": "filter.operator.equals",
-                "operation": "equals",
-                "type": "string"
-              },
-              "rightValue": "restore"
-            }
-          ],
-          "options": {
-            "caseSensitive": true,
-            "typeValidation": "strict",
-            "version": 3
-          }
-        },
-        "options": {}
-      },
-      "name": "Restore?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        4704,
-        176
-      ],
-      "id": "568e2a0f-b0f5-43f8-a46f-973d4bb59efe"
-    },
-    {
-      "parameters": {
-        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent($('Plan').first().json.holdId) }}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleCalendarOAuth2Api",
-        "options": {},
-        "method": "PATCH",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'confirmed' }) }}"
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        4928,
-        176
-      ],
-      "id": "71416b1e-33cb-465c-a271-3c728eda31d4",
-      "name": "Restore Hold",
+      "id": "d2181535-e06c-4a9f-a30f-cfaf190eb5a0",
+      "name": "Remove Own Booking",
       "onError": "continueRegularOutput",
       "credentials": {
         "googleCalendarOAuth2Api": {
@@ -802,7 +314,7 @@
     },
     {
       "parameters": {
-        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent($('Plan').first().json.holdId) }}",
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent($('Check Placed').first().json.ownEventId) }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleCalendarOAuth2Api",
         "options": {}
@@ -810,11 +322,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5152,
-        176
+        1792,
+        -176
       ],
-      "id": "a5e59661-5255-40f1-90e1-f7f79e147007",
-      "name": "Recheck Restore",
+      "id": "0647ff37-cb1a-4cb1-a8a0-49a766d4fdea",
+      "name": "Recheck Own",
       "onError": "continueRegularOutput",
       "credentials": {
         "googleCalendarOAuth2Api": {
@@ -827,12 +339,12 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Outcome: the one place a request's final state and messages are decided. Nothing reports success, or \"nothing\n// changed\", unless that is what the calendar showed. A timeout says it went ahead under the timeout rule.\nconst P = $('Plan').first().json;\nconst ran = n => { try { $(n).first(); return true; } catch (e) { return false; } };\nconst j = n => ran(n) ? ($(n).first().json || {}) : null;\nconst now = new Date().toISOString();\nconst mb = P.kind === 'MBOOTH', to = P.via === 'sweep-timeout';\nconst APPROVALS = 'C0C34UMFXGD';\nlet fin = null, msgs = [];\nconst dm = (to_, text) => { if (to_) msgs.push({ to: to_, text }); };\nconst done = () => {\n  fin = { 'Status': 'DONE', 'Resolved Via': P.via, 'Decided At': now, 'Stage': 'PLACED' };\n  if (mb && to) {\n    dm(P.requester, 'Done - ' + P.room + ' is yours for ' + P.when + '. ' + P.approverName + \" didn't reply by the deadline, so it went ahead under the M-booth sharing rule.\");\n    dm(P.approver, 'No reply came in by the deadline, so under the M-booth sharing rule ' + P.requesterName + ' now has ' + P.room + ' for ' + P.when + ' and your booking for that time was released.');\n  } else if (mb) {\n    dm(P.requester, 'Done - ' + P.room + ' is yours for ' + P.when + '. ' + P.approverName + \" OK'd sharing the booth.\");\n    dm(P.approver, \"You've offered your \" + P.room + ' booth (' + P.when + ') to ' + P.requesterName + '. Thanks for sharing!');\n  } else {\n    dm(P.requester, 'Done - ' + P.room + ' is yours for ' + P.when + '. ' + P.approverName + ' moved their session to make way.');\n    dm(P.approver, 'Heads up - your \"' + P.incTitle + '\" was moved to make room for a higher-priority session in ' + P.room + \", as you OK'd. Thanks!\");\n  }\n};\nconst failNothing = reason => { fin = { 'Status': 'FAILED', 'Resolved Via': reason, 'Decided At': now };\n  dm(P.requester, \"I couldn't get \" + (P.room || 'that room') + ' for you just now (' + P.when + '). Nothing was changed - please try another time or room.'); };\nif (P.route === 'outcome') {\n  if (P.outcome === 'reject') { fin = { 'Status': 'REJECTED', 'Resolved Via': 'reply-no', 'Decided At': now };\n    dm(P.requester, mb ? (P.approverName + ' would rather keep ' + P.room + ' on ' + P.when + ', so it stays theirs. Want another booth or time?')\n                       : (P.approverName + \" can't move their session, so \" + P.room + ' stays taken for ' + P.when + '. Want another time or room?')); }\n  else if (P.outcome === 'expire') fin = { 'Status': 'EXPIRED', 'Resolved Via': 'sweep-expired', 'Decided At': now };\n  else if (P.outcome === 'finish') done();\n  else if (P.outcome === 'fail') failNothing(P.reason);\n} else if (ran('Check Placed')) {\n  const cp = j('Check Placed');\n  if (cp.next === 'placed') done();\n  else if (cp.next === 'restore') {\n    const rr = j('Recheck Restore') || {};\n    if (rr.status === 'confirmed') {\n      fin = { 'Status': 'FAILED', 'Resolved Via': cp.reason, 'Decided At': now, 'Stage': 'RESTORED' };\n      dm(P.requester, \"I couldn't book \" + P.room + ' for you just now (' + P.when + '), so ' + P.approverName + \"'s booking is back as it was. Please try another time or booth.\");\n      dm(P.approver, \"That didn't go through, so your \" + P.room + ' booking for ' + P.when + ' is back as it was.');\n    } else {\n      fin = { 'Status': 'NEEDS_ATTENTION', 'Resolved Via': cp.reason + '; RESTORE_FAILED', 'Decided At': now, 'Stage': 'RESTORE_FAILED' };\n      dm(P.requester, 'Something went wrong booking ' + P.room + ' for you (' + P.when + ') and I could not confirm ' + P.approverName + \"'s booking is back. The team has been alerted and will sort it out.\");\n      dm(P.approver, 'Something went wrong while sharing your ' + P.room + ' booth for ' + P.when + '. The team has been alerted to check your booking.');\n      msgs.push({ to: APPROVALS, text: '[CONSENT NEEDS ATTENTION] ' + P.requestId + ': the hold ' + P.holdId + ' was deleted, the booking failed (' + cp.reason + ') and restoring the hold failed. Its details are in the Hold Snapshot column.' });\n    }\n  } else if (cp.outcome === 'fail') failNothing(cp.reason);\n} else {\n  const cd = j('Check Delete'), ch = j('Check Hold');\n  const x = cd || ch || {};\n  if (x.outcome === 'fail') failNothing(x.reason);\n}\nreturn [{ json: { fin, msgs } }];"
+        "jsCode": "// Outcome: the final state and the messages. A timeout says it went ahead under the timeout rule; \"nothing changed\"\n// is only said when it is true.\nconst P = $('Plan').first().json;\nconst ran = n => { try { $(n).first(); return true; } catch (e) { return false; } };\nconst j = n => ran(n) ? ($(n).first().json || {}) : null;\nconst now = new Date().toISOString(), mb = P.kind === 'MBOOTH', to = P.via === 'sweep-timeout';\nconst APPROVALS = 'C0C34UMFXGD';\nlet fin = null; const msgs = [];\nconst dm = (t, text) => { if (t) msgs.push({ to: t, text }); };\nconst failNothing = reason => { fin = { 'Status': 'FAILED', 'Resolved Via': reason, 'Decided At': now };\n  dm(P.requester, \"I couldn't get \" + (P.room || 'that room') + ' for you just now (' + P.when + '). Nothing was changed - please try another time or room.'); };\nif (P.act === 'reject') {\n  fin = { 'Status': 'REJECTED', 'Resolved Via': 'reply-no', 'Decided At': now };\n  dm(P.requester, mb ? (P.approverName + ' would rather keep ' + P.room + ' on ' + P.when + ', so it stays theirs. Want another booth or time?')\n                     : (P.approverName + \" can't move their session, so \" + P.room + ' stays taken for ' + P.when + '. Want another time or room?'));\n  dm(P.approver, mb ? ('Okay, ' + P.room + ' stays yours on ' + P.when + '. I let ' + P.requesterName + ' know.') : ('Okay, \"' + P.incTitle + '\" stays where it is. I let ' + P.requesterName + ' know.'));\n} else if (P.act === 'expire') fin = { 'Status': 'EXPIRED', 'Resolved Via': 'sweep-expired', 'Decided At': now };\nelse if (P.act === 'fail') failNothing(P.reason);\nelse if (ran('Check Placed')) {\n  const cp = j('Check Placed');\n  if (cp.next === 'placed') {\n    fin = { 'Status': 'DONE', 'Resolved Via': P.via, 'Decided At': now, 'Placement Event Id': cp.placementId || '' };\n    if (mb && to) {\n      dm(P.requester, 'Done - ' + P.room + ' is yours for ' + P.when + '. ' + P.approverName + \" didn't reply by the deadline, so it went ahead under the M-booth sharing rule.\");\n      dm(P.approver, 'No reply came in by the deadline, so under the M-booth sharing rule ' + P.requesterName + ' has ' + P.room + ' for ' + P.when + '.');\n    } else if (mb) {\n      dm(P.requester, 'Done - ' + P.room + ' is yours for ' + P.when + '. ' + P.approverName + \" OK'd sharing the booth.\");\n      dm(P.approver, \"You've offered your \" + P.room + ' booth (' + P.when + ') to ' + P.requesterName + '. Thanks for sharing!');\n    } else {\n      dm(P.requester, 'Done - ' + P.room + ' is yours for ' + P.when + '. ' + P.approverName + ' moved their session to make way.');\n      dm(P.approver, 'Heads up - your \"' + P.incTitle + '\" was moved to make room for a higher-priority session in ' + P.room + \", as you OK'd. Thanks!\");\n    }\n  } else if (cp.next === 'remove') {\n    const g = j('Recheck Own') || {};\n    const errTxt = g.error ? JSON.stringify(g.error) : '';\n    if (g.status === 'cancelled' || /\\b(404|410)\\b|not ?found|deleted|gone/i.test(errTxt)) failNothing(cp.reason);\n    else { fin = { 'Status': 'NEEDS_ATTENTION', 'Resolved Via': cp.reason + '; OWN_EVENT_LEFT', 'Decided At': now };\n      dm(P.requester, \"I couldn't get \" + P.room + ' for you (' + P.when + ') and a half-made booking may still show on the calendar. The team has been alerted to clear it.');\n      msgs.push({ to: APPROVALS, text: '[CONSENT NEEDS ATTENTION] ' + P.requestId + ': the booking for ' + P.room + ' (' + P.when + ') failed (' + cp.reason + ') and its own event ' + cp.ownEventId + ' could not be removed. The holder\\'s booking was not touched.' }); }\n  } else if (cp.outcome === 'fail') failNothing(cp.reason);\n}\nreturn [{ json: { fin, msgs } }];"
       },
-      "id": "f2e327e9-f8ff-444b-8dee-1ec0529f2542",
+      "id": "c7018294-0253-48b4-87a1-f71c56143316",
       "name": "Outcome",
       "position": [
-        5376,
+        1792,
         0
       ],
       "type": "n8n-nodes-base.code",
@@ -840,13 +352,48 @@
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const o = $('Outcome').first().json;\nif (!o.fin) return [];      // retry / not due: the row stays as it is for the next sweep\nreturn [{ json: Object.assign({ 'Request ID': $('Plan').first().json.requestId }, o.fin) }];"
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "431550013",
+          "cachedResultName": "Consent Requests"
+        },
+        "options": {}
       },
-      "id": "b587cf19-3549-449f-b7a2-24ffcc18fc69",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2016,
+        0
+      ],
+      "id": "9a536d7c-4e25-49fc-9657-52057f472dd7",
+      "name": "Recheck Row",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Write only if the row is still PENDING: a parallel run (approval and timeout at once) may have finished it.\nconst id = $('Plan').first().json.requestId;\nconst cur = $('Recheck Row').all().map(i => i.json || {}).find(r => String(r['Request ID'] || '').trim() === id) || {};\nconst o = $('Outcome').first().json;\nif (!o.fin || String(cur['Status'] || '').toUpperCase() !== 'PENDING') return [];\nreturn [{ json: Object.assign({ 'Request ID': id }, o.fin) }];"
+      },
+      "id": "38d70b9b-d125-4e9f-a4d9-c452963763e7",
       "name": "Outcome Row",
       "position": [
-        5600,
+        2240,
         0
       ],
       "type": "n8n-nodes-base.code",
@@ -881,7 +428,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        5824,
+        2464,
         0
       ],
       "credentials": {
@@ -890,18 +437,18 @@
           "name": "Google Sheets - Jessie Log"
         }
       },
-      "id": "48432f80-d076-43a4-b0eb-550517f66fd9",
+      "id": "5d6972ef-4b22-4edd-b4cf-f9c0ad836b2c",
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Messages go out only once the outcome is on the row; if the write failed the next sweep redoes the outcome.\nconst w = $input.first().json || {};\nif (w.error) return [];\nreturn ($('Outcome').first().json.msgs || []).map(m => ({ json: m }));"
+        "jsCode": "// Messages go out only once the outcome is on the row; if the write failed, the next sweep redoes it.\nconst w = $input.first().json || {};\nif (w.error) return [];\nreturn ($('Outcome').first().json.msgs || []).map(m => ({ json: m }));"
       },
-      "id": "2c20bf52-edda-44a4-9634-2d21a171d9dc",
+      "id": "203bde9d-4ade-486b-8000-c2cbeb6a38b8",
       "name": "Outcome Messages",
       "position": [
-        6048,
+        2688,
         0
       ],
       "type": "n8n-nodes-base.code",
@@ -924,7 +471,7 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.2,
       "position": [
-        6272,
+        2912,
         0
       ],
       "onError": "continueRegularOutput",
@@ -934,18 +481,18 @@
           "name": "Jessie Slack (signed)"
         }
       },
-      "id": "ad6c9b78-5cf6-4615-bc71-86f38d5001ea",
-      "webhookId": "082fe6c4-e5a8-46cc-817b-7d467686a811"
+      "id": "1e90039c-2040-46cf-a05e-291e50aba2ba",
+      "webhookId": "e25d2777-4ce8-4030-9a8d-bdc831009768"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "const o = (() => { try { return $('Outcome').first().json; } catch (e) { return {}; } })();\nreturn [{ json: { request_id: $('Plan').first().json.requestId, status: (o.fin || {}).Status || 'UNCHANGED' } }];"
       },
-      "id": "20444f91-44c2-4de7-8901-745abac9c6de",
+      "id": "bab4325b-a1bf-4db9-8035-e5872b42e593",
       "name": "Return",
       "position": [
-        6496,
+        3136,
         0
       ],
       "type": "n8n-nodes-base.code",
@@ -980,24 +527,6 @@
       "main": [
         [
           {
-            "node": "Hold?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Hold?": {
-      "main": [
-        [
-          {
-            "node": "Get Hold",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
             "node": "Place?",
             "type": "main",
             "index": 0
@@ -1009,189 +538,14 @@
       "main": [
         [
           {
-            "node": "Placing Row",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Outcome",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Hold": {
-      "main": [
-        [
-          {
-            "node": "Check Hold",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check Hold": {
-      "main": [
-        [
-          {
-            "node": "Delete Hold?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Delete Hold?": {
-      "main": [
-        [
-          {
-            "node": "Snapshot Row",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Place After Check?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Place After Check?": {
-      "main": [
-        [
-          {
-            "node": "Placing Row",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Outcome",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Snapshot Row": {
-      "main": [
-        [
-          {
-            "node": "Write Snapshot",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Write Snapshot": {
-      "main": [
-        [
-          {
-            "node": "Delete Hold",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Delete Hold": {
-      "main": [
-        [
-          {
-            "node": "Recheck Hold",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Recheck Hold": {
-      "main": [
-        [
-          {
-            "node": "Check Delete",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check Delete": {
-      "main": [
-        [
-          {
-            "node": "Deleted?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Deleted?": {
-      "main": [
-        [
-          {
-            "node": "Deleted Row",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Outcome",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Deleted Row": {
-      "main": [
-        [
-          {
-            "node": "Write Deleted",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Write Deleted": {
-      "main": [
-        [
-          {
-            "node": "Placing Row",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Placing Row": {
-      "main": [
-        [
-          {
-            "node": "Write Placing",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Write Placing": {
-      "main": [
-        [
-          {
             "node": "Place Kind?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Outcome",
             "type": "main",
             "index": 0
           }
@@ -1242,58 +596,18 @@
       "main": [
         [
           {
-            "node": "Placed?",
+            "node": "Remove Own?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Placed?": {
+    "Remove Own?": {
       "main": [
         [
           {
-            "node": "Placed Row",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Restore?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Placed Row": {
-      "main": [
-        [
-          {
-            "node": "Write Placed",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Write Placed": {
-      "main": [
-        [
-          {
-            "node": "Outcome",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Restore?": {
-      "main": [
-        [
-          {
-            "node": "Restore Hold",
+            "node": "Remove Own Booking",
             "type": "main",
             "index": 0
           }
@@ -1307,18 +621,18 @@
         ]
       ]
     },
-    "Restore Hold": {
+    "Remove Own Booking": {
       "main": [
         [
           {
-            "node": "Recheck Restore",
+            "node": "Recheck Own",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Recheck Restore": {
+    "Recheck Own": {
       "main": [
         [
           {
@@ -1330,6 +644,17 @@
       ]
     },
     "Outcome": {
+      "main": [
+        [
+          {
+            "node": "Recheck Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recheck Row": {
       "main": [
         [
           {

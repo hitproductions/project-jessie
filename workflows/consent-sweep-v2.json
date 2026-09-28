@@ -13,7 +13,7 @@
           "interval": [
             {
               "field": "minutes",
-              "minutesInterval": 1
+              "minutesInterval": 10
             }
           ]
         }
@@ -25,7 +25,7 @@
         0
       ],
       "id": "sweep-cron",
-      "name": "Every Minute"
+      "name": "Every 10 min"
     },
     {
       "parameters": {
@@ -62,7 +62,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Consent Sweep (v2, review 29 Sep): picks the ONE oldest consent request that needs work - a recorded decision\n// (APPROVED / REJECTED / INCUMBENT_MOVED), a deadline that has passed, or a run left half-way (Stage) - and hands it\n// to Finalize, which re-reads the row and decides. One row per minute keeps each run far shorter than the gap\n// between runs, so two finalizations do not overlap. MBOOTH timeout still books; PREEMPT timeout still just expires.\nconst now = Date.now(), U = s => String(s || '').toUpperCase().trim();\nconst due = $input.all().map(i => (i && i.json) || {}).filter(r => {\n  if (!r['Request ID'] || U(r['Status']) !== 'PENDING') return false;\n  const st = U(r['Stage']);\n  if (st === 'RESTORE_FAILED') return false;\n  if (st || U(r['Decision'])) return true;\n  const dl = Date.parse(r['Deadline'] || ''); return isFinite(dl) && now >= dl;\n}).sort((a, b) => String(a['Request ID']).localeCompare(String(b['Request ID'])));\nreturn due.length ? [{ json: { request_id: due[0]['Request ID'] } }] : [];"
+        "jsCode": "// Consent Sweep (v2, review 29 Sep): every consent request that needs work goes to Finalize SEPARATELY (one\n// sub-run per row, in turn) - a deadline that has passed, or a recorded decision whose Finalize call did not finish.\n// Finalize re-reads each row and decides. MBOOTH timeout still books; PREEMPT timeout still just expires.\nconst now = Date.now(), U = s => String(s || '').toUpperCase().trim();\nreturn $input.all().map(i => (i && i.json) || {}).filter(r => {\n  if (!r['Request ID'] || U(r['Status']) !== 'PENDING') return false;\n  if (U(r['Decision'])) { const at = Date.parse(r['Decision At'] || ''); return !isFinite(at) || now - at > 2 * 60 * 1000; }   // give main / Move's own call time first\n  const dl = Date.parse(r['Deadline'] || ''); return isFinite(dl) && now >= dl;\n}).sort((a, b) => String(a['Request ID']).localeCompare(String(b['Request ID']))).map(r => ({ json: { request_id: r['Request ID'] } }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -106,7 +106,7 @@
     }
   ],
   "connections": {
-    "Every Minute": {
+    "Every 10 min": {
       "main": [
         [
           {

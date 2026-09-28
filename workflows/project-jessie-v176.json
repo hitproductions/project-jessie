@@ -1698,7 +1698,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Consent-reply router (main v176, review 29 Sep). A reply DECIDES a consent request only when it is an\n// unambiguous yes or no AND it is tied to that request: it carries the request's code, or Jessie's last message in\n// this DM was that request's prompt. It used to approve on the first word (\"yes but only after 5pm\", \"no problem\"\n// rejected), pick the newest pending row, and a \"yes\" to the holder's own booking summary approved the consent.\n// A decision is only RECORDED here; Consent Sweep -> Finalize carries it out (one writer).\nconst rows = $('Read Pending Consent').all().map(i => (i && i.json) || {});\nconst trig = $('Slack Trigger').first().json || {};\nconst sender = String(trig.user || '');\nconst senderJson = ($('Get Sender').first().json) || {};\nlet hist = []; try { hist = $('Consent History').all().map(i => (i && i.json) || {}); } catch (e) { hist = []; }\nfunction consentCode(id) { let h = 0; for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;\n  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 4; i++) { s += A[h % 32]; h = Math.floor(h / 32); } return s; }\nfunction whenPhrase(s,e){try{if(/^\\d{4}-\\d{2}-\\d{2}$/.test(String(s||''))){return new Date(s+'T00:00:00+08:00').toLocaleDateString('en-US',{timeZone:'Asia/Manila',month:'short',day:'numeric'})+' (all day)';}const o={timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'};const a=new Date(s).toLocaleString('en-US',o);const b=e?new Date(e).toLocaleTimeString('en-US',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'}):'';return b?(a+'–'+b):a;}catch(_){return String(s||'');}}\nconst U = s => String(s || '').toUpperCase();\nconst mine = rows.filter(r => U(r['Status']) === 'PENDING' && String(r['Approver'] || '') === sender && r['Request ID']);\nconst norm = s => String(s || '').toLowerCase().replace(/:\\+1:|:thumbsup:|\\u{1F44D}/gu, ' yes ').replace(/[^a-z0-9 ]/g, ' ').replace(/\\s+/g, ' ').trim();\nconst raw = String(trig.text || '');\nconst inText = U(raw).match(/\\b[A-Z2-9]{4}\\b/g) || [];\nlet bound = mine.find(r => inText.indexOf(consentCode(r['Request ID'])) !== -1) || null;\nlet text = norm(raw);\nif (bound) text = text.replace(new RegExp('\\\\b' + consentCode(bound['Request ID']).toLowerCase() + '\\\\b', 'g'), ' ').replace(/\\b(request|ref)\\b/g, ' ').replace(/\\s+/g, ' ').trim();\nif (!bound) {\n  const lastBot = hist.find(m => m && (m.bot_id || m.subtype === 'bot_message'));\n  const mm = lastBot && String(lastBot.text || '').match(/\\(request ([A-Z2-9]{4})\\)/);\n  if (mm) bound = mine.find(r => consentCode(r['Request ID']) === mm[1]) || null;\n}\nconst APPROVE = new Set(['yes','y','yep','yup','yeah','ok','okay','k','sure','go','go ahead','yes go ahead','ok go ahead','yes please',\n  'please do','approve','approved','confirm','confirmed','yes ok','ok sure','sure go ahead','yes sure','sure thing','go for it',\n  'yes go for it','fine','thats fine','yes thats fine','yes you can','they can','yes they can','allowed','yes allowed']);\nconst REJECT = new Set(['no','n','nope','no thanks','no thank you','deny','denied','reject','rejected','decline','declined','not ok',\n  'not okay','sorry no','no sorry','i need it','they cant','no they cant','no i need it']);\nconst LOOKS = /\\b(yes|yeah|yep|ok|okay|sure|no|nope|not|but|only|after|before|until|unless|actually|maybe|problem|worries|approve|decline|reject|go)\\b/;\nfunction classify(t) { if (!t) return 'none'; if (APPROVE.has(t)) return 'approve'; if (REJECT.has(t)) return 'reject';\n  return (t.split(' ').length <= 14 && LOOKS.test(t)) ? 'ambiguous' : 'none'; }\nconst c = classify(text);\nlet branch = 'normal', decision = '', reply = '', matched = {}, consentContext = '';\nconst ctx = r => { const who = r['Approver Name'] || 'this booker', title = r['Incumbent Title'] || 'their booking', rm = r['Room/Booth'] || 'a room', reqName = r['Requester Name'] || 'a higher-priority booking';\n  return 'CONSENT CONTEXT: You earlier asked ' + who + ' to move \"' + title + '\" out of ' + rm + ' to free it for ' + reqName + ', which outranks it. They are replying now. If they give a new time or room, move \"' + title + '\" there via the normal Move flow - present the move summary and confirm as usual. Do NOT book ' + reqName + ' yourself; that happens automatically once \"' + title + '\" moves and frees the room. If they decline, tell ' + reqName + ' it stays taken.'; };\nif (trig.bot_id) { branch = 'ignore'; }\nelse if (bound) {\n  matched = bound;\n  const code = consentCode(bound['Request ID']), room = bound['Room/Booth'] || 'the booth', who = bound['Requester Name'] || 'them',\n        when = whenPhrase(bound['Req Start'], bound['Req End']);\n  if (U(bound['Kind']) === 'MBOOTH') {\n    if (c === 'approve') { branch = 'decide'; decision = 'APPROVED'; reply = \"Thanks! I'll book \" + room + ' for ' + who + ' (' + when + ') and let them know.'; }\n    else if (c === 'reject') { branch = 'decide'; decision = 'REJECTED'; reply = 'Okay, ' + room + ' stays yours on ' + when + \". I'll let \" + who + ' know.'; }\n    else if (c === 'ambiguous') { branch = 'clarify'; reply = 'Just to check: can ' + who + ' use ' + room + ' on ' + when + '? Please reply yes or no. (request ' + code + ')'; }\n  } else {\n    if (c === 'reject') { branch = 'decide'; decision = 'REJECTED'; reply = 'Okay, \"' + (bound['Incumbent Title'] || 'your booking') + \"\\\" stays where it is. I'll let \" + who + ' know.'; }\n    else { branch = 'consent-help'; consentContext = ctx(bound); }\n  }\n} else {\n  // Not tied to one request: a bare \"yes\" belongs to whatever Jessie last asked, so it is NOT taken as consent.\n  const pre = mine.filter(r => U(r['Kind']) !== 'MBOOTH');\n  if (pre.length) { branch = 'consent-help'; consentContext = pre.map(ctx).join('\\n'); }\n}\nreturn [{ json: Object.assign({}, senderJson, { _consentBranch: branch, _consentDecision: decision, _consentReply: reply,\n  _consentContext: consentContext, _matched: matched, _consentClass: c }) }];"
+        "jsCode": "// Consent-reply router (main v176, review 29 Sep). A reply DECIDES a consent request only when it is an\n// unambiguous yes or no AND it is tied to that request: it carries the request's code, or Jessie's last message in\n// this DM was that request's prompt. It used to approve on the first word (\"yes but only after 5pm\", \"no problem\"\n// rejected), pick the newest pending row, and a \"yes\" to the holder's own booking summary approved the consent.\n// A decision is recorded on the row, then Finalize carries it out (Consent Sweep retries if that call does not finish).\nconst rows = $('Read Pending Consent').all().map(i => (i && i.json) || {});\nconst trig = $('Slack Trigger').first().json || {};\nconst sender = String(trig.user || '');\nconst senderJson = ($('Get Sender').first().json) || {};\nlet hist = []; try { hist = $('Consent History').all().map(i => (i && i.json) || {}); } catch (e) { hist = []; }\nfunction consentCode(id) { let h = 0; for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;\n  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 4; i++) { s += A[h % 32]; h = Math.floor(h / 32); } return s; }\nfunction whenPhrase(s,e){try{if(/^\\d{4}-\\d{2}-\\d{2}$/.test(String(s||''))){return new Date(s+'T00:00:00+08:00').toLocaleDateString('en-US',{timeZone:'Asia/Manila',month:'short',day:'numeric'})+' (all day)';}const o={timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'};const a=new Date(s).toLocaleString('en-US',o);const b=e?new Date(e).toLocaleTimeString('en-US',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'}):'';return b?(a+'–'+b):a;}catch(_){return String(s||'');}}\nconst U = s => String(s || '').toUpperCase();\nconst mine = rows.filter(r => U(r['Status']) === 'PENDING' && String(r['Approver'] || '') === sender && r['Request ID']);\nconst norm = s => String(s || '').toLowerCase().replace(/:\\+1:|:thumbsup:|\\u{1F44D}/gu, ' yes ').replace(/[^a-z0-9 ]/g, ' ').replace(/\\s+/g, ' ').trim();\nconst raw = String(trig.text || '');\nconst inText = U(raw).match(/\\b[A-Z2-9]{4}\\b/g) || [];\nlet bound = mine.find(r => inText.indexOf(consentCode(r['Request ID'])) !== -1) || null;\nlet text = norm(raw);\nif (bound) text = text.replace(new RegExp('\\\\b' + consentCode(bound['Request ID']).toLowerCase() + '\\\\b', 'g'), ' ').replace(/\\b(request|ref)\\b/g, ' ').replace(/\\s+/g, ' ').trim();\nif (!bound) {\n  const lastBot = hist.find(m => m && (m.bot_id || m.subtype === 'bot_message'));\n  const mm = lastBot && String(lastBot.text || '').match(/\\(request ([A-Z2-9]{4})\\)/);\n  if (mm) bound = mine.find(r => consentCode(r['Request ID']) === mm[1]) || null;\n}\nconst APPROVE = new Set(['yes','y','yep','yup','yeah','ok','okay','k','sure','go','go ahead','yes go ahead','ok go ahead','yes please',\n  'please do','approve','approved','confirm','confirmed','yes ok','ok sure','sure go ahead','yes sure','sure thing','go for it',\n  'yes go for it','fine','thats fine','yes thats fine','yes you can','they can','yes they can','allowed','yes allowed']);\nconst REJECT = new Set(['no','n','nope','no thanks','no thank you','deny','denied','reject','rejected','decline','declined','not ok',\n  'not okay','sorry no','no sorry','i need it','they cant','no they cant','no i need it']);\nconst LOOKS = /\\b(yes|yeah|yep|ok|okay|sure|no|nope|not|but|only|after|before|until|unless|actually|maybe|problem|worries|approve|decline|reject|go)\\b/;\nfunction classify(t) { if (!t) return 'none'; if (APPROVE.has(t)) return 'approve'; if (REJECT.has(t)) return 'reject';\n  return (t.split(' ').length <= 14 && LOOKS.test(t)) ? 'ambiguous' : 'none'; }\nconst c = classify(text);\nlet branch = 'normal', decision = '', reply = '', matched = {}, consentContext = '';\nconst ctx = r => { const who = r['Approver Name'] || 'this booker', title = r['Incumbent Title'] || 'their booking', rm = r['Room/Booth'] || 'a room', reqName = r['Requester Name'] || 'a higher-priority booking';\n  return 'CONSENT CONTEXT: You earlier asked ' + who + ' to move \"' + title + '\" out of ' + rm + ' to free it for ' + reqName + ', which outranks it. They are replying now. If they give a new time or room, move \"' + title + '\" there via the normal Move flow - present the move summary and confirm as usual. Do NOT book ' + reqName + ' yourself; that happens automatically once \"' + title + '\" moves and frees the room. If they decline, tell ' + reqName + ' it stays taken.'; };\nif (trig.bot_id) { branch = 'ignore'; }\nelse if (bound) {\n  matched = bound;\n  const code = consentCode(bound['Request ID']), room = bound['Room/Booth'] || 'the booth', who = bound['Requester Name'] || 'them',\n        when = whenPhrase(bound['Req Start'], bound['Req End']);\n  if (U(bound['Kind']) === 'MBOOTH') {\n    if (c === 'approve') { branch = 'decide'; decision = 'APPROVED'; reply = \"Thanks! I'll book \" + room + ' for ' + who + ' (' + when + ') and let them know.'; }\n    else if (c === 'reject') { branch = 'decide'; decision = 'REJECTED'; reply = 'Okay, ' + room + ' stays yours on ' + when + \". I'll let \" + who + ' know.'; }\n    else if (c === 'ambiguous') { branch = 'clarify'; reply = 'Just to check: can ' + who + ' use ' + room + ' on ' + when + '? Please reply yes or no. (request ' + code + ')'; }\n  } else {\n    if (c === 'reject') { branch = 'decide'; decision = 'REJECTED'; reply = 'Okay, \"' + (bound['Incumbent Title'] || 'your booking') + \"\\\" stays where it is. I'll let \" + who + ' know.'; }\n    else { branch = 'consent-help'; consentContext = ctx(bound); }\n  }\n} else {\n  // Not tied to one request: a bare \"yes\" belongs to whatever Jessie last asked, so it is NOT taken as consent.\n  const pre = mine.filter(r => U(r['Kind']) !== 'MBOOTH');\n  if (pre.length) { branch = 'consent-help'; consentContext = pre.map(ctx).join('\\n'); }\n}\nreturn [{ json: Object.assign({}, senderJson, { _consentBranch: branch, _consentDecision: decision, _consentReply: reply,\n  _consentContext: consentContext, _matched: matched, _consentClass: c }) }];"
       },
       "id": "364f1b28-b679-4d33-9d5c-d565a4bb0ea2",
       "name": "Consent Router",
@@ -2508,7 +2508,7 @@
         "mode": "runOnceForAllItems",
         "jsCode": "// Consent Check (main v176): does the sender have a PENDING consent request to answer? Only then is Slack history\n// read, to see whether Jessie's last message in this DM was that request's prompt.\nconst sender = String(($('Slack Trigger').first().json || {}).user || '');\nconst any = $input.all().some(i => { const r = (i && i.json) || {}; return String(r['Status'] || '').toUpperCase() === 'PENDING' && String(r['Approver'] || '') === sender; });\nreturn [{ json: { needHistory: any ? 'yes' : 'no' } }];"
       },
-      "id": "ac9f5e15-cc26-4005-a0c4-0b42e90ba91b",
+      "id": "af4f8cf1-9f1b-45d7-97d4-ec194adfa56f",
       "name": "Consent Check",
       "position": [
         73376,
@@ -2523,7 +2523,7 @@
           "combinator": "and",
           "conditions": [
             {
-              "id": "fc419652-d1bc-4abc-903f-d6dc38d05b65",
+              "id": "e65c926a-d87f-4bc3-a907-aa5791f864ea",
               "leftValue": "={{ $json.needHistory }}",
               "operator": {
                 "name": "filter.operator.equals",
@@ -2542,7 +2542,7 @@
         },
         "options": {}
       },
-      "id": "446b1f6e-5f45-46b4-8008-62d84e2b59a7",
+      "id": "c28b2c15-6484-4a68-b59d-5777d9ada462",
       "name": "Consent History?",
       "position": [
         73440,
@@ -2564,7 +2564,7 @@
         "filters": {}
       },
       "alwaysOutputData": true,
-      "id": "5ea8f5ad-232f-4a5f-84ee-dd492acbfb76",
+      "id": "810d8f4f-0e46-4a46-a972-009786e620fa",
       "name": "Consent History",
       "position": [
         73488,
@@ -2572,7 +2572,7 @@
       ],
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.5,
-      "webhookId": "bc3e9ec0-579e-451f-9319-b54d3ee204a0",
+      "webhookId": "b126d185-9bc9-46d2-b917-324d69d698e9",
       "credentials": {
         "slackApi": {
           "id": "EcX8szEJrOLYLUfl",
@@ -2588,7 +2588,7 @@
           "combinator": "and",
           "conditions": [
             {
-              "id": "bc4ffe61-7088-4a54-ae36-09b4fe35a511",
+              "id": "fc3bb83f-9472-496d-89b9-b25aa571ba30",
               "leftValue": "={{ $json._consentBranch }}",
               "operator": {
                 "name": "filter.operator.equals",
@@ -2607,7 +2607,7 @@
         },
         "options": {}
       },
-      "id": "8dbc9ffc-18c7-4c8c-84b2-0b1ec09d6a05",
+      "id": "d5fc5523-bc7a-495f-8b05-878460608c0b",
       "name": "Consent Decide?",
       "position": [
         73936,
@@ -2621,7 +2621,7 @@
         "mode": "runOnceForAllItems",
         "jsCode": "const m = $('Consent Router').first().json;\nreturn [{ json: { 'Request ID': (m._matched || {})['Request ID'] || '', 'Decision': m._consentDecision, 'Decision At': new Date().toISOString() } }];"
       },
-      "id": "f4f9f0c6-c330-4a6f-9a01-6ed37d606206",
+      "id": "e26ebdb3-3872-4896-8d32-4496bc249888",
       "name": "Decision Row",
       "position": [
         74160,
@@ -2655,7 +2655,7 @@
         },
         "options": {}
       },
-      "id": "7e0255d4-d8b3-4042-a09a-8002588d2786",
+      "id": "cc0d4129-7cb4-4729-b402-d5519036642c",
       "name": "Record Decision",
       "position": [
         74384,
@@ -2673,14 +2673,78 @@
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// The decision is on the row; Consent Sweep carries it out within a minute.\nconst w = $input.first().json || {};\nconst m = $('Consent Router').first().json;\nreturn [{ json: { output: w.error ? \"Sorry, I couldn't record that just now. Please reply again in a minute.\" : m._consentReply } }];"
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "24367f37-56d1-4cf4-a69e-d8d229d1b670",
+              "leftValue": "={{ $json.error ? 'no' : 'yes' }}",
+              "operator": {
+                "name": "filter.operator.equals",
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "yes"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
       },
-      "id": "5a0232c0-d1e4-4c34-b3bc-4b896377c3ef",
-      "name": "Decision Reply",
+      "id": "7eff5ac4-2307-48ae-8432-a613f8df4b2f",
+      "name": "Decision Recorded?",
       "position": [
         74608,
         4976
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "TO1UnZTZ2LhtE9J3",
+          "mode": "id",
+          "cachedResultName": "Finalize Consent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "request_id": "={{ $('Decision Row').first().json['Request ID'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        74832,
+        4880
+      ],
+      "id": "ea960fca-86f9-483d-af08-24eb3a76f374",
+      "name": "Call Finalize",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Only reached when the decision could not be written; Finalize (called after a good write) does the messaging.\nreturn [{ json: { output: \"Sorry, I couldn't record that just now. Please reply again in a minute.\" } }];"
+      },
+      "id": "3b1cbe2a-44c3-4052-a8cd-a0eb9a4ef6ba",
+      "name": "Decision Reply",
+      "position": [
+        74832,
+        5072
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
@@ -2691,7 +2755,7 @@
           "combinator": "and",
           "conditions": [
             {
-              "id": "35a514d4-85cb-4c8f-9315-994c8fdd28e2",
+              "id": "a88a46a1-709d-4076-a3ee-6504ce2ff460",
               "leftValue": "={{ $json._consentBranch }}",
               "operator": {
                 "name": "filter.operator.equals",
@@ -2710,7 +2774,7 @@
         },
         "options": {}
       },
-      "id": "76375713-60e8-4627-8604-dbe1c875ec0d",
+      "id": "55b5b3e6-69a5-4042-b61a-2a6b554ed9c1",
       "name": "Consent Clarify?",
       "position": [
         74160,
@@ -2724,7 +2788,7 @@
         "mode": "runOnceForAllItems",
         "jsCode": "return [{ json: { output: $('Consent Router').first().json._consentReply } }];"
       },
-      "id": "f54e002e-4c8f-4697-9143-d1b3cb4c5ae3",
+      "id": "f8a091f7-66f3-4881-830a-68c332c60f7c",
       "name": "Clarify Reply",
       "position": [
         74384,
@@ -3358,6 +3422,24 @@
     },
     "Record Decision": {
       "main": [
+        [
+          {
+            "node": "Decision Recorded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision Recorded?": {
+      "main": [
+        [
+          {
+            "node": "Call Finalize",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Decision Reply",

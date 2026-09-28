@@ -7,13 +7,16 @@ pull-dir: main.json, open.json, finalize.json, sweep.json, book.json, move.json 
 Writes project-jessie-v176, open-consent-request-v11, finalize-consent-v10, consent-sweep-v2, book-session-v57,
 move-booking-v25.
 
-One writer. main and Move only RECORD a decision on the row (Decision / Decision At). Consent Sweep, once a minute,
-hands at most ONE due row to Finalize, which re-reads the row and is the only thing that changes Status, the hold or
-the requester's booking. No lock is claimed: Sheets cannot do one, Google does not guarantee event-id collision
-detection, and the n8n Data Table upsert is unverified. Two Finalize runs can only overlap if one run takes longer
-than the minute between sweeps.
+Simpler design (Tara, 29 Sep): standing M-booth holds are "Show as available", so a consented booking goes in
+ALONGSIDE the hold - nothing is deleted, so nothing has to be restored. main and Move record the decision on the row,
+then call Finalize; Finalize re-reads the row, books (ignoring only that exact hold), and writes the outcome only if
+the row is still PENDING. A second run (approval and timeout together, or a retry) recognises the first run's booking
+by its consent marker instead of booking twice. Consent Sweep (every 10 min) sends each due row separately: timeouts,
+and recorded decisions whose Finalize call did not finish. No lock is claimed.
 
-New Consent Requests columns (setup): Decision, Decision At, Stage, Hold Snapshot, Placement Event Id.
+New Consent Requests columns (setup): Decision, Decision At, Placement Event Id.
+Setup on the calendar: the standing M-booth holds that block their booth (M1 - Rico, M4 - Tel, M4 - Japs, M8 - ANA)
+set to "Show as available", as M6 - Marketing and M2 - Peemo already are.
 """
 import copy, json, os, sys, uuid
 
@@ -54,7 +57,7 @@ ROUTER = r"""// Consent-reply router (main v176, review 29 Sep). A reply DECIDES
 // unambiguous yes or no AND it is tied to that request: it carries the request's code, or Jessie's last message in
 // this DM was that request's prompt. It used to approve on the first word ("yes but only after 5pm", "no problem"
 // rejected), pick the newest pending row, and a "yes" to the holder's own booking summary approved the consent.
-// A decision is only RECORDED here; Consent Sweep -> Finalize carries it out (one writer).
+// A decision is recorded on the row, then Finalize carries it out (Consent Sweep retries if that call does not finish).
 const rows = $('Read Pending Consent').all().map(i => (i && i.json) || {});
 const trig = $('Slack Trigger').first().json || {};
 const sender = String(trig.user || '');
@@ -115,13 +118,17 @@ return [{ json: { needHistory: any ? 'yes' : 'no' } }];"""
 
 DECISION_ROW = r"""const m = $('Consent Router').first().json;
 return [{ json: { 'Request ID': (m._matched || {})['Request ID'] || '', 'Decision': m._consentDecision, 'Decision At': new Date().toISOString() } }];"""
-DECISION_REPLY = r"""// The decision is on the row; Consent Sweep carries it out within a minute.
-const w = $input.first().json || {};
-const m = $('Consent Router').first().json;
-return [{ json: { output: w.error ? "Sorry, I couldn't record that just now. Please reply again in a minute." : m._consentReply } }];"""
+DECISION_REPLY = r"""// Only reached when the decision could not be written; Finalize (called after a good write) does the messaging.
+return [{ json: { output: "Sorry, I couldn't record that just now. Please reply again in a minute." } }];"""
+
+def call_finalize(t_exec, pos, rid):
+    n = clone(t_exec, "Call Finalize", pos)
+    n["parameters"]["workflowInputs"]["value"] = {"request_id": rid}
+    n["parameters"].pop("mode", None); n["onError"] = "continueRegularOutput"
+    return n
 CLARIFY_REPLY = r"""return [{ json: { output: $('Consent Router').first().json._consentReply } }];"""
 
-def build_main(w):
+def build_main(w, t_exec):
     N = {n["name"]: n for n in w["nodes"]}
     w["name"] = "Project Jessie — v176 (consent replies)"
     tmpl_if = N["MBooth Book?"]; tmpl_sheet = None
@@ -139,7 +146,9 @@ def build_main(w):
            hist,
            ifeq(tmpl_if, "Consent Decide?", "={{ $json._consentBranch }}", "decide", [x0 + 672, y0]),
            code("Decision Row", DECISION_ROW, [x0 + 896, y0 - 144]), rec,
-           code("Decision Reply", DECISION_REPLY, [x0 + 1344, y0 - 144]),
+           ifeq(tmpl_if, "Decision Recorded?", "={{ $json.error ? 'no' : 'yes' }}", "yes", [x0 + 1344, y0 - 144]),
+           call_finalize(t_exec, [x0 + 1568, y0 - 240], "={{ $('Decision Row').first().json['Request ID'] }}"),
+           code("Decision Reply", DECISION_REPLY, [x0 + 1568, y0 - 48]),
            ifeq(tmpl_if, "Consent Clarify?", "={{ $json._consentBranch }}", "clarify", [x0 + 896, y0 + 96]),
            code("Clarify Reply", CLARIFY_REPLY, [x0 + 1120, y0 + 16])]
     w["nodes"].extend(new)
@@ -151,7 +160,8 @@ def build_main(w):
     link(C, "Consent History", "Consent Router")
     C["Consent Router"] = {"main": [[{"node": "Consent Decide?", "type": "main", "index": 0}]]}
     link(C, "Consent Decide?", "Decision Row", 0); link(C, "Consent Decide?", "Consent Clarify?", 1)
-    link(C, "Decision Row", "Record Decision"); link(C, "Record Decision", "Decision Reply"); link(C, "Decision Reply", "Send Reply")
+    link(C, "Decision Row", "Record Decision"); link(C, "Record Decision", "Decision Recorded?")
+    link(C, "Decision Recorded?", "Call Finalize", 0); link(C, "Decision Recorded?", "Decision Reply", 1); link(C, "Decision Reply", "Send Reply")
     link(C, "Consent Clarify?", "Clarify Reply", 0); link(C, "Consent Clarify?", "Read Reference Cache", 1)
     link(C, "Clarify Reply", "Send Reply")
     return w
@@ -171,45 +181,38 @@ def build_open(w):
     n["parameters"]["jsCode"] = c
     return w
 
-# ---------------------------------------------------------------- Finalize Consent: the one writer
+# ---------------------------------------------------------------- Finalize Consent: re-read, book, report
 PLAN = r"""// Finalize Plan (v10, review 29 Sep). Re-reads the row by Request ID and decides from ITS state, never from what
-// the caller passed. Only Consent Sweep calls this, one row at a time. Stages persist progress so a run that dies
-// half-way is finished (or safely unwound) by the next sweep:
-//   '' -> HOLD_SNAPSHOT (hold copied to the row) -> HOLD_DELETED -> PLACING -> PLACED -> Status DONE
+// the caller passed. Nothing is deleted any more: a standing M-booth hold is "Show as available", so the requester
+// is booked alongside it, and only that exact hold is ignored by the clash check (exclude_event_id).
 """ + WHENFN + r"""
 const IN = $('When Executed by Another Workflow').first().json || {};
 const id = String(IN.request_id || '').trim();
 const U = s => String(s || '').toUpperCase().trim();
-const rows = $('Read Rows').all().map(i => (i && i.json) || {}).filter(r => String(r['Request ID'] || '').trim() === id && id);
+const rows = $('Read Rows').all().map(i => (i && i.json) || {}).filter(r => id && String(r['Request ID'] || '').trim() === id);
 const out = o => [{ json: Object.assign({ requestId: id }, o) }];
-if (!id) return out({ route: 'outcome', outcome: 'skip', reason: 'NO_REQUEST_ID' });
-if (rows.length !== 1) return out({ route: 'outcome', outcome: 'skip', reason: rows.length ? 'DUPLICATE_ROWS' : 'NOT_FOUND' });
+if (!id) return out({ act: 'skip', reason: 'NO_REQUEST_ID' });
+if (rows.length !== 1) return out({ act: 'skip', reason: rows.length ? 'DUPLICATE_ROWS' : 'NOT_FOUND' });
 const row = rows[0];
-if (U(row['Status']) !== 'PENDING') return out({ route: 'outcome', outcome: 'skip', reason: 'ALREADY_' + U(row['Status']) });
-const kind = U(row['Kind']) || 'PREEMPT', stage = U(row['Stage']), decision = U(row['Decision']);
+if (U(row['Status']) !== 'PENDING') return out({ act: 'skip', reason: 'ALREADY_' + U(row['Status']) });
+const kind = U(row['Kind']) || 'PREEMPT', decision = U(row['Decision']);
 const dl = Date.parse(row['Deadline'] || ''), due = isFinite(dl) && Date.now() >= dl;
 const holdId = String(row['Incumbent Event Id'] || '').trim();
-const via = decision === 'APPROVED' ? 'mbooth-approve' : decision === 'INCUMBENT_MOVED' ? 'move-hook' : 'sweep-timeout';
-const base = { kind, stage, via, holdId, room: row['Room/Booth'] || '', reqStart: row['Req Start'] || '', reqEnd: row['Req End'] || '',
-  approver: row['Approver'] || '', approverName: row['Approver Name'] || 'the holder', requester: row['Requester'] || '',
-  requesterName: row['Requester Name'] || 'the requester', incTitle: row['Incumbent Title'] || '', when: whenPhrase(row['Req Start'], row['Req End']),
-  hadSnapshot: !!String(row['Hold Snapshot'] || '').trim() };
-if (stage === 'RESTORE_FAILED') return out(Object.assign(base, { route: 'outcome', outcome: 'skip', reason: 'NEEDS_A_PERSON' }));
-if (stage === 'PLACED') return out(Object.assign(base, { route: 'outcome', outcome: 'finish', placementId: row['Placement Event Id'] || '' }));
-let route;
-if (stage === 'HOLD_SNAPSHOT' || stage === 'HOLD_DELETED') route = 'hold';
-else if (stage === 'PLACING') route = 'place';
-else if (decision === 'REJECTED') return out(Object.assign(base, { route: 'outcome', outcome: 'reject' }));
-else if (kind === 'MBOOTH') { if (decision !== 'APPROVED' && !due) return out(Object.assign(base, { route: 'outcome', outcome: 'skip', reason: 'NOT_DUE' })); route = holdId ? 'hold' : 'place'; }
-else { if (decision === 'INCUMBENT_MOVED') route = 'place';
-       else if (due) return out(Object.assign(base, { route: 'outcome', outcome: 'expire' }));   // PREEMPT timeout: nobody is moved
-       else return out(Object.assign(base, { route: 'outcome', outcome: 'skip', reason: 'NOT_DUE' })); }
+const via = decision === 'APPROVED' ? 'mbooth-approve' : decision === 'INCUMBENT_MOVED' ? 'move-hook' : decision === 'REJECTED' ? 'reply-no' : 'sweep-timeout';
+const base = { kind, via, holdId, room: row['Room/Booth'] || '', approver: row['Approver'] || '', approverName: row['Approver Name'] || 'the holder',
+  requester: row['Requester'] || '', requesterName: row['Requester Name'] || 'the requester', incTitle: row['Incumbent Title'] || '',
+  when: whenPhrase(row['Req Start'], row['Req End']) };
+let act;
+if (decision === 'REJECTED') act = 'reject';
+else if (kind === 'MBOOTH') act = (decision === 'APPROVED' || due) ? 'place' : 'skip';       // MBOOTH timeout still books
+else act = decision === 'INCUMBENT_MOVED' ? 'place' : due ? 'expire' : 'skip';              // PREEMPT timeout: nobody moved
+if (act !== 'place') return out(Object.assign(base, { act, reason: act === 'skip' ? 'NOT_DUE' : '' }));
 function safeParse(s) { if (s && typeof s === 'object') return s; try { return JSON.parse(s || ''); } catch (_) { return null; } }
 const req = safeParse(row['Req Payload']);
-if (!row['Req Start'] || !row['Req End'] || !row['Room/Booth'] || !req) return out(Object.assign(base, { route: 'outcome', outcome: 'fail', reason: 'MISSING_REQ_DETAILS' }));
+if (!row['Req Start'] || !row['Req End'] || !row['Room/Booth'] || !req) return out(Object.assign(base, { act: 'fail', reason: 'MISSING_REQ_DETAILS' }));
 const dateOf = iso => { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso)); } catch (_) { return ''; } };
 const placeTarget = req.kind === 'move' ? 'move' : 'book';
-// The marker lets a retry recognise a placement that already went through (Book Session hands it back on a clash).
+// The marker lets a second run recognise a booking the first already made (Book Session hands it back on a clash).
 const mark = ' | consent: ' + id;
 const placePayload = placeTarget === 'move'
   ? { title: req.title || '', event_id: req.event_id || '', booking_date: req.booking_date || dateOf(row['Req Start']), new_start_iso: req.new_start_iso || row['Req Start'],
@@ -217,233 +220,149 @@ const placePayload = placeTarget === 'move'
       requester_name: req.requester_name || row['Requester Name'] || '' }
   : Object.assign({}, req, { rooms: req.rooms || row['Room/Booth'] || '', start_iso: req.start_iso || row['Req Start'], end_iso: req.end_iso || row['Req End'],
       description: String(req.description || '').indexOf('consent: ' + id) === -1 ? String(req.description || '') + mark : String(req.description || ''),
-      // Exactly the approved hold may be ignored, and only because it is being released for this booking.
       exclude_event_id: kind === 'MBOOTH' ? holdId : '' });
-return out(Object.assign(base, { route, placeTarget, placePayload,
-  weDeleted: stage === 'HOLD_DELETED' || ((stage === 'HOLD_SNAPSHOT' || stage === 'PLACING') && base.hadSnapshot) }));"""
+return out(Object.assign(base, { act, placeTarget, placePayload }));"""
 
-CHECK_HOLD = r"""// Check Hold: what is the approved hold's state right now? Only a confirmed instance in the requested booth and
-// window is deleted; a hold that has changed is left alone and the request fails with nothing changed.
-const P = $('Plan').first().json;
-const g = $input.first().json || {};
-const errTxt = g.error ? JSON.stringify(g.error) : '';
-const gone = g.status === 'cancelled' || /\b(404|410)\b|not ?found|deleted|gone/i.test(errTxt);
-if (!g.id && !gone) return [{ json: { next: 'outcome', outcome: 'retry', reason: 'HOLD_READ_FAILED' } }];
-if (gone) return [{ json: { next: 'place', weDeleted: !!P.weDeleted, reason: P.weDeleted ? 'HOLD_ALREADY_DELETED_BY_US' : 'HOLD_ALREADY_GONE' } }];
-const room = String(P.room || '').toLowerCase();
-const inRoom = (g.attendees || []).some(a => String(a.displayName || '').toLowerCase().indexOf(room) !== -1) || String(g.location || '').toLowerCase().indexOf(room) !== -1 || String(g.summary || '').toLowerCase().indexOf(room) === 0;
-const ms = v => { const s = String(v || ''); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? Date.parse(s + 'T00:00:00+08:00') : Date.parse(s); };
-const hs = ms(g.start && (g.start.dateTime || g.start.date)), he = ms(g.end && (g.end.dateTime || g.end.date));
-const overlaps = hs < ms(P.reqEnd) && he > ms(P.reqStart);
-if (!inRoom || !overlaps) return [{ json: { next: 'outcome', outcome: 'fail', reason: 'HOLD_CHANGED' } }];
-const snap = { id: g.id, recurringEventId: g.recurringEventId || '', summary: g.summary || '', start: g.start, end: g.end,
-  location: g.location || '', description: g.description || '', attendees: (g.attendees || []).map(a => ({ email: a.email, resource: !!a.resource })), status: g.status };
-return [{ json: { next: 'delete', snapshot: snap } }];"""
-SNAP_ROW = r"""const P = $('Plan').first().json;
-return [{ json: { 'Request ID': P.requestId, 'Stage': 'HOLD_SNAPSHOT', 'Hold Snapshot': JSON.stringify($('Check Hold').first().json.snapshot) } }];"""
-CHECK_DELETE = r"""// Check Delete: re-read the hold after DELETE. Deleted -> place. Still there -> the delete failed and nothing changed
-// (verified). Unreadable -> leave it for the next sweep, which re-reads the hold before doing anything.
-const g = $input.first().json || {};
-const errTxt = g.error ? JSON.stringify(g.error) : '';
-if (g.status === 'cancelled' || /\b(404|410)\b|not ?found|deleted|gone/i.test(errTxt)) return [{ json: { next: 'place' } }];
-if (g.id && g.status && g.status !== 'cancelled') return [{ json: { next: 'outcome', outcome: 'fail', reason: 'DELETE_FAILED' } }];
-return [{ json: { next: 'outcome', outcome: 'retry', reason: 'DELETE_UNVERIFIED' } }];"""
-STAGE_ROW = lambda st: ("return [{ json: { 'Request ID': $('Plan').first().json.requestId, 'Stage': '" + st + "' } }];")
-CHECK_PLACED = r"""// Check Placed: did the requester's booking go in? CREATED / MOVED, or Book Session reports a clash with OUR earlier
-// placement (the consent marker) - a retry after a run that died after booking. A call that errored is uncertain:
-// left at PLACING for the next sweep, whose attempt either finds our booking or fails cleanly.
-const P = $('Plan').first().json;
+CHECK_PLACED = r"""// Check Placed: CREATED / MOVED, or a clash with THIS request's own earlier booking (the consent marker - another
+// run got there first) counts as placed. A booking the booth declined, or created at the wrong time, is ours and
+// is removed so the calendar is left as it was. A call that errored is uncertain and is left for the next sweep.
 const r = $input.first().json || {};
-const ran = n => { try { $(n).first(); return true; } catch (e) { return false; } };
-const weDeleted = !!P.weDeleted || ran('Check Delete') || (ran('Check Hold') && !!$('Check Hold').first().json.weDeleted);
 const st = String(r.status || '').toUpperCase();
-if (st === 'CREATED' || st === 'MOVED' || r.consent_placed_id) return [{ json: { next: 'placed', weDeleted, placementId: r.event_id || r.new_event_id || r.consent_placed_id || '' } }];
-if (r.error || !st) return [{ json: { next: 'outcome', outcome: 'retry', weDeleted, reason: 'PLACEMENT_UNCERTAIN' } }];
-return [{ json: { next: weDeleted ? 'restore' : 'outcome', outcome: 'fail', weDeleted, reason: 'PLACE_FAILED:' + (r.reason || st) } }];"""
-PLACED_ROW = r"""return [{ json: { 'Request ID': $('Plan').first().json.requestId, 'Stage': 'PLACED', 'Placement Event Id': $('Check Placed').first().json.placementId || '' } }];"""
-OUTCOME = r"""// Outcome: the one place a request's final state and messages are decided. Nothing reports success, or "nothing
-// changed", unless that is what the calendar showed. A timeout says it went ahead under the timeout rule.
+if (st === 'CREATED' || st === 'MOVED') return [{ json: { next: 'placed', placementId: r.event_id || r.new_event_id || '' } }];
+if (r.consent_placed_id) return [{ json: { next: 'placed', placementId: r.consent_placed_id, already: true } }];
+if (r.error || !st) return [{ json: { next: 'outcome', outcome: 'retry', reason: 'PLACEMENT_UNCERTAIN' } }];
+if (r.event_id) return [{ json: { next: 'remove', ownEventId: r.event_id, reason: 'PLACE_FAILED:' + st } }];
+return [{ json: { next: 'outcome', outcome: 'fail', reason: 'PLACE_FAILED:' + (r.reason || st) } }];"""
+
+OUTCOME = r"""// Outcome: the final state and the messages. A timeout says it went ahead under the timeout rule; "nothing changed"
+// is only said when it is true.
 const P = $('Plan').first().json;
 const ran = n => { try { $(n).first(); return true; } catch (e) { return false; } };
 const j = n => ran(n) ? ($(n).first().json || {}) : null;
-const now = new Date().toISOString();
-const mb = P.kind === 'MBOOTH', to = P.via === 'sweep-timeout';
+const now = new Date().toISOString(), mb = P.kind === 'MBOOTH', to = P.via === 'sweep-timeout';
 const APPROVALS = 'C0C34UMFXGD';
-let fin = null, msgs = [];
-const dm = (to_, text) => { if (to_) msgs.push({ to: to_, text }); };
-const done = () => {
-  fin = { 'Status': 'DONE', 'Resolved Via': P.via, 'Decided At': now, 'Stage': 'PLACED' };
-  if (mb && to) {
-    dm(P.requester, 'Done - ' + P.room + ' is yours for ' + P.when + '. ' + P.approverName + " didn't reply by the deadline, so it went ahead under the M-booth sharing rule.");
-    dm(P.approver, 'No reply came in by the deadline, so under the M-booth sharing rule ' + P.requesterName + ' now has ' + P.room + ' for ' + P.when + ' and your booking for that time was released.');
-  } else if (mb) {
-    dm(P.requester, 'Done - ' + P.room + ' is yours for ' + P.when + '. ' + P.approverName + " OK'd sharing the booth.");
-    dm(P.approver, "You've offered your " + P.room + ' booth (' + P.when + ') to ' + P.requesterName + '. Thanks for sharing!');
-  } else {
-    dm(P.requester, 'Done - ' + P.room + ' is yours for ' + P.when + '. ' + P.approverName + ' moved their session to make way.');
-    dm(P.approver, 'Heads up - your "' + P.incTitle + '" was moved to make room for a higher-priority session in ' + P.room + ", as you OK'd. Thanks!");
-  }
-};
+let fin = null; const msgs = [];
+const dm = (t, text) => { if (t) msgs.push({ to: t, text }); };
 const failNothing = reason => { fin = { 'Status': 'FAILED', 'Resolved Via': reason, 'Decided At': now };
   dm(P.requester, "I couldn't get " + (P.room || 'that room') + ' for you just now (' + P.when + '). Nothing was changed - please try another time or room.'); };
-if (P.route === 'outcome') {
-  if (P.outcome === 'reject') { fin = { 'Status': 'REJECTED', 'Resolved Via': 'reply-no', 'Decided At': now };
-    dm(P.requester, mb ? (P.approverName + ' would rather keep ' + P.room + ' on ' + P.when + ', so it stays theirs. Want another booth or time?')
-                       : (P.approverName + " can't move their session, so " + P.room + ' stays taken for ' + P.when + '. Want another time or room?')); }
-  else if (P.outcome === 'expire') fin = { 'Status': 'EXPIRED', 'Resolved Via': 'sweep-expired', 'Decided At': now };
-  else if (P.outcome === 'finish') done();
-  else if (P.outcome === 'fail') failNothing(P.reason);
-} else if (ran('Check Placed')) {
+if (P.act === 'reject') {
+  fin = { 'Status': 'REJECTED', 'Resolved Via': 'reply-no', 'Decided At': now };
+  dm(P.requester, mb ? (P.approverName + ' would rather keep ' + P.room + ' on ' + P.when + ', so it stays theirs. Want another booth or time?')
+                     : (P.approverName + " can't move their session, so " + P.room + ' stays taken for ' + P.when + '. Want another time or room?'));
+  dm(P.approver, mb ? ('Okay, ' + P.room + ' stays yours on ' + P.when + '. I let ' + P.requesterName + ' know.') : ('Okay, "' + P.incTitle + '" stays where it is. I let ' + P.requesterName + ' know.'));
+} else if (P.act === 'expire') fin = { 'Status': 'EXPIRED', 'Resolved Via': 'sweep-expired', 'Decided At': now };
+else if (P.act === 'fail') failNothing(P.reason);
+else if (ran('Check Placed')) {
   const cp = j('Check Placed');
-  if (cp.next === 'placed') done();
-  else if (cp.next === 'restore') {
-    const rr = j('Recheck Restore') || {};
-    if (rr.status === 'confirmed') {
-      fin = { 'Status': 'FAILED', 'Resolved Via': cp.reason, 'Decided At': now, 'Stage': 'RESTORED' };
-      dm(P.requester, "I couldn't book " + P.room + ' for you just now (' + P.when + '), so ' + P.approverName + "'s booking is back as it was. Please try another time or booth.");
-      dm(P.approver, "That didn't go through, so your " + P.room + ' booking for ' + P.when + ' is back as it was.');
+  if (cp.next === 'placed') {
+    fin = { 'Status': 'DONE', 'Resolved Via': P.via, 'Decided At': now, 'Placement Event Id': cp.placementId || '' };
+    if (mb && to) {
+      dm(P.requester, 'Done - ' + P.room + ' is yours for ' + P.when + '. ' + P.approverName + " didn't reply by the deadline, so it went ahead under the M-booth sharing rule.");
+      dm(P.approver, 'No reply came in by the deadline, so under the M-booth sharing rule ' + P.requesterName + ' has ' + P.room + ' for ' + P.when + '.');
+    } else if (mb) {
+      dm(P.requester, 'Done - ' + P.room + ' is yours for ' + P.when + '. ' + P.approverName + " OK'd sharing the booth.");
+      dm(P.approver, "You've offered your " + P.room + ' booth (' + P.when + ') to ' + P.requesterName + '. Thanks for sharing!');
     } else {
-      fin = { 'Status': 'NEEDS_ATTENTION', 'Resolved Via': cp.reason + '; RESTORE_FAILED', 'Decided At': now, 'Stage': 'RESTORE_FAILED' };
-      dm(P.requester, 'Something went wrong booking ' + P.room + ' for you (' + P.when + ') and I could not confirm ' + P.approverName + "'s booking is back. The team has been alerted and will sort it out.");
-      dm(P.approver, 'Something went wrong while sharing your ' + P.room + ' booth for ' + P.when + '. The team has been alerted to check your booking.');
-      msgs.push({ to: APPROVALS, text: '[CONSENT NEEDS ATTENTION] ' + P.requestId + ': the hold ' + P.holdId + ' was deleted, the booking failed (' + cp.reason + ') and restoring the hold failed. Its details are in the Hold Snapshot column.' });
+      dm(P.requester, 'Done - ' + P.room + ' is yours for ' + P.when + '. ' + P.approverName + ' moved their session to make way.');
+      dm(P.approver, 'Heads up - your "' + P.incTitle + '" was moved to make room for a higher-priority session in ' + P.room + ", as you OK'd. Thanks!");
     }
+  } else if (cp.next === 'remove') {
+    const g = j('Recheck Own') || {};
+    const errTxt = g.error ? JSON.stringify(g.error) : '';
+    if (g.status === 'cancelled' || /\b(404|410)\b|not ?found|deleted|gone/i.test(errTxt)) failNothing(cp.reason);
+    else { fin = { 'Status': 'NEEDS_ATTENTION', 'Resolved Via': cp.reason + '; OWN_EVENT_LEFT', 'Decided At': now };
+      dm(P.requester, "I couldn't get " + P.room + ' for you (' + P.when + ') and a half-made booking may still show on the calendar. The team has been alerted to clear it.');
+      msgs.push({ to: APPROVALS, text: '[CONSENT NEEDS ATTENTION] ' + P.requestId + ': the booking for ' + P.room + ' (' + P.when + ') failed (' + cp.reason + ') and its own event ' + cp.ownEventId + ' could not be removed. The holder\'s booking was not touched.' }); }
   } else if (cp.outcome === 'fail') failNothing(cp.reason);
-} else {
-  const cd = j('Check Delete'), ch = j('Check Hold');
-  const x = cd || ch || {};
-  if (x.outcome === 'fail') failNothing(x.reason);
 }
 return [{ json: { fin, msgs } }];"""
-OUTCOME_ROW = r"""const o = $('Outcome').first().json;
-if (!o.fin) return [];      // retry / not due: the row stays as it is for the next sweep
-return [{ json: Object.assign({ 'Request ID': $('Plan').first().json.requestId }, o.fin) }];"""
-OUTCOME_MSGS = r"""// Messages go out only once the outcome is on the row; if the write failed the next sweep redoes the outcome.
+RECHECK_ROW = r"""// Write only if the row is still PENDING: a parallel run (approval and timeout at once) may have finished it.
+const id = $('Plan').first().json.requestId;
+const cur = $('Recheck Row').all().map(i => i.json || {}).find(r => String(r['Request ID'] || '').trim() === id) || {};
+const o = $('Outcome').first().json;
+if (!o.fin || String(cur['Status'] || '').toUpperCase() !== 'PENDING') return [];
+return [{ json: Object.assign({ 'Request ID': id }, o.fin) }];"""
+OUTCOME_MSGS = r"""// Messages go out only once the outcome is on the row; if the write failed, the next sweep redoes it.
 const w = $input.first().json || {};
 if (w.error) return [];
 return ($('Outcome').first().json.msgs || []).map(m => ({ json: m }));"""
 RETURN = r"""const o = (() => { try { return $('Outcome').first().json; } catch (e) { return {}; } })();
 return [{ json: { request_id: $('Plan').first().json.requestId, status: (o.fin || {}).Status || 'UNCHANGED' } }];"""
 
-def build_finalize(w):
+def build_finalize(w, t_read):
     N = {n["name"]: n for n in w["nodes"]}
     w["name"] = "Jessie — Finalize Consent — v10"
     trig = N["When Executed by Another Workflow"]
     trig["parameters"] = {"workflowInputs": {"values": [{"name": "request_id"}]}}
-    sweep_read = None
-    t_http = N["Cancel Hold"]; t_sheet = N["Mark Done"]; t_slack = N["Notify Incumbent"]
-    t_if = N["Place Kind?"]; book = N["Book Requester"]; move = N["Move Requester"]
-    keep = {"When Executed by Another Workflow", "Place Kind?", "Book Requester", "Move Requester"}
+    t_http, t_sheet, t_slack, t_if = N["Cancel Hold"], N["Mark Done"], N["Notify Incumbent"], N["Place Kind?"]
+    book, move = N["Book Requester"], N["Move Requester"]
     notes = [n for n in w["nodes"] if n["type"].endswith("stickyNote")]
-    w["nodes"] = [n for n in w["nodes"] if n["name"] in keep] + notes
+    for n in notes:
+        n["parameters"]["content"] = ("## Finalize Consent v10\nRe-reads the row by Request ID, books the requester (a standing hold is "
+          "\"Show as available\" and only that exact hold is ignored), and records the outcome only if the row is still PENDING. "
+          "Nothing is deleted except this request's own declined booking. Called by main (a recorded yes / no), Move (incumbent moved) "
+          "and Consent Sweep (timeouts and retries).")
     book["onError"] = "continueRegularOutput"; move["onError"] = "continueRegularOutput"
-    bv = book["parameters"]["workflowInputs"]["value"]
-    bv["exclude_event_id"] = "={{ $('Plan').first().json.placePayload.exclude_event_id }}"
-    return w, dict(t_http=t_http, t_sheet=t_sheet, t_slack=t_slack, t_if=t_if, trig=trig, book=book, move=move)
-
-def finish_finalize(w, T, t_read):
-    url = "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent($('Plan').first().json.holdId) }}"
-    def http(name, method, pos, body=None):
-        n = clone(T["t_http"], name, pos); p = {"url": url, "authentication": "predefinedCredentialType", "nodeCredentialType": "googleCalendarOAuth2Api", "options": {}}
-        if method != "GET": p["method"] = method
-        if body: p.update({"sendBody": True, "specifyBody": "json", "jsonBody": body})
-        n["parameters"] = p; n["onError"] = "continueRegularOutput"; n["alwaysOutputData"] = True; return n
-    def sheet(name, pos, onerr=None):
-        n = clone(T["t_sheet"], name, pos)
-        if onerr: n["onError"] = onerr
-        else: n.pop("onError", None)
-        return n
-    X = 0; Y = 0
+    book["parameters"]["workflowInputs"]["value"]["exclude_event_id"] = "={{ $('Plan').first().json.placePayload.exclude_event_id }}"
     P = lambda cx, cy: [cx * 224, cy * 176]
     read = clone(t_read, "Read Rows", P(1, 0)); read["alwaysOutputData"] = True; read.pop("onError", None)
-    T["trig"]["position"] = P(0, 0)
-    nodes = [read, code("Plan", PLAN, P(2, 0)),
-             ifeq(T["t_if"], "Hold?", "={{ $json.route }}", "hold", P(3, 0)),
-             ifeq(T["t_if"], "Place?", "={{ $('Plan').first().json.route }}", "place", P(4, 1)),
-             http("Get Hold", "GET", P(4, -1)), code("Check Hold", CHECK_HOLD, P(5, -1)),
-             ifeq(T["t_if"], "Delete Hold?", "={{ $json.next }}", "delete", P(6, -1)),
-             ifeq(T["t_if"], "Place After Check?", "={{ $('Check Hold').first().json.next }}", "place", P(7, 0)),
-             code("Snapshot Row", SNAP_ROW, P(7, -2)), sheet("Write Snapshot", P(8, -2)),
-             http("Delete Hold", "DELETE", P(9, -2)), http("Recheck Hold", "GET", P(10, -2)),
-             code("Check Delete", CHECK_DELETE, P(11, -2)),
-             ifeq(T["t_if"], "Deleted?", "={{ $json.next }}", "place", P(12, -2)),
-             code("Deleted Row", STAGE_ROW("HOLD_DELETED"), P(13, -2)), sheet("Write Deleted", P(14, -2), "continueRegularOutput"),
-             code("Placing Row", STAGE_ROW("PLACING"), P(15, 0)), sheet("Write Placing", P(16, 0), "continueRegularOutput"),
-             code("Check Placed", CHECK_PLACED, P(19, 0)),
-             ifeq(T["t_if"], "Placed?", "={{ $json.next }}", "placed", P(20, 0)),
-             code("Placed Row", PLACED_ROW, P(21, -1)), sheet("Write Placed", P(22, -1), "continueRegularOutput"),
-             ifeq(T["t_if"], "Restore?", "={{ $('Check Placed').first().json.next }}", "restore", P(21, 1)),
-             http("Restore Hold", "PATCH", P(22, 1), "={{ JSON.stringify({ status: 'confirmed' }) }}"),
-             http("Recheck Restore", "GET", P(23, 1)),
-             code("Outcome", OUTCOME, P(24, 0)), code("Outcome Row", OUTCOME_ROW, P(25, 0)),
-             sheet("Write Outcome", P(26, 0), "continueRegularOutput"), code("Outcome Messages", OUTCOME_MSGS, P(27, 0))]
-    msg = clone(T["t_slack"], "Send Message", P(28, 0))
+    reread = clone(t_read, "Recheck Row", P(9, 0)); reread["alwaysOutputData"] = True; reread["onError"] = "continueRegularOutput"; reread["executeOnce"] = True
+    url = ("=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}"
+           "/events/{{ encodeURIComponent($('Check Placed').first().json.ownEventId) }}")
+    def http(name, method, pos):
+        n = clone(t_http, name, pos); p = {"url": url, "authentication": "predefinedCredentialType", "nodeCredentialType": "googleCalendarOAuth2Api", "options": {}}
+        if method != "GET": p["method"] = method
+        n["parameters"] = p; n["onError"] = "continueRegularOutput"; n["alwaysOutputData"] = True; return n
+    write = clone(t_sheet, "Write Outcome", P(11, 0)); write["onError"] = "continueRegularOutput"
+    msg = clone(t_slack, "Send Message", P(13, 0))
     msg["parameters"] = {"select": "channel", "channelId": {"__rl": True, "mode": "id", "value": "={{ $json.to }}"},
                          "text": "={{ $json.text }}", "otherOptions": {"includeLinkToWorkflow": False}}
     msg["onError"] = "continueRegularOutput"
-    ret = code("Return", RETURN, P(29, 0)); ret["executeOnce"] = True
-    nodes += [msg, ret]
-    T["t_if"]["name"] = "Place Kind?"; T["t_if"]["position"] = P(17, 0)
-    T["move"]["position"] = P(18, -1); T["book"]["position"] = P(18, 1)
-    w["nodes"].extend(nodes)
+    ret = code("Return", RETURN, P(14, 0)); ret["executeOnce"] = True
+    t_if["position"] = P(4, 0); move["position"] = P(5, -1); book["position"] = P(5, 1); trig["position"] = P(0, 0)
+    w["nodes"] = [trig, t_if, book, move] + notes + [read, code("Plan", PLAN, P(2, 0)),
+        ifeq(t_if, "Place?", "={{ $json.act }}", "place", P(3, 0)),
+        code("Check Placed", CHECK_PLACED, P(6, 0)),
+        ifeq(t_if, "Remove Own?", "={{ $json.next }}", "remove", P(7, 0)),
+        http("Remove Own Booking", "DELETE", P(7, -1)), http("Recheck Own", "GET", P(8, -1)),
+        code("Outcome", OUTCOME, P(8, 0)), reread, code("Outcome Row", RECHECK_ROW, P(10, 0)), write,
+        code("Outcome Messages", OUTCOME_MSGS, P(12, 0)), msg, ret]
     C = {}
     L = lambda a, b, br=0: link(C, a, b, br)
-    L("When Executed by Another Workflow", "Read Rows"); L("Read Rows", "Plan"); L("Plan", "Hold?")
-    L("Hold?", "Get Hold", 0); L("Hold?", "Place?", 1)
-    L("Place?", "Placing Row", 0); L("Place?", "Outcome", 1)
-    L("Get Hold", "Check Hold"); L("Check Hold", "Delete Hold?")
-    L("Delete Hold?", "Snapshot Row", 0); L("Delete Hold?", "Place After Check?", 1)
-    L("Place After Check?", "Placing Row", 0); L("Place After Check?", "Outcome", 1)
-    L("Snapshot Row", "Write Snapshot"); L("Write Snapshot", "Delete Hold"); L("Delete Hold", "Recheck Hold"); L("Recheck Hold", "Check Delete")
-    L("Check Delete", "Deleted?"); L("Deleted?", "Deleted Row", 0); L("Deleted?", "Outcome", 1)
-    L("Deleted Row", "Write Deleted"); L("Write Deleted", "Placing Row")
-    L("Placing Row", "Write Placing"); L("Write Placing", "Place Kind?")
+    L("When Executed by Another Workflow", "Read Rows"); L("Read Rows", "Plan"); L("Plan", "Place?")
+    L("Place?", "Place Kind?", 0); L("Place?", "Outcome", 1)
     L("Place Kind?", "Move Requester", 0); L("Place Kind?", "Book Requester", 1)
     L("Move Requester", "Check Placed"); L("Book Requester", "Check Placed")
-    L("Check Placed", "Placed?"); L("Placed?", "Placed Row", 0); L("Placed?", "Restore?", 1)
-    L("Placed Row", "Write Placed"); L("Write Placed", "Outcome")
-    L("Restore?", "Restore Hold", 0); L("Restore?", "Outcome", 1)
-    L("Restore Hold", "Recheck Restore"); L("Recheck Restore", "Outcome")
-    L("Outcome", "Outcome Row"); L("Outcome Row", "Write Outcome"); L("Write Outcome", "Outcome Messages")
-    L("Outcome Messages", "Send Message"); L("Send Message", "Return")
+    L("Check Placed", "Remove Own?"); L("Remove Own?", "Remove Own Booking", 0); L("Remove Own?", "Outcome", 1)
+    L("Remove Own Booking", "Recheck Own"); L("Recheck Own", "Outcome")
+    L("Outcome", "Recheck Row"); L("Recheck Row", "Outcome Row"); L("Outcome Row", "Write Outcome")
+    L("Write Outcome", "Outcome Messages"); L("Outcome Messages", "Send Message"); L("Send Message", "Return")
     w["connections"] = C
-    for n in w["nodes"]:
-        if n["type"].endswith("stickyNote"):
-            n["parameters"]["content"] = ("## Finalize Consent v10\nCalled only by Consent Sweep, one Request ID at a time. Re-reads the row; "
-              "Stage records progress (HOLD_SNAPSHOT, HOLD_DELETED, PLACING, PLACED) so the next sweep finishes or unwinds a run "
-              "that died. The hold is copied to the row before it is deleted, the booking is checked, and a failed booking restores "
-              "the hold; if that fails the row is NEEDS_ATTENTION and #approvals is told.")
     return w
 
 # ---------------------------------------------------------------- Consent Sweep
-SWEEP = r"""// Consent Sweep (v2, review 29 Sep): picks the ONE oldest consent request that needs work - a recorded decision
-// (APPROVED / REJECTED / INCUMBENT_MOVED), a deadline that has passed, or a run left half-way (Stage) - and hands it
-// to Finalize, which re-reads the row and decides. One row per minute keeps each run far shorter than the gap
-// between runs, so two finalizations do not overlap. MBOOTH timeout still books; PREEMPT timeout still just expires.
+SWEEP = r"""// Consent Sweep (v2, review 29 Sep): every consent request that needs work goes to Finalize SEPARATELY (one
+// sub-run per row, in turn) - a deadline that has passed, or a recorded decision whose Finalize call did not finish.
+// Finalize re-reads each row and decides. MBOOTH timeout still books; PREEMPT timeout still just expires.
 const now = Date.now(), U = s => String(s || '').toUpperCase().trim();
-const due = $input.all().map(i => (i && i.json) || {}).filter(r => {
+return $input.all().map(i => (i && i.json) || {}).filter(r => {
   if (!r['Request ID'] || U(r['Status']) !== 'PENDING') return false;
-  const st = U(r['Stage']);
-  if (st === 'RESTORE_FAILED') return false;
-  if (st || U(r['Decision'])) return true;
+  if (U(r['Decision'])) { const at = Date.parse(r['Decision At'] || ''); return !isFinite(at) || now - at > 2 * 60 * 1000; }   // give main / Move's own call time first
   const dl = Date.parse(r['Deadline'] || ''); return isFinite(dl) && now >= dl;
-}).sort((a, b) => String(a['Request ID']).localeCompare(String(b['Request ID'])));
-return due.length ? [{ json: { request_id: due[0]['Request ID'] } }] : [];"""
+}).sort((a, b) => String(a['Request ID']).localeCompare(String(b['Request ID']))).map(r => ({ json: { request_id: r['Request ID'] } }));"""
 
 def build_sweep(w):
     N = {n["name"]: n for n in w["nodes"]}
     w["name"] = "Jessie — Consent Sweep — v2"
-    N["Every 10 min"]["name"] = "Every Minute"
-    N["Every 10 min"]["parameters"] = {"rule": {"interval": [{"field": "minutes", "minutesInterval": 1}]}}
     N["Sweep Decide"]["parameters"]["jsCode"] = SWEEP
     pr = N["Sweep Book"]; pr["name"] = "Process Row"; pr["onError"] = "continueRegularOutput"
     pr["parameters"]["workflowInputs"]["value"] = {"request_id": "={{ $json.request_id }}"}
     pr["parameters"]["mode"] = "each"
     w["nodes"] = [n for n in w["nodes"] if n["name"] not in ("Sweep Route?", "Mark Expired")]
     C = {}
-    link(C, "Every Minute", "Read Pending Rows"); link(C, "Read Pending Rows", "Sweep Decide"); link(C, "Sweep Decide", "Process Row")
+    link(C, "Every 10 min", "Read Pending Rows"); link(C, "Read Pending Rows", "Sweep Decide"); link(C, "Sweep Decide", "Process Row")
     w["connections"] = C
-    return w, N["Read Pending Rows"]
+    return w, N["Read Pending Rows"], pr
 
 # ---------------------------------------------------------------- Book Session v57
 def build_book(w):
@@ -476,32 +395,32 @@ def build_book(w):
     return w
 
 # ---------------------------------------------------------------- Move Booking v25: record, don't finalize
-MOVED_ROW = r"""// v25 (review 29 Sep): the move freed a room a consent request was waiting for. Record that on the row; Consent
-// Sweep -> Finalize places the requester (one writer). The move itself already succeeded.
+MOVED_ROW = r"""// v25 (review 29 Sep): the move freed a room a consent request was waiting for. Record that on the row, then Finalize
+// places the requester; if that call does not finish, Consent Sweep retries from the recorded decision.
 return [{ json: { 'Request ID': ($json.matched || {})['Request ID'] || '', 'Decision': 'INCUMBENT_MOVED', 'Decision At': new Date().toISOString() } }];"""
-def build_move(w, t_sheet):
+def build_move(w, t_sheet, t_exec):
     w["name"] = "Jessie — Move Booking — v25 (v24 fixed)"
     cf = node(w, "Call Finalize"); pos = cf["position"]
     w["nodes"] = [n for n in w["nodes"] if n["name"] != "Call Finalize"]
     rec = clone(t_sheet, "Record Incumbent Moved", [pos[0] + 176, pos[1]]); rec["onError"] = "continueRegularOutput"
-    w["nodes"] += [code("Incumbent Moved Row", MOVED_ROW, pos), rec]
+    w["nodes"] += [code("Incumbent Moved Row", MOVED_ROW, pos), rec,
+                   call_finalize(t_exec, [pos[0] + 352, pos[1]], "={{ $('Incumbent Moved Row').first().json['Request ID'] }}")]
     C = w["connections"]; out = C.pop("Call Finalize")
     for br in C["Place If Consent?"]["main"]:
         for t in br:
             if t["node"] == "Call Finalize": t["node"] = "Incumbent Moved Row"
-    link(C, "Incumbent Moved Row", "Record Incumbent Moved")
-    C["Record Incumbent Moved"] = out
+    link(C, "Incumbent Moved Row", "Record Incumbent Moved"); link(C, "Record Incumbent Moved", "Call Finalize")
+    C["Call Finalize"] = out
     return w
 
 def main(src, dst):
     W = {k: load(src, k) for k in ("main", "open", "finalize", "sweep", "book", "move")}
     t_sheet = copy.deepcopy(node(W["finalize"], "Mark Done"))
-    sweep, t_read = build_sweep(W["sweep"])
-    fin, T = build_finalize(W["finalize"])
-    fin = finish_finalize(fin, T, t_read)
-    outs = {"project-jessie-v176.json": build_main(W["main"]), "open-consent-request-v11.json": build_open(W["open"]),
+    sweep, t_read, t_exec = build_sweep(W["sweep"])
+    fin = build_finalize(W["finalize"], t_read)
+    outs = {"project-jessie-v176.json": build_main(W["main"], t_exec), "open-consent-request-v11.json": build_open(W["open"]),
             "finalize-consent-v10.json": fin, "consent-sweep-v2.json": sweep, "book-session-v57.json": build_book(W["book"]),
-            "move-booking-v25.json": build_move(W["move"], t_sheet)}
+            "move-booking-v25.json": build_move(W["move"], t_sheet, t_exec)}
     for f, w in outs.items():
         json.dump(w, open(os.path.join(dst, f), "w"), indent=2, ensure_ascii=False); print("wrote", f, len(w["nodes"]), "nodes")
 

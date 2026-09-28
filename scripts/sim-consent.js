@@ -45,7 +45,7 @@ async function runWorkflow(w, startNode, startItems, env) {
       branches = [T, Fb];
     } else if (t === 'googleSheets') {
       const op = n.parameters.operation || 'read';
-      if (op === 'read' || op === undefined) { if (env.failRead && env.failRead(name)) throw new Error(name + ': sheet read failed'); branches = [env.sheet.map(r => ({ json: { ...r } }))]; }
+      if (op === 'read' || op === undefined) { if (env.failRead && env.failRead(name)) throw new Error(name + ': sheet read failed'); const src = (env.readFor && env.readFor(name)) || env.sheet; branches = [src.map(r => ({ json: { ...r } }))]; }
       else branches = [await perItem(async it => { if (env.failWrite && env.failWrite(name, it.json)) throw new Error('sheet write failed');
         const r = env.sheet.find(x => x['Request ID'] === it.json['Request ID']); if (r) Object.assign(r, it.json); env.writes.push({ node: name, ...it.json }); return [{ json: { ...(r || it.json) } }]; })];
     } else if (t === 'httpRequest') {
@@ -66,129 +66,117 @@ async function runWorkflow(w, startNode, startItems, env) {
 }
 
 // ------------------------------------------------------------ fakes
-const HOLD = 'jmuq10se2757bdh88rqock5i8c_20271006T160000Z', M1 = 'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com';
-const holdEvent = over => ({ id: HOLD, recurringEventId: 'jmuq10se2757bdh88rqock5i8c', status: 'confirmed', summary: 'M1 - Rico',
-  start: { dateTime: '2027-10-07T00:00:00+08:00' }, end: { dateTime: '2027-10-08T00:00:00+08:00' }, location: 'KDC Plaza-Top Level-M1 (1)',
-  attendees: [{ email: M1, displayName: 'KDC Plaza-Top Level-M1 (1)', resource: true, responseStatus: 'accepted' }], description: 'ref: URICO', ...over });
+const HOLD = 'jmuq10se2757bdh88rqock5i8c_20271006T160000Z';
 const payload = { summary: 'M1 - Howard', start_iso: '2027-10-07T10:00:00+08:00', end_iso: '2027-10-07T12:00:00+08:00', rooms: 'M1',
   description: 'Booked by: Howard Luistro | ref: UHOW', session_type: '', client: '', department: 'Localization', engineer: '', bookingType: '', all_day: false, reference_data: '' };
 const row = over => ({ 'Request ID': '20271001090000-UHOW', 'Status': 'PENDING', 'Kind': 'MBOOTH', 'Requester': 'UHOW', 'Requester Name': 'Howard Luistro',
   'Approver': 'URICO', 'Approver Name': 'Rico', 'Room/Booth': 'M1', 'Req Start': '2027-10-07T10:00:00+08:00', 'Req End': '2027-10-07T12:00:00+08:00',
   'Incumbent Event Id': HOLD, 'Incumbent Title': 'M1 - Rico', 'Deadline': '2099-01-01T00:00:00Z', 'Req Payload': JSON.stringify(payload),
-  'Decision': '', 'Decision At': '', 'Stage': '', 'Hold Snapshot': '', 'Placement Event Id': '', ...over });
+  'Decision': '', 'Decision At': '', 'Placement Event Id': '', ...over });
+// The fake calendar: the standing hold (transparent unless told otherwise) and our bookings. Book Session is
+// modelled on the real one: a clash with an event that is not the excluded hold is ROOM_OCCUPIED (and names our own
+// consent booking when that is the clash); an opaque hold makes the booth decline, leaving a declined event behind.
 function env(opts = {}) {
-  const cal = { hold: opts.hold === null ? null : holdEvent(opts.hold || {}), bookings: [] };
-  const e = { sheet: opts.rows || [row(opts.row || {})], writes: [], msgs: [], calls: [], cal,
-    failWrite: opts.failWrite, failRead: opts.failRead,
-    async http(name, method, url, body) {
-      e.calls.push(name + ' ' + method);
+  const cal = { hold: { id: HOLD, status: 'confirmed', transparency: opts.opaque ? 'opaque' : 'transparent' }, bookings: [] };
+  const e = { sheet: opts.rows || [row(opts.row || {})], writes: [], msgs: [], calls: [], cal, failWrite: opts.failWrite, readFor: opts.readFor,
+    async http(name, method, url) {
+      e.calls.push(name + ' ' + method + ' ' + decodeURIComponent(url.split('/events/')[1] || ''));
+      const id = decodeURIComponent(url.split('/events/')[1] || ''); const b = cal.bookings.find(x => x.id === id);
       if (opts.httpFail && opts.httpFail(name, method)) throw new Error('HTTP 500 backend error');
-      if (!cal.hold) throw new Error('The resource you are requesting could not be found (404)');
-      if (method === 'GET') return { ...cal.hold };
-      if (method === 'DELETE') { if (opts.deleteFail) throw new Error('HTTP 500'); cal.hold.status = 'cancelled'; return {}; }
-      if (method === 'PATCH') { if (opts.restoreFail) throw new Error('HTTP 500'); cal.hold.status = JSON.parse(body).status; return { ...cal.hold }; }
+      if (id === HOLD) throw new Error('test: the hold must never be touched');
+      if (!b) throw new Error('The resource you are requesting could not be found (404)');
+      if (method === 'DELETE') { b.status = 'cancelled'; return {}; }
+      return { ...b };
     },
     async sub(name, v) {
-      e.calls.push(name);
-      const mine = cal.bookings.find(b => String(b.description).includes('consent: ' + (String(v.description || '').match(/consent: (\S+)/) || [])[1]));
+      e.calls.push(name + ' exclude=' + (v.exclude_event_id || ''));
       if (opts.bookResult) { const r = opts.bookResult(v, cal); if (r) return r; }
+      const tag = (String(v.description || '').match(/consent: (\S+)/) || [])[1];
+      const mine = cal.bookings.find(b => b.status !== 'cancelled' && tag && String(b.description).includes('consent: ' + tag));
       if (mine) return { status: 'REJECTED', reason: 'ROOM_OCCUPIED', consent_placed_id: mine.id };
-      if (cal.hold && cal.hold.status === 'confirmed' && v.exclude_event_id !== cal.hold.id) return { status: 'REJECTED', reason: 'ROOM_OCCUPIED' };
-      const b = { id: 'bk' + (cal.bookings.length + 1), description: v.description, start: v.start_iso || v.new_start_iso }; cal.bookings.push(b);
+      if (cal.bookings.some(b => b.status !== 'cancelled')) return { status: 'REJECTED', reason: 'ROOM_OCCUPIED' };
+      if (!opts.noHold && v.exclude_event_id !== HOLD && name !== 'Move Requester') return { status: 'REJECTED', reason: 'ROOM_OCCUPIED' };   // the hold is in the room
+      const b = { id: 'bk' + (cal.bookings.length + 1), description: v.description, status: 'confirmed' }; cal.bookings.push(b);
+      if (cal.hold.transparency === 'opaque') return { status: 'ROOM_DECLINED', event_id: b.id };
       return name === 'Move Requester' ? { status: 'MOVED', new_event_id: b.id } : { status: 'CREATED', event_id: b.id };
     } };
   return e;
 }
 const finalize = async e => { await runWorkflow(F, 'When Executed by Another Workflow', [{ json: { request_id: e.sheet[0]['Request ID'] } }], e); return e; };
 const R0 = e => e.sheet[0];
+const live = e => e.cal.bookings.filter(b => b.status !== 'cancelled');
 
 (async () => {
-  console.log('Finalize - M-booth approval, the happy path');
+  console.log('Finalize - M-booth approval');
   let e = await finalize(env({ row: { Decision: 'APPROVED' } }));
-  ok(R0(e).Status === 'DONE' && R0(e).Stage === 'PLACED' && R0(e)['Resolved Via'] === 'mbooth-approve', 'approved -> DONE', R0(e));
-  ok(e.cal.hold.status === 'cancelled' && e.cal.bookings.length === 1, 'hold instance released, one booking made');
-  ok(JSON.parse(R0(e)['Hold Snapshot']).id === HOLD, 'hold copied to the row before it was deleted');
-  ok(e.writes.findIndex(w => w.Stage === 'HOLD_SNAPSHOT') < e.calls.indexOf('Delete Hold DELETE') + 99 && e.writes[0].Stage === 'HOLD_SNAPSHOT', 'snapshot written first');
-  ok(/consent: 20271001090000-UHOW/.test(e.cal.bookings[0].description), 'booking carries the consent marker');
+  ok(R0(e).Status === 'DONE' && R0(e)['Resolved Via'] === 'mbooth-approve' && R0(e)['Placement Event Id'] === 'bk1', 'approved -> DONE, booking id recorded', R0(e));
+  ok(live(e).length === 1 && /consent: 20271001090000-UHOW/.test(live(e)[0].description), 'one booking, carrying the consent marker');
+  ok(e.cal.hold.status === 'confirmed' && !e.calls.some(c => c.includes(HOLD) && !c.includes('exclude=')), 'the hold is never touched');
+  ok(e.calls.includes('Book Requester exclude=' + HOLD), 'only that exact hold is excluded from the clash check');
   ok(e.msgs.length === 2 && /OK'd sharing/.test(e.msgs.find(m => m.to === 'UHOW').text) && /offered your M1/.test(e.msgs.find(m => m.to === 'URICO').text), 'approval wording to both');
 
-  console.log('Finalize - M-booth timeout');
+  console.log('Finalize - timeout, not due, reject');
   e = await finalize(env({ row: { Deadline: '2020-01-01T00:00:00Z' } }));
-  ok(R0(e).Status === 'DONE' && R0(e)['Resolved Via'] === 'sweep-timeout', 'deadline passed, no reply -> books (policy kept)');
+  ok(R0(e).Status === 'DONE' && R0(e)['Resolved Via'] === 'sweep-timeout', 'M-booth deadline passed, no reply -> books (policy kept)');
   ok(e.msgs.every(m => !/OK'd/.test(m.text)) && /didn't reply by the deadline/.test(e.msgs.find(m => m.to === 'UHOW').text) && /No reply came in/.test(e.msgs.find(m => m.to === 'URICO').text), 'timeout wording, not "approved"', e.msgs);
-  e = await finalize(env({ row: { Deadline: '2099-01-01T00:00:00Z' } }));
-  ok(R0(e).Status === 'PENDING' && e.calls.length === 0, 'not due and no decision -> nothing happens');
+  e = await finalize(env({}));
+  ok(R0(e).Status === 'PENDING' && e.calls.length === 0 && e.msgs.length === 0, 'not due and no decision -> nothing happens');
+  e = await finalize(env({ row: { Decision: 'REJECTED' } }));
+  ok(R0(e).Status === 'REJECTED' && e.calls.length === 0 && /stays theirs/.test(e.msgs.find(m => m.to === 'UHOW').text) && /stays yours/.test(e.msgs.find(m => m.to === 'URICO').text), 'recorded "no" -> REJECTED, both told, calendar untouched');
 
-  console.log('Finalize - deletion failure');
-  e = await finalize(env({ row: { Decision: 'APPROVED' }, deleteFail: true }));
-  ok(R0(e).Status === 'FAILED' && R0(e)['Resolved Via'] === 'DELETE_FAILED', 'delete failed and the hold is verified still there -> FAILED', R0(e));
-  ok(e.cal.hold.status === 'confirmed' && e.cal.bookings.length === 0 && !e.calls.includes('Book Requester'), 'hold intact, nothing booked');
-  ok(/Nothing was changed/.test(e.msgs[0].text) && e.msgs.length === 1, 'requester told nothing changed (true)');
-  e = await finalize(env({ row: { Decision: 'APPROVED' }, deleteFail: true, httpFail: (n, m) => n === 'Recheck Hold' }));
-  ok(R0(e).Status === 'PENDING' && R0(e).Stage === 'HOLD_SNAPSHOT' && e.msgs.length === 0, 'delete outcome unreadable -> left for the next sweep, no claim made');
-
-  console.log('Finalize - placement failure');
+  console.log('Finalize - failures');
   e = await finalize(env({ row: { Decision: 'APPROVED' }, bookResult: () => ({ status: 'REJECTED', reason: 'ROOM_OCCUPIED' }) }));
-  ok(R0(e).Status === 'FAILED' && R0(e).Stage === 'RESTORED' && e.cal.hold.status === 'confirmed', 'booking failed -> hold restored and verified', R0(e));
-  ok(/back as it was/.test(e.msgs.find(m => m.to === 'UHOW').text) && /back as it was/.test(e.msgs.find(m => m.to === 'URICO').text), 'both told the holder\'s booking is back');
-  e = await finalize(env({ row: { Decision: 'APPROVED' }, restoreFail: true, bookResult: () => ({ status: 'REJECTED', reason: 'ROOM_OCCUPIED' }) }));
-  ok(R0(e).Status === 'NEEDS_ATTENTION' && R0(e).Stage === 'RESTORE_FAILED', 'restore failed -> NEEDS_ATTENTION', R0(e));
-  ok(e.msgs.some(m => m.to === 'C0C34UMFXGD' && /NEEDS ATTENTION/.test(m.text)) && e.msgs.every(m => !/Nothing was changed|nothing changed/i.test(m.text)), 'team alerted; nobody told "nothing changed"');
-  const e2 = await finalize(e); ok(e2.calls.filter(c => c !== 'Get Hold GET').length === e.calls.filter(c => c !== 'Get Hold GET').length && R0(e2).Status === 'NEEDS_ATTENTION', 'a NEEDS_ATTENTION row is left for a person');
+  ok(R0(e).Status === 'FAILED' && live(e).length === 0 && e.cal.hold.status === 'confirmed' && /Nothing was changed/.test(e.msgs[0].text), 'booking refused -> FAILED, "nothing changed" (true: nothing was touched)');
+  e = await finalize(env({ row: { Decision: 'APPROVED' }, opaque: true }));
+  ok(R0(e).Status === 'FAILED' && live(e).length === 0 && e.calls.some(c => c.startsWith('Remove Own Booking DELETE bk1')), 'hold still blocking the booth -> our declined booking is removed, FAILED', e.calls);
+  ok(/Nothing was changed/.test(e.msgs[0].text) && e.cal.hold.status === 'confirmed', '...and the hold is untouched');
+  e = await finalize(env({ row: { Decision: 'APPROVED' }, opaque: true, httpFail: n => n === 'Remove Own Booking' || n === 'Recheck Own' }));
+  ok(R0(e).Status === 'NEEDS_ATTENTION' && e.msgs.some(m => m.to === 'C0C34UMFXGD') && e.msgs.every(m => !/Nothing was changed/.test(m.text)), 'our declined booking could not be removed -> NEEDS_ATTENTION, team alerted, no "nothing changed"');
   e = await finalize(env({ row: { Decision: 'APPROVED' }, bookResult: () => { throw new Error('sub-workflow crashed'); } }));
-  ok(R0(e).Status === 'PENDING' && R0(e).Stage === 'PLACING' && e.msgs.length === 0, 'booking call crashed (uncertain) -> left at PLACING, no message');
+  ok(R0(e).Status === 'PENDING' && e.msgs.length === 0 && e.writes.length === 0, 'booking call crashed (uncertain) -> row left PENDING for the sweep, no message');
 
   console.log('Finalize - status write fails after a successful booking');
   e = env({ row: { Decision: 'APPROVED' }, failWrite: n => n === 'Write Outcome' });
   await finalize(e);
-  ok(R0(e).Status === 'PENDING' && R0(e).Stage === 'PLACED' && e.msgs.length === 0 && e.cal.bookings.length === 1, 'booked, DONE not written -> nobody told yet');
+  ok(R0(e).Status === 'PENDING' && live(e).length === 1 && e.msgs.length === 0, 'booked but DONE not written -> nobody told yet');
   e.failWrite = null; await finalize(e);
-  ok(R0(e).Status === 'DONE' && e.cal.bookings.length === 1 && e.msgs.length === 2, 'next sweep finishes it: DONE, still one booking, messages once');
-  e = env({ row: { Decision: 'APPROVED' }, failWrite: n => n === 'Write Placed' || n === 'Write Outcome' });
-  await finalize(e);
-  ok(R0(e).Stage === 'PLACING' && e.cal.bookings.length === 1, 'booked but even PLACED not written -> row still says PLACING');
-  e.failWrite = null; await finalize(e);
-  ok(R0(e).Status === 'DONE' && e.cal.bookings.length === 1 && e.cal.hold.status === 'cancelled', 'retry recognises its own booking (consent marker): DONE, no second booking, no restore');
+  ok(R0(e).Status === 'DONE' && live(e).length === 1 && e.msgs.length === 2, 'the retry recognises its own booking: DONE, still one booking, messages once');
 
-  console.log('Finalize - duplicates and state');
+  console.log('Finalize - duplicates and races');
   e = await finalize(env({ row: { Decision: 'APPROVED' } })); const n1 = e.calls.length; await finalize(e);
-  ok(e.calls.length === n1 && e.cal.bookings.length === 1 && e.msgs.length === 2, 'a second run on a DONE row does nothing');
+  ok(e.calls.length === n1 && live(e).length === 1 && e.msgs.length === 2, 'a second run on a DONE row does nothing');
+  e = await finalize(env({ row: { Decision: 'APPROVED' } }));
+  const stale = [row({ Decision: 'APPROVED' })];
+  e.readFor = n => n === 'Read Rows' ? stale : null;             // run 2 started before run 1 wrote DONE (approval + timeout together)
+  await finalize(e);
+  ok(live(e).length === 1 && R0(e).Status === 'DONE' && e.msgs.length === 2, 'approval and timeout racing: one booking, row stays DONE, messages sent once');
+  e = await finalize(env({ row: { Decision: 'APPROVED' } }));
+  e.readFor = n => n === 'Read Rows' ? stale : null;
+  const e3 = Object.assign(e, {}); const keep = e3.sub; e3.sub = async (nm, v) => ({ status: 'REJECTED', reason: 'ROOM_OCCUPIED' });
+  await finalize(e3);
+  ok(R0(e3).Status === 'DONE' && e3.msgs.length === 2, 'a racing run whose booking fails does not overwrite DONE with FAILED');
   e = await finalize(env({ row: { Decision: 'APPROVED', Status: 'REJECTED' } }));
-  ok(e.calls.length === 0 && R0(e).Status === 'REJECTED', 'only PENDING rows are acted on');
+  ok(e.calls.length === 0, 'only PENDING rows are acted on');
   e = await finalize(env({ rows: [row({ Decision: 'APPROVED' }), row({ Decision: 'APPROVED' })] }));
   ok(e.calls.length === 0, 'two rows with the same Request ID -> nothing done');
-  e = await finalize(env({ row: { Decision: 'REJECTED' } }));
-  ok(R0(e).Status === 'REJECTED' && e.calls.length === 0 && /stays theirs/.test(e.msgs[0].text), 'recorded "no" -> REJECTED, requester told, calendar untouched');
-
-  console.log('Finalize - the hold itself');
-  e = await finalize(env({ row: { Decision: 'APPROVED' }, hold: { attendees: [{ email: 'c_other@resource.calendar.google.com', displayName: 'KDC Plaza-Top Level-M2 (2)', resource: true }], location: 'KDC Plaza-Top Level-M2 (2)', summary: 'M2 - Rico' } }));
-  ok(R0(e).Status === 'FAILED' && R0(e)['Resolved Via'] === 'HOLD_CHANGED' && e.cal.hold.status === 'confirmed', 'a hold that is no longer in M1 is not deleted');
-  e = await finalize(env({ row: { Decision: 'APPROVED' }, hold: { start: { dateTime: '2027-10-09T00:00:00+08:00' }, end: { dateTime: '2027-10-10T00:00:00+08:00' } } }));
-  ok(R0(e)['Resolved Via'] === 'HOLD_CHANGED', 'a hold that moved to another day is not deleted');
-  e = await finalize(env({ row: { Decision: 'APPROVED' }, hold: null }));
-  ok(R0(e).Status === 'DONE' && !e.calls.includes('Delete Hold DELETE'), 'hold already gone -> just book');
-  e = await finalize(env({ row: { Decision: 'APPROVED' }, hold: null, bookResult: () => ({ status: 'REJECTED', reason: 'ROOM_OCCUPIED' }) }));
-  ok(R0(e).Status === 'FAILED' && !e.calls.includes('Restore Hold PATCH') && /Nothing was changed/.test(e.msgs[0].text), 'we deleted nothing -> no restore, "nothing changed" is true');
-  e = await finalize(env({ row: { Decision: 'APPROVED' }, httpFail: n => n === 'Get Hold' }));
-  ok(R0(e).Status === 'PENDING' && e.writes.length === 0, 'hold unreadable -> nothing done, retried next sweep');
-  ok(!/recurringEventId/.test(JSON.stringify(e.calls)) && true, 'only the instance id is ever deleted (series id never used)');
 
   console.log('Finalize - PREEMPT');
   e = await finalize(env({ row: { Kind: 'PREEMPT', 'Incumbent Event Id': 'inc1', Deadline: '2020-01-01T00:00:00Z' } }));
   ok(R0(e).Status === 'EXPIRED' && e.calls.length === 0 && e.msgs.length === 0, 'PREEMPT timeout -> EXPIRED, nobody moved (policy kept)');
-  e = await finalize(env({ row: { Kind: 'PREEMPT', 'Incumbent Event Id': 'inc1', Decision: 'INCUMBENT_MOVED', Deadline: '2020-01-01T00:00:00Z' }, hold: null }));
-  ok(R0(e).Status === 'DONE' && R0(e)['Resolved Via'] === 'move-hook' && !e.calls.some(c => /Hold/.test(c)), 'incumbent moved (even past the deadline) -> requester placed, no hold touched');
+  e = await finalize(env({ noHold: true, row: { Kind: 'PREEMPT', 'Incumbent Event Id': 'inc1', Decision: 'INCUMBENT_MOVED' } }));
+  ok((await finalize(env({ row: { Kind: 'PREEMPT', 'Incumbent Event Id': 'inc1', Decision: 'INCUMBENT_MOVED' } }))).sheet[0].Status === 'FAILED', 'PREEMPT: if the incumbent is somehow still there, the requester is NOT booked over it');
+  ok(R0(e).Status === 'DONE' && R0(e)['Resolved Via'] === 'move-hook' && e.calls.includes('Book Requester exclude='), 'incumbent moved -> requester placed, nothing excluded');
 
   console.log('Consent Sweep');
   const sweep = async sheet => { const calls = []; await runWorkflow(S, 'Read Pending Rows', [{ json: {} }], { sheet, writes: [], msgs: [], async sub(n, v) { calls.push(v.request_id); return {}; } }); return calls; };
-  const rows3 = [row({ 'Request ID': 'B', Deadline: '2020-01-01T00:00:00Z' }), row({ 'Request ID': 'A', Deadline: '2020-01-01T00:00:00Z' }),
-                 row({ 'Request ID': 'C', Kind: 'PREEMPT', Deadline: '2020-01-01T00:00:00Z' }), row({ 'Request ID': 'D' }), row({ 'Request ID': 'E', Status: 'DONE', Deadline: '2020-01-01T00:00:00Z' }),
-                 row({ 'Request ID': 'F', Stage: 'RESTORE_FAILED' })];
-  ok(JSON.stringify(await sweep(rows3)) === '["A"]', 'several expired rows -> ONE per run, oldest first');
-  const seen = []; for (let i = 0; i < 4; i++) { const c = await sweep(rows3); if (c[0]) { seen.push(c[0]); rows3.find(r => r['Request ID'] === c[0]).Status = 'DONE'; } }
-  ok(JSON.stringify(seen) === '["A","B","C"]', 'each expired row is processed separately, in turn; not-due, done and needs-attention rows are skipped', seen);
-  ok(JSON.stringify(await sweep([row({ 'Request ID': 'Z', Decision: 'APPROVED' })])) === '["Z"]', 'a recorded decision is picked up without waiting for the deadline');
-  ok(node(S, 'Every Minute').parameters.rule.interval[0].minutesInterval === 1 && node(S, 'Process Row').parameters.mode === 'each', 'runs every minute; one sub-run per row');
+  const old = new Date(Date.now() - 10 * 60e3).toISOString(), fresh = new Date().toISOString();
+  const rows6 = [row({ 'Request ID': 'B', Deadline: '2020-01-01T00:00:00Z' }), row({ 'Request ID': 'A', Deadline: '2020-01-01T00:00:00Z' }),
+                 row({ 'Request ID': 'C', Kind: 'PREEMPT', Deadline: '2020-01-01T00:00:00Z' }), row({ 'Request ID': 'D' }),
+                 row({ 'Request ID': 'E', Status: 'DONE', Deadline: '2020-01-01T00:00:00Z' }),
+                 row({ 'Request ID': 'G', Decision: 'APPROVED', 'Decision At': old }), row({ 'Request ID': 'H', Decision: 'APPROVED', 'Decision At': fresh })];
+  const got = await sweep(rows6);
+  ok(JSON.stringify(got) === '["A","B","C","G"]', 'every expired row, and a decision left unfinished, each sent separately; not-due, done and just-decided rows skipped', got);
+  ok(node(S, 'Process Row').parameters.mode === 'each' && node(S, 'Every 10 min').parameters.rule.interval[0].minutesInterval === 10, 'one sub-run per row; schedule unchanged (10 min)');
 
   console.log('Consent Router (main)');
   const router = node(M, 'Consent Router').parameters.jsCode;
@@ -215,7 +203,8 @@ const R0 = e => e.sheet[0];
   r = await route('no', prompt(P1), [P1]); ok(r._consentDecision === 'REJECTED', 'PREEMPT "no" -> rejected');
   r = await route('I can move to 3pm', prompt(P1), [P1]); ok(r._consentBranch === 'consent-help' && /CONSENT CONTEXT/.test(r._consentContext), 'PREEMPT reply with a new time -> the move flow, as before');
   const to = (w, n, b = 0) => (((w.connections[n] || {}).main || [])[b] || []).map(t => t.node);
-  ok(!M.nodes.some(n => n.name === 'Call Finalize MBOOTH') && JSON.stringify(to(M, 'Record Decision')) === '["Decision Reply"]' && JSON.stringify(to(M, 'Decision Reply')) === '["Send Reply"]', 'main only records the decision and replies; it never finalizes');
+  ok(!M.nodes.some(n => n.name === 'Call Finalize MBOOTH') && JSON.stringify(to(M, 'Record Decision')) === '["Decision Recorded?"]' && JSON.stringify(to(M, 'Decision Recorded?', 0)) === '["Call Finalize"]' && JSON.stringify(to(M, 'Decision Recorded?', 1)) === '["Decision Reply"]', 'main records the decision, then calls Finalize with the request id (or says it could not record it)');
+  ok(node(M, 'Call Finalize').parameters.workflowInputs.value.request_id.includes("Decision Row"), 'Finalize gets only the request id - it re-reads the row itself');
   ok(JSON.stringify(to(M, 'Consent Clarify?', 1)) === '["Read Reference Cache"]', 'everything else continues into the normal flow (cache block)');
 
   console.log('Book Session v57 and Move v25');
@@ -242,7 +231,7 @@ const R0 = e => e.sheet[0];
   ok(Array.isArray(cfull.conflicts) && /consent: X1/.test(cfull.conflicts[0].description || ''), 'Check Conflicts keeps the description on a conflict (needed for the line above)', cfull.conflicts);
   const mvRow = new Function('$json', node(MV, 'Incumbent Moved Row').parameters.jsCode)({ matched: { 'Request ID': 'RP' } })[0].json;
   ok(mvRow['Request ID'] === 'RP' && mvRow.Decision === 'INCUMBENT_MOVED' && !('Status' in mvRow), 'Move records "incumbent moved" and never writes Status');
-  ok(!MV.nodes.some(n => n.name === 'Call Finalize'), 'Move no longer finalizes itself');
+  ok(JSON.stringify(to(MV, 'Record Incumbent Moved')) === '["Call Finalize"]' && JSON.stringify(to(MV, 'Call Finalize')) === '["Notify?"]', 'Move records "incumbent moved", then calls Finalize with the request id');
 
   console.log(`\n${fail ? 'FAIL' : 'OK'} - ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
