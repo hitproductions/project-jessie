@@ -63,9 +63,10 @@ const FIXES = [
       for (const k of ['retryOnFail', 'maxTries', 'waitBetweenTries']) t[k] = r[k]; return ''; } },
   // v176 (review 29 Sep) replaced v149/v150: main no longer finalizes on a reply (Call Finalize MBOOTH is gone) and
   // no longer picks the newest pending row - it records an unambiguous, request-bound decision for Consent Sweep.
-  { id: 'v176 consent decision is recorded, not finalized', present: wf => !!node(wf, 'Record Decision') && !node(wf, 'Call Finalize MBOOTH'),
+  // Either consent design counts until v176 is imported (it is waiting on Consent Requests columns, 29 Sep).
+  { id: 'consent router nodes (v149, or v176 recorded decision)', present: wf => (!!node(wf, 'Record Decision') && !node(wf, 'Call Finalize MBOOTH')) || (!!node(wf, 'MBooth Book?') && !!node(wf, 'Call Finalize MBOOTH')),
     apply: () => 'structural (nodes + connections) - merge by hand from ' + path.basename(REF_PATH) },
-  { id: 'v176 router binds replies to one request', present: wf => /consentCode/.test(code(wf, 'Consent Router')) && !/best\s*=\s*r/.test(code(wf, 'Consent Router')),
+  { id: 'consent router row choice (v150 most-recent, or v176 bound to one request)', present: wf => /consentCode/.test(code(wf, 'Consent Router')) || /best\s*=\s*r/.test(code(wf, 'Consent Router')),
     apply: wf => { const t = node(wf, 'Consent Router'); if (!t) return 'Consent Router missing';
       t.parameters.jsCode = code(REF, 'Consent Router'); return ''; } },
   { id: 'v154 All Bookers + Booked For nodes', present: wf => !!node(wf, 'All Bookers') && !!node(wf, 'Booked For'),

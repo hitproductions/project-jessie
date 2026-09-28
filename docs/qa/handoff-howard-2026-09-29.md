@@ -78,3 +78,19 @@ date guard and Book Direct would fix them.
 Every test booking was removed from the KDC calendar, including the 5-date QATESTC7B series and the QATEST38 booking
 made during the 3.8 run. The booking log keeps their BOOKED rows; the events deleted directly from the calendar have
 no CANCELLED row.
+
+## Waiting on you: consent rebuild (candidates, not imported)
+
+Everything ChatGPT's consent review flagged was confirmed in the code, and a simpler rebuild is built and tested
+offline (`scripts/sim-consent.js` 52/52): main v176, Open v11, Finalize v10, Sweep v2, Book Session v57, Move v25.
+In short: only a clear yes/no tied to one request counts; holds are never deleted any more (the requester is booked
+alongside a standing hold, ignoring only that exact hold); Finalize re-reads the row and writes only if it is still
+PENDING; each expired row is processed separately; timeout messages say it went ahead under the timeout rule.
+
+Before it can be imported:
+1. Add three column headers to the **Consent Requests** tab of the Jessie Log sheet: **Decision**, **Decision At**,
+   **Placement Event Id** (Tara cannot edit the sheet's structure).
+2. Set the standing M-booth holds that still block their booth to **"Show as available"**: M1 - Rico, M4 - Tel,
+   M4 - Japs, M8 - ANA (M6 - Marketing and M2 - Peemo already are).
+3. Then main v176 needs rebuilding on top of whatever main is live by then (`scripts/build-consent-fix.py` works
+   from fresh pulls).
