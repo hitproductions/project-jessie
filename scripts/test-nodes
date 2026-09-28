@@ -91,6 +91,13 @@ const suite=(name,fn)=>{
   console.log('');
 };
 
+// 29 Sep (main v177): Guard Probe sends the confirmation as one line, "Book it? Reply yes or no." Its checks below
+// were written against the canonical two-line form, so its output is mapped back to that form before asserting -
+// every check keeps its meaning (including the "no confirmation line" ones). scripts/sim-short-marker.js checks
+// the one line itself.
+const NEG={book:'change anything',cancel:'keep it',move:'keep it where it is'};
+const toCanon=o=>{ if(!o||typeof o.output!=='string') return o;
+  o.output=o.output.replace(/\n*(Book|Cancel|Move) it\? Reply yes or no\.$/,(w,v)=>{ v=v.toLowerCase(); return '\nReply only with "yes" to '+v+', or "no" to '+NEG[v]+'.\nConfirm to '+v+'.'; }); return o; };
 // ── Guard Probe ────────────────────────────────────────────────────────────
 suite('Guard Probe — what reaches Slack', ()=>{
   const s=src('Guard Probe');
@@ -111,9 +118,9 @@ suite('Guard Probe — what reaches Slack', ()=>{
       return {isExecuted:ctx.executed[name],first:()=>({json:{}})};
     return {first:()=>({json:{}})};
   };
-  const runCtx=(o,ctx={})=>new Function('$input','$',s)(
+  const runCtx=(o,ctx={})=>toCanon(new Function('$input','$',s)(
     {first:()=>({json: ctx.steps===undefined?{output:o}:{output:o,intermediateSteps:ctx.steps} })},
-    mk(ctx))[0].json;
+    mk(ctx))[0].json);
   const run=o=>runCtx(o,{}).output;
   const t=[
     ['collapses ** to *','**Bold** text',x=>x==='*Bold* text'],
@@ -774,12 +781,13 @@ suite('Prepare Booking — render, send, read back at the yes', ()=>{
   const CC={verdict:'CLEAR',final_summary:'ORBIT / Jem Lim / TL',final_description:'Engineer: Tara Lim (Post Engineer) | Booked by: Howard Luistro (for Japs Concepcion) | ref: U1 | Type: External | Dept: Audio Post',final_start:REQ.start_iso,final_end:REQ.end_iso,final_client:'Jem Lim',assumed_minutes:0};
   const render=(req,cc,rows,dp)=>new Function('$',rs)(n=>({first:()=>{ if(n==='When Executed by Another Workflow') return {json:req}; if(n==='Check Conflicts') return {json:cc}; if(n==='Decide Preempt'){ if(!dp) throw new Error('not executed'); return {json:dp}; } return {json:{}}; },
     all:()=>n==='Get Client'?(rows||[{id:'rec1'}]).map(j=>({json:j})):[]}))[0].json;
-  const gpRun=(output,steps,rt)=>new Function('$input','$',gp)({first:()=>({json:{output,intermediateSteps:steps}})},n=>{
+  const gpRun=(output,steps,rt)=>toCanon(new Function('$input','$',gp)({first:()=>({json:{output,intermediateSteps:steps}})},n=>{
     if(n==='Get Booker') return {first:()=>({json:{fields:{Name:'Howard Luistro'}}})};
     if(n==='Gate Context') return {first:()=>({json:{dateNotice:'',pastDateNotice:'',startOnlyNotice:''}})};
     if(n==='Room Table') return {first:()=>({json:{roomTable:'',referenceData:JSON.stringify({types:[{type:'VO Recording',min:60,max:180}]})}})};
     if(n==='Booked For') return {first:()=>({json:{bookedFor:'Japs Concepcion',requesterText:rt===undefined?'client Jem Lim':rt}})};
-    return {first:()=>({json:{}})}; })[0].json;
+    return {first:()=>({json:{}})}; })[0].json);
+  const gpRunRaw=gpRun;
   const readBack=(botText,confirmed)=>new Function('$',pbk)(n=>({first:()=>({json:n==='Gate Context'?{confirmed}:{}}),
     all:()=>n==='Get Recent Messages'?[{json:{user:'U1',text:'yes',ts:'3'}},{json:{bot_id:'B1',text:botText,ts:'2'}}]:[]}))[0].json;
   const asStep=r=>[{action:{tool:'Prepare_Booking',toolInput:{}},observation:JSON.stringify([r])}];

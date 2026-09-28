@@ -41,7 +41,7 @@ const pcRun = (text, gate = { confirmedCancel: true }, ageS = 60) => new Functio
   wrap([{ json: { roomTable: 'kept' } }]))[0].json;
 const gpSend = txt => new Function('$input', '$', code(M, 'Guard Probe'))(wrap([{ json: { ...((rec('Guard Probe') || [{ json: {} }])[0].json), output: 'x', intermediateSteps: [{ action: { tool: 'Prepare_Cancel' }, observation: JSON.stringify([{ status: 'PREPARED', card_text: txt }]) }] } }]), n => wrap(rec(n) || [{ json: {} }]))[0].json.output;
 const sent = gpSend(card);
-ok(sent === card, 'Guard Probe sends the card unchanged (so the code still matches)', sent);
+ok(sent === card.replace(/\n\nReply only with[^\n]*\nConfirm to cancel\.$/, '\n\nCancel it? Reply yes or no.'), 'Guard Probe sends the card with only its last line shortened (booking lines and code unchanged)', sent);
 let p = pcRun(sent);
 ok(p._cancelDirect.use === true && p._cancelDirect.title === 'QATEST / Jem Lim / TL' && p._cancelDirect.booking_date === '2027-10-07', 'main reads title, date and code back off the card', p._cancelDirect);
 ok(p.roomTable === 'kept', 'Prepared Cancel passes its input through unchanged');
@@ -89,7 +89,7 @@ const gp = code(M, 'Guard Probe');
 const gin = rec('Guard Probe') || [{ json: {} }];
 const steps = [{ action: { tool: 'Find_Booking' }, observation: '[]' }, { action: { tool: 'Prepare_Cancel' }, observation: JSON.stringify([{ status: 'PREPARED', card_text: card }]) }];
 const gout = new Function('$input', '$', gp)(wrap([{ json: { ...gin[0].json, output: 'Here is the booking. Want me to cancel it?', intermediateSteps: steps } }]), n => wrap(rec(n) || [{ json: {} }]))[0].json;
-ok(gout.output === card, 'the model\'s own wording is replaced by the card, unchanged', gout.output);
+ok(gout.output === sent, 'the model\'s own wording is replaced by the card', gout.output);
 const gout2 = new Function('$input', '$', gp)(wrap([{ json: { ...gin[0].json, output: 'Which booking?', intermediateSteps: [{ action: { tool: 'Find_Booking' }, observation: '[]' }] } }]), n => wrap(rec(n) || [{ json: {} }]))[0].json;
 ok(gout2.output === 'Which booking?', 'no Prepare Cancel this turn -> reply untouched');
 
