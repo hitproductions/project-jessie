@@ -110,6 +110,11 @@ All test events deleted afterwards; the calendar was checked after every write.
 | Move an owned booking (first real-yes move since Prepare Booking) | ✅ moved, room kept, original removed |
 | Series with one date taken | ⚠️ first yes did nothing (bug 18); second yes booked 4 and reported the skipped date correctly |
 
+Speed against the 28 Sep QA round (same kinds of turns, whole-turn times, medians): all turns **16.4 s → 9.0 s**
+(76 vs 13 turns); booking request → summary 18.5 → 9.0 s; other AI replies 14.4 → 6.8 s; yes to a booking
+14.0 → 9.4 s; yes to a cancel 17.8 → 7.5 s (Cancel Direct); a 5-date series 40.4 → 36.1 s (Book Session per date,
+untouched). Tonight's sample is small; the overall median is the solid number.
+
 New bugs:
 - **18 (major): a series "yes" can re-send the summary instead of booking.** The gate saw the yes; the AI called
   Expand Series again. Same failure Book Direct fixed for single bookings. Fix direction: a code-written series
