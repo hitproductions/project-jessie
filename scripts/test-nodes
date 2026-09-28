@@ -106,7 +106,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
                                                         startOnlyNotice:ctx.startOnly?'THEY GAVE A START TIME AND NO END TIME.':''}})};
     if(name==='Room Table')   return {first:()=>({json:{roomTable:ctx.roomTable===undefined?ROOMS:ctx.roomTable,
                                                         referenceData:JSON.stringify({types:[{type:'VO Recording',min:60,max:180},{type:'Music Vocal Recording',min:60,max:120},{type:'Localization Editing',min:240,max:null}]})}})};
-    if(name==='Booked For')   return {first:()=>({json:{bookedFor:ctx.bookedFor||''}})};
+    if(name==='Booked For')   return {first:()=>({json:{bookedFor:ctx.bookedFor||'',requesterText:ctx.requesterText||''}})};
     if(ctx.executed && Object.prototype.hasOwnProperty.call(ctx.executed,name))
       return {isExecuted:ctx.executed[name],first:()=>({json:{}})};
     return {first:()=>({json:{}})};
@@ -304,7 +304,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     // QA M5 2026-09-25: an unusual length is flagged before the yes, both ways, never as a "minimum".
     ['usual length','9 hours of VO is flagged before the yes (QA M5)',
       '*BUZZ / Jem Lim / TL*\n*Date:* October 1, 2027 (Fri)\n*Time:* 9:00 AM – 6:00 PM\n*Room:* Studio F\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
-      {},x=>/Heads up: 9 hours is longer than VO Recording sessions usually run \(1–3 hours\)\. Still book it as is\?\nReply only with "yes" to book/.test(x.output)&&/Confirm to book\.$/.test(x.output)],
+      {},x=>/Heads up: 9 hours is longer than VO Recording sessions usually run \(1–3 hours\)\.\nReply only with "yes" to book/.test(x.output)&&!/Still book/.test(x.output)&&/Confirm to book\.$/.test(x.output)],
     ['usual length','15 minutes: the model note is replaced, never "minimum" (QA M5)',
       'Note: The session length requested (15 minutes) is shorter than the minimum duration for a VO Recording session (60 minutes).\n\n*PROJECT STAR / Sasa Abella / RG*\n*Time:* 2:00 PM – 2:15 PM\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
       {},x=>/Heads up: 15 minutes is shorter than VO Recording sessions usually run \(1–3 hours\)/.test(x.output)&&!/minimum/i.test(x.output)&&/^\*PROJECT STAR/.test(x.output)],
@@ -319,6 +319,20 @@ suite('Guard Probe — what reaches Slack', ()=>{
       {},x=>!/Heads up/.test(x.output)],
     ['usual length','only a booking summary',
       'Booked. That was a long one: 9:00 AM – 6:00 PM, VO Recording.',{},x=>!/Heads up/.test(x.output)],
+    // v162 (Howard, 2026-09-28)
+    ['v162','a leaked tool instruction is removed','Free in that window: Studio 1, Studio 2. List exactly these and no others.',{},x=>!/List exactly/.test(x.output)&&/Studio 2\.$/.test(x.output)],
+    ['v162','a note glued onto the Client line is removed','*ATLAS / Brightline Media / TL*\n*Client:* Brightline Media (not in client list yet and will be flagged for review)\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
+      {},x=>/\*Client:\* Brightline Media\n/.test(x.output)&&!/flagged/.test(x.output)],
+    ['v162','"Client: None" without being told is turned into the question','*ORANGE / TL*\n*Client:* None\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
+      {requesterText:'Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORANGE, engineer Tara Lim'},x=>!/Confirm to book/.test(x.output)&&/Who is the client/.test(x.output)],
+    ['v162','"Client: None" after "no client" stands','*ORANGE / TL*\n*Client:* None\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
+      {requesterText:'there is no client for this one\nBook Studio 7 next Friday'},x=>/Confirm to book\.$/.test(x.output)&&!/Who is the client/.test(x.output)],
+    ['v162','a client only in the three-segment title is a client','*BUZZ / Jem Lim / TL*\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
+      {requesterText:'book it'},x=>/Confirm to book\.$/.test(x.output)],
+    ['v162','a Localization two-segment title is not "no client"','*NET-KUBA / FP*\n*Session Type:* Localization Dubbing\n\nConfirm to book. (yes/no)',
+      {requesterText:'book it'},x=>/Confirm to book\.$/.test(x.output)],
+    ['v162','a two-segment studio title with no Client line asks','*ORANGE / TL*\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
+      {requesterText:'book studio 7'},x=>/Who is the client/.test(x.output)],
     // QA B2 2026-09-25: the summary shows who the booking is for, from Booked For.
     ['booked for','the booker line gains "(for X)"','*SUSHI / Pael / DR*\n*Booked by:* Tara Lim\n\nConfirm to book. (yes/no)',
       {bookedFor:'Japs Concepcion'},x=>/\*Booked by:\* Tara Lim \(for Japs Concepcion\)/.test(x.output)],
@@ -386,11 +400,12 @@ suite('Check Conflicts — the booking guards', ()=>{
   let r=run('Jem Lim','X / Jem Lim / TL',D,E,'Jem Lim',T);
   check('cc','engineer is in the description',/^Engineer: Tara Lim/.test(r.d),r.d.slice(0,60));
   check('cc','no leading pipe',!/^\s*\|/.test(r.d),r.d.slice(0,30));
-  check('cc','tech requirements come through',r.d.includes(T));
+  // v50 (2026-09-28): client Technical Requirements are no longer read or written.
+  check('cc','client tech requirements are no longer written',!r.d.includes(T)&&!/Tech requirements/.test(r.d),r.d);
   r=run('','X / Jem Lim / TL',D,E,'Jem Lim',T);
   check('cc','client recovered from the title',r.c==='Jem Lim',JSON.stringify(r.c));
   r=run('','M5 - Howard',D,E,'Leslie Tan','Atmos rig');
-  check('cc','internal room gets no client',r.c===''&&r.d.includes('None'),JSON.stringify(r.c));
+  check('cc','internal room gets no client',r.c===''&&!/Tech requirements/.test(r.d),JSON.stringify(r.c));
   r=run('Jem Lim','X / jem lim / TL',D,E,'Jem Lim',T);
   check('cc','client name spelling corrected',r.s==='X / Jem Lim / TL',r.s);
   r=run('Jem Lim','X / Someone Else / TL',D,E,'Jem Lim',T);
@@ -487,6 +502,33 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
   check('bfd','a failure answers "no one" instead of throwing',r.bookedFor===''&&/airtable down/.test(r.error||''));
   r=run({ts:'3',subtype:'message_changed',message:{text:'Book Studio F for Japs next Thursday',user:'UCAMY'}},[]);
   check('bfd','a thread "also send to channel" reply is read from message.text',r.bookedFor==='Japs Concepcion');
+  // v162 decision (a): "for <someone not on staff>" is the client
+  r=run(U(2,'Book Studio F for Jem Lim next Thursday 1-4pm'),[]);
+  check('bfc','"for Jem Lim" (not staff) is the client',r.forClient==='Jem Lim'&&/THE CLIENT IS Jem Lim/.test(r.notice),JSON.stringify(r));
+  r=run(U(2,'Book a session for Spotify next Tuesday from 2pm to 5pm'),[]);
+  check('bfc','"for Spotify" is the client',r.forClient==='Spotify');
+  r=run(U(2,"book Studio 7 next Thursday 2pm to 5pm for Jem Lim's new ad, VO recording, project ORBIT, engineer Tara Lim"),[]);
+  check('bfc','a possessive ends the name',r.forClient==='Jem Lim');
+  r=run(U(2,'Book Studio F for Japs next Thursday'),[]);
+  check('bfc','staff is booked-for, never the client',r.bookedFor==='Japs Concepcion'&&r.forClient==='');
+  r=run(U(2,'Book Studio 7 for 2 hours for a VO recording for next Thursday'),[]);
+  check('bfc','hours / an article / a date word are not a client',r.forClient==='');
+  r=run(U(2,'Book Studio 7 for ORBIT next Friday, project ORBIT'),[]);
+  check('bfc','the project named in the message is not the client',r.forClient==='');
+  r=run(U(2,'Book Likha for Marketing tomorrow 2-4pm'),[]);
+  check('bfc','a department is not a client',r.forClient==='');
+  r=run(U(2,'Book Studio 7 for Brightline Media tomorrow, client Brightline Media'),[]);
+  check('bfc','an explicit "client X" is left to the model',r.forClient==='');
+  r=run(U(2,'Book Studio 7 for Camy tomorrow 2-4pm'),[]);
+  check('bfc','the requester is not their own client',r.forClient==='');
+  // v162 decision (b): requester text for the new-client check; (d): studios vs rooms
+  h=[U(9,'yes'),J(8,'summary... Confirm to book.'),U(7,'client is Brightline Media'),J(6,'Who is the client?'),U(5,'Book Studio 7 tomorrow 2-4pm, VO, project ATLAS')];
+  r=run(h[0],h);
+  check('bfc','requesterText holds what they typed for this booking',/Brightline Media/.test(r.requesterText)&&/project ATLAS/.test(r.requesterText)&&!/Who is the client/.test(r.requesterText));
+  r=run(U(2,'which studios are open next thursday 10am to 1pm?'),[]);
+  check('bfc','"which studios" scopes the free list to studios',r.roomScope==='studios');
+  r=run(U(2,'What rooms are free next Friday from 2pm to 5pm?'),[]);
+  check('bfc','"what rooms" keeps every room',r.roomScope==='all');
 });
 
 // ── Engineers and arrangers must be real people in Bookers ────────────────────
@@ -533,6 +575,37 @@ suite('Check Conflicts — engineer must be on the staff list', ()=>{
   check('st','an unreadable staff list refuses rather than guesses',x.r&&x.r.reason==='ENGINEER_UNVERIFIED');
 });
 
+// ── v50: a new client must be one the requester typed; notes never ride on the client ──
+suite('Check Conflicts — client cleanup and unverified new clients (v50)', ()=>{
+  const whole=src('Check Conflicts');
+  const i=whole.indexOf('// v50 (Howard, 2026-09-28): the client is a name');
+  const j=whole.indexOf('// Get Events In Window is an HTTP Request against the Calendar API');
+  const k=whole.indexOf('// --- a new client must be one the requester actually typed');
+  const l=whole.indexOf('// Rooms and session types are passed in by Room Table');
+  if(i<0||k<0){ check('cv','Check Conflicts has the v50 client blocks',false); return; }
+  const clean=new Function('REQ',whole.slice(i,j)+'\nreturn REQ;');
+  let R=clean({client:'Brightline Media (not in client list yet and will be flagged for review)',summary:'ATLAS / TL',session_type:'VO Recording'});
+  check('cv','a note glued onto the client is removed',R.client==='Brightline Media',R.client);
+  check('cv','and the client goes back into a two-segment title',R.summary==='ATLAS / Brightline Media / TL',R.summary);
+  R=clean({client:'NET-KUBA',summary:'NET-KUBA / FP',session_type:'Localization Dubbing'});
+  check('cv','Localization keeps Project Code / initials',R.summary==='NET-KUBA / FP');
+  R=clean({client:'',summary:'ORANGE / TL',session_type:'VO Recording'});
+  check('cv','no client leaves PROJECT / initials alone',R.summary==='ORANGE / TL');
+  const body=whole.slice(k,l);
+  const run=(REQ,rows)=>{ const $=name=>({all:()=>name==='Get Client'?rows.map(r=>({json:r})):[]});
+    const r=new Function('REQ','$',body+'\nreturn null;')(REQ,$); return r?r[0].json.reason:'CLEAR'; };
+  const typed='Book Studio 8 next Friday 3pm to 5pm, VO recording, project ATLAS, client Brightline Media, engineer Tara Lim';
+  check('cv','a new client the requester typed passes',run({client:'Brightline Media',summary:'ATLAS / Brightline Media / TL',requester_text:typed},[{}])==='CLEAR');
+  check('cv','a new client Gemini made up is refused',run({client:'Brightline Studios',summary:'ATLAS / Brightline Studios / TL',requester_text:typed},[{}])==='CLIENT_UNVERIFIED');
+  check('cv','case and punctuation do not matter',run({client:'brightline media',summary:'X / brightline media / TL',requester_text:typed},[{}])==='CLEAR');
+  check('cv','a client found in Clients passes whatever the spelling',run({client:'Pael',summary:'X / Pael / DR',requester_text:'client pael laurena'},[{id:'rec1'}])==='CLEAR');
+  check('cv','a lookup that errored is not held against it',run({client:'Zed',summary:'X / Zed / TL',requester_text:'book it'},[{error:'x'}])==='CLEAR');
+  check('cv','no requester text (consent placement) skips the check',run({client:'Anyone',summary:'X / Anyone / TL',requester_text:''},[{}])==='CLEAR');
+  check('cv','a Localization project code is not checked',run({client:'NET-KUBA',summary:'NET-KUBA / FP',requester_text:'project kuba'},[{}])==='CLEAR');
+  check('cv','a part-word match is not enough',run({client:'Bright',summary:'X / Bright / TL',requester_text:typed},[{}])==='CLIENT_UNVERIFIED');
+  check('cv','CLEAR passes the cleaned times on',/final_start: REQ\.start_iso, final_end: REQ\.end_iso/.test(whole));
+});
+
 // ── New clients are logged for review, not refused (v49) ────────────────────
 suite('Book Session — a client not in Airtable is flagged as new', ()=>{
   const p=path.join(T,'New_Client_expr.js');
@@ -544,6 +617,7 @@ suite('Book Session — a client not in Airtable is flagged as new', ()=>{
   check('nc','no client is not new',run({client:'',summary:'ORANGE / HL'},[{}])===false);
   check('nc','the title client counts when the input is empty',run({client:'',summary:'ATLAS / Acme Records / TL'},[{}])===true);
   check('nc','a lookup that errored is not evidence',run({client:'Acme',summary:'X / Acme / TL'},[{error:'timeout'}])===false);
+  check('nc','a note glued onto the client does not stop it being new',run({client:'Acme (new client)',summary:'X / Acme / TL'},[{}])===true);
   check('nc','a Localization project code in the client slot is not a client',run({client:'NET-KUBA',summary:'NET-KUBA / FP',session_type:'Localization Dubbing'},[{}])===false);
 });
 

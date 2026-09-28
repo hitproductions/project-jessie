@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+// Padded-timestamp protections (PENDING 51, gotcha 18), offline. Added 2026-09-28.
+// The model glues junk onto timestamps ("...+08:00hq", "2027-10-07p", U+FE0F). Every workflow that queries the
+// calendar with a model-supplied value must clean it BEFORE the query and fail closed when the read fails -
+// Room Availability used to answer "every room free" on 40% of checks. test-nodes does not load these nodes.
+//
+//   ./scripts/test-dates          the newest file of each workflow in workflows/
+const fs = require('fs'), path = require('path');
+const DIR = path.join(__dirname, '..', 'workflows');
+const newest = base => { const f = fs.readdirSync(DIR).filter(x => new RegExp('^' + base + '-v\\d+\\.json$').test(x))
+  .sort((a, b) => +a.match(/-v(\d+)/)[1] - +b.match(/-v(\d+)/)[1]).pop(); if (!f) throw new Error('no ' + base); return f; };
+const W = base => { const f = newest(base); const w = JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8')); w._file = f; return w; };
+const N = (w, n) => { const x = w.nodes.find(y => y.name === n); if (!x) throw new Error(w._file + ': no node ' + n); return x; };
+let ok = 0, bad = 0; const check = (n, c, d) => { if (c) { ok++; console.log('  ok    ' + n); } else { bad++; console.log('  FAIL  ' + n + (d === undefined ? '' : '  :: ' + d)); } };
+const PAD = { booking_date: '2027-10-07hq', new_start_iso: '2027-10-07T13:00:00+08:00p', new_end_iso: '2027-10-07T15:00:00+08:00េ' };
+
+// Room Availability: clean query, CALENDAR_ERROR instead of "all free", studios scope
+{ const w = W('room-availability'); console.log(w._file);
+  const code = N(w, 'Compute Availability').parameters.jsCode;
+  const rooms = ['Studio 1', 'Studio 7', 'Studio A', 'M1', 'Likha', 'Lobby'].map((n, i) => ({ id: 'r' + i, name: n, vocalBooth: n === 'Studio A', booth: n === 'Studio A', common: n === 'Likha' || n === 'Lobby' }));
+  const run = (input, req) => { const REQ = Object.assign({ start_iso: '2027-10-07T13:00:00+08:00', end_iso: '2027-10-07T16:00:00+08:00', reference_data: JSON.stringify({ rooms, types: [] }), room: '', session_type: '' }, req);
+    return new Function('$', '$input', code)(() => ({ first: () => ({ json: REQ }), all: () => [{ json: REQ }] }), { all: () => input.map(j => ({ json: j })), first: () => ({ json: input[0] || {} }) })[0].json; };
+  check('a failed calendar read is CALENDAR_ERROR, not "all free"', run([{ error: { message: 'Bad Request' } }], {}).status === 'CALENDAR_ERROR');
+  const r = run([{ kind: 'calendar#events', items: [] }], { scope: 'studios' });
+  check('"studios" leaves out conference rooms and the lobby, keeps M booths', r.free_rooms.join(',') === 'M1,Studio 1,Studio 7,Studio A', r.free_rooms.join(','));
+  check('"rooms" lists everything', run([{ kind: 'calendar#events', items: [] }], {}).free_rooms.length === 6);
+  const q = N(w, 'Get Events In Window').parameters.queryParameters.parameters.find(p => p.name === 'timeMin').value.trim();
+  check('the calendar query gets the clean time', new Function('$', 'return ' + q.slice(3, -2))(() => ({ first: () => ({ json: { start_iso: PAD.new_start_iso } }) })) === '2027-10-07T13:00:00+08:00'); }
+
+// Book Session: the conflict query asks for the requested day, not now + 24 h
+{ const w = W('book-session'); console.log(w._file);
+  const q = N(w, 'Get Events In Window').parameters.queryParameters.parameters.find(p => p.name === 'timeMin').value.trim();
+  check('the conflict query gets the requested time', new Function('$', 'return ' + q.slice(3, -2))(() => ({ first: () => ({ json: { start_iso: PAD.new_start_iso, end_iso: PAD.new_end_iso } }) })) === '2027-10-07T13:00:00+08:00');
+  check('Create Event reads the cleaned final_start', /final_start/.test(N(w, 'Create Event').parameters.start)); }
+
+// Move Booking: the new window fails closed; dates cleaned
+{ const w = W('move-booking'); console.log(w._file);
+  const cnw = N(w, 'Check New Window').parameters.jsCode;
+  const R = { attendees: [{ email: 's7@r' }], location: 'Studio 7', new_start: '2027-10-07T13:00:00+08:00', new_end: '2027-10-07T15:00:00+08:00', original_id: 'o1' };
+  const run = input => new Function('$', '$input', cnw)(() => ({ first: () => ({ json: R }) }), { first: () => ({ json: input }), all: () => [{ json: input }] })[0].json;
+  check('a failed read of the new window refuses the move', run({ error: { message: 'x' } }).reason === 'LOOKUP_FAILED');
+  check('an empty new window is not refused', run({ kind: 'calendar#events', items: [] }).verdict !== 'REJECTED'); }
+
+// The REQ cleaners and the day-query URLs (Move / Cancel / Find)
+const DT = { fromISO: s => ({ toISO: () => /^\d{4}-\d{2}-\d{2}T00:00:00$/.test(s) ? s + '+08:00' : null, plus: () => ({ toISO: () => 'next' }) }) };
+for (const [base, n, keys] of [['move-booking', 'Resolve Booking', ['new_start_iso', 'new_end_iso', 'booking_date']], ['cancel-booking', 'Check Ownership', ['booking_date']], ['find-booking', 'Shape Results', ['booking_date']]]) {
+  const w = W(base); console.log(w._file);
+  const c = N(w, n).parameters.jsCode, i = c.indexOf('const REQ ='), mark = "REQ[k] = _iso(REQ[k]).slice(0, 10); }); }";
+  const j = c.indexOf('\n', c.indexOf(mark)) + 1;
+  if (c.indexOf(mark) === -1) { check(base + ': dates are cleaned before use', false, 'cleaner missing'); continue; }
+  const head = c.slice(0, i).split('\n').filter(l => /^const clean|^\s+\.replace|^\s+\.trim\(\);/.test(l)).join('\n');
+  const REQ = new Function('$', head + '\n' + c.slice(i, j) + '\nreturn REQ;')(() => ({ first: () => ({ json: PAD }) }));
+  check(base + ': padded dates and times are cleaned', keys.every(k => /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}\+08:00)?$/.test(REQ[k])), keys.map(k => REQ[k]).join(' '));
+  const seg = N(w, 'List Day Events').parameters.url.match(/timeMin=\{\{([\s\S]*?)\}\}/)[1];
+  check(base + ': the day query gets a real date', new Function('$json', 'DateTime', 'return ' + seg)({ booking_date: PAD.booking_date }, DT) === encodeURIComponent('2027-10-07T00:00:00+08:00'));
+}
+
+// Series: dates and HH:MM times
+for (const base of ['expand-series', 'book-series']) {
+  const w = W(base); console.log(w._file);
+  const c = N(w, 'Expand Dates').parameters.jsCode, a = 'const REQ = (function (o) {', z = "})($('When Executed by Another Workflow').first().json);";
+  if (c.indexOf(a) === -1) { check(base + ': series inputs are cleaned', false, 'cleaner missing'); continue; }
+  const REQ = new Function('$', c.slice(c.indexOf(a), c.indexOf(z) + z.length) + '\nreturn REQ;')(() => ({ first: () => ({ json: { start_date: '2027-10-05hq', until_date: '2027-10-26️', time_start: '14:00p', time_end: '17:00' } }) }));
+  check(base + ': series dates and times are cleaned', REQ.start_date === '2027-10-05' && REQ.until_date === '2027-10-26' && REQ.time_start === '14:00' && REQ.time_end === '17:00');
+}
+
+// main: the model's own List Events tool
+{ const w = W('project-jessie'); console.log(w._file);
+  const le = N(w, 'List Events').parameters.timeMin.trim();
+  check('List Events gets a clean time', new Function('$fromAI', 'return ' + le.slice(3, -2))(() => '2027-10-07T00:00:00+08:00hq') === '2027-10-07T00:00:00+08:00'); }
+
+console.log('\n' + ok + ' passing, ' + bad + ' failing'); process.exit(bad ? 1 : 0);

@@ -28,8 +28,9 @@ ones move to the bottom instead of being renumbered.
 
 | # | What | Blocked on / owner |
 |---|---|---|
-| 51 | **Padded timestamp reads as "every room free"** (eval 27 Sep): Room Availability 40% of checks; Book Session's conflict query has the same gap | Build (small); go-ahead |
-| 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | Tel: delete the 3 preference fields, reword Jem Lim's Technical Requirements |
+| 51 | **Padded timestamp reads as "every room free"** (eval 27 Sep): Room Availability 40% of checks; same shape in Book Session and Move Booking | Fixed in every workflow (built 28 Sep, `test-dates` 17/17); import + live re-test |
+| 52 | M2 and M6 have `Active / Bookable` unticked in Rooms & Studios, so Jessie never lists or offers them | Tel ticks both (Howard, 28 Sep) |
+| 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | Tel: delete every hidden Clients field; Claude re-checks the schema after |
 | 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest). Eval run 27 Sep, see `docs/eval/` |
 | 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
@@ -41,7 +42,7 @@ ones move to the bottom instead of being renumbered.
 | 29 | Music sessions don't require an arranger | Build |
 | 30 | Celebrity sessions don't suggest a holding room | Build |
 | 44 | Tells the requester "Booked" even when the room declines seconds later (clash she can't see) | Build |
-| 35 | Timestamp junk-guard not yet in Move Booking / Expand Series | Build (small) |
+| 35 | Timestamp junk-guard not yet in Move Booking / Expand Series | Built 28 Sep with 51 (Move v20, Expand v2) |
 | 37 | Never run live: priority request timing out; same-day / next-day M-booth windows | Test now / watch at launch |
 | 38, 16 | 2027 test events still on the calendar | Howard (manual) |
 
@@ -492,6 +493,13 @@ queries now → now+24 h and `Check Conflicts` compares against the wrong day; `
 value (fails, or books over a session — unverified). 0 of 14 live write calls were padded. *Move Booking*'s `Get
 New Window` follows the pattern (see also 35). **Fix:** clean every model-supplied timestamp before the query, and
 fail closed on a calendar error ("couldn't check" / refuse). Small, no speed cost; awaiting the go-ahead.
+
+**52. M2 and M6 are not marked bookable.** Found 2026-09-28 from the eval (QA A2: "List all rooms" twice named
+M2 and M6, which the scorer took as invented). Both rows exist in Rooms & Studios (Room Type `M Booth`), but their
+`Active / Bookable` checkbox is unticked, and `All Rooms` in main reads only `{Active / Bookable}` rooms — so Room
+Table never lists them and Room Availability never reports them. (An earlier note here said they were missing from
+the table; they are not — Howard, 2026-09-28.) If they should be bookable, tick the box; if they are deliberately
+held (the calendar has standing "M2 - Peemo" / "M6 - Marketing" events), nothing to do.
 
 ---
 

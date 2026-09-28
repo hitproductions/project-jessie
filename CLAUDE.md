@@ -234,6 +234,7 @@ only script that writes to n8n.
 | `./scripts/fix-studio-e <file>...` · `--check` | swaps Studio E's dead resource id for the live one in freshly pulled files, nodes only (PENDING 43) |
 | `./scripts/eval-run` · `--only A,B` · `--repeat n` · `--main <file>` | the hallucination eval: plays `docs/eval/scenarios.json` through the **eval twin** (a guarded test copy of main, real Gemini + live sub-workflows, no Slack, never a yes) and scores every reply against tool output and Airtable. `--main` tests a candidate prompt before import. Raw results in git-ignored `eval/`. Report: `docs/eval/eval-report-2026-09-27.md` |
 | `./scripts/eval-twin build [file]` · `guard <twin> <src>` | builds / re-checks the eval twin (`KRZmVfKIwCiLREjz`, inactive except during a run) |
+| `./scripts/test-dates` | the padded-timestamp protections (gotcha 18), offline, on the newest file of each workflow: clean query, fail closed on a failed read, studios scope |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
 | `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
 | `./scripts/verify-ids` | all twelve Jessie workflow ids (incl. the three consent workflows) resolve to **active** workflows with the right names, and the Jessie bot id still points at the live app |
@@ -285,7 +286,7 @@ being *made*; only this one stops one being *claimed*.
 `Book Session` refuses before anything reaches the calendar:
 
 ```
-MISSING_DETAILS · MISSING_CLIENT · ENGINEER_UNKNOWN · ENGINEER_UNVERIFIED · TITLE_INITIALS · NO_REFERENCE_DATA · PAST_DATE · NOT_CONFIRMED · DURATION_INVALID
+MISSING_DETAILS · MISSING_CLIENT · CLIENT_UNVERIFIED · ENGINEER_UNKNOWN · ENGINEER_UNVERIFIED · TITLE_INITIALS · NO_REFERENCE_DATA · PAST_DATE · NOT_CONFIRMED · DURATION_INVALID
 ROOM_UNSUITABLE · ROOM_NOT_PRIORITY · NO_ROOM · UNKNOWN_ROOM · ROOM_OCCUPIED · UNVERIFIABLE
 ```
 
@@ -321,6 +322,26 @@ Client Row` → `Log New Client`, one row per client, `appendOrUpdate` on `Clien
 to add to Airtable: only Tel can write Airtable, and the service account behind `Log to Sheet` already
 writes that spreadsheet. A lookup that errored, and a Localization Project Code in the client slot, are not
 logged. The sheet write can never fail a booking (`continueRegularOutput`).
+
+**The four eval decisions** (Howard, 2026-09-28; main v162 / Book v50 / Room Availability v9 / Book Series v3):
+- *(a) "for <name>" that is not staff is the client.* `Booked For` now also returns `forClient`: a capitalised
+  name after "for" that is not in Bookers (any name or alias, the requester included), not a room, session type,
+  department, date word or the project, when the requester did not name a client outright. The prompt is told
+  "THE CLIENT IS X", Room Table's "ask who the client is" notice is suppressed, and the Book Session / Book Series
+  `client` inputs fall back to it. Before: "Who is the client?" 20 of 20 for "for Spotify" / "for Jem Lim".
+- *(b) A new client must be one the requester typed* — `CLIENT_UNVERIFIED`. `Booked For` hands on
+  `requesterText` (the requester's messages for this booking) as the tools' `requester_text`; Check Conflicts
+  refuses a client that is neither found in Clients nor present in that text, so a name Gemini invented is never
+  booked or written to New Clients. Skipped when a caller sends no text (consent placements). A note glued onto the
+  client ("Acme (new client)") is stripped in Book Session and on the summary's Client line (Guard Probe), and a
+  given client is put back into a `PROJECT / initials` title.
+- *(c) Unusual length: no question, always the heads-up.* Guard Probe's line is now a statement ("Heads up: 9
+  hours is longer than VO Recording sessions usually run (1–3 hours).") and the prompt says never ask first.
+- *(d) Studios vs rooms.* `Booked For` sets `roomScope` from what the requester typed ("studios" without
+  "rooms" → studios); Room Availability then leaves conference rooms and the lobby (Airtable Room Type
+  `Conference Room` / `Lobby`, passed as `common` by Room Table) out of the free list, keeping the M booths.
+- Also: "Client: None" only stands after the requester said there is none (Guard Probe otherwise drops the
+  confirmation line and asks), and Room Availability's own instruction no longer leaks into replies.
 
 **Who a booking is *for* is decided deterministically** (main v154). The `Booked For` node (between
 `All Bookers` and `Room Table`) scans the requester's messages for the current booking, newest first,
@@ -396,6 +417,12 @@ Known contradictions in Rooms & Studios, and which field Jessie trusts:
   including two whose own Equipment says "stereo only".
 - **`Vocal Booth` is the flag, not the `Recording Booth` room type.**
 - **`Room Requirements` is a capability string**, not a room list. The ranking is the list.
+- **Jessie reads only Name, Client Type, Booker Type, Importance and Notes from Clients** (2026-09-28). Tel is
+  deleting every other field — the three preferred-room fields, Typical Session Length, Technical Requirements,
+  Min Simultaneous Rooms, Tends to Overrun and the Advertising / Localization Projects links. **Hiding a field in an
+  Airtable view does not hide it from Jessie**: the API returns every field, which is how a hidden preference and
+  Jem Lim's hidden Technical Requirements kept reaching replies. Book Session v50 no longer writes "Tech
+  requirements" into event descriptions; main v162's prompt no longer mentions any of these fields.
 - **Client room preferences are not used** (dropped 2026-09-28, Tara/Howard). Rooms come from the session-type
   ranking only. The Clients table's `Preferred Rooms` / `Preferred Room Name` / `Preferred Room Names` fields
   (the last is a *link*, so it returned record ids) are being removed by Tel; nothing in the workflows reads
@@ -534,7 +561,12 @@ the task runner), for whoever has shell access to the box.
     checks in the eval, 4 of 27 live. `isoOnly()` (gotcha 16) cleaned the value *after* the query. Book
     Session's conflict query has the same shape (a padded start falls back to now + 24 h). Any node that
     queries with a model-supplied value must clean it *before* the query and fail closed on an error —
-    PENDING 51.
+    PENDING 51. Fixed everywhere a model-supplied date or time reaches the calendar (2026-09-28): Room
+    Availability v9 (clean query, `CALENDAR_ERROR` instead of "all free"), Book Session v50 (clean query; Create
+    Event and Verify read the cleaned `final_start` / `final_end`), Move Booking v20 (clean inputs and day query;
+    a failed read of the new window is `LOOKUP_FAILED`, not free), Cancel v16 / Find v4 (clean day query — both
+    already failed closed), Expand Series v2 / Book Series v3 (clean dates and HH:MM), and main's `List Events`
+    tool. `./scripts/test-dates` checks all of it offline.
 
 ## Not done
 
