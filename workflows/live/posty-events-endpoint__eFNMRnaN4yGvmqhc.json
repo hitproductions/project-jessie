@@ -196,6 +196,17 @@
           ]
         ]
       },
+      "Emit Live Check": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Run Typo Check (Live)",
+              "type": "main"
+            }
+          ]
+        ]
+      },
       "Emit Pending": {
         "main": [
           [
@@ -849,7 +860,13 @@
       },
       "Write Project Row": {
         "main": [
-          [],
+          [
+            {
+              "index": 0,
+              "node": "Emit Live Check",
+              "type": "main"
+            }
+          ],
           [
             {
               "index": 0,
@@ -860,7 +877,7 @@
         ]
       }
     },
-    "createdAt": "2026-09-28T09:22:17.996Z",
+    "createdAt": "2026-09-28T09:48:00.995Z",
     "description": null,
     "name": null,
     "nodeGroups": [],
@@ -902,9 +919,9 @@
         "name": "Section — New project posted in #newpostprojects",
         "parameters": {
           "color": 5,
-          "content": "## New project posted in #newpostprojects\nWrites the index row and DMs the poster the project (that DM is its notify_ts, so a 🚀 on it releases). A QU that is already in use gets a thread reply instead.",
+          "content": "## New project posted in #newpostprojects\nWrites the index row and DMs the poster the project (that DM is its notify_ts, so a 🚀 on it releases). A QU that is already in use gets a thread reply instead. Then the post goes straight to the Xero typo check (Workflow 5), without waiting.",
           "height": 490,
-          "width": 1880
+          "width": 2440
         },
         "position": [
           790,
@@ -3111,23 +3128,57 @@
         ],
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2
+      },
+      {
+        "id": "emit-live-check",
+        "name": "Emit Live Check",
+        "parameters": {
+          "jsCode": "// Check the new post against Xero right away (Tara, 2026-09-28): Workflow 5 replies in-thread\n// (typo flag or studio hours) and DMs Tara. It runs after the row is written, and Workflow 2 doesn't\n// wait for it. If Slack never delivers the post, or this fails, the 09:00/17:00 runs still check it,\n// and they skip any post Posty already replied to. An uncoded (NOQU-) post has nothing to look up.\nconst req = $('Classify Event').first().json;\nif (req.synthetic) return [];\nconst e = $('Slack Trigger').first().json;\nreturn [{ json: { post: { ts: String(e.ts || ''), text: e.text || '', user: e.user || '',\n  bot_id: e.bot_id || '', app_id: e.app_id || '', subtype: e.subtype || '' } } }];"
+        },
+        "position": [
+          2800,
+          1770
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "run-typo-live",
+        "name": "Run Typo Check (Live)",
+        "parameters": {
+          "options": {
+            "waitForSubWorkflow": false
+          },
+          "workflowId": {
+            "__rl": true,
+            "cachedResultName": "Posty — Xero Typo Check",
+            "mode": "id",
+            "value": "cXsAqwMXa6c8yATc"
+          }
+        },
+        "position": [
+          3080,
+          1770
+        ],
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2
       }
     ],
-    "updatedAt": "2026-09-28T09:22:17.996Z",
-    "versionId": "1e03f099-2ece-474e-b74b-005d2bc74f6a",
+    "updatedAt": "2026-09-28T09:48:00.995Z",
+    "versionId": "446ff2f7-e64d-4040-a758-7b07d82ef586",
     "workflowId": "eFNMRnaN4yGvmqhc",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-09-28T09:22:18.470Z",
+        "createdAt": "2026-09-28T09:48:01.499Z",
         "event": "activated",
-        "id": 1358,
+        "id": 1370,
         "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
-        "versionId": "1e03f099-2ece-474e-b74b-005d2bc74f6a",
+        "versionId": "446ff2f7-e64d-4040-a758-7b07d82ef586",
         "workflowId": "eFNMRnaN4yGvmqhc"
       }
     ]
   },
-  "activeVersionId": "1e03f099-2ece-474e-b74b-005d2bc74f6a",
+  "activeVersionId": "446ff2f7-e64d-4040-a758-7b07d82ef586",
   "connections": {
     "Ack Early": {
       "main": [
@@ -3316,6 +3367,17 @@
           {
             "index": 0,
             "node": "Run Digest",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Emit Live Check": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Run Typo Check (Live)",
             "type": "main"
           }
         ]
@@ -3974,7 +4036,13 @@
     },
     "Write Project Row": {
       "main": [
-        [],
+        [
+          {
+            "index": 0,
+            "node": "Emit Live Check",
+            "type": "main"
+          }
+        ],
         [
           {
             "index": 0,
@@ -4032,9 +4100,9 @@
       "name": "Section — New project posted in #newpostprojects",
       "parameters": {
         "color": 5,
-        "content": "## New project posted in #newpostprojects\nWrites the index row and DMs the poster the project (that DM is its notify_ts, so a 🚀 on it releases). A QU that is already in use gets a thread reply instead.",
+        "content": "## New project posted in #newpostprojects\nWrites the index row and DMs the poster the project (that DM is its notify_ts, so a 🚀 on it releases). A QU that is already in use gets a thread reply instead. Then the post goes straight to the Xero typo check (Workflow 5), without waiting.",
         "height": 490,
-        "width": 1880
+        "width": 2440
       },
       "position": [
         790,
@@ -6241,6 +6309,40 @@
       ],
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2
+    },
+    {
+      "id": "emit-live-check",
+      "name": "Emit Live Check",
+      "parameters": {
+        "jsCode": "// Check the new post against Xero right away (Tara, 2026-09-28): Workflow 5 replies in-thread\n// (typo flag or studio hours) and DMs Tara. It runs after the row is written, and Workflow 2 doesn't\n// wait for it. If Slack never delivers the post, or this fails, the 09:00/17:00 runs still check it,\n// and they skip any post Posty already replied to. An uncoded (NOQU-) post has nothing to look up.\nconst req = $('Classify Event').first().json;\nif (req.synthetic) return [];\nconst e = $('Slack Trigger').first().json;\nreturn [{ json: { post: { ts: String(e.ts || ''), text: e.text || '', user: e.user || '',\n  bot_id: e.bot_id || '', app_id: e.app_id || '', subtype: e.subtype || '' } } }];"
+      },
+      "position": [
+        2800,
+        1770
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "run-typo-live",
+      "name": "Run Typo Check (Live)",
+      "parameters": {
+        "options": {
+          "waitForSubWorkflow": false
+        },
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "Posty — Xero Typo Check",
+          "mode": "id",
+          "value": "cXsAqwMXa6c8yATc"
+        }
+      },
+      "position": [
+        3080,
+        1770
+      ],
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2
     }
   ],
   "pinData": {},
@@ -6276,7 +6378,7 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 1,
-  "updatedAt": "2026-09-28T09:22:17.988Z",
-  "versionCounter": 82,
-  "versionId": "1e03f099-2ece-474e-b74b-005d2bc74f6a"
+  "updatedAt": "2026-09-28T09:48:00.988Z",
+  "versionCounter": 83,
+  "versionId": "446ff2f7-e64d-4040-a758-7b07d82ef586"
 }

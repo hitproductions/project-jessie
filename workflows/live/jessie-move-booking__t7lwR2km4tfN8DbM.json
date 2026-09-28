@@ -297,8 +297,8 @@
       }
     },
     "createdAt": "2026-09-28T08:28:38.930Z",
-    "description": null,
-    "name": null,
+    "description": "No self-consent when moving onto your own booking",
+    "name": "v22 - v21 fixed",
     "nodeGroups": [],
     "nodes": [
       {
@@ -970,7 +970,7 @@
         "typeVersion": 1.2
       }
     ],
-    "updatedAt": "2026-09-28T08:28:38.930Z",
+    "updatedAt": "2026-09-28T10:26:10.000Z",
     "versionId": "1ef6f5c5-e0bb-4ed1-b602-3a4dbbe189a6",
     "workflowId": "t7lwR2km4tfN8DbM",
     "workflowPublishHistory": [
@@ -983,9 +983,25 @@
         "workflowId": "t7lwR2km4tfN8DbM"
       },
       {
+        "createdAt": "2026-09-28T10:26:10.654Z",
+        "event": "activated",
+        "id": 1400,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "1ef6f5c5-e0bb-4ed1-b602-3a4dbbe189a6",
+        "workflowId": "t7lwR2km4tfN8DbM"
+      },
+      {
         "createdAt": "2026-09-28T08:28:39.062Z",
         "event": "deactivated",
         "id": 1336,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "1ef6f5c5-e0bb-4ed1-b602-3a4dbbe189a6",
+        "workflowId": "t7lwR2km4tfN8DbM"
+      },
+      {
+        "createdAt": "2026-09-28T10:26:10.592Z",
+        "event": "deactivated",
+        "id": 1399,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
         "versionId": "1ef6f5c5-e0bb-4ed1-b602-3a4dbbe189a6",
         "workflowId": "t7lwR2km4tfN8DbM"

@@ -20,16 +20,11 @@ Posty — Events Endpoint                    active   posty-events-endpoint__eFN
 Posty — Index Refresh                      active   posty-index-refresh__DItjvgnQPf5aEsIq.json
 Posty — Weekly Digest                      active   posty-weekly-digest__7cG9CRcCoT5UvTTi.json
 Posty — Xero Typo Check                    active   posty-xero-typo-check__cXsAqwMXa6c8yATc.json
-Posty — one-off: mark QU-180333 deleted (2026-09-28) inactive posty-one-off-mark-qu-180333-deleted-2026-09-28__Xqpmo4l8Sv4y2JUV.json
 Project Jessie v2                          active   project-jessie-v2__uVVYVB2M7kxpLleI.json
 Project Jessie v2 BACKUP aug17_502pm       inactive project-jessie-v2-backup-aug17-502pm__1GcIAeLdJZLeB8js.json
 Project Jessie v2 backup 0814.513pm        inactive project-jessie-v2-backup-0814-513pm__jtNid6MGQiIsWL51.json
 Project Jessie v2 copy aug17_331pm         inactive project-jessie-v2-copy-aug17-331pm__9sTzJ45mOEIv4Las.json
-TMP — Add TALENTS column                   inactive tmp-add-talents-column__PssIRRkmqLsVYtpI.json
-TMP — Add TALENTS column                   inactive tmp-add-talents-column__sjCYONBjCXk0Tdig.json
-TMP — Airtable schema probe                inactive tmp-airtable-schema-probe__c1YIsN2ZZvgPjyt8.json
-TMP — Fix QUERY formula                    inactive tmp-fix-query-formula__9hNruLSVaM18nDMO.json
 Tel Proj                                   inactive tel-proj__GGGboD7zwOe9G6sC.json
 Timesheet Sync — Engineer Tabs to Post Logsheet active   timesheet-sync-engineer-tabs-to-post-logsheet__2S5mMSKZNRMGEtea.json
-ZZ Jessie Eval Twin (test copy - do not use) active   zz-jessie-eval-twin-test-copy-do-not-use__KRZmVfKIwCiLREjz.json
+ZZ Jessie Eval Twin (test copy - do not use) inactive zz-jessie-eval-twin-test-copy-do-not-use__KRZmVfKIwCiLREjz.json
 slack ids                                  inactive slack-ids__EeSu7YekB1R7FYki.json

@@ -48,7 +48,10 @@ for wid, name in expect.items():
         print("  ERROR      %s  %s  (%s)" % (wid, name, msg)); continue
     if w.get("id") != wid:
         problems.append("workflow %s (%s) no longer exists" % (wid, name)); print("  GONE   %s  %s" % (wid, name)); continue
-    tag = "ok" if (w["name"]==name and w["active"]) else "CHECK"
+    # Since 2026-09-28 a title carries the build: "Jessie — Book Session — v55 (v54 fixed)". Only the stable part
+    # before " — v<n>" is checked, so a new build never makes this fail; a different workflow still does.
+    stable = re.sub(r'\s+[—-]\s+v\d+\b.*$', '', w["name"] or '').strip()
+    tag = "ok" if (stable==name and w["active"]) else "CHECK"
     if tag=="CHECK": problems.append("%s: name=%r active=%s" % (wid, w["name"], w["active"]))
     print("  %-5s %s  %s%s" % (tag, wid, w["name"], "" if w["active"] else "  (INACTIVE)"))
 

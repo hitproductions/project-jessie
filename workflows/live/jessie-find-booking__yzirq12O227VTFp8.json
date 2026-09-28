@@ -28,8 +28,8 @@
       }
     },
     "createdAt": "2026-09-28T07:20:43.156Z",
-    "description": null,
-    "name": null,
+    "description": "Studio E calendar id",
+    "name": "v5 - v4 fixed",
     "nodeGroups": [],
     "nodes": [
       {
@@ -88,7 +88,7 @@
         "typeVersion": 2
       }
     ],
-    "updatedAt": "2026-09-28T07:20:43.156Z",
+    "updatedAt": "2026-09-28T10:26:11.000Z",
     "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
     "workflowId": "yzirq12O227VTFp8",
     "workflowPublishHistory": [
@@ -101,9 +101,25 @@
         "workflowId": "yzirq12O227VTFp8"
       },
       {
+        "createdAt": "2026-09-28T10:26:11.722Z",
+        "event": "activated",
+        "id": 1404,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
+        "workflowId": "yzirq12O227VTFp8"
+      },
+      {
         "createdAt": "2026-09-28T07:20:43.249Z",
         "event": "deactivated",
         "id": 1310,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
+        "workflowId": "yzirq12O227VTFp8"
+      },
+      {
+        "createdAt": "2026-09-28T10:26:11.685Z",
+        "event": "deactivated",
+        "id": 1403,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
         "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
         "workflowId": "yzirq12O227VTFp8"

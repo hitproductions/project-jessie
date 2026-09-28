@@ -57,8 +57,8 @@
       }
     },
     "createdAt": "2026-09-28T03:33:01.342Z",
-    "description": null,
-    "name": null,
+    "description": "Padded dates and times cleaned",
+    "name": "v3 - v2 fixed",
     "nodeGroups": [],
     "nodes": [
       {
@@ -234,7 +234,7 @@
         "typeVersion": 2
       }
     ],
-    "updatedAt": "2026-09-28T03:33:01.342Z",
+    "updatedAt": "2026-09-28T10:26:12.000Z",
     "versionId": "443a4f36-1ad1-49ee-bb85-8827be90a21b",
     "workflowId": "UAwFoifgkfL1xNP2",
     "workflowPublishHistory": [
@@ -247,9 +247,25 @@
         "workflowId": "UAwFoifgkfL1xNP2"
       },
       {
+        "createdAt": "2026-09-28T10:26:12.712Z",
+        "event": "activated",
+        "id": 1410,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "443a4f36-1ad1-49ee-bb85-8827be90a21b",
+        "workflowId": "UAwFoifgkfL1xNP2"
+      },
+      {
         "createdAt": "2026-09-28T03:33:01.436Z",
         "event": "deactivated",
         "id": 1262,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "443a4f36-1ad1-49ee-bb85-8827be90a21b",
+        "workflowId": "UAwFoifgkfL1xNP2"
+      },
+      {
+        "createdAt": "2026-09-28T10:26:12.672Z",
+        "event": "deactivated",
+        "id": 1409,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
         "versionId": "443a4f36-1ad1-49ee-bb85-8827be90a21b",
         "workflowId": "UAwFoifgkfL1xNP2"

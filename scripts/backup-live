@@ -47,7 +47,10 @@ def api(path):
     raise Unreachable(last + " || " + " | ".join(keep) if keep else last)
 
 os.makedirs("workflows/live", exist_ok=True)
-slug = lambda s: re.sub(r'[^a-zA-Z0-9]+', '-', s).strip('-').lower()[:60]
+# Since 2026-09-28 a title carries the build ("Jessie — Book Session — v55 (v54 fixed)"). The file is named from the
+# stable part before " — v<n>", so a new build overwrites the same snapshot instead of leaving an old-name file behind.
+stable = lambda s: re.sub(r'\s+[—-]\s+v\d+\b.*$', '', s or '').strip()
+slug = lambda s: re.sub(r'[^a-zA-Z0-9]+', '-', stable(s)).strip('-').lower()[:60]
 try:
     data = api("/api/v1/workflows?limit=200").get("data", [])
 except Unreachable as e:
