@@ -29,8 +29,8 @@ ones move to the bottom instead of being renumbered.
 | # | What | Blocked on / owner |
 |---|---|---|
 | 51 | **Padded timestamp reads as "every room free"** (eval 27 Sep): Room Availability 40% of checks; same shape in Book Session and Move Booking | Fixed in every workflow, **LIVE 28 Sep 03:33 UTC** (`test-dates` 17/17); live re-test by eval |
-| 52 | M2 and M6 have `Active / Bookable` unticked in Rooms & Studios, so Jessie never lists or offers them | Tel ticks both (Howard, 28 Sep) |
-| 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | Tel: delete every hidden Clients field; Claude re-checks the schema after |
+| 52 | M2 and M6 had `Active / Bookable` unticked, so Jessie never listed or offered them | **Done 28 Sep:** Tel ticked both; live room list 25 → 27 at 03:35 UTC |
+| 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | **Done 28 Sep:** Tel deleted the hidden fields; Clients = Name, Importance, Notes, Booker Type, Client Type; live lookups confirmed |
 | 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest). Eval run 27 Sep, see `docs/eval/` |
 | 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
@@ -473,7 +473,12 @@ The project code in the Localization client slot (`Client: NET-KUBA`) is intende
   the client to the **`New Clients`** tab of the Jessie Log spreadsheet (`appendOrUpdate` on `Client`, one row per
   client, Status `For Review`) — Tel reviews it and adds the client to Airtable, since only Tel can write Airtable.
   The write never fails a booking.
-- *Needs:* **Howard** — add a tab named exactly `New Clients` to the Jessie Log spreadsheet with this header row:
+- *Airtable, done 2026-09-28:* Tel deleted every hidden Clients field (the three preferred-room fields, Typical Session
+  Length, Technical Requirements, Min Simultaneous Rooms, Tends to Overrun, the Advertising / Localization Projects links,
+  Rooms & Studios). Clients is now Name, Importance, Notes, Booker Type, Client Type; from 03:35 UTC live Clients lookups
+  return only those (28 lookups, no errors). The deleted links' partner fields in Rooms & Studios, Localization Projects and
+  Advertising Projects became plain text columns; Jessie reads none of them.
+- *Needs (done):* **Howard** — add a tab named exactly `New Clients` to the Jessie Log spreadsheet with this header row:
   `Client | Status | Booked by | Project | Session Type | Department | Booking Date | Room(s) | Calendar Title |
   Event ID | Added`. Until it exists the write fails silently and the booking still goes through. **Tel** — delete
   `Preferred Rooms`, `Preferred Room Name` and `Preferred Room Names` from Clients (their inverse fields in Rooms &
@@ -499,7 +504,8 @@ M2 and M6, which the scorer took as invented). Both rows exist in Rooms & Studio
 `Active / Bookable` checkbox is unticked, and `All Rooms` in main reads only `{Active / Bookable}` rooms — so Room
 Table never lists them and Room Availability never reports them. (An earlier note here said they were missing from
 the table; they are not — Howard, 2026-09-28.) If they should be bookable, tick the box; if they are deliberately
-held (the calendar has standing "M2 - Peemo" / "M6 - Marketing" events), nothing to do.
+held (the calendar has standing "M2 - Peemo" / "M6 - Marketing" events), nothing to do. **Resolved 2026-09-28:** Tel ticked
+both; from 03:35:31 UTC `All Rooms` returns 27 rooms and Room Table lists M2 and M6.
 
 ---
 
