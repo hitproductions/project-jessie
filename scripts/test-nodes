@@ -102,7 +102,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
              +'- Music Mixing — normally: Studio F · also possible: Studio C';
   const mk=(ctx={})=>name=>{
     if(name==='Get Booker')   return {first:()=>({json:{fields:{Name:'Tara Lim'}}})};
-    if(name==='Gate Context') return {first:()=>({json:{dateNotice:ctx.dateNotice||'',pastDateNotice:'',
+    if(name==='Gate Context') return {first:()=>({json:{datesUnderDiscussion:ctx.dates||'',dateNotice:ctx.dateNotice||'',pastDateNotice:'',
                                                         startOnlyNotice:ctx.startOnly?'THEY GAVE A START TIME AND NO END TIME.':''}})};
     if(name==='Room Table')   return {first:()=>({json:{roomTable:ctx.roomTable===undefined?ROOMS:ctx.roomTable,
                                                         referenceData:JSON.stringify({types:[{type:'VO Recording',min:60,max:180},{type:'Music Vocal Recording',min:60,max:120},{type:'Localization Editing',min:240,max:null}]})}})};
@@ -193,6 +193,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['booked for','booked for a colleague: the summary says so'],
     ['usual length','an unusual length, said BEFORE the yes'],
     ['v162','v162 \\(Howard, 2026-09-28\\)'],
+    ['v164','v164 \\(QA E1\\)'],
   ];
   const t2=[
     // a date with no year — both older patterns need one
@@ -321,6 +322,10 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['usual length','only a booking summary',
       'Booked. That was a long one: 9:00 AM – 6:00 PM, VO Recording.',{},x=>!/Heads up/.test(x.output)],
     // v162 (Howard, 2026-09-28)
+    ['v164','no date named: the booking question also asks the day (QA E1)','What session type is this, who is the client, and who is engineering?',
+      {requesterText:'Book Studio 7 from 2pm to 5pm'},x=>/And which day is it for\?$/.test(x.output)],
+    ['v164','a question that already asks the day is left alone','Which day, and who is engineering?',{requesterText:'Book Studio 7 from 2pm to 5pm'},x=>!/And which day/.test(x.output)],
+    ['v164','not added when the date is known',"What session type is this?",{requesterText:'Book Studio 7 tomorrow 2pm to 5pm',dates:'2027-09-29'},x=>!/And which day/.test(x.output)],
     ['v162','"a last-resort or alternative room" is reworded','Studio 8 is normally a last-resort or alternative room for VO Recording.',{},x=>!/last.resort/i.test(x.output)],
     ['v162','a leaked tool instruction is removed','Free in that window: Studio 1, Studio 2. List exactly these and no others.',{},x=>!/List exactly/.test(x.output)&&/Studio 2\.$/.test(x.output)],
     ['v162','a note glued onto the Client line is removed','*ATLAS / Brightline Media / TL*\n*Client:* Brightline Media (not in client list yet and will be flagged for review)\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
@@ -640,6 +645,30 @@ suite('Check Conflicts — prepare mode, NOT_PREPARED, date and length (v51)', (
   check('pv','start time only: the end is the Typical Duration (QA M4)',d.REQ&&d.REQ.end_iso==='2027-10-08T15:00:00+08:00'&&d.am===60,JSON.stringify(d.REQ&&d.REQ.end_iso));
   check('pv','a given end is kept when it is not start-only',runD({mode:'prepare',expected_date:'2027-10-08',rooms:'Studio 7',session_type:'VO Recording',start_iso:'2027-10-08T14:00:00+08:00',end_iso:'2027-10-08T17:00:00+08:00',reference_data:T}).REQ.end_iso==='2027-10-08T17:00:00+08:00');
   check('pv','outside prepare mode nothing changes',!runD({expected_date:'',rooms:'Studio 7'}).reason);
+});
+suite('Check Conflicts — department, booking type, Localization title (v52)', ()=>{
+  const whole=src('Check Conflicts');
+  const k=whole.indexOf('// v51 Prepare Booking (Howard'), l=whole.indexOf('// v50 (Howard, 2026-09-28): the client is a name');
+  if(whole.indexOf('NEED_DEPARTMENT')<0){ console.log('  skip  v52 is not in this build'); return; }
+  const m=whole.indexOf('// Get Events In Window is an HTTP Request against the Calendar API');
+  const run=(REQ,clientRows)=>{ const $=n=>({all:()=>n==='Get Client'?(clientRows||[]).map(j=>({json:j})):[]});
+    const r=new Function('REQ','$',whole.slice(k,m)+'\nreturn {REQ};')(REQ,$); return Array.isArray(r)?{reason:r[0].json.reason,human:r[0].json.human}:r; };
+  const T=JSON.stringify({types:[{type:'VO Recording',typical:60,roles:['Post Engineer']},{type:'Celebrity Recording',roles:['Music Engineer','Post Engineer','Music Arranger']},{type:'Localization Dubbing',roles:['Loc Engineer']}]});
+  const base={mode:'prepare',expected_date:'2027-10-08',rooms:'Studio 7',start_iso:'2027-10-08T14:00:00+08:00',end_iso:'2027-10-08T16:00:00+08:00',reference_data:T};
+  let r=run(Object.assign({},base,{session_type:'VO Recording'}));
+  check('d52','department comes from the session type',r.REQ&&r.REQ.department==='Audio Post',JSON.stringify(r.REQ&&r.REQ.department));
+  r=run(Object.assign({},base,{session_type:'Celebrity Recording'}));
+  check('d52','a type spanning departments asks Music or Audio Post',r.reason==='NEED_DEPARTMENT'&&/Music or a Audio Post|Music or Audio Post/.test(r.human),r.human);
+  check('d52','a department they gave is kept',run(Object.assign({},base,{session_type:'Celebrity Recording',department:'Music'})).REQ.department==='Music');
+  r=run(Object.assign({},base,{session_type:'VO Recording',client:'Jem Lim'}),[{id:'r1',fields:{Name:'Jem Lim','Client Type':['External']}}]);
+  check('d52','booking type comes from a single-type client record',r.REQ&&r.REQ.bookingType==='External');
+  r=run(Object.assign({},base,{session_type:'VO Recording',client:'Sharon Ambas'}),[{id:'r2',fields:{Name:'Sharon Ambas','Client Type':['External','Personal']}}]);
+  check('d52','a client tagged both asks External or Personal',r.reason==='NEED_BOOKING_TYPE');
+  check('d52','a booking type they gave is kept',run(Object.assign({},base,{session_type:'VO Recording',client:'Sharon Ambas',bookingType:'Personal'}),[{id:'r2',fields:{Name:'Sharon Ambas','Client Type':['External','Personal']}}]).REQ.bookingType==='Personal');
+  check('d52','a new client leaves the booking type to them',!run(Object.assign({},base,{session_type:'VO Recording',client:'Brightline Media'}),[{}]).reason);
+  r=run(Object.assign({},base,{session_type:'Localization Dubbing',client:'Nimbus Streaming',summary:'NET-KUBA / Nimbus Streaming / FP'}));
+  check('d52','a Localization title drops the client segment (eval NC-5)',r.REQ&&r.REQ.summary==='NET-KUBA / FP'&&r.REQ.client==='Nimbus Streaming',JSON.stringify(r.REQ&&r.REQ.summary));
+  check('d52','outside prepare mode nothing is worked out',!run(Object.assign({},base,{mode:'',session_type:'VO Recording'})).REQ.department);
 });
 
 // ── v50: a new client must be one the requester typed; notes never ride on the client ──
