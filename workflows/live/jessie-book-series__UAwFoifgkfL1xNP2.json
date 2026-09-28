@@ -234,7 +234,7 @@
         "typeVersion": 2
       }
     ],
-    "updatedAt": "2026-09-28T10:26:12.000Z",
+    "updatedAt": "2026-09-28T10:38:57.000Z",
     "versionId": "443a4f36-1ad1-49ee-bb85-8827be90a21b",
     "workflowId": "UAwFoifgkfL1xNP2",
     "workflowPublishHistory": [
@@ -255,6 +255,22 @@
         "workflowId": "UAwFoifgkfL1xNP2"
       },
       {
+        "createdAt": "2026-09-28T10:38:57.067Z",
+        "event": "activated",
+        "id": 1416,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "443a4f36-1ad1-49ee-bb85-8827be90a21b",
+        "workflowId": "UAwFoifgkfL1xNP2"
+      },
+      {
+        "createdAt": "2026-09-28T10:38:57.418Z",
+        "event": "activated",
+        "id": 1418,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "443a4f36-1ad1-49ee-bb85-8827be90a21b",
+        "workflowId": "UAwFoifgkfL1xNP2"
+      },
+      {
         "createdAt": "2026-09-28T03:33:01.436Z",
         "event": "deactivated",
         "id": 1262,
@@ -266,6 +282,22 @@
         "createdAt": "2026-09-28T10:26:12.672Z",
         "event": "deactivated",
         "id": 1409,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "443a4f36-1ad1-49ee-bb85-8827be90a21b",
+        "workflowId": "UAwFoifgkfL1xNP2"
+      },
+      {
+        "createdAt": "2026-09-28T10:38:57.037Z",
+        "event": "deactivated",
+        "id": 1415,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "443a4f36-1ad1-49ee-bb85-8827be90a21b",
+        "workflowId": "UAwFoifgkfL1xNP2"
+      },
+      {
+        "createdAt": "2026-09-28T10:38:57.382Z",
+        "event": "deactivated",
+        "id": 1417,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
         "versionId": "443a4f36-1ad1-49ee-bb85-8827be90a21b",
         "workflowId": "UAwFoifgkfL1xNP2"
@@ -331,7 +363,7 @@
   "id": "UAwFoifgkfL1xNP2",
   "isArchived": false,
   "meta": null,
-  "name": "Jessie — Book Series",
+  "name": "Jessie — Book Series — v3 (v2 fixed)",
   "nodeGroups": [],
   "nodes": [
     {
@@ -535,7 +567,7 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 0,
-  "updatedAt": "2026-09-28T03:33:01.336Z",
+  "updatedAt": "2026-09-28T10:38:56.936Z",
   "versionCounter": 3,
   "versionId": "443a4f36-1ad1-49ee-bb85-8827be90a21b"
 }

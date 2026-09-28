@@ -486,7 +486,7 @@
         "typeVersion": 4.5
       }
     ],
-    "updatedAt": "2026-09-28T10:26:12.000Z",
+    "updatedAt": "2026-09-28T10:38:58.000Z",
     "versionId": "19b7b0c3-8c7f-4ddf-9e43-99b89c309ec7",
     "workflowId": "bAyDw7udhmY0NL38",
     "workflowPublishHistory": [
@@ -507,6 +507,22 @@
         "workflowId": "bAyDw7udhmY0NL38"
       },
       {
+        "createdAt": "2026-09-28T10:38:58.429Z",
+        "event": "activated",
+        "id": 1420,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "19b7b0c3-8c7f-4ddf-9e43-99b89c309ec7",
+        "workflowId": "bAyDw7udhmY0NL38"
+      },
+      {
+        "createdAt": "2026-09-28T10:38:58.763Z",
+        "event": "activated",
+        "id": 1422,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "19b7b0c3-8c7f-4ddf-9e43-99b89c309ec7",
+        "workflowId": "bAyDw7udhmY0NL38"
+      },
+      {
         "createdAt": "2026-09-28T03:33:02.409Z",
         "event": "deactivated",
         "id": 1266,
@@ -518,6 +534,22 @@
         "createdAt": "2026-09-28T10:26:12.011Z",
         "event": "deactivated",
         "id": 1405,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "19b7b0c3-8c7f-4ddf-9e43-99b89c309ec7",
+        "workflowId": "bAyDw7udhmY0NL38"
+      },
+      {
+        "createdAt": "2026-09-28T10:38:58.395Z",
+        "event": "deactivated",
+        "id": 1419,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "19b7b0c3-8c7f-4ddf-9e43-99b89c309ec7",
+        "workflowId": "bAyDw7udhmY0NL38"
+      },
+      {
+        "createdAt": "2026-09-28T10:38:58.728Z",
+        "event": "deactivated",
+        "id": 1421,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
         "versionId": "19b7b0c3-8c7f-4ddf-9e43-99b89c309ec7",
         "workflowId": "bAyDw7udhmY0NL38"
@@ -674,7 +706,7 @@
   "id": "bAyDw7udhmY0NL38",
   "isArchived": false,
   "meta": null,
-  "name": "Jessie — Cancel Booking",
+  "name": "Jessie — Cancel Booking — v16 (v15 fixed)",
   "nodeGroups": [],
   "nodes": [
     {
@@ -1043,7 +1075,7 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 0,
-  "updatedAt": "2026-09-28T03:33:02.307Z",
+  "updatedAt": "2026-09-28T10:38:58.299Z",
   "versionCounter": 22,
   "versionId": "19b7b0c3-8c7f-4ddf-9e43-99b89c309ec7"
 }

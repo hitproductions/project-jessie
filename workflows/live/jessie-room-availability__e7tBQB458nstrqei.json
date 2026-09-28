@@ -130,7 +130,7 @@
         "typeVersion": 2
       }
     ],
-    "updatedAt": "2026-09-28T10:26:11.000Z",
+    "updatedAt": "2026-09-28T10:39:01.000Z",
     "versionId": "f31aaf19-bccd-426c-b657-8a2e14fb6a63",
     "workflowId": "e7tBQB458nstrqei",
     "workflowPublishHistory": [
@@ -151,6 +151,22 @@
         "workflowId": "e7tBQB458nstrqei"
       },
       {
+        "createdAt": "2026-09-28T10:39:01.032Z",
+        "event": "activated",
+        "id": 1428,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "f31aaf19-bccd-426c-b657-8a2e14fb6a63",
+        "workflowId": "e7tBQB458nstrqei"
+      },
+      {
+        "createdAt": "2026-09-28T10:39:01.377Z",
+        "event": "activated",
+        "id": 1430,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "f31aaf19-bccd-426c-b657-8a2e14fb6a63",
+        "workflowId": "e7tBQB458nstrqei"
+      },
+      {
         "createdAt": "2026-09-28T07:20:40.793Z",
         "event": "deactivated",
         "id": 1306,
@@ -162,6 +178,22 @@
         "createdAt": "2026-09-28T10:26:11.024Z",
         "event": "deactivated",
         "id": 1401,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "f31aaf19-bccd-426c-b657-8a2e14fb6a63",
+        "workflowId": "e7tBQB458nstrqei"
+      },
+      {
+        "createdAt": "2026-09-28T10:39:01.000Z",
+        "event": "deactivated",
+        "id": 1427,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "f31aaf19-bccd-426c-b657-8a2e14fb6a63",
+        "workflowId": "e7tBQB458nstrqei"
+      },
+      {
+        "createdAt": "2026-09-28T10:39:01.342Z",
+        "event": "deactivated",
+        "id": 1429,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
         "versionId": "f31aaf19-bccd-426c-b657-8a2e14fb6a63",
         "workflowId": "e7tBQB458nstrqei"
@@ -198,7 +230,7 @@
   "id": "e7tBQB458nstrqei",
   "isArchived": false,
   "meta": null,
-  "name": "Jessie — Room Availability",
+  "name": "Jessie — Room Availability — v10 (v9 fixed)",
   "nodeGroups": [],
   "nodes": [
     {
@@ -328,7 +360,7 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 0,
-  "updatedAt": "2026-09-28T07:20:40.695Z",
+  "updatedAt": "2026-09-28T10:39:00.922Z",
   "versionCounter": 19,
   "versionId": "f31aaf19-bccd-426c-b657-8a2e14fb6a63"
 }

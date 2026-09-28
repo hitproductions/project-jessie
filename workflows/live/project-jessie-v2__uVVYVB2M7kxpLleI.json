@@ -2980,7 +2980,7 @@
         "typeVersion": 2
       }
     ],
-    "updatedAt": "2026-09-28T10:25:01.000Z",
+    "updatedAt": "2026-09-28T10:39:18.000Z",
     "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0",
     "workflowId": "uVVYVB2M7kxpLleI",
     "workflowPublishHistory": [
@@ -3001,6 +3001,22 @@
         "workflowId": "uVVYVB2M7kxpLleI"
       },
       {
+        "createdAt": "2026-09-28T10:39:17.172Z",
+        "event": "activated",
+        "id": 1440,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0",
+        "workflowId": "uVVYVB2M7kxpLleI"
+      },
+      {
+        "createdAt": "2026-09-28T10:39:18.058Z",
+        "event": "activated",
+        "id": 1442,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0",
+        "workflowId": "uVVYVB2M7kxpLleI"
+      },
+      {
         "createdAt": "2026-09-28T10:25:00.937Z",
         "event": "deactivated",
         "id": 1393,
@@ -3012,6 +3028,22 @@
         "createdAt": "2026-09-28T10:25:01.672Z",
         "event": "deactivated",
         "id": 1395,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0",
+        "workflowId": "uVVYVB2M7kxpLleI"
+      },
+      {
+        "createdAt": "2026-09-28T10:39:17.093Z",
+        "event": "deactivated",
+        "id": 1439,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0",
+        "workflowId": "uVVYVB2M7kxpLleI"
+      },
+      {
+        "createdAt": "2026-09-28T10:39:17.975Z",
+        "event": "deactivated",
+        "id": 1441,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
         "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0",
         "workflowId": "uVVYVB2M7kxpLleI"
@@ -3507,7 +3539,7 @@
   "meta": {
     "templateCredsSetupCompleted": true
   },
-  "name": "Project Jessie v2",
+  "name": "Project Jessie v2 — v168 (v167 fixed)",
   "nodeGroups": [],
   "nodes": [
     {
@@ -6064,7 +6096,7 @@
   },
   "tags": [],
   "triggerCount": 1,
-  "updatedAt": "2026-09-28T10:25:00.662Z",
+  "updatedAt": "2026-09-28T10:39:16.817Z",
   "versionCounter": 952,
   "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0"
 }

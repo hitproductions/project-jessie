@@ -1149,7 +1149,7 @@
         "typeVersion": 2.2
       }
     ],
-    "updatedAt": "2026-09-28T10:26:10.000Z",
+    "updatedAt": "2026-09-28T10:39:05.000Z",
     "versionId": "a1c21525-5a0d-42e5-8f0e-011c6a3dfd0a",
     "workflowId": "EUG3sGXkfsJSYIMz",
     "workflowPublishHistory": [
@@ -1170,6 +1170,22 @@
         "workflowId": "EUG3sGXkfsJSYIMz"
       },
       {
+        "createdAt": "2026-09-28T10:39:04.641Z",
+        "event": "activated",
+        "id": 1436,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "a1c21525-5a0d-42e5-8f0e-011c6a3dfd0a",
+        "workflowId": "EUG3sGXkfsJSYIMz"
+      },
+      {
+        "createdAt": "2026-09-28T10:39:05.080Z",
+        "event": "activated",
+        "id": 1438,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "a1c21525-5a0d-42e5-8f0e-011c6a3dfd0a",
+        "workflowId": "EUG3sGXkfsJSYIMz"
+      },
+      {
         "createdAt": "2026-09-28T09:51:59.153Z",
         "event": "deactivated",
         "id": 1372,
@@ -1181,6 +1197,22 @@
         "createdAt": "2026-09-28T10:26:10.116Z",
         "event": "deactivated",
         "id": 1397,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "a1c21525-5a0d-42e5-8f0e-011c6a3dfd0a",
+        "workflowId": "EUG3sGXkfsJSYIMz"
+      },
+      {
+        "createdAt": "2026-09-28T10:39:04.596Z",
+        "event": "deactivated",
+        "id": 1435,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "a1c21525-5a0d-42e5-8f0e-011c6a3dfd0a",
+        "workflowId": "EUG3sGXkfsJSYIMz"
+      },
+      {
+        "createdAt": "2026-09-28T10:39:05.027Z",
+        "event": "deactivated",
+        "id": 1437,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
         "versionId": "a1c21525-5a0d-42e5-8f0e-011c6a3dfd0a",
         "workflowId": "EUG3sGXkfsJSYIMz"
@@ -1511,7 +1543,7 @@
   "id": "EUG3sGXkfsJSYIMz",
   "isArchived": false,
   "meta": null,
-  "name": "Jessie — Book Session",
+  "name": "Jessie — Book Session — v55 (v54 fixed)",
   "nodeGroups": [],
   "nodes": [
     {
@@ -2367,7 +2399,7 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 0,
-  "updatedAt": "2026-09-28T09:51:58.990Z",
+  "updatedAt": "2026-09-28T10:39:04.467Z",
   "versionCounter": 92,
   "versionId": "a1c21525-5a0d-42e5-8f0e-011c6a3dfd0a"
 }

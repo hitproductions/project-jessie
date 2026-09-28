@@ -144,9 +144,10 @@ Anything learned goes into a file, or the next session rediscovers it the hard w
 - every new build → a row in [`VERSIONS.md`](VERSIONS.md): what it fixes and **which version had the problem**.
   Numbers only go up; a fix to v166 is v167 labelled "fixes v166: …", never a renamed file (scripts sort by the
   number, and `verify-ids` / `backup-live` key on the n8n workflow names, which do not change)
-- every import → publish it with a **version name** in n8n: `./scripts/n8n-write activate <id> "v169 - v168 fixed"
-  "<one line>"` (the "fixed" label goes in the version name, not only the description). This also does the
-  Active toggle that reloads tool inputs
+- every import → **label it in two places**: set the workflow title in the file to `<stable title> — v169 (v168
+  fixed)` before `n8n-write put`, then publish with the version name: `./scripts/n8n-write activate <id> "v169 -
+  v168 fixed" "<one line>"` (this is also the Active toggle that reloads tool inputs). `verify-ids` and `backup-live`
+  only look at the stable part before ` — v<n>`, so a new build never breaks them (since 2026-09-28)
 
 Then commit and push. One shared n8n instance means the folder is the only place
 knowledge accumulates.
@@ -192,6 +193,8 @@ knowledge accumulates.
 ```
 Slack DM → n8n → agent (Gemini 3.5 Flash Lite, temp 0.2) → Airtable + Google Calendar → Slack
 ```
+
+Titles below are the stable part; in n8n each also carries its current build, e.g. `Jessie — Book Session — v55 (v54 fixed)`.
 
 | Workflow | id | What it is |
 |---|---|---|

@@ -88,7 +88,7 @@
         "typeVersion": 2
       }
     ],
-    "updatedAt": "2026-09-28T10:26:11.000Z",
+    "updatedAt": "2026-09-28T10:39:00.000Z",
     "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
     "workflowId": "yzirq12O227VTFp8",
     "workflowPublishHistory": [
@@ -109,6 +109,22 @@
         "workflowId": "yzirq12O227VTFp8"
       },
       {
+        "createdAt": "2026-09-28T10:38:59.636Z",
+        "event": "activated",
+        "id": 1424,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
+        "workflowId": "yzirq12O227VTFp8"
+      },
+      {
+        "createdAt": "2026-09-28T10:39:00.105Z",
+        "event": "activated",
+        "id": 1426,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
+        "workflowId": "yzirq12O227VTFp8"
+      },
+      {
         "createdAt": "2026-09-28T07:20:43.249Z",
         "event": "deactivated",
         "id": 1310,
@@ -120,6 +136,22 @@
         "createdAt": "2026-09-28T10:26:11.685Z",
         "event": "deactivated",
         "id": 1403,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
+        "workflowId": "yzirq12O227VTFp8"
+      },
+      {
+        "createdAt": "2026-09-28T10:38:59.603Z",
+        "event": "deactivated",
+        "id": 1423,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
+        "workflowId": "yzirq12O227VTFp8"
+      },
+      {
+        "createdAt": "2026-09-28T10:39:00.068Z",
+        "event": "deactivated",
+        "id": 1425,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
         "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
         "workflowId": "yzirq12O227VTFp8"
@@ -156,7 +188,7 @@
   "id": "yzirq12O227VTFp8",
   "isArchived": false,
   "meta": null,
-  "name": "Jessie — Find Booking",
+  "name": "Jessie — Find Booking — v5 (v4 fixed)",
   "nodeGroups": [],
   "nodes": [
     {
@@ -245,7 +277,7 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 0,
-  "updatedAt": "2026-09-28T07:20:43.153Z",
+  "updatedAt": "2026-09-28T10:38:59.530Z",
   "versionCounter": 7,
   "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc"
 }

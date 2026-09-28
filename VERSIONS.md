@@ -8,7 +8,10 @@ in `workflows/` and the titles of the commits that imported them. n8n itself kee
   to when it appeared and when it was fixed. Detail (tests, eval numbers) stays in the commit messages.
 - **Live** is the time (UTC) it was imported and confirmed; *candidate* means built and tested, not imported.
 - Numbers only go up. A fix to a build is the next number, labelled with what it fixes; never a renamed file.
-- **In n8n, the version itself carries the label.** Each import is published with a version name, e.g.
+- **In n8n, the title carries the current build** (from 2026-09-28): `Project Jessie v2 — v168 (v167 fixed)`,
+  `Jessie — Book Session — v55 (v54 fixed)`, so the workflow list shows it at a glance. `verify-ids` and
+  `backup-live` use only the part before ` — v<n>`.
+- **In n8n, the version itself carries the label too.** Each import is published with a version name, e.g.
   **"v168 - v167 fixed"** (`./scripts/n8n-write activate <id> "v168 - v167 fixed" "<one-line description>"`), so
   n8n's own version history shows which build fixed which. The workflow name ("Project Jessie v2") never changes:
   `verify-ids` and `backup-live` key on it. Labelled from v168 on; earlier versions keep n8n's unnamed entries.
