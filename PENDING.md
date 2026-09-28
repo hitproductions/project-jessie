@@ -40,7 +40,7 @@ ones move to the bottom instead of being renumbered.
 | 27 | Can open the same consent request twice | Build |
 | 28 | Booking over your own booking asks *you* for consent | Build |
 | 23 | After "room taken", re-offers the same failed slot | **Built 28 Sep:** ROOM_OCCUPIED lists the usual rooms actually free in that window (Book Session v53, live) |
-| 29 | Music sessions don't require an arranger | Build |
+| 29 | Music sessions don't require an arranger | **Built 28 Sep** (Book Session v54): asked whenever a Music session's type lists an arranger; "no arranger" accepted (Howard) |
 | 30 | Celebrity sessions don't suggest a holding room | **Built 28 Sep:** prepared summary notes it from Room Requirements (goes live with main v165) |
 | 44 | Tells the requester "Booked" even when the room declines seconds later (clash she can't see) | Build |
 | 35 | Timestamp junk-guard not yet in Move Booking / Expand Series | LIVE 28 Sep with 51 (Move v20, Expand v2) |

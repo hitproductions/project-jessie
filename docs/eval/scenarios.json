@@ -220,7 +220,7 @@
       "class": "bookedFor",
       "note": "QA B2",
       "turns": [
-        "Book Studio F for Japs next Thursday from 1pm to 4pm, music vocal recording, project SUSHI, client Pael, engineer Daryl"
+        "Book Studio F for Japs next Thursday from 1pm to 4pm, music vocal recording, project SUSHI, client Pael, engineer Daryl, no arranger"
       ],
       "expect": {
         "bookedFor": "Japs Concepcion",
@@ -905,6 +905,32 @@
       ],
       "expect": {
         "date": "Wednesday next week"
+      }
+    },
+    {
+      "id": "MUS-1",
+      "class": "music",
+      "note": "PENDING 29: a Music session with no arranger named - ask for one",
+      "turns": [
+        "Book Studio F next Friday 1pm to 4pm, band recording, project ECHO, client Pael, engineer Daryl"
+      ],
+      "expect": {
+        "mentions": [
+          "arranger"
+        ],
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "MUS-2",
+      "class": "music",
+      "note": "PENDING 29: 'no arranger' is accepted",
+      "turns": [
+        "Book Studio F next Friday 1pm to 4pm, band recording, project ECHO, client Pael, engineer Daryl, no arranger"
+      ],
+      "expect": {
+        "engineer": "Daryl Reyes",
+        "project": "ECHO"
       }
     }
   ]

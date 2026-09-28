@@ -658,7 +658,7 @@ suite('Check Conflicts — department, booking type, Localization title (v52)', 
   const run=(REQ,clientRows)=>{ const $=n=>({all:()=>n==='Get Client'?(clientRows||[]).map(j=>({json:j})):[]});
     const r=new Function('REQ','$',whole.slice(k,m)+'\nreturn {REQ};')(REQ,$); return Array.isArray(r)?{reason:r[0].json.reason,human:r[0].json.human}:r; };
   const T=JSON.stringify({types:[{type:'VO Recording',typical:60,roles:['Post Engineer']},{type:'Celebrity Recording',roles:['Music Engineer','Post Engineer','Music Arranger']},{type:'Localization Dubbing',roles:['Loc Engineer']}]});
-  const base={mode:'prepare',expected_date:'2027-10-08',rooms:'Studio 7',start_iso:'2027-10-08T14:00:00+08:00',end_iso:'2027-10-08T16:00:00+08:00',reference_data:T,requester_text:'client work'};
+  const base={mode:'prepare',expected_date:'2027-10-08',rooms:'Studio 7',start_iso:'2027-10-08T14:00:00+08:00',end_iso:'2027-10-08T16:00:00+08:00',reference_data:T,requester_text:'client work, no arranger'};
   let r=run(Object.assign({},base,{session_type:'VO Recording'}));
   check('d52','department comes from the session type',r.REQ&&r.REQ.department==='Audio Post',JSON.stringify(r.REQ&&r.REQ.department));
   r=run(Object.assign({},base,{session_type:'Celebrity Recording'}));
@@ -701,6 +701,18 @@ suite('Check Conflicts — department, booking type, Localization title (v52)', 
     check('d53','Localization is External, and its project code is not checked as a client',run3({mode:'prepare',session_type:'Localization Dubbing',client:'NET-KUBA',summary:'NET-KUBA / FP'},[]).REQ.bookingType==='External');
     check('d53','internal rooms skip it all',!run3({mode:'prepare',session_type:'',client:''},[]).reason);
     check('d53','outside prepare mode nothing changes',!run3({mode:'',session_type:'VO Recording',client:'Jem Limm'},[],ALL).reason);
+  }
+  if(whole.indexOf('NEED_ARRANGER')>=0){
+    const i4=whole.indexOf('// v54 - PENDING 29');
+    const run4=REQ=>{ const r=new Function('REQ','const __prep = String(REQ.mode||"").trim().toLowerCase()==="prepare";\n'+whole.slice(i4,m)+'\nreturn {REQ};')(REQ); return Array.isArray(r)?r[0].json:r; };
+    const T4=JSON.stringify({types:[{type:'Band Recording',roles:['Music Engineer','Music Arranger']},{type:'VO Recording',roles:['Post Engineer']},{type:'Celebrity Recording',roles:['Music Engineer','Post Engineer','Music Arranger']}]});
+    const P4={mode:'prepare',reference_data:T4,description:'Engineer: Daryl Reyes (Music Engineer) | Booked by: X | ref: U1'};
+    check('d54','a Music session with no arranger: ask for one (PENDING 29)',run4(Object.assign({},P4,{session_type:'Band Recording',department:'Music'})).reason==='NEED_ARRANGER');
+    check('d54','"no arranger" is accepted',!run4(Object.assign({},P4,{session_type:'Band Recording',department:'Music',requester_text:'no arranger for this one'})).reason);
+    check('d54','an arranger given passes',!run4(Object.assign({},P4,{session_type:'Band Recording',department:'Music',description:'Engineer: Daryl Reyes (Music Engineer) | Arranger: Brian Cua | Booked by: X'})).reason);
+    check('d54','Celebrity Recording as Audio Post is not asked',!run4(Object.assign({},P4,{session_type:'Celebrity Recording',department:'Audio Post'})).reason);
+    check('d54','Celebrity Recording as Music is asked',run4(Object.assign({},P4,{session_type:'Celebrity Recording',department:'Music'})).reason==='NEED_ARRANGER');
+    check('d54','a type without an arranger role is not asked',!run4(Object.assign({},P4,{session_type:'VO Recording',department:'Audio Post'})).reason);
   }
 });
 
