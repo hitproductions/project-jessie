@@ -237,7 +237,41 @@ def build_main(w):
     link(C, "Reference Lookup Failed", "Send Reply")
     return w
 
+GET_BOOKER = r"""// Get Booker (main v175): who is asking, now from the reference cache instead of a live Airtable read (Tara,
+// 29 Sep: staff changes are rare, so up to 15 minutes stale is accepted). Same result as the Airtable search
+// {Slack User ID} = "<sender>": the matching Bookers records as {id, fields}, or one empty item when none match.
+const user = String($('Slack Trigger').first().json.user || '').trim();
+const s = $('Reference Snapshot').first().json;
+const rows = (Array.isArray(s.bookers) ? s.bookers : [])
+  .filter(r => user && String((r.fields || {})['Slack User ID'] || '').trim() === user);
+const out = rows.map(r => ({ json: { id: r.id, fields: r.fields }, pairedItem: { item: 0 } }));
+return out.length ? out : [{ json: {}, pairedItem: { item: 0 } }];"""
+
+def cache_get_booker(w):
+    """v175: the cache block moves in front of Get Booker, which becomes a cache adapter."""
+    N = {n["name"]: n for n in w["nodes"]}
+    w["name"] = "Project Jessie — v175 (Get Booker cached)"
+    old = N["Get Booker"]
+    rep = code_node("Get Booker", GET_BOOKER, old["position"]); rep["id"] = old["id"]
+    w["nodes"][w["nodes"].index(old)] = rep
+    C = w["connections"]
+    for br in C["Consent Reject?"]["main"]:
+        for t in br:
+            if t["node"] == "Get Booker": t["node"] = "Read Reference Cache"
+    C["Reference OK?"]["main"][0] = [{"node": "Get Booker", "type": "main", "index": 0}]
+    C["Gate Context"] = {"main": [[{"node": "All Rooms", "type": "main", "index": 0}]]}
+    row = {"Read Reference Cache": [73232, 5440], "Check Reference Cache": [73408, 5440], "Cache Fresh?": [73584, 5440],
+           "Refresh Cache Now": [73760, 5584], "Reference Snapshot": [73936, 5440], "Reference OK?": [74112, 5440],
+           "Reference Lookup Failed": [74288, 5584]}
+    for n in w["nodes"]:
+        if n["name"] in row: n["position"] = row[n["name"]]
+    return w
+
 if __name__ == "__main__":
+    if sys.argv[1] == "--get-booker":
+        w = cache_get_booker(json.load(open(sys.argv[2])))
+        json.dump(w, open(sys.argv[3], "w"), indent=2, ensure_ascii=False)
+        print("wrote", sys.argv[3], len(w["nodes"]), "nodes"); sys.exit(0)
     rin, min_, rout, mout = sys.argv[1:5]
     r = build_refresh(json.load(open(rin)))
     m = build_main(json.load(open(min_)))

@@ -22,7 +22,9 @@ Started 2026-09-28. Earlier builds are in `git log`.
 
 | Version | Live | Fixes (found in) | Adds |
 |---|---|---|---|
-| v173 | *candidate* | Three Airtable reads (Rooms, Session Types, Bookers) on every message (v172 and earlier) | Reference cache: reads the `Jessie Reference Cache` data table; refreshes synchronously when missing, malformed or over 15 min old; plain failure reply if the refresh fails. Needs Refresh Reference Cache v2. `scripts/sim-ref-cache.js` |
+| v175 | 2026-09-29 03:07 | Get Booker was a live Airtable read on every message, 1–4 s (v174 and earlier) | Get Booker served from the reference cache (sender matched on Slack User ID); cache block moved in front of it. Staff/authority changes take up to 15 min to apply (accepted by Tara). `scripts/sim-get-booker.js` |
+| v174 | 2026-09-29 02:58 | v173 canvas: cache nodes on top of the Gemini / Memory nodes (v173) | Layout only |
+| v173 | 2026-09-29 02:56 | Three Airtable reads (Rooms, Session Types, Bookers) on every message, ~3.3 s (v172 and earlier) | Reference cache (with Refresh Reference Cache v2); imported by Tara without sticky notes and the two disabled nodes |
 | v168 | 2026-09-28 18:25 | After a "no", the refused summary re-sent unchanged instead of asking what to change (v167, live test) | — |
 | v167 | 2026-09-28 17:52 | Invented engineer names (v166 and earlier: the prompt asked for a full name, role and initials); garbled project / client copies; "which studios" leaving out the M booths (v165); a refusal's instructions pasted into the reply (v165); "10am-12nn" booked as 10–11 (v166); "no client, it's client work" read as a client called "work" (v167 draft) | Engineer, arranger, project, client and times read from the requester's own words |
 | v166 | 2026-09-28 16:28 | Claimed "I've asked the holder" with nothing behind it (PENDING 26) | **Prepare Booking on for everyone** (built across v163–v165); the in-house arranger notice |
