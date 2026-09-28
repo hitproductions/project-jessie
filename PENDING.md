@@ -21,7 +21,7 @@ ones move to the bottom instead of being renumbered.
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
 | 22 | Automatic backup off since 16 Sep; manual backups only (last 2026-09-25) | Follows 21 |
-| 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | Mirror live-tested; tablet-release delete check, then publish |
+| 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | **Tel's to-do (28 Sep):** Tel reports it working; her confirmation marks it DONE in the sprint checklist |
 | 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | **Applied 28 Sep 07:20 UTC** in Book Session v53, Room Availability v10, Move v21, Find v5 (main's disabled node goes with v165). IT still to confirm the old id is retired |
 
 ### 🟠 Soon: before the SOP is final (by 5 Oct); behaviour real users will hit
