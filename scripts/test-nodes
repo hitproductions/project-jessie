@@ -816,6 +816,9 @@ suite('Check Conflicts — prepare mode, NOT_PREPARED, date and length (v51)', (
   const runD=REQ=>{ const r=new Function('REQ',whole.slice(k,l)+'\nreturn {REQ, am:__assumedMins};')(REQ); return Array.isArray(r)?{reason:r[0].json.reason}:r; };
   const T=JSON.stringify({types:[{type:'VO Recording',typical:60}]});
   check('pv','no date named: prepare refuses (QA E1)',runD({mode:'prepare',expected_date:'',rooms:'Studio 7',start_iso:'2027-10-08T14:00:00+08:00'}).reason==='MISSING_DATE');
+  { const _D=runD({mode:'prepare',expected_date:'',rooms:'Studio 7',start_iso:'2027-09-27T14:00:00+08:00',requester_text:'Book Studio 7 last Monday from 2pm to 5pm'});
+    if(_D.reason!=='MISSING_DATE') check('v55','"last Monday" is a day that has passed, not a missing one (QA E2)',_D.reason==='PAST_DATE',_D.reason); }
+  check('v55','"the last Monday of October" is not a past day',runD({mode:'prepare',expected_date:'',rooms:'Studio 7',start_iso:'2027-10-25T14:00:00+08:00',requester_text:'Book Studio 7 the last Monday of October'}).reason!=='PAST_DATE');
   check('pv','a named date goes ahead',!runD({mode:'prepare',expected_date:'2027-10-08',rooms:'Studio 7',start_iso:'2027-10-08T14:00:00+08:00'}).reason);
   check('pv','an M booth needs no named date',!runD({mode:'prepare',expected_date:'',rooms:'M3'}).reason);
   const d=runD({mode:'prepare',expected_date:'2027-10-08',rooms:'Studio 7',session_type:'VO Recording',start_only:true,start_iso:'2027-10-08T14:00:00+08:00',end_iso:'2027-10-08T17:00:00+08:00',reference_data:T});
