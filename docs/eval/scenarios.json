@@ -1092,6 +1092,20 @@
           "Jem Lim"
         ]
       }
+    },
+    {
+      "id": "NO-1",
+      "note": "v168: after a no, ask what to change - never the same summary again (live, 28 Sep)",
+      "turns": [
+        "Book Studio 8 next Wednesday 10am to 12pm, VO recording, project ROLETEST, client Jem Lim, engineer Drey",
+        "no"
+      ],
+      "expect": {
+        "mentions": [
+          "change"
+        ],
+        "noSummaryExpected": true
+      }
     }
   ]
 }

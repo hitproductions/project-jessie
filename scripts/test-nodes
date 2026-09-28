@@ -102,11 +102,11 @@ suite('Guard Probe — what reaches Slack', ()=>{
              +'- Music Mixing — normally: Studio F · also possible: Studio C';
   const mk=(ctx={})=>name=>{
     if(name==='Get Booker')   return {first:()=>({json:{fields:{Name:'Tara Lim'}}})};
-    if(name==='Gate Context') return {first:()=>({json:{datesUnderDiscussion:ctx.dates||'',dateNotice:ctx.dateNotice||'',pastDateNotice:'',
+    if(name==='Gate Context') return {first:()=>({json:{datesUnderDiscussion:ctx.dates||'',dateNotice:ctx.dateNotice||'',pastDateNotice:'',declineNotice:ctx.decline||'',
                                                         startOnlyNotice:ctx.startOnly?'THEY GAVE A START TIME AND NO END TIME.':''}})};
     if(name==='Room Table')   return {first:()=>({json:{roomTable:ctx.roomTable===undefined?ROOMS:ctx.roomTable,
                                                         referenceData:JSON.stringify({types:[{type:'VO Recording',min:60,max:180},{type:'Music Vocal Recording',min:60,max:120},{type:'Localization Editing',min:240,max:null}]})}})};
-    if(name==='Booked For')   return {first:()=>({json:{bookedFor:ctx.bookedFor||'',requesterText:ctx.requesterText||''}})};
+    if(name==='Booked For')   return {first:()=>({json:{bookedFor:ctx.bookedFor||'',requesterText:ctx.requesterText||'',botText:ctx.botText||''}})};
     if(ctx.executed && Object.prototype.hasOwnProperty.call(ctx.executed,name))
       return {isExecuted:ctx.executed[name],first:()=>({json:{}})};
     return {first:()=>({json:{}})};
@@ -195,8 +195,16 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v162','v162 \\(Howard, 2026-09-28\\)'],
     ['v164','v164 \\(QA E1\\)'],
     ['v167','v167 \\(eval 2026-09-28\\)'],
+    ['v168','v168 \\(live, 28 Sep\\)'],
   ];
   const t2=[
+    // v168: a "no" never gets the refused summary back
+    ['v168','after a no, the same prepared summary is replaced by the question','x',{steps:[{action:{tool:'Prepare_Booking'},observation:JSON.stringify([{status:'PREPARED',summary_text:"*ROLETEST / Jem Lim / DR*\n*Time:* 10:00 AM – 12:00 PM\n\n_check de53563e_\n\nReply only with \"yes\" to book, or \"no\" to change anything.\nConfirm to book."}])}],decline:'THEY SAID NO',botText:"*ROLETEST / Jem Lim / DR*\n*Time:* 10:00 AM – 12:00 PM\n\n_check de53563e_\n\nReply only with \"yes\" to book, or \"no\" to change anything.\nConfirm to book."},
+      x=>/nothing was booked\. What would you like to change\?/.test(x.output)&&!/_check/.test(x.output)],
+    ['v168','after a no, a CHANGED summary (new code) is shown','x',{steps:[{action:{tool:'Prepare_Booking'},observation:JSON.stringify([{status:'PREPARED',summary_text:"*ROLETEST / Jem Lim / DR*\n*Time:* 10:00 AM – 12:00 PM\n\n_check de53563e_\n\nReply only with \"yes\" to book, or \"no\" to change anything.\nConfirm to book."}])}],decline:'THEY SAID NO',botText:'*ROLETEST ...* _check 11111111_'},
+      x=>/_check de53563e_/.test(x.output)],
+    ['v168','without a no, the summary is shown','x',{steps:[{action:{tool:'Prepare_Booking'},observation:JSON.stringify([{status:'PREPARED',summary_text:"*ROLETEST / Jem Lim / DR*\n*Time:* 10:00 AM – 12:00 PM\n\n_check de53563e_\n\nReply only with \"yes\" to book, or \"no\" to change anything.\nConfirm to book."}])}],botText:"*ROLETEST / Jem Lim / DR*\n*Time:* 10:00 AM – 12:00 PM\n\n_check de53563e_\n\nReply only with \"yes\" to book, or \"no\" to change anything.\nConfirm to book."},
+      x=>/_check de53563e_/.test(x.output)],
     // v167 (eval 2026-09-28): the free list is completed; leaked refusal instructions are removed
     ['v167','adds the free rooms a list left out (the M booths, A1-2)','Free studios next Thursday: Studio 1, Studio 2, Studio 4, Studio 7, Studio C',{steps:[{action:{tool:'Room_Availability'},observation:"[{\"status\":\"OK\",\"asked\":null,\"scope\":\"studios\",\"free_rooms\":[\"M2\",\"M3\",\"Studio 1\",\"Studio 2\",\"Studio 4\",\"Studio 7\",\"Studio C\"]}]"}]},
       x=>/\nAlso free: M2, M3\.$/.test(x.output)],
