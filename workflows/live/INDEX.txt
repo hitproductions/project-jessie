@@ -23,7 +23,7 @@ Posty — Xero Typo Check                    active   posty-xero-typo-check__cXs
 Project Jessie v2 BACKUP aug17_502pm       inactive project-jessie-v2-backup-aug17-502pm__1GcIAeLdJZLeB8js.json
 Project Jessie v2 backup 0814.513pm        inactive project-jessie-v2-backup-0814-513pm__jtNid6MGQiIsWL51.json
 Project Jessie v2 copy aug17_331pm         inactive project-jessie-v2-copy-aug17-331pm__9sTzJ45mOEIv4Las.json
-Project Jessie v2 — v168 (v167 fixed)      active   project-jessie-v2__uVVYVB2M7kxpLleI.json
+Project Jessie — v168 (v167 fixed)         active   project-jessie__uVVYVB2M7kxpLleI.json
 Tel Proj                                   inactive tel-proj__GGGboD7zwOe9G6sC.json
 Timesheet Sync — Engineer Tabs to Post Logsheet active   timesheet-sync-engineer-tabs-to-post-logsheet__2S5mMSKZNRMGEtea.json
 ZZ Jessie Eval Twin (test copy - do not use) inactive zz-jessie-eval-twin-test-copy-do-not-use__KRZmVfKIwCiLREjz.json

@@ -2980,7 +2980,7 @@
         "typeVersion": 2
       }
     ],
-    "updatedAt": "2026-09-28T10:39:18.000Z",
+    "updatedAt": "2026-09-28T10:42:34.000Z",
     "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0",
     "workflowId": "uVVYVB2M7kxpLleI",
     "workflowPublishHistory": [
@@ -3017,6 +3017,22 @@
         "workflowId": "uVVYVB2M7kxpLleI"
       },
       {
+        "createdAt": "2026-09-28T10:42:33.809Z",
+        "event": "activated",
+        "id": 1446,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0",
+        "workflowId": "uVVYVB2M7kxpLleI"
+      },
+      {
+        "createdAt": "2026-09-28T10:42:34.456Z",
+        "event": "activated",
+        "id": 1448,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0",
+        "workflowId": "uVVYVB2M7kxpLleI"
+      },
+      {
         "createdAt": "2026-09-28T10:25:00.937Z",
         "event": "deactivated",
         "id": 1393,
@@ -3044,6 +3060,22 @@
         "createdAt": "2026-09-28T10:39:17.975Z",
         "event": "deactivated",
         "id": 1441,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0",
+        "workflowId": "uVVYVB2M7kxpLleI"
+      },
+      {
+        "createdAt": "2026-09-28T10:42:33.725Z",
+        "event": "deactivated",
+        "id": 1445,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0",
+        "workflowId": "uVVYVB2M7kxpLleI"
+      },
+      {
+        "createdAt": "2026-09-28T10:42:34.369Z",
+        "event": "deactivated",
+        "id": 1447,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
         "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0",
         "workflowId": "uVVYVB2M7kxpLleI"
@@ -3539,7 +3571,7 @@
   "meta": {
     "templateCredsSetupCompleted": true
   },
-  "name": "Project Jessie v2 — v168 (v167 fixed)",
+  "name": "Project Jessie — v168 (v167 fixed)",
   "nodeGroups": [],
   "nodes": [
     {
@@ -6096,7 +6128,7 @@
   },
   "tags": [],
   "triggerCount": 1,
-  "updatedAt": "2026-09-28T10:39:16.817Z",
+  "updatedAt": "2026-09-28T10:42:33.501Z",
   "versionCounter": 952,
   "versionId": "2150ea71-cace-462e-8889-35cfeecfdeb0"
 }

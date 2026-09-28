@@ -194,11 +194,12 @@ knowledge accumulates.
 Slack DM → n8n → agent (Gemini 3.5 Flash Lite, temp 0.2) → Airtable + Google Calendar → Slack
 ```
 
-Titles below are the stable part; in n8n each also carries its current build, e.g. `Jessie — Book Session — v55 (v54 fixed)`.
+Titles below are the stable part; in n8n each also carries its current build, e.g. `Jessie — Book Session — v55 (v54 fixed)`. Main was `Project Jessie v2` until 2026-09-28; the "v2" was dropped
+because it read like a build number.
 
 | Workflow | id | What it is |
 |---|---|---|
-| `Project Jessie v2` | `uVVYVB2M7kxpLleI` | main, 54 nodes including the lane notes |
+| `Project Jessie` | `uVVYVB2M7kxpLleI` | main, 54 nodes including the lane notes |
 | `Jessie — Book Session` | `EUG3sGXkfsJSYIMz` | the only way a booking is created |
 | `Jessie — Cancel Booking` | `bAyDw7udhmY0NL38` | the only way one is deleted |
 | `Jessie — Move Booking` | `t7lwR2km4tfN8DbM` | the only way one is rescheduled |
