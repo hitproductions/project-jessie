@@ -96,6 +96,32 @@ n8n stored.
   summary's lines, "what's free today" listing style.
 - Later: availability answers inventing an end time (bug 15).
 
+## Live QA, 29 Sep ~04:30 PHT (on the live builds)
+
+All test events deleted afterwards; the calendar was checked after every write.
+
+| Test | Result |
+|---|---|
+| Cancel someone else's booking (seeded event, foreign booker) | ✅ refused at the card, nothing offered |
+| Taglish booking ("pa-book … sa Friday next week … si Tara ang engineer") | ✅ right date, engineer and room |
+| Conditional yes ("yes pero gawin mong 3pm to 5pm") | ✅ not booked |
+| Yes → Book Direct | ✅ booked, 0 AI calls, exactly one event |
+| A second "yes" after "Booked." | ⚠️ no double booking, but a confusing reply (bug 17) |
+| Move an owned booking (first real-yes move since Prepare Booking) | ✅ moved, room kept, original removed |
+| Series with one date taken | ⚠️ first yes did nothing (bug 18); second yes booked 4 and reported the skipped date correctly |
+
+New bugs:
+- **18 (major): a series "yes" can re-send the summary instead of booking.** The gate saw the yes; the AI called
+  Expand Series again. Same failure Book Direct fixed for single bookings. Fix direction: a code-written series
+  summary with a check code and a direct path (the recurring-bookings review, point 2). Intermittent: the 28 Sep
+  series yes booked first time.
+- **16: "Friday next week" is read by the date guard as this Friday** → a needless "October 1 or October 8?"
+  question. Same family: "every Tuesday in November" set the date under discussion to this Tuesday (5 Oct), which
+  likely confused the model in bug 18.
+- **17 (minor): a repeated "yes" after "Booked."** gets "Studio 8 is taken … by QATESTTG" (their own booking) and
+  alternatives. Should say "Already booked."
+- Bug 9 again (Booking Type line on one summary only). Move summary doesn't show the old time.
+
 ## Still open from QA
 
 Bugs 2, 3, 9, 10, 11/13, 12, 14, 15 — see the QA handoff. 5, 6, 8 are fixed by Prepare Cancel.
