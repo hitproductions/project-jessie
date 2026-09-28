@@ -32,7 +32,6 @@ ones move to the bottom instead of being renumbered.
 | 53 | Clients table data: 7 duplicate names, 3 names with stray spaces, 3 non-client rows. Bookers (28 Sep, raised with Tel): Via Aceron's Info to list Loc Engineer; BP Valenzuela's Initials trailing space; Eddie Boy Vargas retiring - remove from Bookers when he leaves; any nicknames people use for engineers added to Info (v167 reads names from the requester's words against Info) | Airtable (Tel) |
 | 52 | M2 and M6 had `Active / Bookable` unticked, so Jessie never listed or offered them | **Done 28 Sep:** Tel ticked both; live room list 25 → 27 at 03:35 UTC |
 | 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | **Done 28 Sep:** Tel deleted the hidden fields; Clients = Name, Importance, Notes, Booker Type, Client Type; live lookups confirmed |
-| 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep | **Retested — close.** Evals 27–28 Sep (900+ conversations); the prompt-trim retest checklist is scenarios TC-1..10, all passing on v165 |
 | 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
 | 54 | **Gemini invents staff names and corrupts copied details.** v165 eval: "Andrian \"Drey\" Sison", "Daryl Aquino" for "Drey"/"Daryl" (refused, a wasted turn, and the refusal leaked its instructions); earlier "REASON1" → "REazon1", "Tara Inf". Cause: four places asked the model for a full name, role and initials it did not have | **Built 28 Sep** (main v167 + Book Session v55, NOT imported): the prompt asks for names as typed (27/27 in the eval twin, was 0/2); engineer, arranger, project, client and times are read from the requester's own words and win over the model's; v55 fills name, role and initials from Bookers |
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
@@ -60,7 +59,7 @@ ones move to the bottom instead of being renumbered.
 | 40 | Leftover snapshot files from renames in `workflows/live/` | **Done 28 Sep:** approved; current snapshots refreshed first, then the 5 old-name files removed (all 5 ids still active under their current names) |
 | 41 | `Booked For` notice quotes three words instead of the name | **LIVE 28 Sep 08:28 UTC** (main v166) |
 
-**Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31, 32. **Item 14** is a permanent
+**Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31, 32, 45. **Item 14** is a permanent
 known constraint, not a task.
 
 ---
@@ -362,7 +361,9 @@ declines moments later, and the event sits on KDC Bookings with the room crossed
 its attendees; if the room declined, delete the new event and tell the requester the room is taken. It
 matters more once tablets are a booking source (item 42).
 
-**45. Retest the trimmed prompt (main v157) before the SOP starts on 29 Sep.** *v157 is LIVE — pushed
+**45. Retest the trimmed prompt (main v157) before the SOP starts on 29 Sep. RESOLVED 2026-09-28** — retested by
+Howard's eval twin, 27–28 Sep (900+ real-Gemini conversations; see [`docs/eval/eval-report-2026-09-27.md`](docs/eval/eval-report-2026-09-27.md)); the
+prompt-trim checklist is scenarios TC-1..10, all passing on v165. The "Dhang" example leak it found is removed. *v157 is LIVE — pushed
 2026-09-26 ~07:05 UTC; first real turn (exec 12158) replied normally. The retest is still owed.*
 **`reapply-main-fixes --check` now reports "v152 on-behalf prompt guidance MISSING" — a false alarm.** The
 guidance is present (`booked_for`, "Booked by: <you> (for <them>)", not the client, never in the title), just
