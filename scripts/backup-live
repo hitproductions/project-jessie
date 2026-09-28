@@ -81,7 +81,7 @@ for w in data:
 # that has lost access to a project does not error - it returns a SHORTER list. So
 # a short list means "check the key", never "these were deleted".
 EXPECTED = {
- "uVVYVB2M7kxpLleI":"Project Jessie v2","EUG3sGXkfsJSYIMz":"Jessie — Book Session",
+ "uVVYVB2M7kxpLleI":"Project Jessie","EUG3sGXkfsJSYIMz":"Jessie — Book Session",
  "bAyDw7udhmY0NL38":"Jessie — Cancel Booking","t7lwR2km4tfN8DbM":"Jessie — Move Booking",
  "yzirq12O227VTFp8":"Jessie — Find Booking","e7tBQB458nstrqei":"Jessie — Room Availability",
  "K2tPBykMwKcQGMub":"Jessie — Prune Executions"}

@@ -20,7 +20,7 @@ problems = []
 
 # 1. every workflow id the docs/scripts name must resolve to an ACTIVE workflow
 expect = {
- "uVVYVB2M7kxpLleI":"Project Jessie v2","EUG3sGXkfsJSYIMz":"Jessie — Book Session",
+ "uVVYVB2M7kxpLleI":"Project Jessie","EUG3sGXkfsJSYIMz":"Jessie — Book Session",
  "bAyDw7udhmY0NL38":"Jessie — Cancel Booking","t7lwR2km4tfN8DbM":"Jessie — Move Booking",
  "yzirq12O227VTFp8":"Jessie — Find Booking","e7tBQB458nstrqei":"Jessie — Room Availability",
  "hkx9PXcgW9nrzY2a":"Jessie — Expand Series","UAwFoifgkfL1xNP2":"Jessie — Book Series",
@@ -51,6 +51,8 @@ for wid, name in expect.items():
     # Since 2026-09-28 a title carries the build: "Jessie — Book Session — v55 (v54 fixed)". Only the stable part
     # before " — v<n>" is checked, so a new build never makes this fail; a different workflow still does.
     stable = re.sub(r'\s+[—-]\s+v\d+\b.*$', '', w["name"] or '').strip()
+    # Main was "Project Jessie v2" until 2026-09-28; the "v2" was dropped because it read like a build number.
+    if stable == "Project Jessie v2": stable = "Project Jessie"
     tag = "ok" if (stable==name and w["active"]) else "CHECK"
     if tag=="CHECK": problems.append("%s: name=%r active=%s" % (wid, w["name"], w["active"]))
     print("  %-5s %s  %s%s" % (tag, wid, w["name"], "" if w["active"] else "  (INACTIVE)"))

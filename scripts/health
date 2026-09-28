@@ -47,7 +47,7 @@ if not rows:
     sys.exit(1)
 
 errors, slow, shown = [], [], 0
-print(f"last {len(rows)} executions of Project Jessie v2\n")
+print(f"last {len(rows)} executions of Project Jessie (main)\n")
 
 for e in rows:
     d = api(f"/api/v1/executions/{e['id']}?includeData=true")
