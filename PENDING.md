@@ -36,9 +36,9 @@ ones move to the bottom instead of being renumbered.
 | 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
 | 34 | A1: free rooms sometimes left out of an availability answer | **Re-verified 28 Sep:** eval a1 9/9 (v162), 9/9 (v163) — close after the v165 eval |
-| 26 | Can claim "I've asked the current holder" without doing it | Build |
+| 26 | Can claim "I've asked the current holder" without doing it | **Built 28 Sep** (main v166 Guard Probe: withdrawn unless Book Session / Move opened it that turn) |
 | 27 | Can open the same consent request twice | Build |
-| 28 | Booking over your own booking asks *you* for consent | Build |
+| 28 | Booking over your own booking asks *you* for consent | **Built 28 Sep** (Book Session v54, Move v22: SELF_BOOKING → "you already have it") |
 | 23 | After "room taken", re-offers the same failed slot | **Built 28 Sep:** ROOM_OCCUPIED lists the usual rooms actually free in that window (Book Session v53, live) |
 | 29 | Music sessions don't require an arranger | **Built 28 Sep** (Book Session v54): asked whenever a Music session's type lists an arranger; "no arranger" accepted (Howard) |
 | 30 | Celebrity sessions don't suggest a holding room | **Built 28 Sep:** prepared summary notes it from Room Requirements (goes live with main v165) |

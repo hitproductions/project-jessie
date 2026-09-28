@@ -322,6 +322,12 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['usual length','only a booking summary',
       'Booked. That was a long one: 9:00 AM – 6:00 PM, VO Recording.',{},x=>!/Heads up/.test(x.output)],
     // v162 (Howard, 2026-09-28)
+    ['v164','a claimed request to the holder with nothing behind it is withdrawn (PENDING 26)','Studio F is held by INCUMBENT. I\'ve asked the current holder to move and will confirm once they reply.',
+      {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK"}]'}]},x=>/I have not asked anyone yet/.test(x.output)&&/asked the holder: NOT FOUND/.test(x.claimProbe)],
+    ['v164','...but stands when Book Session really opened it','I\'ve asked the current holder to move and will confirm once they reply.',
+      {steps:[{action:{tool:'Book_Session'},observation:'[{"status":"PREEMPT_PENDING","request_id":"r1"}]'}]},x=>/I've asked the current holder/.test(x.output)],
+    ['v164','a promise ("I will ask them") is not a claim','Studio F is held. If you want it I will ask them to move.',
+      {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK"}]'}]},x=>/I will ask them to move/.test(x.output)],
     ['v164','no date named: the booking question also asks the day (QA E1)','What session type is this, who is the client, and who is engineering?',
       {requesterText:'Book Studio 7 from 2pm to 5pm'},x=>/And which day is it for\?$/.test(x.output)],
     ['v164','a question that already asks the day is left alone','Which day, and who is engineering?',{requesterText:'Book Studio 7 from 2pm to 5pm'},x=>!/And which day/.test(x.output)],
