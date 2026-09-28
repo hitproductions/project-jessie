@@ -311,8 +311,10 @@
         "which studios are open next thursday 10am to 1pm?"
       ],
       "expect": {
-        "a1": true
-      }
+        "a1": true,
+        "noCommon": true
+      },
+      "note": "decision (d): studios leave out conference rooms and the lobby"
     },
     {
       "id": "A1-3",
@@ -465,14 +467,14 @@
     {
       "id": "QA-B3",
       "class": "conversation",
-      "note": "QA B3: a second request while one awaits confirmation is new, not a yes",
+      "note": "QA B3: a second request while one awaits confirmation is new, not a yes (2nd room fixed to one that runs VO, 2026-09-28)",
       "turns": [
         "Book Studio 8 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim",
-        "Book Studio 3 next Monday 10am to 12pm, VO recording, project TIDE, client Sasa Abella, engineer Richard"
+        "Book Studio 7 next Monday 10am to 12pm, VO recording, project TIDE, client Sasa Abella, engineer Richard"
       ],
       "expect": {
         "room2": [
-          "Studio 3"
+          "Studio 7"
         ],
         "project2": "TIDE"
       }
@@ -578,27 +580,25 @@
     {
       "id": "QA-E3a",
       "class": "rooms",
-      "note": "QA E3: 'studio one'",
+      "note": "QA E3: 'studio one' is understood (was a VO booking in a room that does not run VO)",
       "turns": [
-        "Book studio one next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+        "Is studio one free next Friday at 2pm?"
       ],
       "expect": {
-        "room": [
-          "Studio 1"
-        ]
+        "roomStatusFor": "Studio 1",
+        "noSummaryExpected": true
       }
     },
     {
       "id": "QA-E3b",
       "class": "rooms",
-      "note": "QA E3: 'std 3'",
+      "note": "QA E3: 'std 3' is understood (was a VO booking in a room that does not run VO)",
       "turns": [
-        "Book std 3 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+        "Is std 3 free next Friday at 2pm?"
       ],
       "expect": {
-        "room": [
-          "Studio 3"
-        ]
+        "roomStatusFor": "Studio 3",
+        "noSummaryExpected": true
       }
     },
     {

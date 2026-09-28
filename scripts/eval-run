@@ -208,12 +208,18 @@ function score(sc, res) {
   if (E.refusesPast) add('refusesPast', !F.isSummary && /(past|passed|already happened|gone by)/i.test(reply) ? 'pass' : 'fail', reply.slice(0, 120).replace(/\n/g, ' '));
   if (E.notFound) add('notFound', !/^(cancell?ed)/i.test(String(R.claimProbe || '')) && /(could ?n.?t find|can.?t find|cannot find|no booking|not find|don.?t see|not seeing|no .*booking|nothing booked)/i.test(reply) ? 'pass' : 'fail', reply.slice(0, 120).replace(/\n/g, ' '));
   if (E.seriesWeekday) {
+    // The dates come from Expand Series' own answer when it ran (2026-09-28: the reply writes them as
+    // "October 5, 12, 19, 26", which the old reply parser read as none). The reply parse is the fallback.
+    const exp = obsOf('expand series').flatMap(x => [].concat(x.dates || x.occurrences || x.sessions || []))
+      .map(d => String((d && (d.date || d.start || d.start_iso)) || d).slice(0, 10)).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d));
     const ds = [...reply.matchAll(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})/g)].map(m => new Date(Date.UTC(+m[3], MONTHS.indexOf(m[1].toLowerCase()), +m[2])));
-    const days = [...new Set(ds.map(d => d.toISOString().slice(0, 10)))];
+    const days = exp.length ? [...new Set(exp)] : [...new Set(ds.map(d => d.toISOString().slice(0, 10)))];
     const wd = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'].indexOf(E.seriesWeekday.toLowerCase());
     const wrong = days.filter(d => new Date(d + 'T00:00:00Z').getUTCDay() !== wd);
     add('series', days.length >= (E.seriesMin || 4) && !wrong.length ? 'pass' : 'fail', days.length + ' dates' + (wrong.length ? ', not ' + E.seriesWeekday + ': ' + wrong.join(', ') : ''));
   }
+  // decision (d): "studios" leaves the conference rooms and the lobby out of a free list.
+  if (E.noCommon) { const hit = reply.match(/\b(Likha|Katha|Salin|Lobby)\b/); add('noCommon', hit ? 'fail' : 'pass', hit ? 'named ' + hit[0] : ''); }
   if (E.lookupOnly) {
     const titles = [...obsOf('find booking'), ...obsOf('list events')].flatMap(x => (x.bookings || x.events || (x.summary ? [x] : [])).map(b => b.title || b.summary)).filter(Boolean);
     const shown = [...reply.matchAll(/([A-Z0-9][A-Z0-9 &'-]{1,}\s\/\s[^\n*]+?)(?=\*|\n|$| on | from | at )/g)].map(m => m[1].trim());

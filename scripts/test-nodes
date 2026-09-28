@@ -192,6 +192,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['booker is not always you','a near-miss of the real one'],
     ['booked for','booked for a colleague: the summary says so'],
     ['usual length','an unusual length, said BEFORE the yes'],
+    ['v162','v162 \\(Howard, 2026-09-28\\)'],
   ];
   const t2=[
     // a date with no year — both older patterns need one
@@ -320,6 +321,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['usual length','only a booking summary',
       'Booked. That was a long one: 9:00 AM – 6:00 PM, VO Recording.',{},x=>!/Heads up/.test(x.output)],
     // v162 (Howard, 2026-09-28)
+    ['v162','"a last-resort or alternative room" is reworded','Studio 8 is normally a last-resort or alternative room for VO Recording.',{},x=>!/last.resort/i.test(x.output)],
     ['v162','a leaked tool instruction is removed','Free in that window: Studio 1, Studio 2. List exactly these and no others.',{},x=>!/List exactly/.test(x.output)&&/Studio 2\.$/.test(x.output)],
     ['v162','a note glued onto the Client line is removed','*ATLAS / Brightline Media / TL*\n*Client:* Brightline Media (not in client list yet and will be flagged for review)\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
       {},x=>/\*Client:\* Brightline Media\n/.test(x.output)&&!/flagged/.test(x.output)],

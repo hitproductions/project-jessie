@@ -28,7 +28,7 @@ ones move to the bottom instead of being renumbered.
 
 | # | What | Blocked on / owner |
 |---|---|---|
-| 51 | **Padded timestamp reads as "every room free"** (eval 27 Sep): Room Availability 40% of checks; same shape in Book Session and Move Booking | Fixed in every workflow (built 28 Sep, `test-dates` 17/17); import + live re-test |
+| 51 | **Padded timestamp reads as "every room free"** (eval 27 Sep): Room Availability 40% of checks; same shape in Book Session and Move Booking | Fixed in every workflow, **LIVE 28 Sep 03:33 UTC** (`test-dates` 17/17); live re-test by eval |
 | 52 | M2 and M6 have `Active / Bookable` unticked in Rooms & Studios, so Jessie never lists or offers them | Tel ticks both (Howard, 28 Sep) |
 | 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | Tel: delete every hidden Clients field; Claude re-checks the schema after |
 | 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest). Eval run 27 Sep, see `docs/eval/` |
@@ -42,7 +42,7 @@ ones move to the bottom instead of being renumbered.
 | 29 | Music sessions don't require an arranger | Build |
 | 30 | Celebrity sessions don't suggest a holding room | Build |
 | 44 | Tells the requester "Booked" even when the room declines seconds later (clash she can't see) | Build |
-| 35 | Timestamp junk-guard not yet in Move Booking / Expand Series | Built 28 Sep with 51 (Move v20, Expand v2) |
+| 35 | Timestamp junk-guard not yet in Move Booking / Expand Series | LIVE 28 Sep with 51 (Move v20, Expand v2) |
 | 37 | Never run live: priority request timing out; same-day / next-day M-booth windows | Test now / watch at launch |
 | 38, 16 | 2027 test events still on the calendar | Howard (manual) |
 

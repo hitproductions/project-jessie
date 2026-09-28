@@ -323,7 +323,8 @@ to add to Airtable: only Tel can write Airtable, and the service account behind 
 writes that spreadsheet. A lookup that errored, and a Localization Project Code in the client slot, are not
 logged. The sheet write can never fail a booking (`continueRegularOutput`).
 
-**The four eval decisions** (Howard, 2026-09-28; main v162 / Book v50 / Room Availability v9 / Book Series v3):
+**The four eval decisions** (Howard, 2026-09-28; main v162 / Book v50 / Room Availability v9 / Book Series v3,
+**LIVE 2026-09-28 03:33 UTC** with Move v20, Cancel v16, Find v4, Expand Series v2):
 - *(a) "for <name>" that is not staff is the client.* `Booked For` now also returns `forClient`: a capitalised
   name after "for" that is not in Bookers (any name or alias, the requester included), not a room, session type,
   department, date word or the project, when the requester did not name a client outright. The prompt is told
