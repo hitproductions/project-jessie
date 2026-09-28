@@ -167,7 +167,7 @@ These aren't bugs; they need a call on what Jessie *should* do.
 
 | # | Situation | What she does now | Question |
 |---|---|---|---|
-| a | "Book ... **for Jem Lim**", "a session **for Spotify**", "**for Jem Lim's** new ad": the client given with "for" | Asks "Who is the client?", **20 of 20** across four scenarios | Should "for <someone not on staff>" be read as the client? That was Howard's rule on 25 Sep. Today it's safe, but it adds a turn to a very common phrasing. Booked For already knows who *is* staff, so this can be decided in code. |
+| a | "Book ... **for Jem Lim**", "a session **for Spotify**", "**for Jem Lim's** new ad": the client given with "for" | Asks "Who is the client?", **20 of 20** across four scenarios | Should "for <someone not on staff>" be read as the client? That was the rule agreed on 25 Sep. Today it's safe, but it adds a turn to a very common phrasing. Booked For already knows who *is* staff, so this can be decided in code. |
 | b | A client that isn't in Airtable ("Acme Records") | 3 of 5 ask to check the name; 2 of 5 go ahead | Refuse, go ahead, or go ahead and flag "new client"? Right now it's a coin flip. |
 | c | 15-minute VO session | 3 of 5 show the summary with the heads-up; 2 of 5 ask first and say "minimum duration is 60 minutes" | Fine to ask? If so, the "minimum" wording should go, since Min/Max are what sessions usually run, not limits. |
 | d | "Which **studios** are open?" | 4 of 5 leave out Likha, Lobby and M booths | Correct reading of "studios", or should she always list everything? |
