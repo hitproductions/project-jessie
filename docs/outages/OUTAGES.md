@@ -348,6 +348,18 @@ Anything measured mid-outage needs its timestamp recorded and its scope stated. 
 same applies to *where a probe is sent from*: a request from the VM and a request from
 AWS are different experiments.
 
+## Data point: 28 September — one message 60 s late, recovered by Slack's retry
+
+Howard DM'd "hello" at **04:06:44 UTC** (Slack event ts 1790568404.56). No execution was created for Slack's first
+attempt; the execution started at **04:07:44.84, 60.3 s later** — the one-minute step of Slack's retry schedule. Every
+other message that hour, both directions, arrived in ~1 s (execs 13616-13619), and the conversation then ran normally.
+Checked at the time: n8n up, trigger registered (unsigned POST 401), the public URL answered 404 (n8n) — not 403 — from
+both a home connection and a datacenter IP, and Posty had received Slack events at 01:00 UTC. Nothing was changed; it
+recovered on its own. Earlier that morning the Jessie workflows had been imported (03:33 UTC) and the eval twin, which has
+no Slack trigger, was deactivated at ~04:05:08 — no known mechanism links either to a dropped delivery 1.5 minutes later.
+Same shape as 2 September's "61 s late: a Slack retry". Without an external monitor (PENDING 15) or Cloudflare's Security
+Events for that minute, whether the first attempt met a 403 at the edge cannot be told.
+
 ## What to do when it next drops
 
 Do these **while it is confirmed down**, and note the time.
