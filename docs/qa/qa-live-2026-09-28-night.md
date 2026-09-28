@@ -45,6 +45,7 @@ booking log keeps their BOOKED rows — the 7 deleted directly from the calendar
 11. Minor: Localization picked Studio 1 / booth Studio A itself without asking, then refused them as taken (M2); celebrity picked Studio 7 itself (M3).
 12. QA-N2: "Book ... 2pm to 4pm" then "actually make it 3pm instead" -> 3:00-4:00 PM "Assuming 1 hour" (exec 15819). The requested 2-hour length was dropped; a start change should keep the length (3-5 PM).
 13. Minor (same pattern as 11): QA-M7 no room given -> Jessie chose Studio 7 herself and put it in the summary without asking (exec 15832). Otherwise correct: Spotify as client, new-client note, one question per gap. Not confirmed (a yes writes a New Clients row for Tel).
+15. Minor: v171 'is studio 7 free next thursday at 2pm?' -> 'free ... from 2:00 PM to 4:00 PM' (exec 15881): an end time nobody gave; v168 said 'at 2:00 PM'.
 14. Minor: recurring-series summaries are model-written and omit Department and Booked by (C7). Prepared summaries for series are already on the after-launch list.
 
 ## Fixed tonight
@@ -52,7 +53,9 @@ booking log keeps their BOOKED rows — the 7 deleted directly from the calendar
 - **Bug 1 → main v170, live 22:49 PHT.** A verified yes to a prepared summary books in code (Book Direct), Gemini not called. Verified live twice (B3 1 and 2): "Booked." in ~14 s, calendar entry carries "Booked by … | ref:". `scripts/sim-book-direct.js` checks the direct path sends Book Session exactly what the tool would.
 - v169 (22:36–22:46) dropped the booker reference and was rolled back; see its commit.
 
+- **Bug 4 → main v171, live 23:16 PHT.** AI Agent upgraded 1.7 → 2.2 with *Enable Fallback Model*; a second model node **Gemini Fallback** (`models/gemini-2.5-flash`, same credential and retries) takes over when Flash Lite fails. Proven live: with the primary model name deliberately broken for one message (exec 15884), both primary calls failed and the fallback answered correctly with a tool call; v171 restored 27 s later. Normal turn on v171 (exec 15881): tools, memory, Guard Probe and intermediate steps all working, primary only.
+
 ## Worth deciding
 
-- **Bugs 4 + 5 (Gemini 503s):** a fallback model on the agent, or longer retries (5 × 5 s); and the cancel "yes" could go direct the way booking now does.
+- **Bug 5:** the cancel "yes" could go direct the way booking now does (the fallback model already makes a 503 there much less likely).
 - **Bugs 2, 3, 6, 12:** each is the model writing or choosing something code already knows. Same approach as the date guard and Book Direct.
