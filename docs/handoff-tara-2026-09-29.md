@@ -1,179 +1,72 @@
-# Handoff: Tara's session, 28 Sep 21:48 → 29 Sep 04:15 PHT
+# Handoff: Tara's session, 28 Sep 21:48 → 29 Sep 05:00 PHT
 
-*For Howard. What changed, what is live, what is waiting on you. The QA-night detail (scenarios, bug list, 3.8
-Flash comparison) is in [`qa/handoff-howard-2026-09-29.md`](qa/handoff-howard-2026-09-29.md). Build-by-build
-detail: [`../VERSIONS.md`](../VERSIONS.md). Everything below is committed; nothing is pushed yet.*
+*For Howard. Build detail: [`../VERSIONS.md`](../VERSIONS.md). QA-night detail: [`qa/handoff-howard-2026-09-29.md`](qa/handoff-howard-2026-09-29.md).*
 
 ## Live now
 
-| Workflow | Build | Since (PHT) |
-|---|---|---|
-| Project Jessie (main) | **v177** | 29 Sep 04:08 |
-| Book Session | **v58** | 29 Sep 04:08 |
-| Cancel Booking | **v18** | 29 Sep 04:08 |
-| Expand Series | **v4** | 29 Sep 04:08 |
-| Room Availability | **v11** | 29 Sep 03:25 |
-| Find Booking | **v6** | 29 Sep 03:25 |
-| Move Booking | **v24** | 29 Sep 03:25 |
-| Refresh Reference Cache | **v2** (your v1, tidied) | 29 Sep 02:54 |
-| Book Series, consent workflows | unchanged | |
+| Workflow | Build |
+|---|---|
+| Project Jessie (main) | **v180** |
+| Book Session | **v58** |
+| Cancel Booking | **v18** |
+| Room Availability · Find · Move | **v11 · v6 · v24** |
+| Expand Series | **v4** |
+| Refresh Reference Cache | **v2** (your v1, tidied) |
+| Book Series, consent workflows | unchanged |
 
-Last live check, 04:08: book → yes → cancel → yes, every node green, test booking removed.
+## The big one: Prepare Booking's "yes" was never really tested
 
-## The big one: Prepare Booking's "yes" had not really been tested
+Prepare Booking (v166, live 28 Sep 16:28) was tested up to the summary only: the eval twin never says yes, and the
+one live booking happened to work. In QA, **2 of 4 yeses failed**: the model re-prepared instead of booking (once
+nothing was booked, once it booked but replied with a fresh summary). **Fixed in v170:** a verified yes books in code.
+**For QA and the SOP: always go through to the booking.** Tonight's live QA did, for book, cancel, move and series.
 
-Prepare Booking went live on 28 Sep at 16:28 PHT (main v166). What was tested before that was everything up to the
-summary, not what happens when the requester says yes:
-- **The eval twin never says yes.** By design it stops at the summary, so none of its 245 conversations reached a
-  booking.
-- **The one live booking** (v168, before QA) happened to work.
+## What changed
 
-Tonight's QA said yes and followed each booking to the calendar, and the first tries failed. On **2 of 4 yeses** the
-model called Prepare Booking again instead of Book Session:
-- **M1:** nothing was booked.
-- **M4:** it booked, but the reply was a fresh "Confirm to book." summary, as if it hadn't.
+1. **"Yes" skips the AI for book and cancel.** Book Direct (v170). Cancel: code writes the cancel card with a check
+   code; a yes cancels exactly that booking or refuses (v177 / Cancel v18). Fixes QA bugs 5, 6, 8.
+2. **Fallback model** (v171/v172): 3.8 Flash answers when Flash Lite returns Google's 503 (17 of 90 turns).
+3. **Reference cache** (v173–v175): rooms, session types, staff and Get Booker from the data table. Staff changes
+   take up to 15 min (Tara's call).
+4. **Booking correctness** (ChatGPT review, checked in code): untitled or partial titles no longer match for
+   cancel/move; all-day events are Manila midnight; a calendar read with a second page is refused, never "free";
+   move keeps unflagged room attendees.
+5. **Shorter replies:** "Book it? / Cancel it? / Move it? Reply yes or no." (old form still confirms); shorter notes,
+   greetings, questions, series summary and error message.
+6. **QA bugs 16–18** (v178–v180): "Friday next week" and "every Tuesday" read correctly; a repeated yes gets
+   "That's already booked"; a series yes now books first time (the model is told the series is approved).
 
-**Fixed in v170 (Book Direct):** a verified yes books in code, with no model call. The first attempt, v169, dropped
-the booker reference from the event (so it couldn't be cancelled); it was live for 10 minutes before the rollback.
-Tonight's live checks confirm the fix.
+## Tested tonight (live, 2027 test bookings, all deleted)
 
-**The lesson for QA and the SOP testing: go through to the booking, not just to the summary.** The same gap exists
-for **moves**: still model-written, and not tested with a real yes tonight. (A series was: 5 Tuesdays in November
-booked correctly.)
+Passed: book → yes (no AI) · cancel card → yes (no AI) · cancel someone else's booking → refused · Taglish request ·
+conditional yes not booked · repeated yes · move an owned booking · series with a taken date (4 booked, 1 reported
+skipped) · series yes after v180.
 
-## What changed, and why
-
-**1. A "yes" no longer needs the AI (book and cancel).**
-- Book (v170): a yes to a prepared summary books in code (see above).
-- Cancel (v177 / Cancel v18): code writes the cancel card (with a check code over the event); a yes cancels
-  exactly that booking, unchanged, or refuses. Fixes QA bugs 5, 6, 8.
-- Live: book yes 9.6 s, cancel yes 7.5 s, **0 model calls**.
-
-**2. Google overload no longer breaks turns (v171 / v172).** Gemini 503 "high demand" hit 17 of 90 turns. The agent
-now has a fallback model (3.8 Flash) that takes over when Flash Lite fails.
-
-**3. Reference data is cached (v173–v175).** Rooms, session types, staff and Get Booker come from the
-`Jessie Reference Cache` data table (refreshed every 5 min, or on the spot if older than 15 min). About 3 s → 0.3 s
-before the AI on every message. Your refresh workflow was writing blank rows because Build Cache passed 58 items
-through; fixed in your 18:39 import, tidied in v2. Staff/authority changes now take up to 15 min (Tara's call).
-
-**4. Booking correctness (ChatGPT review, verified in the code first).**
-- Cancel/move no longer match an untitled event, and act only on one exact title or a verified id.
-- All-day events are Manila midnight (a 6–7 AM booking used to slip past an all-day hold).
-- A calendar read with a second page is refused, never read as "free" (not paged: busiest real day 16 events).
-- Move keeps a room attendee even without the `resource` flag.
-
-**5. Shorter replies.** One-line confirmation "Book it? / Cancel it? / Move it? Reply yes or no." (the old two lines
-still confirm); shorter notes ("Assumed 1 hour (usual for VO Recording)."); one-line greetings; questions without
-narration; series summary without an intro; "Something went wrong - please try again."
-
-Every change: offline suites (test-nodes 462, gate 37, plus a new sim per change), then pulled back to confirm what
-n8n stored.
+**Speed** (medians, same kinds of turns as the 28 Sep QA): all turns **16.4 s → 9.0 s**; booking request → summary
+18.5 → 9.0 s; yes to a cancel 17.8 → 7.5 s; a 5-date series 40 → 36 s (Book Session per date, untouched).
 
 ## Waiting on you
 
-1. **Consent rebuild** — built and tested (`sim-consent.js` 52/52), not imported. Needs, first:
-   - three columns on the Consent Requests tab: **Decision**, **Decision At**, **Placement Event Id**;
-   - the standing holds that still block their booth set to **"Show as available"**: M1 - Rico, M4 - Tel,
-     M4 - Japs, M8 - ANA.
-   Then rebuild on the live main (`scripts/build-consent-fix.py` works from fresh pulls). Details in the QA handoff.
-   **Also in this pass — Read Pending Consent speed.** main reads the whole Consent Requests sheet on every message
-   (~1.1 s, measured tonight, the biggest pre-AI cost left) to see whether the sender owes a consent answer. Fix: the
-   cache refresh also stores who has a PENDING request; main reads the sheet only when the sender is on that list,
-   and falls back to reading it when the list is unavailable. Open Consent Request must refresh the cache right after
-   writing a request and **before** DMing the holder, or a quick "yes" is missed. Small remaining window: two
-   refreshes overlapping could write an older list — say how you close it. Test it with the consent live test.
-2. **Recurring bookings** — ChatGPT's review, below. Not yet checked against the code. Its earlier reviews were
-   mostly right (one pagination claim was not worth the change), so verify each point before building.
-3. **Push** everything to GitHub once you have pulled and looked.
+1. **Consent rebuild**, built and tested offline, not imported. Needs first:
+   - columns **Decision**, **Decision At**, **Placement Event Id** on the Consent Requests tab;
+   - standing holds that block their booth set to **"Show as available"**: M1 - Rico, M4 - Tel, M4 - Japs, M8 - ANA.
 
-## Decided tonight (Tara)
+   Then rebuild on the live main with `scripts/build-consent-fix.py`. In the same pass: **Read Pending Consent**
+   costs ~1.1 s on every message. Keep the pending approvers in the cache; Open Consent Request must refresh it
+   after writing a request and before DMing the holder.
+2. **Recurring bookings review**: [`review-recurring-bookings.md`](review-recurring-bookings.md). Not yet checked
+   against the code. The real gap: series summaries are still AI-written (a code-written summary with a check code
+   would make the series yes deterministic, like Prepare Booking).
 
-- Keep Flash Lite as the main model, 3.8 Flash as the fallback.
-- Get Booker from the cache (15-minute delay on staff changes is fine).
-- Consent: the simpler design — never delete a hold.
-- Not now: splitting the prompt / per-task tools (the AI path already averages 1–2 calls a turn), trimming the booking
-  summary's lines, "what's free today" listing style.
-- Later: availability answers inventing an end time (bug 15).
+## Decided (Tara)
 
-## Live QA, 29 Sep ~04:30 PHT (on the live builds)
+Flash Lite main, 3.8 Flash fallback · Get Booker cached · consent: never delete a hold · not now: prompt split,
+trimming the booking summary, "what's free" wording · later: invented availability end time (bug 15).
 
-All test events deleted afterwards; the calendar was checked after every write.
+## Open bugs
 
-| Test | Result |
-|---|---|
-| Cancel someone else's booking (seeded event, foreign booker) | ✅ refused at the card, nothing offered |
-| Taglish booking ("pa-book … sa Friday next week … si Tara ang engineer") | ✅ right date, engineer and room |
-| Conditional yes ("yes pero gawin mong 3pm to 5pm") | ✅ not booked |
-| Yes → Book Direct | ✅ booked, 0 AI calls, exactly one event |
-| A second "yes" after "Booked." | ⚠️ no double booking, but a confusing reply (bug 17) |
-| Move an owned booking (first real-yes move since Prepare Booking) | ✅ moved, room kept, original removed |
-| Series with one date taken | ⚠️ first yes did nothing (bug 18); second yes booked 4 and reported the skipped date correctly |
-
-Speed against the 28 Sep QA round (same kinds of turns, whole-turn times, medians): all turns **16.4 s → 9.0 s**
-(76 vs 13 turns); booking request → summary 18.5 → 9.0 s; other AI replies 14.4 → 6.8 s; yes to a booking
-14.0 → 9.4 s; yes to a cancel 17.8 → 7.5 s (Cancel Direct); a 5-date series 40.4 → 36.1 s (Book Session per date,
-untouched). Tonight's sample is small; the overall median is the solid number.
-
-New bugs:
-- **18 (major): a series "yes" can re-send the summary instead of booking.** The gate saw the yes; the AI called
-  Expand Series again. Same failure Book Direct fixed for single bookings. Fix direction: a code-written series
-  summary with a check code and a direct path (the recurring-bookings review, point 2). Intermittent: the 28 Sep
-  series yes booked first time.
-- **16: "Friday next week" is read by the date guard as this Friday** → a needless "October 1 or October 8?"
-  question. Same family: "every Tuesday in November" set the date under discussion to this Tuesday (5 Oct), which
-  likely confused the model in bug 18.
-- **17 (minor): a repeated "yes" after "Booked."** gets "Studio 8 is taken … by QATESTTG" (their own booking) and
-  alternatives. Should say "Already booked."
-- Bug 9 again (Booking Type line on one summary only). Move summary doesn't show the old time.
-
-## Still open from QA
-
-Bugs 2, 3, 9, 10, 11/13, 12, 14, 15 — see the QA handoff. 5, 6, 8 are fixed by Prepare Cancel.
-
----
-
-## Appendix: recurring bookings review (from ChatGPT, for Howard)
-
-> Next, improve Jessie's recurring-booking workflows. Use the latest files and preserve the previous caching, booking,
-> consent, confirmation, background-job, and AI optimizations. Focus on Expand Series, Book Series, and their
-> connections to Project Jessie and Book Session.
->
-> 1. **Fix recurrence validation.** Reject nonexistent dates instead of silently normalizing them (February 30 must
->    not become March 2). Validate hours 00–23 and minutes 00–59. Require a positive integer count when using count.
->    Require exactly one end condition: count or until_date, preserving the caller's existing "unused count"
->    convention, such as 0. Reject invalid weekday codes rather than silently dropping them. Preserve the existing
->    16-occurrence limit and one-year maximum. Handle overnight sessions explicitly according to existing booking
->    policy; never silently reinterpret reversed times.
-> 2. **Keep preview and execution consistent.** Use one shared recurrence implementation, or verify both copies with
->    identical tests. The exact dates, times, rooms, and booking details confirmed by the requester must be the ones
->    executed. Do not regenerate a different series from new AI arguments after confirmation. Apply the existing
->    structured confirmation mechanism to series where needed.
-> 3. **Resolve shared details once.** Resolve staff, client, session type, and room reference information once per
->    series and pass it to each occurrence. Use the existing cache and staff_data mechanism where appropriate. Inspect
->    Book Session's actual inputs and update mappings so the information reaches it. Preserve live authorization and
->    fresh conflict checks for each calendar mutation.
-> 4. **Make partial completion and retries reliable.** Assign a stable series action ID and occurrence IDs. Persist
->    each occurrence's outcome and created event ID. On retry, reconcile uncertain outcomes and resume unfinished
->    occurrences without recreating successful ones. Preserve the existing behavior of retaining successful bookings
->    when other dates fail or conflict. Do not introduce automatic rollback of the entire series.
-> 5. **Report every occurrence accurately.** Correlate results by occurrence ID rather than array position alone.
->    Distinguish created, conflict/skipped, pending consent, rejected, failed, and uncertain outcomes. Never say the
->    whole series was booked unless every occurrence succeeded. A failure after some successful writes must still
->    leave a recoverable record of those successes.
-> 6. **Optimize without introducing booking races.** Reuse shared lookups first. Do not blindly parallelize calendar
->    writes. Any concurrency must respect resource overlap, existing locking, API limits, and retry behavior. Use the
->    background-job mechanism for reporting and secondary notifications.
-> 7. **Test.** Cover leap years, invalid dates/times, fractional counts, both/neither end conditions, weekday
->    selection, overnight policy, Manila all-day boundaries, occurrence limits, partial conflicts, mid-series API
->    failure, duplicate requests, and retry after partial completion. Measure external lookup counts and execution
->    time where possible.
->
-> Return corrected importable JSONs, tests and results, any required state-schema changes, and a short summary of the
-> improvement.
-
-Notes for checking it:
-- The **series summary is still model-written** (the "after launch" item in CLAUDE.md). Point 2 is really "Prepare
-  Series": code writes the series summary with a check code, like Prepare Booking and Prepare Cancel.
-- "Background-job mechanism" and "existing locking" do not exist in Jessie — nothing like that was built tonight.
-- Tonight's series test (Nov 2027, 5 Tuesdays) booked correctly; its summary lacked Booked by (bug 14).
+- **19 (new):** the series summary labelled December Tuesdays "(Mon)". Guard Probe fixes weekdays only on dates
+  written with a year. The booking itself was right.
+- 2 wrong rooms offered as vocal booths · 3 tool instruction leaked into a reply · 9 Booking Type line comes and
+  goes · 10 "this week" doesn't state its dates · 11/13 room picked without asking · 12 "make it 3pm instead" drops
+  the length · 14 series summary lacks Booked by · 15 invented availability end time · move summary lacks the old time.
