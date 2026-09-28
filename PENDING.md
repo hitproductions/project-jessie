@@ -7,7 +7,7 @@ known behaviour gaps, and pre-launch work. Each item says how it was found and w
 **Item numbers are permanent**; other docs cite "PENDING 15". New items get the next number, and resolved
 ones move to the bottom instead of being renumbered.
 
-**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-28 (50 clients optional / new-clients sheet; 51 padded timestamps).
+**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-28 evening (Prepare Booking; 43 applied; 23/30/41 built; 34/45 retested by the evals).
 
 ---
 
@@ -22,7 +22,7 @@ ones move to the bottom instead of being renumbered.
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
 | 22 | Automatic backup off since 16 Sep; manual backups only (last 2026-09-25) | Follows 21 |
 | 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | Mirror live-tested; tablet-release delete check, then publish |
-| 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | Apply: pull + `./scripts/fix-studio-e` + put (needs the n8n key; step 1 of 42) |
+| 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | **Applied 28 Sep 07:20 UTC** in Book Session v53, Room Availability v10, Move v21, Find v5 (main's disabled node goes with v165). IT still to confirm the old id is retired |
 
 ### 🟠 Soon: before the SOP is final (by 5 Oct); behaviour real users will hit
 
@@ -32,16 +32,16 @@ ones move to the bottom instead of being renumbered.
 | 53 | Clients table data: 7 duplicate names, 3 names with stray spaces, 3 non-client rows | Airtable (Tel) |
 | 52 | M2 and M6 had `Active / Bookable` unticked, so Jessie never listed or offered them | **Done 28 Sep:** Tel ticked both; live room list 25 → 27 at 03:35 UTC |
 | 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | **Done 28 Sep:** Tel deleted the hidden fields; Clients = Name, Importance, Notes, Booker Type, Client Type; live lookups confirmed |
-| 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest). Eval run 27 Sep, see `docs/eval/` |
+| 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep | **Retested by the evals (27–28 Sep, 700+ conversations)**; Tara's checklist is now scenarios TC-1..10 — close after the v165 eval |
 | 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
-| 34 | A1: free rooms sometimes left out of an availability answer; never re-verified | Re-test, then build |
+| 34 | A1: free rooms sometimes left out of an availability answer | **Re-verified 28 Sep:** eval a1 9/9 (v162), 9/9 (v163) — close after the v165 eval |
 | 26 | Can claim "I've asked the current holder" without doing it | Build |
 | 27 | Can open the same consent request twice | Build |
 | 28 | Booking over your own booking asks *you* for consent | Build |
-| 23 | After "room taken", re-offers the same failed slot | Build |
+| 23 | After "room taken", re-offers the same failed slot | **Built 28 Sep:** ROOM_OCCUPIED lists the usual rooms actually free in that window (Book Session v53, live) |
 | 29 | Music sessions don't require an arranger | Build |
-| 30 | Celebrity sessions don't suggest a holding room | Build |
+| 30 | Celebrity sessions don't suggest a holding room | **Built 28 Sep:** prepared summary notes it from Room Requirements (goes live with main v165) |
 | 44 | Tells the requester "Booked" even when the room declines seconds later (clash she can't see) | Build |
 | 35 | Timestamp junk-guard not yet in Move Booking / Expand Series | LIVE 28 Sep with 51 (Move v20, Expand v2) |
 | 37 | Never run live: priority request timing out; same-day / next-day M-booth windows | Test now / watch at launch |
@@ -57,7 +57,7 @@ ones move to the bottom instead of being renumbered.
 | 11 | Explore an n8n update | Server |
 | 13, 18, 39 | Speed: first Code node ~3.5s, first outbound call ~4s, new staff-list reads ~1s | Server / later |
 | 40 | Leftover snapshot files from renames in `workflows/live/` | Howard's OK to delete |
-| 41 | `Booked For` notice quotes three words instead of the name | Build (tiny) |
+| 41 | `Booked For` notice quotes three words instead of the name | **Built 28 Sep** (main v165) |
 
 **Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31, 32. **Item 14** is a permanent
 known constraint, not a task.

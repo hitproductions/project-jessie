@@ -477,7 +477,7 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
   let r=run(h[0],h);
   check('bfd','QA B2: "for Japs" is found at the yes turn',r.bookedFor==='Japs Concepcion',JSON.stringify(r));
   check('bfd','and the model is told not to ask who Japs is',/do not ask who they are/.test(r.notice)&&/\(for Japs Concepcion\)/.test(r.notice));
-  { const q=run(U(2,'Book Studio F for Japs next Thursday 1-4pm'),[]); if(/words\.slice\(0, k\)/.test(code)) check('bfd','the notice quotes only the matched words (PENDING 41)',q.matched==='for Japs',q.matched); }
+  { const q=run(U(2,'Book Studio F for Japs next Thursday 1-4pm'),[]); if(/PENDING 41/.test(code)) check('bfd','the notice quotes only the matched words (PENDING 41)',q.matched==='for Japs',q.matched); }
   r=run(U(2,'Book Studio F for Jem Lim next Thursday 1-4pm'),[]);
   check('bfd','a client (not in Bookers) is not a booked-for',r.bookedFor==='');
   r=run(U(2,'Book Studio 7 for John Smith tomorrow 2-4pm'),[]);
