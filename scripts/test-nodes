@@ -443,6 +443,15 @@ suite('Check Conflicts — booked-for is never the client', ()=>{
   const forJ='Engineer: Daryl Reyes (Music Engineer) | Booked by: Camy Caridad (for Japs Concepcion) | ref: U1';
   check('bf','canonical for-name, nickname in the client slot -> MISSING_CLIENT',run2({description:forJ,bookingType:'External',client:'Japs',summary:'SUSHI / Japs / DR'})==='MISSING_CLIENT');
   check('bf','canonical for-name, real client -> CLEAR',run2({description:forJ,bookingType:'External',client:'Pael',summary:'SUSHI / Pael / DR'})==='CLEAR');
+  // v54: an in-house arranger booked-for AND client on record (their own project) is allowed
+  if(body.indexOf('_bfIsClient')>=0){
+    const run3=(REQ,clientRows)=>{ const STAFF=[{Name:'Brian Cua',Info:'Music Arranger, Goes by Brian, BC.'}];
+      const $=name=>({all:()=>name==='All Bookers'?STAFF.map(f=>({json:{fields:f}})):name==='Get Client'?(clientRows||[]).map(j=>({json:j})):[]});
+      const r=new Function('REQ','$',body+'\nreturn null;')(REQ,$); return r?r[0].json.reason:'CLEAR'; };
+    const forB='Engineer: Daryl Reyes (Music Engineer) | Booked by: Camy Caridad (for Brian Cua) | ref: U1';
+    check('bf','an arranger booked-for who is also a client on record may be the client (v54)',run3({description:forB,bookingType:'External',client:'Brian Cua',summary:'ECHO / Brian Cua / DR x BC'},[{id:'rb',fields:{Name:'Brian Cua'}}])==='CLEAR');
+    check('bf','...but not someone with no client record',run3({description:forB,bookingType:'External',client:'Brian Cua',summary:'ECHO / Brian Cua / DR x BC'},[])==='MISSING_CLIENT');
+  }
   check('bf','on-behalf but Personal (not external) -> CLEAR, guard skipped',run({description:forK,bookingType:'Personal',client:'',summary:'X / Kristine Trocino / TL'})==='CLEAR');
 });
 

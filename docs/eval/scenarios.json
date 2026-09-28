@@ -932,6 +932,36 @@
         "engineer": "Daryl Reyes",
         "project": "ECHO"
       }
+    },
+    {
+      "id": "ARR-1",
+      "class": "arranger",
+      "note": "in-house arranger booked for their own project: booked-for AND client (v54/v166)",
+      "turns": [
+        "Book Studio F for Brian next Friday 1pm to 4pm, band recording, project ECHO, engineer Daryl, arranger Brian, it's his own project"
+      ],
+      "expect": {
+        "client": [
+          "Brian Cua"
+        ],
+        "bookedFor": "Brian Cua",
+        "project": "ECHO"
+      }
+    },
+    {
+      "id": "ARR-2",
+      "class": "arranger",
+      "note": "in-house arranger booked-for on someone else's project: the client is the producer",
+      "turns": [
+        "Book Studio F for Brian next Friday 1pm to 4pm, band recording, project ECHO, client Pael, engineer Daryl, arranger Brian"
+      ],
+      "expect": {
+        "client": [
+          "Pael Laurena",
+          "Pael"
+        ],
+        "bookedFor": "Brian Cua"
+      }
     }
   ]
 }
