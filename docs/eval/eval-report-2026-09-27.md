@@ -47,7 +47,7 @@ A booking needs a summary followed by an explicit "yes". The script refuses to s
 
 ### Where the results live
 
-On Howard's Mac, in the project folder, not in Google Sheets:
+On the dev laptop, in the project folder, not in Google Sheets:
 
 - `eval/results/run-<date-time>.md`: the pass/fail report
 - `eval/results/run-<date-time>.json`: every reply, for digging into a specific case
@@ -174,7 +174,7 @@ These aren't bugs; they need a call on what Jessie *should* do.
 
 | e | Celebrity recording, no room named | 2 of 5 go straight to the priority room; 3 of 5 ask "Music or Audio Post?" first | Is that question needed, or can the session type settle it? |
 
-**Decided 28 Sep (Howard with Tara), built as main v162:**
+**Decided 28 Sep, built as main v162:**
 - **(a)** "for <name>" that is not on staff (Bookers) is the client, decided in code (Booked For), not by the model.
 - **(b)** A client not in Airtable is accepted and added to the New Clients sheet, but only a name the requester actually typed: Book Session refuses one Gemini made up (`CLIENT_UNVERIFIED`).
 - **(c)** No question about unusual lengths, but always the heads-up line.

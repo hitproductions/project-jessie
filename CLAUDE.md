@@ -349,7 +349,7 @@ to add to Airtable: only Tel can write Airtable, and the service account behind 
 writes that spreadsheet. A lookup that errored, and a Localization Project Code in the client slot, are not
 logged. The sheet write can never fail a booking (`continueRegularOutput`).
 
-**The four eval decisions** (Howard, 2026-09-28; main v162 / Book v50 / Room Availability v9 / Book Series v3,
+**The four eval decisions** (2026-09-28; main v162 / Book v50 / Room Availability v9 / Book Series v3,
 **LIVE 2026-09-28 03:33 UTC** with Move v20, Cancel v16, Find v4, Expand Series v2):
 - *(a) "for <name>" that is not staff is the client.* `Booked For` now also returns `forClient`: a capitalised
   name after "for" that is not in Bookers (any name or alias, the requester included), not a room, session type,
@@ -381,7 +381,7 @@ summary's booker line. It never throws (on error it answers "no one"). QA B2, 20
 for Japs" had been booked as plain `Booked by: Camy Caridad`.
 
 **Unusual lengths are flagged before the yes** (main v155). Min/Max Duration in Session Types is what a
-session *usually* runs, not a limit (Tara, 2026-08-30: "it could go on for 8 hours"), so nothing blocks
+session *usually* runs, not a limit (raised in QA, 2026-08-30: "it could go on for 8 hours"), so nothing blocks
 on it. Book Session adds a note to the "Booked." reply (`durationNote`), and Guard Probe now also puts one
 plain line above the confirmation, computed from the summary's *Time:* and *Session Type:* against Room
 Table's reference data: *"Heads up: 9 hours is longer than VO Recording sessions usually run (1–3 hours).
@@ -450,7 +450,7 @@ Known contradictions in Rooms & Studios, and which field Jessie trusts:
   Airtable view does not hide it from Jessie**: the API returns every field, which is how a hidden preference and
   Jem Lim's hidden Technical Requirements kept reaching replies. Book Session v50 no longer writes "Tech
   requirements" into event descriptions; main v162's prompt no longer mentions any of these fields.
-- **Client room preferences are not used** (dropped 2026-09-28, Tara/Howard). Rooms come from the session-type
+- **Client room preferences are not used** (dropped 2026-09-28). Rooms come from the session-type
   ranking only. The Clients table's `Preferred Rooms` / `Preferred Room Name` / `Preferred Room Names` fields
   (the last is a *link*, so it returned record ids) are being removed by Tel; nothing in the workflows reads
   them, and the Clients tool returns whatever fields exist, so removing them cannot break a lookup.
