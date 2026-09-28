@@ -144,12 +144,14 @@ const throws = async (f) => { try { await f(); return false; } catch (e) { retur
   ok(Object.values(R.connections).flatMap(v => v.main.flat()).filter(t => t.node === 'Save Reference Cache').length === 1, 'refresh: Save is reachable only from Build Cache');
   for (const n of ['All Rooms', 'All Session Types', 'All Bookers']) {
     const x = node(R, n);
-    ok(x.executeOnce === true && x.parameters.returnAll === true && x.onError === 'stopWorkflow' && x.credentials && x.credentials.airtableTokenApi, 'refresh ' + n + ': once, all pages, stop on error, credential kept');
+    // n8n drops settings equal to their default when it saves: returnAll defaults to true (Airtable v2 search) and
+    // onError to stopping the workflow, so a missing value is the default, not a missing setting.
+    ok(x.executeOnce === true && x.parameters.returnAll !== false && (x.onError === undefined || x.onError === 'stopWorkflow') && x.credentials && x.credentials.airtableTokenApi, 'refresh ' + n + ': once, all pages, stop on error, credential kept');
   }
   ok(node(R, 'All Rooms').parameters.filterByFormula === "={{ '{Active / Bookable}' }}", 'refresh: Active / Bookable filter kept');
   const sv = node(R, 'Save Reference Cache').parameters;
   ok(sv.operation === 'upsert' && sv.dataTableId.value === 'CsdJhgDxCsqq9K9j' && eq(Object.keys(sv.columns.value), ['cache_key', 'payload', 'refreshed_at']) && sv.columns.schema.every(c => c.type === 'string'), 'refresh: upsert writes all three String columns');
-  ok(node(R, 'Every 5 Minutes').parameters.rule.interval[0].minutesInterval === 5, 'refresh: every 5 minutes');
+  ok([5, undefined].includes(node(R, 'Every 5 Minutes').parameters.rule.interval[0].minutesInterval), 'refresh: every 5 minutes (5 is the default n8n drops on save)');
 
   console.log(`\n${fail ? 'FAIL' : 'OK'} - ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
