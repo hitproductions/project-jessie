@@ -1,0 +1,425 @@
+{
+  "updatedAt": "2026-09-28T18:49:46.851Z",
+  "createdAt": "2026-09-23T00:02:25.335Z",
+  "id": "QHHDevaWhMk8gSBX",
+  "name": "Jessie — Consent Sweep — v2",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "sweep-cron",
+      "name": "Every Minute"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "431550013",
+          "cachedResultName": "Consent Requests"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        220,
+        0
+      ],
+      "id": "sweep-read",
+      "name": "Read Pending Rows",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Consent Sweep (v2, review 29 Sep): picks the ONE oldest consent request that needs work - a recorded decision\n// (APPROVED / REJECTED / INCUMBENT_MOVED), a deadline that has passed, or a run left half-way (Stage) - and hands it\n// to Finalize, which re-reads the row and decides. One row per minute keeps each run far shorter than the gap\n// between runs, so two finalizations do not overlap. MBOOTH timeout still books; PREEMPT timeout still just expires.\nconst now = Date.now(), U = s => String(s || '').toUpperCase().trim();\nconst due = $input.all().map(i => (i && i.json) || {}).filter(r => {\n  if (!r['Request ID'] || U(r['Status']) !== 'PENDING') return false;\n  const st = U(r['Stage']);\n  if (st === 'RESTORE_FAILED') return false;\n  if (st || U(r['Decision'])) return true;\n  const dl = Date.parse(r['Deadline'] || ''); return isFinite(dl) && now >= dl;\n}).sort((a, b) => String(a['Request ID']).localeCompare(String(b['Request ID'])));\nreturn due.length ? [{ json: { request_id: due[0]['Request ID'] } }] : [];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "sweep-decide",
+      "name": "Sweep Decide"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "TO1UnZTZ2LhtE9J3",
+          "mode": "id",
+          "cachedResultName": "Finalize Consent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "request_id": "={{ $json.request_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {},
+        "mode": "each"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        -100
+      ],
+      "id": "sweep-book",
+      "name": "Process Row",
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Every Minute": {
+      "main": [
+        [
+          {
+            "node": "Read Pending Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Pending Rows": {
+      "main": [
+        [
+          {
+            "node": "Sweep Decide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sweep Decide": {
+      "main": [
+        [
+          {
+            "node": "Process Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Every 10 min": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "75be5c6f-b57a-485d-b477-6fa96d124be6",
+  "activeVersionId": "75be5c6f-b57a-485d-b477-6fa96d124be6",
+  "versionCounter": 1,
+  "triggerCount": 1,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-09-23T00:02:25.346Z",
+      "createdAt": "2026-09-23T00:02:25.346Z",
+      "role": "workflow:owner",
+      "workflowId": "QHHDevaWhMk8gSBX",
+      "projectId": "518sXYqvqTl1cuns",
+      "project": {
+        "updatedAt": "2026-07-30T08:01:27.418Z",
+        "createdAt": "2026-06-16T08:07:47.559Z",
+        "id": "518sXYqvqTl1cuns",
+        "name": "Howard Luistro <howard@hitproductions.net>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "146478c9-471a-4651-8e62-0216984196e9"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-09-23T00:02:25.350Z",
+    "createdAt": "2026-09-23T00:02:25.350Z",
+    "versionId": "75be5c6f-b57a-485d-b477-6fa96d124be6",
+    "workflowId": "QHHDevaWhMk8gSBX",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes",
+                "minutesInterval": 10
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          0,
+          0
+        ],
+        "id": "sweep-cron",
+        "name": "Every 10 min"
+      },
+      {
+        "parameters": {
+          "authentication": "serviceAccount",
+          "operation": "read",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "list",
+            "value": "431550013",
+            "cachedResultName": "Consent Requests"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          220,
+          0
+        ],
+        "id": "sweep-read",
+        "name": "Read Pending Rows",
+        "alwaysOutputData": true,
+        "credentials": {
+          "googleApi": {
+            "id": "DU75rLW4KHlVhcK1",
+            "name": "Google Sheets - Jessie Log"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Sweep: for each PENDING consent row past its deadline, MBOOTH -> book (via Finalize, timeout=book),\n// PREEMPT/other -> EXPIRE (mark row; never auto-move). sweepAction mirrors mbooth/logic.js (tested).\nfunction sweepAction(row, nowISO){ const status=String((row&&row.Status)||'').toUpperCase(); if(status!=='PENDING') return 'skip'; const now=new Date(nowISO).getTime(); const dl=(row&&row.Deadline)?new Date(row.Deadline).getTime():NaN; if(!Number.isFinite(dl)) return 'skip'; if(now<dl) return 'wait'; const kind=String((row&&row.Kind)||'').toUpperCase(); return (kind==='MBOOTH')?'book':'expire'; }\nconst now=new Date().toISOString(); const out=[];\nfor(const it of $input.all()){ const r=(it&&it.json)||{}; if(!r['Request ID']) continue; const a=sweepAction(r, now);\n  if(a==='book'){ out.push({ json: { _sweepAction:'book', _row:r } }); }\n  else if(a==='expire'){ out.push({ json: { 'Request ID':r['Request ID'], 'Status':'EXPIRED', 'Resolved Via':'sweep-expired', 'Decided At':now, _sweepAction:'expire' } }); }\n}\nreturn out;\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          440,
+          0
+        ],
+        "id": "sweep-decide",
+        "name": "Sweep Decide"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "sb",
+                "leftValue": "={{ $json._sweepAction }}",
+                "operator": {
+                  "name": "filter.operator.equals",
+                  "operation": "equals",
+                  "type": "string"
+                },
+                "rightValue": "book"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          660,
+          0
+        ],
+        "id": "sweep-route",
+        "name": "Sweep Route?"
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "value": "TO1UnZTZ2LhtE9J3",
+            "mode": "id",
+            "cachedResultName": "Finalize Consent"
+          },
+          "workflowInputs": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "row": "={{ JSON.stringify($json._row) }}",
+              "resolvedVia": "sweep-timeout",
+              "attestedBy": ""
+            },
+            "matchingColumns": [],
+            "schema": [],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          900,
+          -100
+        ],
+        "id": "sweep-book",
+        "name": "Sweep Book"
+      },
+      {
+        "parameters": {
+          "authentication": "serviceAccount",
+          "operation": "update",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "list",
+            "value": "431550013",
+            "cachedResultName": "Consent Requests"
+          },
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "matchingColumns": [
+              "Request ID"
+            ],
+            "value": {},
+            "schema": []
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          900,
+          100
+        ],
+        "id": "sweep-expire",
+        "name": "Mark Expired",
+        "credentials": {
+          "googleApi": {
+            "id": "DU75rLW4KHlVhcK1",
+            "name": "Google Sheets - Jessie Log"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Every 10 min": {
+        "main": [
+          [
+            {
+              "node": "Read Pending Rows",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Pending Rows": {
+        "main": [
+          [
+            {
+              "node": "Sweep Decide",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sweep Decide": {
+        "main": [
+          [
+            {
+              "node": "Sweep Route?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sweep Route?": {
+        "main": [
+          [
+            {
+              "node": "Sweep Book",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Mark Expired",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Howard Luistro",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-23T00:39:04.535Z",
+        "id": 1044,
+        "workflowId": "QHHDevaWhMk8gSBX",
+        "versionId": "75be5c6f-b57a-485d-b477-6fa96d124be6",
+        "event": "activated",
+        "userId": "146478c9-471a-4651-8e62-0216984196e9"
+      }
+    ]
+  }
+}
