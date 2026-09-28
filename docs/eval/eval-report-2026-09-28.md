@@ -32,6 +32,10 @@ Internal: it contains staff and client names.* Everything below is **live** as o
 | 17:52 | main v167, Book Session v55 | Names and details from the requester's words; complete free-room lists; one combined client question; "10am-12nn"; "last Monday" |
 | 18:25 | main v168 | After a "no", the refused summary is no longer re-sent |
 
+In n8n the builds live now carry their label in the title and the version name, e.g. **Project Jessie — v168 (v167
+fixed)**, **Jessie — Book Session — v55 (v54 fixed)**, **Jessie — Move Booking — v22 (v21 fixed)**. Labelling started
+with these; earlier builds keep their number only. The full list is in [`VERSIONS.md`](../../VERSIONS.md).
+
 ## How we tested
 
 The same method as 27 Sep: the **eval twin**, a copy of live Jessie with only the Slack parts swapped. Every
