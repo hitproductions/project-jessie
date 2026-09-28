@@ -28,7 +28,7 @@ ones move to the bottom instead of being renumbered.
 
 | # | What | Blocked on / owner |
 |---|---|---|
-| 51 | **Padded timestamp reads as "every room free"** (eval 27 Sep): Room Availability 40% of checks; same shape in Book Session and Move Booking | Fixed in every workflow, **LIVE 28 Sep 03:33 UTC** (`test-dates` 17/17); live re-test by eval |
+| 51 | **Padded timestamp reads as "every room free"** (eval 27 Sep): Room Availability 40% of checks; same shape in Book Session and Move Booking | **Fixed and verified live 28 Sep**: eval after import, 64 of 140 checks padded, all 64 returned the real busy rooms, 0 "all free" (was 61/61) |
 | 52 | M2 and M6 had `Active / Bookable` unticked, so Jessie never listed or offered them | **Done 28 Sep:** Tel ticked both; live room list 25 → 27 at 03:35 UTC |
 | 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | **Done 28 Sep:** Tel deleted the hidden fields; Clients = Name, Importance, Notes, Booker Type, Client Type; live lookups confirmed |
 | 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest). Eval run 27 Sep, see `docs/eval/` |
@@ -497,7 +497,9 @@ Studio F 7 times in 10. *Book Session*'s `Get Events In Window` has the same sha
 queries now → now+24 h and `Check Conflicts` compares against the wrong day; `Create Event` then gets the raw
 value (fails, or books over a session — unverified). 0 of 14 live write calls were padded. *Move Booking*'s `Get
 New Window` follows the pattern (see also 35). **Fix:** clean every model-supplied timestamp before the query, and
-fail closed on a calendar error ("couldn't check" / refuse). Small, no speed cost; awaiting the go-ahead.
+fail closed on a calendar error ("couldn't check" / refuse). Small, no speed cost; **Done 2026-09-28:** fixed in Room Availability v9, Book Session v50, Move v20, Cancel v16, Find v4, Expand
+Series v2, Book Series v3 and main's List Events (`./scripts/test-dates`); live eval after the 03:33 UTC import: 64 of 140
+availability checks had padded times and all 64 returned the real busy rooms — none said every room was free.
 
 **52. M2 and M6 are not marked bookable.** Found 2026-09-28 from the eval (QA A2: "List all rooms" twice named
 M2 and M6, which the scorer took as invented). Both rows exist in Rooms & Studios (Room Type `M Booth`), but their
