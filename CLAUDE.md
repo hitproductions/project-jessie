@@ -36,7 +36,7 @@ else, unprompted:
 3. Check what is live and what it actually did:
 
    ```
-   ./scripts/test-nodes --live     # 124 checks + 27 gate scenarios, what is stored
+   ./scripts/test-nodes --live     # 300+ checks + 28 gate scenarios, what is stored
    ./scripts/health                # per-node status and timing, what actually ran
    ./scripts/verify-ids            # workflow + bot ids still point where they should
    ```
@@ -160,7 +160,7 @@ knowledge accumulates.
 - **Run `./scripts/test-nodes` before shipping anything.** It runs every Code node that
   decides something — `Guard Probe`, `Check Conflicts`, `Check Ownership`, `Shape Results`,
   `Resolve Booking` — against a table of scenarios offline, then delegates to
-  `./scripts/test-gate` for `Gate Context`. 124 checks, plus 27 gate scenarios. `--live` tests what is actually
+  `./scripts/test-gate` for `Gate Context`. 300+ checks on live (450+ on a new candidate), plus 28 gate scenarios. `--live` tests what is actually
   deployed; five explicit paths (main, book, cancel, find, move) test a candidate before
   importing it. Every one of those nodes shipped a bug this weekend that was caught by
   reading output by hand.
@@ -189,7 +189,7 @@ Slack DM → n8n → agent (Gemini 3.5 Flash Lite, temp 0.2) → Airtable + Goog
 
 | Workflow | id | What it is |
 |---|---|---|
-| `Project Jessie v2` | `uVVYVB2M7kxpLleI` | main, 40 nodes including 7 lane notes |
+| `Project Jessie v2` | `uVVYVB2M7kxpLleI` | main, 54 nodes including the lane notes |
 | `Jessie — Book Session` | `EUG3sGXkfsJSYIMz` | the only way a booking is created |
 | `Jessie — Cancel Booking` | `bAyDw7udhmY0NL38` | the only way one is deleted |
 | `Jessie — Move Booking` | `t7lwR2km4tfN8DbM` | the only way one is rescheduled |
@@ -227,7 +227,7 @@ only script that writes to n8n.
 |---|---|
 | `./scripts/n8n list` · `pull <id> <file>` · `execs` · `exec <id>` | read workflows and executions from n8n |
 | `./scripts/n8n-write put <id> <file>` · `activate <id>` · `deactivate <id>` | **writes to n8n** — schema-clean import, and the Active toggle for a tool-schema reload |
-| `./scripts/test-nodes` · `--live` | 124 offline checks + 27 gate scenarios, on a candidate file or on what is deployed |
+| `./scripts/test-nodes` · `--live` | 300+ offline checks + 28 gate scenarios, on a candidate file or on what is deployed |
 | `./scripts/test-gate` | the confirmation gate and date resolver on their own |
 | `./scripts/test-consent` · `<file>` · `--live` | the consent engine's `Build Request`: M-booth deadline tiers, the PREEMPT window, and recipient routing (test-nodes does not load the consent workflows) |
 | `./scripts/test-mirror` · `<file>` | the Envoy Mirror's `Plan Changes` offline: create/update/delete, and that a failed room or KDC read never deletes or duplicates (not yet imported, PENDING 42) |
@@ -280,6 +280,32 @@ says on every turn which happened. On 2026-08-30 she answered an approved bookin
 `Book Session` at all — copied from an almost identical exchange two turns earlier. Nothing
 was created and the requester was told it had been. Every other guard stops a wrong booking
 being *made*; only this one stops one being *claimed*.
+
+## Prepare Booking — code writes the summary the requester approves (main v166, LIVE 2026-09-28)
+
+The model gathers details and calls **Prepare Booking** (Book Session in `mode: prepare`). It runs every guard,
+then its `Render Summary` node writes the summary in one fixed format — calendar title first, the details, a
+`_check xxxxxxxx_` code (a hash of the booking fields) and the confirmation marker — and Guard Probe sends
+exactly that text. At the yes, main's `Prepared Booking` node reads Jessie's newest message back, verifies the
+code, and Book Session books **those** details whatever the model passes (`use` → the tool inputs come from `p`).
+A yes to a summary Prepare Booking did not write is refused (`NOT_PREPARED`). Guard Probe skips every rewrite of a
+prepared summary's booking lines, because any change would break the code. Before it: five date formats, the
+title in 16% of summaries, one live booking titled differently from the summary approved. Still model-written:
+recurring series and moves (after launch). Prepare mode also asks what the model used to guess: no date named
+(`MISSING_DATE`), department (`NEED_DEPARTMENT`), External/Personal (`NEED_BOOKING_TYPE`), the arranger
+(`NEED_ARRANGER`), a near-miss client ("Did you mean …?", `CLIENT_CHECK` / `CLIENT_AMBIGUOUS`).
+
+## Details come from the requester's words, not the model's (main v167 / Book Session v55)
+
+Every detail the model passes into a booking is a place it can invent or misspell something. `Booked For` reads
+the requester's own messages for the current booking (newest first) for the **engineer, arranger, project,
+client and time range**, resolving people against Bookers (name, first name, "Goes by" alias, initials in
+capitals). The Prepare Booking / Book Session / Book Series inputs use those whenever the model's value holds a
+word nobody typed — Jessie's own offers count once answered, except a name she quoted to refuse. A name that is
+unknown or shared is passed exactly as typed, so Book Session asks about what the requester wrote. A shift ("an
+hour later") or a start time alone leaves the model's times alone. Book Session v55 fills in the full name, role
+(from Info, for the department) and initials. **This makes Bookers `Info` load-bearing: a nickname people use
+that is not listed there is refused** (PENDING 53). The prompt and tool inputs ask for names exactly as typed.
 
 ## What is enforced, and where
 
@@ -569,9 +595,28 @@ the task runner), for whoever has shell access to the box.
     already failed closed), Expand Series v2 / Book Series v3 (clean dates and HH:MM), and main's `List Events`
     tool. `./scripts/test-dates` checks all of it offline.
 
+19. **Asking the model for something it does not have makes it invent it.** The tool inputs and the prompt asked
+    for an engineer's "full name and role, e.g. Tara Lim (Post Engineer)" and for initials; given "Drey", a made-up
+    surname was the only way to comply ("Daryl Javier", "Andrian \"Drey\" Sison", "Andre Cabuay"). Changing the
+    wording to "exactly as the requester gave it" took the eval twin from 0/2 to 27/27. Before blaming the model,
+    read every `$fromAI` description and prompt format line for a demand the requester's message cannot satisfy,
+    and let code fill it from Airtable. (Also: hiding a field in an Airtable view does not hide it from the API —
+    see *Reference data*.)
+
+20. **The eval twin only swaps main.** `eval-run --main <file>` tests a candidate main against the *live*
+    sub-workflows, so a Book Session change cannot be eval-tested until it is imported; a main change that needs
+    it will look half-fixed. Import the two together, then run a short live eval. And a `test-nodes` group whose
+    marker is not in the build is skipped silently — register new groups in `GROUPS`, and check the new cases
+    actually ran (the count goes up), not just that nothing failed.
+
+21. **A new tool input has to go in up to three tool nodes** (Prepare Booking, Book Session, Book Series), and check
+    whether Book Series must pass it on to its per-date Book Session call. Missing one fails quietly: that path
+    simply behaves the old way.
+
 ## Not done
 
-- Titles are composed by the model; a wrong project title becomes a wrong calendar title.
+- Titles are still composed by the model, but since v167 the project and client segments are put back to what the
+  requester typed when the model's hold a word nobody typed, and the initials come from Bookers.
 - She sometimes presents a summary without checking availability that turn. `Guard Probe`
   now refuses the summary when *this turn's* check contradicts it — the check errored, or
   named that room busy — but when no check ran at all the offer still stands until

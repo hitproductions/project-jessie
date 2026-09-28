@@ -7,7 +7,7 @@ known behaviour gaps, and pre-launch work. Each item says how it was found and w
 **Item numbers are permanent**; other docs cite "PENDING 15". New items get the next number, and resolved
 ones move to the bottom instead of being renumbered.
 
-**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-28 evening (Prepare Booking; 43 applied; 23/30/41 built; 34/45 retested by the evals).
+**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-28 evening (Prepare Booking LIVE 08:28 UTC; 26/28/29/30/41 live; 54 built in main v167 / Book Session v55).
 
 ---
 
@@ -29,19 +29,20 @@ ones move to the bottom instead of being renumbered.
 | # | What | Blocked on / owner |
 |---|---|---|
 | 51 | **Padded timestamp reads as "every room free"** (eval 27 Sep): Room Availability 40% of checks; same shape in Book Session and Move Booking | **Fixed and verified live 28 Sep**: eval after import, 64 of 140 checks padded, all 64 returned the real busy rooms, 0 "all free" (was 61/61) |
-| 53 | Clients table data: 7 duplicate names, 3 names with stray spaces, 3 non-client rows | Airtable (Tel) |
+| 53 | Clients table data: 7 duplicate names, 3 names with stray spaces, 3 non-client rows. Bookers (28 Sep, Howard asked Tel): Via Aceron's Info to list Loc Engineer; BP Valenzuela's Initials trailing space; Eddie Boy Vargas retiring - remove from Bookers when he leaves; any nicknames people use for engineers added to Info (v167 reads names from the requester's words against Info) | Airtable (Tel) |
 | 52 | M2 and M6 had `Active / Bookable` unticked, so Jessie never listed or offered them | **Done 28 Sep:** Tel ticked both; live room list 25 → 27 at 03:35 UTC |
 | 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | **Done 28 Sep:** Tel deleted the hidden fields; Clients = Name, Importance, Notes, Booker Type, Client Type; live lookups confirmed |
-| 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep | **Retested by the evals (27–28 Sep, 700+ conversations)**; Tara's checklist is now scenarios TC-1..10 — close after the v165 eval |
+| 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep | **Retested — close.** Evals 27–28 Sep (900+ conversations); Tara's checklist is scenarios TC-1..10, all passing on v165 |
 | 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
+| 54 | **Gemini invents staff names and corrupts copied details.** v165 eval: "Andrian \"Drey\" Sison", "Daryl Aquino" for "Drey"/"Daryl" (refused, a wasted turn, and the refusal leaked its instructions); earlier "REASON1" → "REazon1", "Tara Inf". Cause: four places asked the model for a full name, role and initials it did not have | **Built 28 Sep** (main v167 + Book Session v55, NOT imported): the prompt asks for names as typed (27/27 in the eval twin, was 0/2); engineer, arranger, project, client and times are read from the requester's own words and win over the model's; v55 fills name, role and initials from Bookers |
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
-| 34 | A1: free rooms sometimes left out of an availability answer | **Re-verified 28 Sep:** eval a1 9/9 (v162), 9/9 (v163) — close after the v165 eval |
-| 26 | Can claim "I've asked the current holder" without doing it | **Built 28 Sep** (main v166 Guard Probe: withdrawn unless Book Session / Move opened it that turn) |
+| 34 | A1: free rooms sometimes left out of an availability answer | v165 eval: "which studios" dropped the M booths 3/3. **Built 28 Sep** (main v167 Guard Probe adds any free room the reply left out); eval twin 2/2 |
+| 26 | Can claim "I've asked the current holder" without doing it | **LIVE 28 Sep 08:28 UTC** (main v166 Guard Probe: withdrawn unless Book Session / Move opened it that turn) |
 | 27 | Can open the same consent request twice | Build |
-| 28 | Booking over your own booking asks *you* for consent | **Built 28 Sep** (Book Session v54, Move v22: SELF_BOOKING → "you already have it") |
+| 28 | Booking over your own booking asks *you* for consent | **LIVE 28 Sep 08:28 UTC** (Book Session v54, Move v22: SELF_BOOKING → "you already have it") |
 | 23 | After "room taken", re-offers the same failed slot | **Built 28 Sep:** ROOM_OCCUPIED lists the usual rooms actually free in that window (Book Session v53, live) |
-| 29 | Music sessions don't require an arranger | **Built 28 Sep** (Book Session v54): asked whenever a Music session's type lists an arranger; "no arranger" accepted (Howard) |
-| 30 | Celebrity sessions don't suggest a holding room | **Built 28 Sep:** prepared summary notes it from Room Requirements (goes live with main v165) |
+| 29 | Music sessions don't require an arranger | **LIVE 28 Sep 08:28 UTC** (Book Session v54): asked whenever a Music session's type lists an arranger; "no arranger" accepted (Howard) |
+| 30 | Celebrity sessions don't suggest a holding room | **LIVE 28 Sep 08:28 UTC:** prepared summary notes it from Room Requirements |
 | 44 | Tells the requester "Booked" even when the room declines seconds later (clash she can't see) | Build |
 | 35 | Timestamp junk-guard not yet in Move Booking / Expand Series | LIVE 28 Sep with 51 (Move v20, Expand v2) |
 | 37 | Never run live: priority request timing out; same-day / next-day M-booth windows | Test now / watch at launch |
@@ -57,7 +58,7 @@ ones move to the bottom instead of being renumbered.
 | 11 | Explore an n8n update | Server |
 | 13, 18, 39 | Speed: first Code node ~3.5s, first outbound call ~4s, new staff-list reads ~1s | Server / later |
 | 40 | Leftover snapshot files from renames in `workflows/live/` | Howard's OK to delete |
-| 41 | `Booked For` notice quotes three words instead of the name | **Built 28 Sep** (main v165) |
+| 41 | `Booked For` notice quotes three words instead of the name | **LIVE 28 Sep 08:28 UTC** (main v166) |
 
 **Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31, 32. **Item 14** is a permanent
 known constraint, not a task.
