@@ -536,6 +536,9 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
   check('bfc','"which studios" scopes the free list to studios',r.roomScope==='studios');
   r=run(U(2,'What rooms are free next Friday from 2pm to 5pm?'),[]);
   check('bfc','"what rooms" keeps every room',r.roomScope==='all');
+  h=[U(9,'new client'),J(8,'Did you mean Jem Lim, or is Jem Limm a new client?'),U(7,'Book Studio 7 tomorrow 2-4pm VO, project X, client Jem Limm')];
+  r=run(h[0],h);
+  check('bfc','botText holds Jessie\'s messages in this booking (v165)',r.botText===undefined||/Did you mean Jem Lim/.test(r.botText),JSON.stringify(r.botText));
 });
 
 // ── Engineers and arrangers must be real people in Bookers ────────────────────
@@ -654,7 +657,7 @@ suite('Check Conflicts — department, booking type, Localization title (v52)', 
   const run=(REQ,clientRows)=>{ const $=n=>({all:()=>n==='Get Client'?(clientRows||[]).map(j=>({json:j})):[]});
     const r=new Function('REQ','$',whole.slice(k,m)+'\nreturn {REQ};')(REQ,$); return Array.isArray(r)?{reason:r[0].json.reason,human:r[0].json.human}:r; };
   const T=JSON.stringify({types:[{type:'VO Recording',typical:60,roles:['Post Engineer']},{type:'Celebrity Recording',roles:['Music Engineer','Post Engineer','Music Arranger']},{type:'Localization Dubbing',roles:['Loc Engineer']}]});
-  const base={mode:'prepare',expected_date:'2027-10-08',rooms:'Studio 7',start_iso:'2027-10-08T14:00:00+08:00',end_iso:'2027-10-08T16:00:00+08:00',reference_data:T};
+  const base={mode:'prepare',expected_date:'2027-10-08',rooms:'Studio 7',start_iso:'2027-10-08T14:00:00+08:00',end_iso:'2027-10-08T16:00:00+08:00',reference_data:T,requester_text:'client work'};
   let r=run(Object.assign({},base,{session_type:'VO Recording'}));
   check('d52','department comes from the session type',r.REQ&&r.REQ.department==='Audio Post',JSON.stringify(r.REQ&&r.REQ.department));
   r=run(Object.assign({},base,{session_type:'Celebrity Recording'}));
@@ -662,13 +665,42 @@ suite('Check Conflicts — department, booking type, Localization title (v52)', 
   check('d52','a department they gave is kept',run(Object.assign({},base,{session_type:'Celebrity Recording',department:'Music'})).REQ.department==='Music');
   r=run(Object.assign({},base,{session_type:'VO Recording',client:'Jem Lim'}),[{id:'r1',fields:{Name:'Jem Lim','Client Type':['External']}}]);
   check('d52','booking type comes from a single-type client record',r.REQ&&r.REQ.bookingType==='External');
-  r=run(Object.assign({},base,{session_type:'VO Recording',client:'Sharon Ambas'}),[{id:'r2',fields:{Name:'Sharon Ambas','Client Type':['External','Personal']}}]);
+  r=run(Object.assign({},base,{session_type:'VO Recording',client:'Sharon Ambas',requester_text:''}),[{id:'r2',fields:{Name:'Sharon Ambas','Client Type':['External','Personal']}}]);
   check('d52','a client tagged both asks External or Personal',r.reason==='NEED_BOOKING_TYPE');
   check('d52','a booking type they gave is kept',run(Object.assign({},base,{session_type:'VO Recording',client:'Sharon Ambas',bookingType:'Personal'}),[{id:'r2',fields:{Name:'Sharon Ambas','Client Type':['External','Personal']}}]).REQ.bookingType==='Personal');
-  check('d52','a new client leaves the booking type to them',!run(Object.assign({},base,{session_type:'VO Recording',client:'Brightline Media'}),[{}]).reason);
+  if(whole.indexOf('CLIENT_CHECK')>=0) check('d52','a new client: booking type from their own words ("client work")',run(Object.assign({},base,{session_type:'VO Recording',client:'Brightline Media'}),[{}]).REQ.bookingType==='External');
+  else check('d52','a new client leaves the booking type to them (v52)',!run(Object.assign({},base,{session_type:'VO Recording',client:'Brightline Media'}),[{}]).reason);
   r=run(Object.assign({},base,{session_type:'Localization Dubbing',client:'Nimbus Streaming',summary:'NET-KUBA / Nimbus Streaming / FP'}));
   check('d52','a Localization title drops the client segment (eval NC-5)',r.REQ&&r.REQ.summary==='NET-KUBA / FP'&&r.REQ.client==='Nimbus Streaming',JSON.stringify(r.REQ&&r.REQ.summary));
   check('d52','outside prepare mode nothing is worked out',!run(Object.assign({},base,{mode:'',session_type:'VO Recording'})).REQ.department);
+  // v53: who the client is, then External or Personal
+  if(whole.indexOf('CLIENT_CHECK')>=0){
+    const i3=whole.indexOf('// v53 (Howard, 2026-09-28) - who the client is');
+    const run3=(REQ,rows,all)=>{ const $=n=>({all:()=>{ if(n==='Get Client') return (rows||[]).map(j=>({json:j})); if(n==='All Client Names'){ if(!all) throw new Error('not executed'); return all.map(x=>({json:{fields:{Name:x}}})); } return []; }});
+      const r=new Function('REQ','$','const __prep = String(REQ.mode||"").trim().toLowerCase()==="prepare";\n'+whole.slice(i3,m)+'\nreturn {REQ};')(REQ,$); return Array.isArray(r)?r[0].json:r; };
+    const P={mode:'prepare',session_type:'VO Recording'};
+    const ALL=['Jem Lim','Pael Laurena','Sasa Abella','Jen Cortez','Jen Domondon','Jenny Abad Santos','Brian Cua','Mavic Martin'];
+    let r=run3(Object.assign({},P,{client:'Pael',summary:'ORBIT / Pael / TL'}),[{id:'r1',fields:{Name:'Pael Laurena','Client Type':['External']}}]);
+    check('d53','a short form of one client becomes the full name, in the title too',r.REQ&&r.REQ.client==='Pael Laurena'&&r.REQ.summary==='ORBIT / Pael Laurena / TL'&&r.REQ.bookingType==='External',JSON.stringify(r.REQ||r));
+    r=run3(Object.assign({},P,{client:'Jen'}),[{id:'a',fields:{Name:'Jen Cortez'}},{id:'b',fields:{Name:'Jen Domondon'}},{id:'c',fields:{Name:'Jenny Abad Santos'}}]);
+    check('d53','several matches: a numbered list',r.reason==='CLIENT_AMBIGUOUS'&&/1\. Jen Cortez  2\. Jen Domondon  3\. Jenny Abad Santos/.test(r.human),r.human);
+    r=run3(Object.assign({},P,{client:'Jem Limm'}),[],ALL);
+    check('d53','a typo of an existing client: "Did you mean Jem Lim?"',r.reason==='CLIENT_CHECK'&&/Did you mean Jem Lim, or is Jem Limm a new client\?/.test(r.human),r.human);
+    check('d53','a typo in the first name too',run3(Object.assign({},P,{client:'Sasha Abella'}),[],ALL).reason==='CLIENT_CHECK');
+    r=run3(Object.assign({},P,{client:'Jem Limm',asked_text:'Did you mean Jem Lim, or is Jem Limm a new client?',requester_text:'new client, external'}),[],ALL);
+    check('d53','asked once: after "new client" it goes ahead as typed',!r.reason&&r.REQ.client==='Jem Limm'&&r.REQ.bookingType==='External',JSON.stringify(r));
+    check('d53','a genuinely new name is not second-guessed',!run3(Object.assign({},P,{client:'Brightline Media',requester_text:'external'}),[],ALL).reason);
+    check('d53','nor a new name that only shares a first name',!run3(Object.assign({},P,{client:'Jen Park',requester_text:'external'}),[],ALL).reason);
+    check('d53','exact duplicates (two identical records) are one client',!run3(Object.assign({},P,{client:'Ino Magno'}),[{id:'x',fields:{Name:'Ino Magno','Client Type':['External']}},{id:'y',fields:{Name:'Ino Magno','Client Type':['External']}}]).reason);
+    check('d53','a new client with no type said: ask External or Personal once',run3(Object.assign({},P,{client:'Brightline Media'}),[],ALL).reason==='NEED_BOOKING_TYPE');
+    check('d53','no client and no type said: ask too',run3(Object.assign({},P,{client:''}),[],ALL).reason==='NEED_BOOKING_TYPE');
+    check('d53','"my own project" means Personal',run3(Object.assign({},P,{client:'',requester_text:'this is my own project'}),[],ALL).REQ.bookingType==='Personal');
+    check('d53','a type they gave is kept',run3(Object.assign({},P,{client:'Brightline Media',bookingType:'External'}),[],ALL).REQ.bookingType==='External');
+    check('d53','both types on the record: ask',run3(Object.assign({},P,{client:'Sharon Ambas'}),[{id:'s',fields:{Name:'Sharon Ambas','Client Type':['External','Personal']}}]).reason==='NEED_BOOKING_TYPE');
+    check('d53','Localization is External, and its project code is not checked as a client',run3({mode:'prepare',session_type:'Localization Dubbing',client:'NET-KUBA',summary:'NET-KUBA / FP'},[]).REQ.bookingType==='External');
+    check('d53','internal rooms skip it all',!run3({mode:'prepare',session_type:'',client:''},[]).reason);
+    check('d53','outside prepare mode nothing changes',!run3({mode:'',session_type:'VO Recording',client:'Jem Limm'},[],ALL).reason);
+  }
 });
 
 // ── v50: a new client must be one the requester typed; notes never ride on the client ──
@@ -679,7 +711,7 @@ suite('Check Conflicts — client cleanup and unverified new clients (v50)', ()=
   const k=whole.indexOf('// --- a new client must be one the requester actually typed');
   const l=whole.indexOf('// Rooms and session types are passed in by Room Table');
   if(i<0||k<0){ check('cv','Check Conflicts has the v50 client blocks',false); return; }
-  const clean=new Function('REQ',whole.slice(i,j)+'\nreturn REQ;');
+  const clean=new Function('REQ','const __prep = false;\n'+whole.slice(i,j)+'\nreturn REQ;');
   let R=clean({client:'Brightline Media (not in client list yet and will be flagged for review)',summary:'ATLAS / TL',session_type:'VO Recording'});
   check('cv','a note glued onto the client is removed',R.client==='Brightline Media',R.client);
   check('cv','and the client goes back into a two-segment title',R.summary==='ATLAS / Brightline Media / TL',R.summary);

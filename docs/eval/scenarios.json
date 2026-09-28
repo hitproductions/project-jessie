@@ -139,7 +139,7 @@
       "class": "client",
       "note": "a new client: keep as given, invent nothing",
       "turns": [
-        "Book Studio 8 next Friday 3pm to 5pm, VO recording, project ATLAS, client Acme Records, engineer Tara Lim"
+        "Book Studio 8 next Friday 3pm to 5pm, VO recording, project ATLAS, client Acme Records, engineer Tara Lim, client work"
       ],
       "expect": {
         "client": [
@@ -633,7 +633,7 @@
       "class": "noClient",
       "note": "v161: no client, said up front - books with PROJECT / initials",
       "turns": [
-        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORANGE, engineer Tara Lim, no client"
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORANGE, engineer Tara Lim, no client, it's client work"
       ],
       "expect": {
         "noClient": true,
@@ -661,7 +661,7 @@
       "note": "v161: asked for a client, answers there is none",
       "turns": [
         "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORANGE, engineer Tara Lim",
-        "there is no client for this one"
+        "there is no client for this one, it's client work"
       ],
       "expect": {
         "noClient": true,
@@ -674,7 +674,7 @@
       "class": "newClient",
       "note": "v161: advertising client not in Airtable - proceeds, notes it is new",
       "turns": [
-        "Book Studio 8 next Friday 3pm to 5pm, VO recording, project ATLAS, client Brightline Media, engineer Tara Lim"
+        "Book Studio 8 next Friday 3pm to 5pm, VO recording, project ATLAS, client Brightline Media, engineer Tara Lim, client work"
       ],
       "expect": {
         "client": [
@@ -837,6 +837,74 @@
       ],
       "expect": {
         "mustAsk": true
+      }
+    },
+    {
+      "id": "NC-6",
+      "class": "newClient",
+      "note": "v53: new client, no booking type said - ask External or Personal once",
+      "turns": [
+        "Book Studio 8 next Friday 3pm to 5pm, VO recording, project ATLAS, client Zeta Test Media, engineer Tara Lim"
+      ],
+      "expect": {
+        "mentions": [
+          "(external|personal)"
+        ],
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "NC-7",
+      "class": "newClient",
+      "note": "v53: a typo of an existing client - Did you mean?",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Limm, engineer Tara Lim"
+      ],
+      "expect": {
+        "mentions": [
+          "Jem Lim\\b",
+          "(did you mean|new client)"
+        ],
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "NC-8",
+      "class": "newClient",
+      "note": "v53: after 'it is a new client' the typed name goes through",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Limm, engineer Tara Lim",
+        "it's a new client, not Jem Lim - client work"
+      ],
+      "expect": {
+        "client": [
+          "Jem Limm"
+        ]
+      }
+    },
+    {
+      "id": "NC-9",
+      "class": "newClient",
+      "note": "v53: a short form of one client becomes the full name",
+      "turns": [
+        "Book Studio 7 next Friday 11am to 1pm, VO recording, project NOVA, client Pael, engineer Tara Lim"
+      ],
+      "expect": {
+        "client": [
+          "Pael Laurena"
+        ],
+        "project": "NOVA"
+      }
+    },
+    {
+      "id": "DATE-6",
+      "class": "date",
+      "note": "Tara: 'next week' dates",
+      "turns": [
+        "Book Studio 7 on Wednesday next week 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim"
+      ],
+      "expect": {
+        "date": "Wednesday next week"
       }
     }
   ]
