@@ -22,6 +22,7 @@ Started 2026-09-28. Earlier builds are in `git log`.
 
 | Version | Live | Fixes (found in) | Adds |
 |---|---|---|---|
+| Book Session v56 · Room Availability v11 · Find v6 · Cancel v17 · Move v24 | *candidate* | Untitled or partial titles matched for cancel/move; all-day events read as 08:00 Manila; a second calendar page read as free; unflagged room attendees dropped on move (review 29 Sep, all in the builds before) | `scripts/sim-booking-review.js` |
 | v175 | 2026-09-29 03:07 | Get Booker was a live Airtable read on every message, 1–4 s (v174 and earlier) | Get Booker served from the reference cache (sender matched on Slack User ID); cache block moved in front of it. Staff/authority changes take up to 15 min to apply (accepted by Tara). `scripts/sim-get-booker.js` |
 | v174 | 2026-09-29 02:58 | v173 canvas: cache nodes on top of the Gemini / Memory nodes (v173) | Layout only |
 | v173 | 2026-09-29 02:56 | Three Airtable reads (Rooms, Session Types, Bookers) on every message, ~3.3 s (v172 and earlier) | Reference cache (with Refresh Reference Cache v2); imported by Tara without sticky notes and the two disabled nodes |

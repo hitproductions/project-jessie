@@ -1027,8 +1027,9 @@ suite('Check Ownership — who may cancel what', ()=>{
     // ownership check must still be the thing that decides.
     // A substituted letter, not just a case change - lowercasing already
     // absorbed those, so a case-only test proves nothing about the near match.
-    ['one mistyped letter still resolves',{...base,title:'ALPHZ / X / TL'},r=>r.verdict==='CLEAR'],
-    ['a mistyped letter cannot cross ownership',{...base,title:'THEIRZ / Y / KSC'},r=>r.reason==='NOT_YOURS'],
+    // review 29 Sep: a near title is offered back as a candidate, never acted on
+    ['a mistyped letter is offered back, not cancelled',{...base,title:'ALPHZ / X / TL'},r=>r.reason==='AMBIGUOUS_TITLE'&&/ALPHA \/ X \/ TL/.test(r.human)],
+    ['a mistyped letter on someone else\'s booking changes nothing',{...base,title:'THEIRZ / Y / KSC'},r=>r.verdict!=='CLEAR'],
     // Mid-string, where the substring tier cannot quietly rescue it.
     ['an invisible character is stripped',{...base,title:'ALP️HA / X / TL'},r=>r.verdict==='CLEAR'],
     ['a genuinely unknown title still refuses',{...base,title:'ZEBRA / Q / MM'},r=>r.reason==='NOT_ON_CALENDAR'],
@@ -1089,9 +1090,10 @@ suite('Resolve Booking — which booking is being moved', ()=>{
               new_start_iso:'2027-09-10T15:00:00+08:00',new_end_iso:'2027-09-10T18:00:00+08:00'};
   const cases=[
     ['exact title resolves',{...base,title:'REASON1 / Bea Jose / TL'},r=>r.verdict==='CLEAR'],
-    ['the QA corruption resolves',{...base,title:'REazon1 / Bea Jose / TL'},r=>r.verdict==='CLEAR'],
+    // review 29 Sep: the corrupted title comes back as a candidate for the requester to confirm
+    ['the QA corruption is offered back, not moved',{...base,title:'REazon1 / Bea Jose / TL'},r=>r.reason==='AMBIGUOUS_TITLE'&&/REASON1/.test(r.human)],
     ['an invisible character resolves',{...base,title:'REAS️ON1 / Bea Jose / TL'},r=>r.verdict==='CLEAR'],
-    ['a corrupted title cannot cross ownership',{...base,title:'THEIRZ / Y / KSC'},r=>r.reason==='NOT_YOURS'],
+    ['a corrupted title on someone else\'s booking changes nothing',{...base,title:'THEIRZ / Y / KSC'},r=>r.verdict!=='CLEAR'],
     ['an unknown title still refuses',{...base,title:'ZEBRA / Q / MM'},r=>r.reason==='NOT_ON_CALENDAR'],
     ['not confirmed',{...base,confirmed:false,title:'REASON1 / Bea Jose / TL'},r=>r.reason==='NOT_CONFIRMED'],
     ['a corrupted new time refuses',{...base,title:'REASON1 / Bea Jose / TL',new_end_iso:'not a date'},

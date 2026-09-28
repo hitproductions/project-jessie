@@ -1,0 +1,310 @@
+{
+  "updatedAt": "2026-09-28T17:43:53.855Z",
+  "createdAt": "2026-08-29T22:02:44.966Z",
+  "id": "e7tBQB458nstrqei",
+  "name": "Jessie — Room Availability — v11 (v10 fixed)",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "start_iso"
+            },
+            {
+              "name": "end_iso"
+            },
+            {
+              "name": "session_type"
+            },
+            {
+              "name": "room"
+            },
+            {
+              "name": "reference_data"
+            },
+            {
+              "name": "scope"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1408,
+        -384
+      ],
+      "id": "95840a1e-e4d3-41da-aa8a-3406fb7bb1ff",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "timeMin",
+              "value": "={{ (function(v){ v = String(v == null ? '' : v); var m = v.match(/\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?)?/); return m ? m[0] : v; })($('When Executed by Another Workflow').first().json.start_iso) }}"
+            },
+            {
+              "name": "timeMax",
+              "value": "={{ (function(v){ v = String(v == null ? '' : v); var m = v.match(/\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?)?/); return m ? m[0] : v; })($('When Executed by Another Workflow').first().json.end_iso) }}"
+            },
+            {
+              "name": "singleEvents",
+              "value": "true"
+            },
+            {
+              "name": "orderBy",
+              "value": "startTime"
+            },
+            {
+              "name": "maxResults",
+              "value": "250"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1632,
+        -384
+      ],
+      "id": "5d058278-cdc9-4c6e-8bcb-266335d5ea82",
+      "name": "Get Events In Window",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Google gives an all-day event as a bare date (\"2026-10-06\", end exclusive). new Date() reads that as UTC\n// midnight - 08:00 in Manila - so a 6-7 AM booking slipped past an all-day hold (review 29 Sep). A bare date\n// is Manila midnight; a dateTime keeps its own offset.\nconst evMs = v => { const s = String(v || ''); return /^\\d{4}-\\d{2}-\\d{2}$/.test(s) ? Date.parse(s + 'T00:00:00+08:00') : new Date(s).getTime(); };\n// Answers \"what is free\" with set arithmetic instead of asking the model to do it.\n// Without this the agent called List Events ten times for one window and gave up\n// on max iterations - it cannot reliably subtract busy rooms from all rooms.\n// Model output occasionally carries invisible characters. On 2026-08-30 a\n// variation selector (U+FE0F) glued to the end of an ISO timestamp made Room\n// Availability answer BAD_WINDOW, and the model then presented a booking\n// summary as though the room were free. Every string the model hands this\n// workflow is scrubbed once, here, rather than at each place one is read.\n// Tabs and newlines survive - a description is allowed to contain them.\nconst clean = s => String(s == null ? '' : s)\n  .replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F\\u200B-\\u200F\\u2028\\u2029\\u202A-\\u202E\\u2060-\\u2064\\uFE00-\\uFE0F\\uFEFF]/g, '')\n  .trim();\nconst REQ = (function (o) {\n  const out = {};\n  for (const k in o) out[k] = (typeof o[k] === 'string') ? clean(o[k]) : o[k];\n  return out;\n})($('When Executed by Another Workflow').first().json || {});\n\n// A timestamp is only its ISO text. The model has glued VISIBLE junk onto the end - \"...17:00:00+08:00ភាsa\",\n// \"...+08:00容器id\" (QA, 2026-09-24) - which clean() above does not strip (it only removes invisible\n// characters), so Room Availability answered BAD_WINDOW. Keep the leading ISO date/time, drop the rest.\nconst isoOnly = s => { const v = String(s == null ? '' : s); const m = v.match(/\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?)?/); return m ? m[0] : v; };\n['start_iso', 'end_iso', 'booking_date'].forEach(k => { if (typeof REQ[k] === 'string' && REQ[k]) REQ[k] = isoOnly(REQ[k]); });\n\nconst ROOMS = {\n  'Studio 1':'hitproductions.net_3737303833303637363538@resource.calendar.google.com',\n  'Studio 2':'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com',\n  'Studio 3':'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com',\n  'Studio 4':'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com',\n  'Studio 5':'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com',\n  'Studio 6':'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com',\n  'Studio 7':'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com',\n  'Studio 8':'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com',\n  'Studio A':'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com',\n  'Studio B':'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com',\n  'Studio C':'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com',\n  'Studio D':'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com',\n  'Studio E':'c_1888r4bbc2lhqgndmprism70nft64@resource.calendar.google.com',\n  'Studio F':'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com',\n  'Studio M':'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com',\n  'M1':'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com',\n  'M2':'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com',\n  'M3':'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com',\n  'M4':'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com',\n  'M5':'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com',\n  'M6':'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com',\n  'M7':'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com',\n  'M8':'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com',\n  'Salin':'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com',\n  'Katha':'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com',\n  'Likha':'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com',\n  'Lobby':'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com'\n};\nconst keys = Object.keys(ROOMS);\n\nconst events = (function(){\n  const out = [], seen = {};\n  for (const it of $input.all()) {\n    const j = (it && it.json) || {};\n    const list = Array.isArray(j.items) ? j.items : (j && j.id ? [j] : []);\n    for (const ev of list) if (ev && ev.id && !seen[ev.id]) { seen[ev.id] = 1; out.push(ev); }\n  }\n  return out;\n})();\n\nconst ms = v => new Date(v).getTime();\nconst reqStart = ms(REQ.start_iso), reqEnd = ms(REQ.end_iso);\nconst nowShifted = new Date(Date.now() + 8 * 3600 * 1000);\nconst manilaMidnight = Date.UTC(nowShifted.getUTCFullYear(), nowShifted.getUTCMonth(),\n                                nowShifted.getUTCDate()) - 8 * 3600 * 1000;\nif (reqStart && reqStart < manilaMidnight) {\n  return [{ json: { status:'PAST_DATE', window: { start: REQ.start_iso, end: REQ.end_iso },\n    human: String(REQ.start_iso).slice(0, 10) + ' has already passed, so there is nothing to check. '\n         + 'Tell the requester the date is in the past and ask for the right one.' } }];\n}\nif (!(reqStart && reqEnd) || reqEnd <= reqStart) {\n  return [{ json: { status:'BAD_WINDOW',\n    human:'I need a start and an end time to check availability. Ask the requester for the window. '\n         + 'Nothing was checked, so do not present a booking summary and do not tell them a room is free.' } }];\n}\n\n// v9 (PENDING 51, gotcha 18): a calendar read that failed is not an empty calendar. Get Events In Window carries\n// on after an error, and \"no events\" then read as every room free - 79 of 199 checks in the 27 Sep eval, 4 of 27\n// live, Studio F offered while booked. Fail closed instead: Guard Probe already refuses an offer this supports.\n{\n  const _in = $input.all().map(it => (it && it.json) || {});\n  const _read = _in.some(j => Array.isArray(j.items) || j.id);\n  if (!_read || _in.some(j => j.error || j.nextPageToken)) {\n    return [{ json: { status:'CALENDAR_ERROR',\n      human:'The calendar could not be read for that window, so nothing can be confirmed as free or busy. '\n          + 'Tell the requester the check failed and to try again in a moment. Do not offer or summarise a room.' } }];\n  }\n}\n\nconst busy = {}, unidentified = [];\nfor (const ev of events) {\n  const s0 = evMs(ev.start && (ev.start.dateTime || ev.start.date));\n  const e0 = evMs(ev.end   && (ev.end.dateTime   || ev.end.date));\n  if (!(s0 < reqEnd && e0 > reqStart)) continue;\n  const emails = (ev.attendees || []).map(a => String(a.email || '').toLowerCase());\n  const loc = String(ev.location || '').toLowerCase();\n  const firstSeg = String(ev.summary || '').split(' - ')[0].trim().toLowerCase();\n  let matched = false;\n  for (const k of keys) {\n    const lk = k.toLowerCase();\n    if (emails.indexOf(ROOMS[k].toLowerCase()) !== -1 || (loc && loc.indexOf(lk) !== -1) || firstSeg === lk) {\n      busy[k] = ev.summary || '(no title)'; matched = true;\n    }\n  }\n  if (!matched) unidentified.push(ev.summary || '(no title)');\n}\n\n// Rooms and session types come from Room Table, which already read them this\n// turn. Reading Airtable again here cost about 2.2 seconds per call.\nconst REF = (function(){\n  try { return JSON.parse(String(REQ.reference_data || '') || '{}'); } catch (e) { return {}; }\n})();\nconst refRooms = REF.rooms || [], refTypes = REF.types || [];\nif (!refRooms.length) {\n  return [{ json: { status:'NO_REFERENCE_DATA',\n    human:'The room data did not reach the availability check, so nothing can be confirmed as free. '\n        + 'Tell the requester it failed and to try again.' } }];\n}\nconst nameOf = {}, active = {};\n// `vocalBooth` arrives from Room Table, which reads the Airtable checkbox. Room\n// Type is not a substitute: it marks Studio E as a Recording Booth, and E is the\n// video and colour grading room. If the flag is missing from reference data -\n// an older main workflow paired with this one - isBooth stays empty and every\n// booth line below is simply omitted rather than guessed at.\nconst isBooth = {}, isCommon = {};\nfor (const r of refRooms) {\n  nameOf[r.id] = r.name;\n  active[r.name] = true;\n  if (r.common === true) isCommon[r.name] = true;\n  if (r.vocalBooth === true) isBooth[r.name] = true;\n}\nconst boothNames = Object.keys(isBooth).sort();\n// isBooth is keyed by exact name and holds VOCAL booths only - it drives the\n// vocal_booths output, which should list A/B/D and not Studio E. The ranking\n// exemption below needs a different question (\"is this room a booth at all?\")\n// and a case-insensitive key, so it gets its own map.\nconst isPairableBooth = {};\nfor (const r of refRooms) {\n  if (r.booth === true || r.vocalBooth === true) {\n    isPairableBooth[String(r.name || '').trim().toLowerCase()] = true;\n  }\n}\n\nconst st = String(REQ.session_type || '').trim().toLowerCase();\nlet priority = [], lastResort = [];\nfor (const t of refTypes) {\n  if (String(t.type || '').trim().toLowerCase() !== st) continue;\n  priority   = [].concat(t.priority || []).map(i => nameOf[i]).filter(Boolean);\n  lastResort = [].concat(t.last     || []).map(i => nameOf[i]).filter(Boolean);\n}\n\nconst free = n => !busy[n];\n\n// If they named a room, answer about THAT room. Without this the tool returns\n// free priority rooms and the agent has to work out why the room they asked for\n// is missing - it got that wrong and reported Studio 3 as busy when Studio 7 was.\n// A booth pairing arrives as one string - \"Studio 1, Studio A\" - because that is\n// the shape Book Session takes. Before this the whole string was looked up as a\n// single room name, came back UNKNOWN_ROOM, and Guard Probe then correctly refused\n// the offer the agent had just made. Seen 2026-09-03 on a Localization Dubbing\n// booking. Each room is now answered separately; `asked` keeps the old shape so\n// Guard Probe's check still works, carrying the worst status of the set.\nconst askedRaw = String(REQ.room || '').trim();\nconst askedList = askedRaw ? askedRaw.split(',').map(function(s){ return s.trim(); }).filter(function(s){ return s.length; }) : [];\n\nconst answerFor = function (one) {\n  const hit = keys.find(function(k){ return k.toLowerCase() === one.toLowerCase(); });\n  if (!hit) {\n    return { room: one, status: 'UNKNOWN_ROOM', human: 'There is no room called \"' + one + '\".' };\n  }\n  if (busy[hit]) {\n    return { room: hit, status: 'BUSY', taken_by: busy[hit],\n      human: hit + ' is taken in that window by \"' + busy[hit] + '\".' };\n  }\n  if (st && (priority.length || lastResort.length)) {\n    const inPri  = priority.some(function(r){ return r.toLowerCase() === hit.toLowerCase(); });\n    const inLast = lastResort.some(function(r){ return r.toLowerCase() === hit.toLowerCase(); });\n    if (inPri) return { room: hit, status: 'FREE', human: hit + ' is free in that window.' };\n    if (inLast) {\n      const freePri = priority.filter(free);\n      return freePri.length\n        ? { room: hit, status: 'FREE_BUT_LAST_RESORT', free_priority: freePri,\n            human: hit + ' is free, but it is not one of the rooms normally used for ' + st + ', and these usual rooms are also free: '\n                 + freePri.join(', ') + '. Offer one of those first; book ' + hit + ' only if they still want it.' }\n        : { room: hit, status: 'FREE', human: hit + ' is free, and every room normally used for ' + st + ' is taken, so it is the right choice.' };\n    }\n    // A booth is a second room on the same event and is never in a session type's\n    // ranking, so \"not run here\" is the wrong answer for one. Report it as free.\n    if (isPairableBooth[hit.toLowerCase()] && askedList.length > 1) {\n      return { room: hit, status: 'FREE', human: hit + ' is free in that window.' };\n    }\n    return { room: hit, status: 'NOT_RUN_HERE', human: st + ' is not run in ' + hit + '.' };\n  }\n  return { room: hit, status: 'FREE', human: hit + ' is free in that window.' };\n};\n\nlet askedAnswer = null;\nif (askedList.length === 1) {\n  askedAnswer = answerFor(askedList[0]);\n} else if (askedList.length > 1) {\n  const each = askedList.map(answerFor);\n  const RANK = ['UNKNOWN_ROOM', 'BUSY', 'NOT_RUN_HERE', 'FREE_BUT_LAST_RESORT', 'FREE'];\n  const worst = each.slice().sort(function(a, b){\n    return RANK.indexOf(a.status) - RANK.indexOf(b.status);\n  })[0];\n  askedAnswer = {\n    room: askedRaw,\n    status: worst.status,\n    rooms: each,\n    human: each.map(function(a){ return a.human; }).join(' ')\n  };\n  if (worst.taken_by) askedAnswer.taken_by = worst.taken_by;\n}\nconst out = { status:'OK', window: { start: REQ.start_iso, end: REQ.end_iso }, asked: askedAnswer,\n  busy: Object.keys(busy).map(k => k + ' (' + busy[k] + ')') };\n\nif (st && (priority.length || lastResort.length)) {\n  out.session_type = st;\n  out.free_priority    = priority.filter(free);\n  out.free_last_resort = lastResort.filter(free);\n  out.human = out.free_priority.length\n    ? 'Free for ' + st + ': ' + out.free_priority.join(', ') + '. Offer one of these.'\n    : (out.free_last_resort.length\n       ? // v9: plain words - this text is relayed, and \"last-resort\" leaked into replies (eval 2026-09-27).\n       'Every room normally used for ' + st + ' is taken. Also free: ' + out.free_last_resort.join(', ') + '. Say that is why.'\n       : 'Nothing that runs ' + st + ' is free in that window. Offer a different time.');\n} else {\n  // v9 (decision (d), Howard 2026-09-28): asked which STUDIOS are free, the list leaves out the conference rooms\n  // and the lobby (Room Type in Airtable) but keeps the M booths; asked about rooms, it is everything. The scope is\n  // worked out in main (Booked For) from what the requester typed, not by the model.\n  const studiosOnly = String(REQ.scope || '').toLowerCase() === 'studios';\n  out.scope = studiosOnly ? 'studios' : 'all';\n  out.free_rooms = Object.keys(active).filter(free).filter(n => !(studiosOnly && isCommon[n])).sort();\n  // The old \"List exactly these and no others.\" was copied into replies word for word (eval 2026-09-27).\n  out.human = out.free_rooms.length\n    ? (studiosOnly ? 'Free studios and booths in that window: ' : 'Free in that window: ') + out.free_rooms.join(', ')\n      + '. Name every one of them, and nothing else.'\n    : (studiosOnly ? 'No studio or booth is free in that window.' : 'Nothing is free in that window.');\n}\n// Booth availability is computed here rather than left to the model to work out\n// from the busy list - subtracting busy rooms from all rooms is exactly what it\n// gets wrong (see the note at the top of this node). One call already covers\n// every room, so this costs nothing extra.\nif (boothNames.length) {\n  out.vocal_booths = { free: boothNames.filter(free), busy: boothNames.filter(n => !free(n)) };\n  out.human += out.vocal_booths.free.length\n    ? ' Vocal booths free in that window: ' + out.vocal_booths.free.join(', ')\n      + '. If a booth is being paired, these are the ones we normally use.'\n    : ' No vocal booth is free in that window (' + boothNames.join(', ') + ' are all taken).';\n}\nif (askedAnswer) { out.human = askedAnswer.human + ' ' + out.human; }\nif (unidentified.length) {\n  out.unidentified = unidentified;\n  out.human += ' Note: ' + unidentified.length + ' event(s) in that window have no identifiable room, so treat this as incomplete.';\n}\nreturn [{ json: out }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        -384
+      ],
+      "id": "5eee28ed-c8d0-4972-9042-6186be5d213f",
+      "name": "Compute Availability"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get Events In Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Events In Window": {
+      "main": [
+        [
+          {
+            "node": "Compute Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "9419c0fb-7dcd-4311-bd48-3814955e1190",
+  "activeVersionId": "9419c0fb-7dcd-4311-bd48-3814955e1190",
+  "versionCounter": 20,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-09-17T05:26:01.406Z",
+      "createdAt": "2026-09-17T05:26:01.406Z",
+      "role": "workflow:owner",
+      "workflowId": "e7tBQB458nstrqei",
+      "projectId": "518sXYqvqTl1cuns",
+      "project": {
+        "updatedAt": "2026-07-30T08:01:27.418Z",
+        "createdAt": "2026-06-16T08:07:47.559Z",
+        "id": "518sXYqvqTl1cuns",
+        "name": "Howard Luistro <howard@hitproductions.net>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "146478c9-471a-4651-8e62-0216984196e9"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-09-28T17:44:03.000Z",
+    "createdAt": "2026-09-28T17:43:53.860Z",
+    "versionId": "9419c0fb-7dcd-4311-bd48-3814955e1190",
+    "workflowId": "e7tBQB458nstrqei",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "start_iso"
+              },
+              {
+                "name": "end_iso"
+              },
+              {
+                "name": "session_type"
+              },
+              {
+                "name": "room"
+              },
+              {
+                "name": "reference_data"
+              },
+              {
+                "name": "scope"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          1408,
+          -384
+        ],
+        "id": "95840a1e-e4d3-41da-aa8a-3406fb7bb1ff",
+        "name": "When Executed by Another Workflow"
+      },
+      {
+        "parameters": {
+          "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleCalendarOAuth2Api",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "timeMin",
+                "value": "={{ (function(v){ v = String(v == null ? '' : v); var m = v.match(/\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?)?/); return m ? m[0] : v; })($('When Executed by Another Workflow').first().json.start_iso) }}"
+              },
+              {
+                "name": "timeMax",
+                "value": "={{ (function(v){ v = String(v == null ? '' : v); var m = v.match(/\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?)?/); return m ? m[0] : v; })($('When Executed by Another Workflow').first().json.end_iso) }}"
+              },
+              {
+                "name": "singleEvents",
+                "value": "true"
+              },
+              {
+                "name": "orderBy",
+                "value": "startTime"
+              },
+              {
+                "name": "maxResults",
+                "value": "250"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1632,
+          -384
+        ],
+        "id": "5d058278-cdc9-4c6e-8bcb-266335d5ea82",
+        "name": "Get Events In Window",
+        "alwaysOutputData": true,
+        "executeOnce": true,
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "6D1r3kaq6KaFdL0a",
+            "name": "Google Calendar account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Answers \"what is free\" with set arithmetic instead of asking the model to do it.\n// Without this the agent called List Events ten times for one window and gave up\n// on max iterations - it cannot reliably subtract busy rooms from all rooms.\n// Model output occasionally carries invisible characters. On 2026-08-30 a\n// variation selector (U+FE0F) glued to the end of an ISO timestamp made Room\n// Availability answer BAD_WINDOW, and the model then presented a booking\n// summary as though the room were free. Every string the model hands this\n// workflow is scrubbed once, here, rather than at each place one is read.\n// Tabs and newlines survive - a description is allowed to contain them.\nconst clean = s => String(s == null ? '' : s)\n  .replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F\\u200B-\\u200F\\u2028\\u2029\\u202A-\\u202E\\u2060-\\u2064\\uFE00-\\uFE0F\\uFEFF]/g, '')\n  .trim();\nconst REQ = (function (o) {\n  const out = {};\n  for (const k in o) out[k] = (typeof o[k] === 'string') ? clean(o[k]) : o[k];\n  return out;\n})($('When Executed by Another Workflow').first().json || {});\n\n// A timestamp is only its ISO text. The model has glued VISIBLE junk onto the end - \"...17:00:00+08:00ភាsa\",\n// \"...+08:00容器id\" (QA, 2026-09-24) - which clean() above does not strip (it only removes invisible\n// characters), so Room Availability answered BAD_WINDOW. Keep the leading ISO date/time, drop the rest.\nconst isoOnly = s => { const v = String(s == null ? '' : s); const m = v.match(/\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?)?/); return m ? m[0] : v; };\n['start_iso', 'end_iso', 'booking_date'].forEach(k => { if (typeof REQ[k] === 'string' && REQ[k]) REQ[k] = isoOnly(REQ[k]); });\n\nconst ROOMS = {\n  'Studio 1':'hitproductions.net_3737303833303637363538@resource.calendar.google.com',\n  'Studio 2':'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com',\n  'Studio 3':'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com',\n  'Studio 4':'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com',\n  'Studio 5':'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com',\n  'Studio 6':'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com',\n  'Studio 7':'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com',\n  'Studio 8':'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com',\n  'Studio A':'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com',\n  'Studio B':'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com',\n  'Studio C':'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com',\n  'Studio D':'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com',\n  'Studio E':'c_1888r4bbc2lhqgndmprism70nft64@resource.calendar.google.com',\n  'Studio F':'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com',\n  'Studio M':'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com',\n  'M1':'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com',\n  'M2':'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com',\n  'M3':'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com',\n  'M4':'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com',\n  'M5':'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com',\n  'M6':'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com',\n  'M7':'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com',\n  'M8':'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com',\n  'Salin':'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com',\n  'Katha':'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com',\n  'Likha':'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com',\n  'Lobby':'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com'\n};\nconst keys = Object.keys(ROOMS);\n\nconst events = (function(){\n  const out = [], seen = {};\n  for (const it of $input.all()) {\n    const j = (it && it.json) || {};\n    const list = Array.isArray(j.items) ? j.items : (j && j.id ? [j] : []);\n    for (const ev of list) if (ev && ev.id && !seen[ev.id]) { seen[ev.id] = 1; out.push(ev); }\n  }\n  return out;\n})();\n\nconst ms = v => new Date(v).getTime();\nconst reqStart = ms(REQ.start_iso), reqEnd = ms(REQ.end_iso);\nconst nowShifted = new Date(Date.now() + 8 * 3600 * 1000);\nconst manilaMidnight = Date.UTC(nowShifted.getUTCFullYear(), nowShifted.getUTCMonth(),\n                                nowShifted.getUTCDate()) - 8 * 3600 * 1000;\nif (reqStart && reqStart < manilaMidnight) {\n  return [{ json: { status:'PAST_DATE', window: { start: REQ.start_iso, end: REQ.end_iso },\n    human: String(REQ.start_iso).slice(0, 10) + ' has already passed, so there is nothing to check. '\n         + 'Tell the requester the date is in the past and ask for the right one.' } }];\n}\nif (!(reqStart && reqEnd) || reqEnd <= reqStart) {\n  return [{ json: { status:'BAD_WINDOW',\n    human:'I need a start and an end time to check availability. Ask the requester for the window. '\n         + 'Nothing was checked, so do not present a booking summary and do not tell them a room is free.' } }];\n}\n\n// v9 (PENDING 51, gotcha 18): a calendar read that failed is not an empty calendar. Get Events In Window carries\n// on after an error, and \"no events\" then read as every room free - 79 of 199 checks in the 27 Sep eval, 4 of 27\n// live, Studio F offered while booked. Fail closed instead: Guard Probe already refuses an offer this supports.\n{\n  const _in = $input.all().map(it => (it && it.json) || {});\n  const _read = _in.some(j => Array.isArray(j.items) || j.id);\n  if (!_read || _in.some(j => j.error)) {\n    return [{ json: { status:'CALENDAR_ERROR',\n      human:'The calendar could not be read for that window, so nothing can be confirmed as free or busy. '\n          + 'Tell the requester the check failed and to try again in a moment. Do not offer or summarise a room.' } }];\n  }\n}\n\nconst busy = {}, unidentified = [];\nfor (const ev of events) {\n  const s0 = ms(ev.start && (ev.start.dateTime || ev.start.date));\n  const e0 = ms(ev.end   && (ev.end.dateTime   || ev.end.date));\n  if (!(s0 < reqEnd && e0 > reqStart)) continue;\n  const emails = (ev.attendees || []).map(a => String(a.email || '').toLowerCase());\n  const loc = String(ev.location || '').toLowerCase();\n  const firstSeg = String(ev.summary || '').split(' - ')[0].trim().toLowerCase();\n  let matched = false;\n  for (const k of keys) {\n    const lk = k.toLowerCase();\n    if (emails.indexOf(ROOMS[k].toLowerCase()) !== -1 || (loc && loc.indexOf(lk) !== -1) || firstSeg === lk) {\n      busy[k] = ev.summary || '(no title)'; matched = true;\n    }\n  }\n  if (!matched) unidentified.push(ev.summary || '(no title)');\n}\n\n// Rooms and session types come from Room Table, which already read them this\n// turn. Reading Airtable again here cost about 2.2 seconds per call.\nconst REF = (function(){\n  try { return JSON.parse(String(REQ.reference_data || '') || '{}'); } catch (e) { return {}; }\n})();\nconst refRooms = REF.rooms || [], refTypes = REF.types || [];\nif (!refRooms.length) {\n  return [{ json: { status:'NO_REFERENCE_DATA',\n    human:'The room data did not reach the availability check, so nothing can be confirmed as free. '\n        + 'Tell the requester it failed and to try again.' } }];\n}\nconst nameOf = {}, active = {};\n// `vocalBooth` arrives from Room Table, which reads the Airtable checkbox. Room\n// Type is not a substitute: it marks Studio E as a Recording Booth, and E is the\n// video and colour grading room. If the flag is missing from reference data -\n// an older main workflow paired with this one - isBooth stays empty and every\n// booth line below is simply omitted rather than guessed at.\nconst isBooth = {}, isCommon = {};\nfor (const r of refRooms) {\n  nameOf[r.id] = r.name;\n  active[r.name] = true;\n  if (r.common === true) isCommon[r.name] = true;\n  if (r.vocalBooth === true) isBooth[r.name] = true;\n}\nconst boothNames = Object.keys(isBooth).sort();\n// isBooth is keyed by exact name and holds VOCAL booths only - it drives the\n// vocal_booths output, which should list A/B/D and not Studio E. The ranking\n// exemption below needs a different question (\"is this room a booth at all?\")\n// and a case-insensitive key, so it gets its own map.\nconst isPairableBooth = {};\nfor (const r of refRooms) {\n  if (r.booth === true || r.vocalBooth === true) {\n    isPairableBooth[String(r.name || '').trim().toLowerCase()] = true;\n  }\n}\n\nconst st = String(REQ.session_type || '').trim().toLowerCase();\nlet priority = [], lastResort = [];\nfor (const t of refTypes) {\n  if (String(t.type || '').trim().toLowerCase() !== st) continue;\n  priority   = [].concat(t.priority || []).map(i => nameOf[i]).filter(Boolean);\n  lastResort = [].concat(t.last     || []).map(i => nameOf[i]).filter(Boolean);\n}\n\nconst free = n => !busy[n];\n\n// If they named a room, answer about THAT room. Without this the tool returns\n// free priority rooms and the agent has to work out why the room they asked for\n// is missing - it got that wrong and reported Studio 3 as busy when Studio 7 was.\n// A booth pairing arrives as one string - \"Studio 1, Studio A\" - because that is\n// the shape Book Session takes. Before this the whole string was looked up as a\n// single room name, came back UNKNOWN_ROOM, and Guard Probe then correctly refused\n// the offer the agent had just made. Seen 2026-09-03 on a Localization Dubbing\n// booking. Each room is now answered separately; `asked` keeps the old shape so\n// Guard Probe's check still works, carrying the worst status of the set.\nconst askedRaw = String(REQ.room || '').trim();\nconst askedList = askedRaw ? askedRaw.split(',').map(function(s){ return s.trim(); }).filter(function(s){ return s.length; }) : [];\n\nconst answerFor = function (one) {\n  const hit = keys.find(function(k){ return k.toLowerCase() === one.toLowerCase(); });\n  if (!hit) {\n    return { room: one, status: 'UNKNOWN_ROOM', human: 'There is no room called \"' + one + '\".' };\n  }\n  if (busy[hit]) {\n    return { room: hit, status: 'BUSY', taken_by: busy[hit],\n      human: hit + ' is taken in that window by \"' + busy[hit] + '\".' };\n  }\n  if (st && (priority.length || lastResort.length)) {\n    const inPri  = priority.some(function(r){ return r.toLowerCase() === hit.toLowerCase(); });\n    const inLast = lastResort.some(function(r){ return r.toLowerCase() === hit.toLowerCase(); });\n    if (inPri) return { room: hit, status: 'FREE', human: hit + ' is free in that window.' };\n    if (inLast) {\n      const freePri = priority.filter(free);\n      return freePri.length\n        ? { room: hit, status: 'FREE_BUT_LAST_RESORT', free_priority: freePri,\n            human: hit + ' is free, but it is not one of the rooms normally used for ' + st + ', and these usual rooms are also free: '\n                 + freePri.join(', ') + '. Offer one of those first; book ' + hit + ' only if they still want it.' }\n        : { room: hit, status: 'FREE', human: hit + ' is free, and every room normally used for ' + st + ' is taken, so it is the right choice.' };\n    }\n    // A booth is a second room on the same event and is never in a session type's\n    // ranking, so \"not run here\" is the wrong answer for one. Report it as free.\n    if (isPairableBooth[hit.toLowerCase()] && askedList.length > 1) {\n      return { room: hit, status: 'FREE', human: hit + ' is free in that window.' };\n    }\n    return { room: hit, status: 'NOT_RUN_HERE', human: st + ' is not run in ' + hit + '.' };\n  }\n  return { room: hit, status: 'FREE', human: hit + ' is free in that window.' };\n};\n\nlet askedAnswer = null;\nif (askedList.length === 1) {\n  askedAnswer = answerFor(askedList[0]);\n} else if (askedList.length > 1) {\n  const each = askedList.map(answerFor);\n  const RANK = ['UNKNOWN_ROOM', 'BUSY', 'NOT_RUN_HERE', 'FREE_BUT_LAST_RESORT', 'FREE'];\n  const worst = each.slice().sort(function(a, b){\n    return RANK.indexOf(a.status) - RANK.indexOf(b.status);\n  })[0];\n  askedAnswer = {\n    room: askedRaw,\n    status: worst.status,\n    rooms: each,\n    human: each.map(function(a){ return a.human; }).join(' ')\n  };\n  if (worst.taken_by) askedAnswer.taken_by = worst.taken_by;\n}\nconst out = { status:'OK', window: { start: REQ.start_iso, end: REQ.end_iso }, asked: askedAnswer,\n  busy: Object.keys(busy).map(k => k + ' (' + busy[k] + ')') };\n\nif (st && (priority.length || lastResort.length)) {\n  out.session_type = st;\n  out.free_priority    = priority.filter(free);\n  out.free_last_resort = lastResort.filter(free);\n  out.human = out.free_priority.length\n    ? 'Free for ' + st + ': ' + out.free_priority.join(', ') + '. Offer one of these.'\n    : (out.free_last_resort.length\n       ? // v9: plain words - this text is relayed, and \"last-resort\" leaked into replies (eval 2026-09-27).\n       'Every room normally used for ' + st + ' is taken. Also free: ' + out.free_last_resort.join(', ') + '. Say that is why.'\n       : 'Nothing that runs ' + st + ' is free in that window. Offer a different time.');\n} else {\n  // v9 (decision (d), Howard 2026-09-28): asked which STUDIOS are free, the list leaves out the conference rooms\n  // and the lobby (Room Type in Airtable) but keeps the M booths; asked about rooms, it is everything. The scope is\n  // worked out in main (Booked For) from what the requester typed, not by the model.\n  const studiosOnly = String(REQ.scope || '').toLowerCase() === 'studios';\n  out.scope = studiosOnly ? 'studios' : 'all';\n  out.free_rooms = Object.keys(active).filter(free).filter(n => !(studiosOnly && isCommon[n])).sort();\n  // The old \"List exactly these and no others.\" was copied into replies word for word (eval 2026-09-27).\n  out.human = out.free_rooms.length\n    ? (studiosOnly ? 'Free studios and booths in that window: ' : 'Free in that window: ') + out.free_rooms.join(', ')\n      + '. Name every one of them, and nothing else.'\n    : (studiosOnly ? 'No studio or booth is free in that window.' : 'Nothing is free in that window.');\n}\n// Booth availability is computed here rather than left to the model to work out\n// from the busy list - subtracting busy rooms from all rooms is exactly what it\n// gets wrong (see the note at the top of this node). One call already covers\n// every room, so this costs nothing extra.\nif (boothNames.length) {\n  out.vocal_booths = { free: boothNames.filter(free), busy: boothNames.filter(n => !free(n)) };\n  out.human += out.vocal_booths.free.length\n    ? ' Vocal booths free in that window: ' + out.vocal_booths.free.join(', ')\n      + '. If a booth is being paired, these are the ones we normally use.'\n    : ' No vocal booth is free in that window (' + boothNames.join(', ') + ' are all taken).';\n}\nif (askedAnswer) { out.human = askedAnswer.human + ' ' + out.human; }\nif (unidentified.length) {\n  out.unidentified = unidentified;\n  out.human += ' Note: ' + unidentified.length + ' event(s) in that window have no identifiable room, so treat this as incomplete.';\n}\nreturn [{ json: out }];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1856,
+          -384
+        ],
+        "id": "5eee28ed-c8d0-4972-9042-6186be5d213f",
+        "name": "Compute Availability"
+      }
+    ],
+    "connections": {
+      "When Executed by Another Workflow": {
+        "main": [
+          [
+            {
+              "node": "Get Events In Window",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Events In Window": {
+        "main": [
+          [
+            {
+              "node": "Compute Availability",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Howard Luistro",
+    "name": "Version 9419c0fb",
+    "description": "",
+    "autosaved": true,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-28T17:44:03.353Z",
+        "id": 1518,
+        "workflowId": "e7tBQB458nstrqei",
+        "versionId": "9419c0fb-7dcd-4311-bd48-3814955e1190",
+        "event": "activated",
+        "userId": "146478c9-471a-4651-8e62-0216984196e9"
+      }
+    ]
+  }
+}
