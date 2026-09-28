@@ -59,3 +59,31 @@ booking log keeps their BOOKED rows — the 7 deleted directly from the calendar
 
 - **Bug 5:** the cancel "yes" could go direct the way booking now does (the fallback model already makes a 503 there much less likely).
 - **Bugs 2, 3, 6, 12:** each is the model writing or choosing something code already knows. Same approach as the date guard and Book Direct.
+
+## 3.8 Flash as the only model (about 23:21 PHT to 01:30 PHT)
+
+Primary model name deliberately broken so the fallback (gemini-3.8-flash) answered every turn; main v172 restored
+afterwards and verified identical. Raw log below. Comparison and next steps: [handoff-howard-2026-09-29.md](handoff-howard-2026-09-29.md).
+### 3.8 Flash as the only model (fallback test window, from 15:21:51 UTC)
+- A2 list rooms: all 27 ✅; grouped Studio E under "Recording / Vocal Booths" (Room Type says Recording Booth, Vocal Booth flag not set - prompt says use the flag). Same family as bug 2. "Studio M (Van)" is correct (Room Type: Van).
+- M1 VO in Studio 3: 3.8 said "VO recording isnt run in Studio 3" and offered only 7/8/F - no option to proceed anyway (Flash Lite offered it). Overstates the rule; the ranking is a recommendation (exec 15895). F2 same as Flash Lite (no dates stated).
+
+### 3.8-only — N2 "actually make it 3pm instead" (execs 15910/15913/15916)
+- Asked "How long will the session run…?" instead of silently making it 3–4 (better than Flash Lite's bug 12).
+- BUG 12 persists in another form: after "same length", Prepare Booking summary = 3:00–4:00 PM with
+  "Assuming 1 hour, the usual VO Recording length". Original was 2–4 PM (2 h); expected 3–5 PM.
+  Looks like 3.8 passed no end time and the code default filled 1 h.
+- Bug 9 seen again: first summary had no *Booking Type:* line, the second one had "External".
+- Speed: 24.5 s / 28.2 s / 19.9 s.
+
+### 3.8-only — C7 series "every Tuesday in November" (execs 15923/15926)
+- PASS: Expand Series gave Nov 2/9/16/23/30 2027 (correct Tuesdays); Book Series booked all 5, 10:00–12:00,
+  Studio 7 resource accepted, description carries Booked by + ref:. All 5 deleted afterwards (test cleanup).
+- Bug 14 partial: summary now has Department, but still no *Booked by:* line; Engineer shown without role;
+  no *Booking Type:* line.
+- No Room_Availability call before the series summary (Book Series checks at booking time, so no wrong booking).
+- "yes" went through the model again (series isn't on Book Direct) — 56 s turn.
+
+### 3.8-only — bug 15 check "is Studio 7 free at 2pm next Wednesday?" (exec 15935)
+- PASS: "Yes, Studio 7 is free at 2:00 PM next Wednesday (October 6, 2027). How long would you need the room for?"
+  No invented 2–4 PM window. Two Room_Availability calls (redundant, harmless). 18.3 s.
