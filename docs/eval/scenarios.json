@@ -700,6 +700,144 @@
           "(new|not (yet )?in|isn.t in|flag|review)"
         ]
       }
+    },
+    {
+      "id": "TC-1",
+      "class": "whoIsWho",
+      "note": "Tara checklist: ambiguous client - 'Jen' matches three - numbered options",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jen, engineer Tara Lim"
+      ],
+      "expect": {
+        "mentions": [
+          "1[.)]",
+          "2[.)]"
+        ],
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "TC-2",
+      "class": "whoIsWho",
+      "note": "Tara checklist: exact-match client (two identical records) - no question",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Ino Magno, engineer Tara Lim"
+      ],
+      "expect": {
+        "client": [
+          "Ino Magno"
+        ],
+        "project": "ORBIT"
+      }
+    },
+    {
+      "id": "TC-3",
+      "class": "whoIsWho",
+      "note": "Tara checklist: 'produ' means the client",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, the produ is Sasa Abella, engineer Tara Lim"
+      ],
+      "expect": {
+        "client": [
+          "Sasa Abella"
+        ]
+      }
+    },
+    {
+      "id": "TC-4",
+      "class": "clientType",
+      "note": "Tara checklist: client tagged External AND Personal - ask which",
+      "turns": [
+        "Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Sharon Ambas, engineer Tara Lim"
+      ],
+      "expect": {
+        "mentions": [
+          "(external|personal)"
+        ],
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "TC-5",
+      "class": "rooms",
+      "note": "Tara checklist: off-list room refused, then insisted on - summary notes it",
+      "turns": [
+        "Book Studio 3 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Tara Lim",
+        "I know it is not the usual room, please use Studio 3 anyway"
+      ],
+      "expect": {
+        "room": [
+          "Studio 3"
+        ],
+        "mentions": [
+          "as you asked"
+        ]
+      }
+    },
+    {
+      "id": "TC-6",
+      "class": "recurring",
+      "note": "Tara checklist: a series over 16 - refused with the options",
+      "turns": [
+        "Book M3 every weekday from next Monday until the end of November, all day"
+      ],
+      "expect": {
+        "mentions": [
+          "16"
+        ],
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "TC-7",
+      "class": "internal",
+      "note": "Tara checklist: conference room - prepared summary",
+      "turns": [
+        "Book Katha next Friday 10am to 12pm for a Marketing x BD meeting"
+      ],
+      "expect": {
+        "room": [
+          "Katha"
+        ]
+      }
+    },
+    {
+      "id": "TC-8",
+      "class": "internal",
+      "note": "Tara checklist: Lobby - prepared summary",
+      "turns": [
+        "Book the Lobby next Friday 4pm to 7pm for the team party"
+      ],
+      "expect": {
+        "room": [
+          "Lobby"
+        ]
+      }
+    },
+    {
+      "id": "TC-9",
+      "class": "move",
+      "note": "Tara checklist: move own booking, up to the summary (existing 2027 test booking)",
+      "turns": [
+        "Move SMOKETEST on October 30 to 4pm to 6pm"
+      ],
+      "expect": {
+        "mentions": [
+          "Confirm to move"
+        ],
+        "noSummaryExpected": true
+      }
+    },
+    {
+      "id": "TC-10",
+      "class": "lookup",
+      "note": "Tara checklist: a vague 'show bookings' is narrowed first",
+      "turns": [
+        "show bookings"
+      ],
+      "expect": {
+        "mustAsk": true
+      }
     }
   ]
 }

@@ -57,7 +57,7 @@ echo
 python3 - "$tmp" <<'PY'
 import json,sys,os
 t=sys.argv[1]
-want={"main.json":["Guard Probe","Booked For"],"book.json":["Check Conflicts"],
+want={"main.json":["Guard Probe","Booked For","Prepared Booking"],"book.json":["Check Conflicts","Render Summary"],
       "cancel.json":["Check Ownership"],"find.json":["Shape Results"],
       "move.json":["Resolve Booking","Build Recipients"]}
 for f,names in want.items():
@@ -575,6 +575,71 @@ suite('Check Conflicts — engineer must be on the staff list', ()=>{
   check('st','no engineer, nothing to check',!x.r&&x.REQ.summary==='M2 - Camy');
   x=run({engineer:'Daryl',description:'Engineer: Daryl'+D,summary:'X / Acme / D'},[]);
   check('st','an unreadable staff list refuses rather than guesses',x.r&&x.r.reason==='ENGINEER_UNVERIFIED');
+});
+
+// ── v51 / v163 Prepare Booking: the summary the requester approves is the booking ──────────
+suite('Prepare Booking — render, send, read back at the yes', ()=>{
+  let rs, pbk, gp; try { rs=src('Render Summary'); pbk=src('Prepared Booking'); gp=src('Guard Probe'); } catch(e){ console.log('  skip  Prepare Booking is not in this build'); return; }
+  const REQ={summary:'orbit / Jem Lim / TL',session_type:'VO Recording',rooms:'Studio 7',department:'Audio Post',bookingType:'External',start_iso:'2027-10-08T14:00:00+08:00',end_iso:'2027-10-08T16:00:00+08:00',mode:'prepare'};
+  const CC={verdict:'CLEAR',final_summary:'ORBIT / Jem Lim / TL',final_description:'Engineer: Tara Lim (Post Engineer) | Booked by: Howard Luistro (for Japs Concepcion) | ref: U1 | Type: External | Dept: Audio Post',final_start:REQ.start_iso,final_end:REQ.end_iso,final_client:'Jem Lim',assumed_minutes:0};
+  const render=(req,cc,rows,dp)=>new Function('$',rs)(n=>({first:()=>{ if(n==='When Executed by Another Workflow') return {json:req}; if(n==='Check Conflicts') return {json:cc}; if(n==='Decide Preempt'){ if(!dp) throw new Error('not executed'); return {json:dp}; } return {json:{}}; },
+    all:()=>n==='Get Client'?(rows||[{id:'rec1'}]).map(j=>({json:j})):[]}))[0].json;
+  const gpRun=(output,steps,rt)=>new Function('$input','$',gp)({first:()=>({json:{output,intermediateSteps:steps}})},n=>{
+    if(n==='Get Booker') return {first:()=>({json:{fields:{Name:'Howard Luistro'}}})};
+    if(n==='Gate Context') return {first:()=>({json:{dateNotice:'',pastDateNotice:'',startOnlyNotice:''}})};
+    if(n==='Room Table') return {first:()=>({json:{roomTable:'',referenceData:JSON.stringify({types:[{type:'VO Recording',min:60,max:180}]})}})};
+    if(n==='Booked For') return {first:()=>({json:{bookedFor:'Japs Concepcion',requesterText:rt===undefined?'client Jem Lim':rt}})};
+    return {first:()=>({json:{}})}; })[0].json;
+  const readBack=(botText,confirmed)=>new Function('$',pbk)(n=>({first:()=>({json:n==='Gate Context'?{confirmed}:{}}),
+    all:()=>n==='Get Recent Messages'?[{json:{user:'U1',text:'yes',ts:'3'}},{json:{bot_id:'B1',text:botText,ts:'2'}}]:[]}))[0].json;
+  const asStep=r=>[{action:{tool:'Prepare_Booking',toolInput:{}},observation:JSON.stringify([r])}];
+  const r=render(REQ,CC);
+  check('pb','renders PREPARED with the calendar title first',r.status==='PREPARED'&&/^\*ORBIT \/ Jem Lim \/ TL\*/.test(r.summary_text),r.summary_text);
+  check('pb','one fixed format: date, time, room, engineer, booked by',/\*Date:\* Friday, October 8, 2027\n\*Time:\* 2:00 PM – 4:00 PM\n\*Room:\* Studio 7\n\*Engineer:\* Tara Lim \(Post Engineer\)/.test(r.summary_text)&&/\*Booked by:\* Howard Luistro \(for Japs Concepcion\)/.test(r.summary_text),r.summary_text);
+  check('pb','ends with a check code and the confirmation marker',/_check [0-9a-f]{8}_\n\nReply only with "yes" to book, or "no" to change anything\.\nConfirm to book\.$/.test(r.summary_text));
+  const g=gpRun('Here you go:\n*Client:* Wrong Person\nConfirm to book.',asStep(r));
+  check('pb','Guard Probe sends the prepared summary, not the model text',g.output.indexOf('*ORBIT / Jem Lim / TL*')===0&&!/Wrong Person/.test(g.output),g.output.slice(0,90));
+  const p=readBack(g.output,true);
+  check('pb','at the yes the approved summary is read back and used',p.use===true&&p.p.summary==='ORBIT / Jem Lim / TL'&&p.p.start_iso==='2027-10-08T14:00:00+08:00'&&p.p.end_iso==='2027-10-08T16:00:00+08:00'&&p.p.rooms==='Studio 7'&&p.p.client==='Jem Lim'&&p.p.booked_for==='Japs Concepcion'&&p.p.engineer_desc==='Engineer: Tara Lim (Post Engineer)'&&p.p.session_type==='VO Recording'&&p.p.bookingType==='External',JSON.stringify(p));
+  check('pb','Slack entities (&amp;) do not break the read-back',readBack(g.output.replace(/&/g,'&amp;'),true).use===true);
+  check('pb','without the yes it is not used',readBack(g.output,false).use===false);
+  check('pb','a changed booking line fails the check code',readBack(g.output.replace('Studio 7','Studio 8'),true).use===false);
+  check('pb','a model-written summary (no check code) is not used',readBack('*ORBIT / Jem Lim / TL*\n*Room:* Studio 7\n\nReply only with "yes" to book, or "no" to change anything.\nConfirm to book.',true).use===false);
+  const r9=render(Object.assign({},REQ,{start_iso:'2027-10-08T09:00:00+08:00',end_iso:'2027-10-08T18:00:00+08:00'}),Object.assign({},CC,{final_start:'2027-10-08T09:00:00+08:00',final_end:'2027-10-08T18:00:00+08:00'}));
+  const g9=gpRun('x',asStep(r9));
+  check('pb','Guard Probe adds the heads-up and it still reads back',/Heads up: 9 hours is longer/.test(g9.output)&&readBack(g9.output,true).use===true,g9.output.slice(-220));
+  check('pb','a new client gets the review note',/not in the client list yet/.test(render(REQ,CC,[{}]).summary_text));
+  const r0=render(REQ,Object.assign({},CC,{final_summary:'ORANGE / TL',final_client:''}));
+  check('pb','no client: "Client: None" and a two-segment title',/\*Client:\* None/.test(r0.summary_text)&&/^\*ORANGE \/ TL\*/.test(r0.summary_text));
+  check('pb','... and it reads back with an empty client',readBack(gpRun('x',asStep(r0),'no client').output,true).p.client==='');
+  check('pb','a start-only booking says the length it assumed',/Assuming 1 hour, the usual VO Recording length/.test(render(REQ,Object.assign({},CC,{assumed_minutes:60})).summary_text));
+  const rc=render(REQ,Object.assign({},CC,{verdict:'REJECTED',reason:'ROOM_OCCUPIED'}),null,{offer:true,open:{kind:'PREEMPT',room:'Studio F',incumbentTitle:'XYZ / Jem Lim / AEG'}});
+  check('pb','a consent-eligible clash is summarised with the note, not requested',rc.needs_consent===true&&/if you confirm I will ask them to move/.test(rc.summary_text));
+  const rl=render(Object.assign({},REQ,{session_type:'Localization Dubbing',rooms:'Studio 1, Studio A'}),Object.assign({},CC,{final_summary:'NET-KUBA / FP',final_client:'NET-KUBA'}));
+  check('pb','Localization shows its Project Code and reads back',/\*Project Code:\* NET-KUBA/.test(rl.summary_text)&&readBack(gpRun('x',asStep(rl)).output,true).use===true);
+  const ri=render({summary:'SALIN - BD',rooms:'Salin',start_iso:'2027-10-08T10:00:00+08:00',end_iso:'2027-10-08T12:00:00+08:00',department:'Business Development'},{verdict:'CLEAR',final_summary:'SALIN - BD',final_description:'| Booked by: Howard Luistro | ref: U1',final_start:'2027-10-08T10:00:00+08:00',final_end:'2027-10-08T12:00:00+08:00',final_client:''});
+  check('pb','a conference room renders without a client and reads back',!/Client:/.test(ri.summary_text)&&readBack(gpRun('x',asStep(ri)).output,true).use===true,ri.summary_text);
+});
+suite('Check Conflicts — prepare mode, NOT_PREPARED, date and length (v51)', ()=>{
+  const whole=src('Check Conflicts');
+  if(whole.indexOf('NOT_PREPARED')<0){ console.log('  skip  prepare mode is not in this build'); return; }
+  const i=whole.indexOf('const confirmed ='), j=whole.indexOf('// --- duration limits');
+  const run=REQ=>{ const r=new Function('REQ',whole.slice(i,j)+'\nreturn null;')(REQ); return r?r[0].json.reason:'CLEAR'; };
+  check('pv','prepare mode needs no confirmation',run({mode:'prepare',confirmed:false,rooms:'Studio 7'})==='CLEAR');
+  check('pv','a yes to an unprepared studio summary is refused',run({confirmed:true,rooms:'Studio 7',require_prepared:true,prepared_ok:false})==='NOT_PREPARED');
+  check('pv','a yes to a prepared summary goes ahead',run({confirmed:true,rooms:'Studio 7',require_prepared:true,prepared_ok:true})==='CLEAR');
+  check('pv','an M booth still books at once',run({confirmed:false,rooms:'M3',require_prepared:true,prepared_ok:false})==='CLEAR');
+  check('pv','callers without the flag (series, consent) are unaffected',run({confirmed:true,rooms:'Studio 7'})==='CLEAR');
+  const k=whole.indexOf('// v51 Prepare Booking (Howard'), l=whole.indexOf('// v50 (Howard, 2026-09-28): the client is a name');
+  const runD=REQ=>{ const r=new Function('REQ',whole.slice(k,l)+'\nreturn {REQ, am:__assumedMins};')(REQ); return Array.isArray(r)?{reason:r[0].json.reason}:r; };
+  const T=JSON.stringify({types:[{type:'VO Recording',typical:60}]});
+  check('pv','no date named: prepare refuses (QA E1)',runD({mode:'prepare',expected_date:'',rooms:'Studio 7',start_iso:'2027-10-08T14:00:00+08:00'}).reason==='MISSING_DATE');
+  check('pv','a named date goes ahead',!runD({mode:'prepare',expected_date:'2027-10-08',rooms:'Studio 7',start_iso:'2027-10-08T14:00:00+08:00'}).reason);
+  check('pv','an M booth needs no named date',!runD({mode:'prepare',expected_date:'',rooms:'M3'}).reason);
+  const d=runD({mode:'prepare',expected_date:'2027-10-08',rooms:'Studio 7',session_type:'VO Recording',start_only:true,start_iso:'2027-10-08T14:00:00+08:00',end_iso:'2027-10-08T17:00:00+08:00',reference_data:T});
+  check('pv','start time only: the end is the Typical Duration (QA M4)',d.REQ&&d.REQ.end_iso==='2027-10-08T15:00:00+08:00'&&d.am===60,JSON.stringify(d.REQ&&d.REQ.end_iso));
+  check('pv','a given end is kept when it is not start-only',runD({mode:'prepare',expected_date:'2027-10-08',rooms:'Studio 7',session_type:'VO Recording',start_iso:'2027-10-08T14:00:00+08:00',end_iso:'2027-10-08T17:00:00+08:00',reference_data:T}).REQ.end_iso==='2027-10-08T17:00:00+08:00');
+  check('pv','outside prepare mode nothing changes',!runD({expected_date:'',rooms:'Studio 7'}).reason);
 });
 
 // ── v50: a new client must be one the requester typed; notes never ride on the client ──

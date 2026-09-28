@@ -29,6 +29,7 @@ ones move to the bottom instead of being renumbered.
 | # | What | Blocked on / owner |
 |---|---|---|
 | 51 | **Padded timestamp reads as "every room free"** (eval 27 Sep): Room Availability 40% of checks; same shape in Book Session and Move Booking | **Fixed and verified live 28 Sep**: eval after import, 64 of 140 checks padded, all 64 returned the real busy rooms, 0 "all free" (was 61/61) |
+| 53 | Clients table data: 7 duplicate names, 3 names with stray spaces, 3 non-client rows | Airtable (Tel) |
 | 52 | M2 and M6 had `Active / Bookable` unticked, so Jessie never listed or offered them | **Done 28 Sep:** Tel ticked both; live room list 25 → 27 at 03:35 UTC |
 | 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | **Done 28 Sep:** Tel deleted the hidden fields; Clients = Name, Importance, Notes, Booker Type, Client Type; live lookups confirmed |
 | 45 | Trimmed prompt (main v157, LIVE): retest before the SOP starts 29 Sep; check 7 decisions | Howard (retest). Eval run 27 Sep, see `docs/eval/` |
@@ -500,6 +501,14 @@ New Window` follows the pattern (see also 35). **Fix:** clean every model-suppli
 fail closed on a calendar error ("couldn't check" / refuse). Small, no speed cost; **Done 2026-09-28:** fixed in Room Availability v9, Book Session v50, Move v20, Cancel v16, Find v4, Expand
 Series v2, Book Series v3 and main's List Events (`./scripts/test-dates`); live eval after the 03:33 UTC import: 64 of 140
 availability checks had padded times and all 64 returned the real busy rooms — none said every room was free.
+
+**53. Clients table data quality.** Found 2026-09-28 while picking eval cases (read-only listing of all 106 rows).
+*Duplicates* (two records each): Ino Magno, Allan Sy, Aldrin Galang, Migs Dela Peña, Marlyn Montano, Brian Cua, Cha Agcaoili
+(one of them stored as " Cha Agcaoili"). *Stray spaces*: " Cha Agcaoili", " Denise Galoyo", "Arnold Buena ". *Rows that are not
+clients*: "Business Development", "Event Lobby", "Direct Clients (Post)". Harmless to bookings — an exact match still resolves
+and a duplicate just makes Jessie pick the first — but a duplicate with different Client Types could flip External/Personal,
+and the non-client rows can match a "for Business Development" request. Fix in Airtable (Tel): merge the duplicates, trim the
+names, and move or delete the non-client rows.
 
 **52. M2 and M6 are not marked bookable.** Found 2026-09-28 from the eval (QA A2: "List all rooms" twice named
 M2 and M6, which the scorer took as invented). Both rows exist in Rooms & Studios (Room Type `M Booth`), but their

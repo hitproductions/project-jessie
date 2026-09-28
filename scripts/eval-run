@@ -108,6 +108,8 @@ function score(sc, res) {
   // The calendar title is what gets booked; a summary without it asks the requester to approve something
   // they cannot see (found in the 2026-09-27 baseline: "*Project Title:* NOVA" and no title line at all).
   if (F.isSummary) add('titleShown', F.title ? 'pass' : 'fail', F.title ? '' : 'summary shows no calendar title');
+  // v163: every booking summary should be the one Prepare Booking rendered (it carries a check code).
+  if (F.isSummary && !/Confirm to book\.\s*$/.test('') ) add('prepared', /_check [0-9a-f]{8}_/.test(reply) ? 'pass' : 'fail', /_check [0-9a-f]{8}_/.test(reply) ? '' : 'the model wrote this summary itself');
   if (E.initials && F.isSummary && !F.title) add('initials', 'na', 'no title line');
   else if (E.initials && F.isSummary) {
     const seg = F.title.split(' / '); const ini = (seg[seg.length - 1] || '').split(' x ')[0].trim();
@@ -218,6 +220,8 @@ function score(sc, res) {
     const wrong = days.filter(d => new Date(d + 'T00:00:00Z').getUTCDay() !== wd);
     add('series', days.length >= (E.seriesMin || 4) && !wrong.length ? 'pass' : 'fail', days.length + ' dates' + (wrong.length ? ', not ' + E.seriesWeekday + ': ' + wrong.join(', ') : ''));
   }
+  // v164: the prompt's placeholders (<colleague>, <name>, <Client A>, [Full Name]) must never reach a reply.
+  { const ph = reply.match(/<(?:you|them|name|colleague|client|another client|client a|client b|room|free room|session type|title|owner|meeting title|event|project|ei)>|\[(?:Full Name|Role)\]/i); add('noPlaceholder', ph ? 'fail' : 'pass', ph ? 'leaked ' + ph[0] : ''); }
   // decision (d): "studios" leaves the conference rooms and the lobby out of a free list.
   if (E.noCommon) { const hit = reply.match(/\b(Likha|Katha|Salin|Lobby)\b/); add('noCommon', hit ? 'fail' : 'pass', hit ? 'named ' + hit[0] : ''); }
   if (E.lookupOnly) {
