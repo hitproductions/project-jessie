@@ -97,6 +97,22 @@ const cases = [
    { confirmedMove: true, confirmed: false, confirmedCancel: false, moveNotice: /MOVE IS ALREADY APPROVED/ }],
   ['n refuses a move',       'n', [usr('n'), bot('ALPHA / X / TL\n\nConfirm to move. (yes/no)')],
    { confirmedMove: false, declineNotice: /SAID NO/ }],
+  // 29 Sep QA bug 16: a weekday with "next week" is next week's day (today in these tests: Mon 30 Aug 2027).
+  ['"Friday next week" is next week\'s Friday', 'book studio 3 Friday next week 2-4pm', [],
+   { dateNotice: /^(?![\s\S]*3 September)[\s\S]*Friday, 10 September 2027/ }],
+  ['"next week Friday" is next week\'s Friday', 'book studio 3 next week Friday 2-4pm', [],
+   { dateNotice: /^(?![\s\S]*3 September)[\s\S]*Friday, 10 September 2027/ }],
+  ['"every Tuesday" is a pattern, not a date', 'Book Studio 7 every Tuesday in November 10am to 12nn', [],
+   { dateNotice: /^(?![\s\S]*Tuesday, 31 August)(?![\s\S]*Tuesday, 7 September)/ }],
+  // QA bug 18: a yes to a series summary says the next action is Book Series.
+  ['a yes to a series summary -> series notice', 'yes', [usr('yes'), bot('*QATESTSR / Jem Lim / TL*\n Dates:\n - November 2, 2027 (Tue)\n - November 9, 2027 (Tue)\n Time: 10:00 AM – 12:00 PM\n\nBook it? Reply yes or no.')],
+   { confirmed: true, seriesNotice: /SERIES IS ALREADY APPROVED/ }],
+  ['a yes to a series summary with the dates on one line -> series notice', 'yes', [usr('yes'), bot('*QATESTSR2 / Jem Lim / TL*\n Dates: November 2, 2027 (Tue), November 9, 2027 (Tue), November 16, 2027 (Tue)\n Time: 10:00 AM – 12:00 PM\n\nBook it? Reply yes or no.')],
+   { confirmed: true, seriesNotice: /SERIES IS ALREADY APPROVED/ }],
+  ['a yes to a series summary with short dates -> series notice', 'yes', [usr('yes'), bot('*QATESTSR3 / Jem Lim / TL*\n Dates: Dec 7 (Tue), Dec 14 (Tue), Dec 21 (Tue)\n Time: 10:00 AM – 12:00 PM\n\nBook it? Reply yes or no.')],
+   { confirmed: true, seriesNotice: /SERIES IS ALREADY APPROVED/ }],
+  ['a yes to a single summary -> no series notice', 'yes', [usr('yes'), bookSummary],
+   { confirmed: true, seriesNotice: /^$/ }],
   // 29 Sep: the one-line confirmation. Both forms must confirm; the old one stays in Slack history for a while.
   ['one-line marker approves a booking', 'yes', [usr('yes'), bot('*Room:* Studio F\n\nBook it? Reply yes or no.')],
    { confirmed: true, confirmedCancel: false, confirmedMove: false }],

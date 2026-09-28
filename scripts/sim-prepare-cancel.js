@@ -8,7 +8,7 @@
 // booking is unchanged.
 const fs = require('fs'), path = require('path');
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
-const C18 = WF('cancel-booking-v18.json'), C17 = WF('cancel-booking-v17.json'), M = WF('project-jessie-v177.json'), M175 = WF('project-jessie-v175.json');
+const C18 = WF('cancel-booking-v18.json'), C17 = WF('cancel-booking-v17.json'), M = WF(process.env.MAIN || 'project-jessie-v177.json'), M175 = WF('project-jessie-v175.json');
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
 const node = (w, n) => w.nodes.find(x => x.name === n);
 let pass = 0, fail = 0;
@@ -74,7 +74,8 @@ console.log('main - wiring and replies');
 const to = (w, n, b = 0) => ((((w.connections[n] || {}).main || [])[b]) || []).map(t => t.node);
 ok(JSON.stringify(to(M, 'Book Direct?', 1)) === '["Prepared Cancel"]' && JSON.stringify(to(M, 'Prepared Cancel')) === '["Cancel Direct?"]', 'after Book Direct? declines: Prepared Cancel -> Cancel Direct?');
 ok(JSON.stringify(to(M, 'Cancel Direct?', 0)) === '["Cancel Direct"]' && JSON.stringify(to(M, 'Cancel Direct')) === '["Cancel Direct Reply"]' && JSON.stringify(to(M, 'Cancel Direct Reply')) === '["Send Reply"]', 'direct path: Cancel Direct -> reply -> Send Reply, the AI Agent is not on it');
-ok(JSON.stringify(to(M, 'Cancel Direct?', 1)) === '["Jessie AI Agent"]', 'everything else goes to the AI Agent as before');
+const _rest = to(M, 'Cancel Direct?', 1);   // v178 puts Already Done? (bug 17) between Cancel Direct? and the agent
+ok(JSON.stringify(_rest) === '["Jessie AI Agent"]' || (JSON.stringify(_rest) === '["Already Done?"]' && JSON.stringify(to(M, 'Already Done?', 1)) === '["Jessie AI Agent"]'), 'everything else goes to the AI Agent as before');
 ok(node(M, 'Cancel Direct').parameters.workflowId.value === 'bAyDw7udhmY0NL38' && node(M, 'Cancel Direct').parameters.workflowInputs.value.event_id === '', 'Cancel Direct calls Cancel Booking with the card, never a model event id');
 ok(JSON.stringify(M.connections['Prepare Cancel']) === JSON.stringify(M.connections['Cancel Booking']), 'Prepare Cancel is wired to the agent like the other tools');
 const reply = res => new Function('$input', code(M, 'Cancel Direct Reply'))(wrap([{ json: res }]))[0].json.output;
