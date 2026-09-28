@@ -7,7 +7,7 @@ known behaviour gaps, and pre-launch work. Each item says how it was found and w
 **Item numbers are permanent**; other docs cite "PENDING 15". New items get the next number, and resolved
 ones move to the bottom instead of being renumbered.
 
-**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-28 evening (Prepare Booking LIVE 08:28 UTC; 26/28/29/30/41 live; 34 and 54 LIVE 09:52 in main v167 / Book Session v55, v168 10:39).
+**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-09-28 evening (Prepare Booking LIVE 16:28 PHT; 26/28/29/30/41 live; 34 and 54 LIVE 09:52 in main v167 / Book Session v55, v168 10:39).
 
 ---
 
@@ -22,7 +22,7 @@ ones move to the bottom instead of being renumbered.
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
 | 22 | Automatic backup off since 16 Sep; manual backups only (last 2026-09-25) | Follows 21 |
 | 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | **Tel's to-do (28 Sep):** Tel reports it working; her confirmation marks it DONE in the sprint checklist |
-| 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | **Applied 28 Sep 07:20 UTC** in Book Session v53, Room Availability v10, Move v21, Find v5 (main's disabled node goes with v165). IT still to confirm the old id is retired |
+| 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | **Applied 28 Sep 15:20 PHT** in Book Session v53, Room Availability v10, Move v21, Find v5 (main's disabled node goes with v165). IT still to confirm the old id is retired |
 
 ### 🟠 Soon: before the SOP is final (by 5 Oct); behaviour real users will hit
 
@@ -30,18 +30,18 @@ ones move to the bottom instead of being renumbered.
 |---|---|---|
 | 51 | **Padded timestamp reads as "every room free"** (eval 27 Sep): Room Availability 40% of checks; same shape in Book Session and Move Booking | **Fixed and verified live 28 Sep**: eval after import, 64 of 140 checks padded, all 64 returned the real busy rooms, 0 "all free" (was 61/61) |
 | 53 | Clients table data: 7 duplicate names, 3 names with stray spaces, 3 non-client rows. Bookers (28 Sep, raised with Tel): Via Aceron's Info to list Loc Engineer; BP Valenzuela's Initials trailing space; Eddie Boy Vargas retiring - remove from Bookers when he leaves; any nicknames people use for engineers added to Info (v167 reads names from the requester's words against Info) | Airtable (Tel) |
-| 52 | M2 and M6 had `Active / Bookable` unticked, so Jessie never listed or offered them | **Done 28 Sep:** Tel ticked both; live room list 25 → 27 at 03:35 UTC |
+| 52 | M2 and M6 had `Active / Bookable` unticked, so Jessie never listed or offered them | **Done 28 Sep:** Tel ticked both; live room list 25 → 27 at 11:35 PHT |
 | 50 | Clients optional + new clients to a `New Clients` sheet; client room preferences dropped (main v161 / Book v49, LIVE 28 Sep) | **Done 28 Sep:** Tel deleted the hidden fields; Clients = Name, Importance, Notes, Booker Type, Client Type; live lookups confirmed |
 | 46 | Speed cache (main v158) FAILED live — Ref Store hung writing static data; rolled back. Do not push v158 | Fix + prove on a test workflow |
-| 54 | **Gemini invents staff names and corrupts copied details.** v165 eval: "Andrian \"Drey\" Sison", "Daryl Aquino" for "Drey"/"Daryl" (refused, a wasted turn, and the refusal leaked its instructions); earlier "REASON1" → "REazon1", "Tara Inf". Cause: four places asked the model for a full name, role and initials it did not have | **LIVE 28 Sep 09:52 UTC** (main v167 + Book Session v55; v168 10:39): the prompt asks for names as typed (27/27 in the eval twin, was 0/2); engineer, arranger, project, client and times are read from the requester's own words and win over the model's; v55 fills name, role and initials from Bookers |
+| 54 | **Gemini invents staff names and corrupts copied details.** v165 eval: "Andrian \"Drey\" Sison", "Daryl Aquino" for "Drey"/"Daryl" (refused, a wasted turn, and the refusal leaked its instructions); earlier "REASON1" → "REazon1", "Tara Inf". Cause: four places asked the model for a full name, role and initials it did not have | **LIVE 28 Sep 17:52 PHT** (main v167 + Book Session v55; v168 10:39): the prompt asks for names as typed (27/27 in the eval twin, was 0/2); engineer, arranger, project, client and times are read from the requester's own words and win over the model's; v55 fills name, role and initials from Bookers |
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
-| 34 | A1: free rooms sometimes left out of an availability answer | v165 eval: "which studios" dropped the M booths 3/3. **LIVE 28 Sep 09:52 UTC** (main v167 Guard Probe adds any free room the reply left out); live eval: M booths listed |
-| 26 | Can claim "I've asked the current holder" without doing it | **LIVE 28 Sep 08:28 UTC** (main v166 Guard Probe: withdrawn unless Book Session / Move opened it that turn) |
+| 34 | A1: free rooms sometimes left out of an availability answer | v165 eval: "which studios" dropped the M booths 3/3. **LIVE 28 Sep 17:52 PHT** (main v167 Guard Probe adds any free room the reply left out); live eval: M booths listed |
+| 26 | Can claim "I've asked the current holder" without doing it | **LIVE 28 Sep 16:28 PHT** (main v166 Guard Probe: withdrawn unless Book Session / Move opened it that turn) |
 | 27 | Can open the same consent request twice | Build |
-| 28 | Booking over your own booking asks *you* for consent | **LIVE 28 Sep 08:28 UTC** (Book Session v54, Move v22: SELF_BOOKING → "you already have it") |
+| 28 | Booking over your own booking asks *you* for consent | **LIVE 28 Sep 16:28 PHT** (Book Session v54, Move v22: SELF_BOOKING → "you already have it") |
 | 23 | After "room taken", re-offers the same failed slot | **Built 28 Sep:** ROOM_OCCUPIED lists the usual rooms actually free in that window (Book Session v53, live) |
-| 29 | Music sessions don't require an arranger | **LIVE 28 Sep 08:28 UTC** (Book Session v54): asked whenever a Music session's type lists an arranger; "no arranger" accepted |
-| 30 | Celebrity sessions don't suggest a holding room | **LIVE 28 Sep 08:28 UTC:** prepared summary notes it from Room Requirements |
+| 29 | Music sessions don't require an arranger | **LIVE 28 Sep 16:28 PHT** (Book Session v54): asked whenever a Music session's type lists an arranger; "no arranger" accepted |
+| 30 | Celebrity sessions don't suggest a holding room | **LIVE 28 Sep 16:28 PHT:** prepared summary notes it from Room Requirements |
 | 44 | Tells the requester "Booked" even when the room declines seconds later (clash she can't see) | Build |
 | 35 | Timestamp junk-guard not yet in Move Booking / Expand Series | LIVE 28 Sep with 51 (Move v20, Expand v2) |
 | 37 | Never run live: priority request timing out; same-day / next-day M-booth windows | Test now / watch at launch |
@@ -57,7 +57,7 @@ ones move to the bottom instead of being renumbered.
 | 11 | Explore an n8n update | Server |
 | 13, 18, 39 | Speed: first Code node ~3.5s, first outbound call ~4s, new staff-list reads ~1s | Server / later |
 | 40 | Leftover snapshot files from renames in `workflows/live/` | **Done 28 Sep:** approved; current snapshots refreshed first, then the 5 old-name files removed (all 5 ids still active under their current names) |
-| 41 | `Booked For` notice quotes three words instead of the name | **LIVE 28 Sep 08:28 UTC** (main v166) |
+| 41 | `Booked For` notice quotes three words instead of the name | **LIVE 28 Sep 16:28 PHT** (main v166) |
 
 **Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31, 32, 45. **Item 14** is a permanent
 known constraint, not a task.
@@ -464,7 +464,7 @@ two-segment `Project Code / Initials` was skipped. v48 applies the same correcti
 Localization or QC. `scripts/sim-title-initials.js` 6/6 (v47 reproduces the bug); test-nodes 209/209.
 The project code in the Localization client slot (`Client: NET-KUBA`) is intended — the department works by project code (Tara, 2026-09-26). Not a bug.
 **50. Clients are optional; new clients go to a review sheet; client room preferences are dropped.** Decided
-2026-09-28 (decided in discussion). **LIVE: main v161 + Book Session v49, imported 2026-09-28 02:58 UTC** (test-nodes --live 221/221 + 28, verify-ids clean). `New Clients` tab created by Howard, headers checked.
+2026-09-28 (decided in discussion). **LIVE: main v161 + Book Session v49, imported 2026-09-28 10:58 PHT** (test-nodes --live 221/221 + 28, verify-ids clean). `New Clients` tab created by Howard, headers checked.
 - *Prompt (v161):* still always ask for a client, but a booking goes ahead without one — title `PROJECT /
   initials`, summary `Client: None`. A client not in Clients is a new client for every department (Advertising
   and Localization included): booked as typed, one line saying it will be flagged for review, never blocked. The

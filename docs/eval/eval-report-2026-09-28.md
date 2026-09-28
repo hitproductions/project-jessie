@@ -1,7 +1,7 @@
 # Jessie hallucination test, round 2: what changed and what it shows
 
 *Runs on 28 September 2026, the day after the first test ([27 Sep report](eval-report-2026-09-27.md)).
-Internal: it contains staff and client names.* Everything below is **live** as of 28 Sep, 10:40 UTC
+Internal: it contains staff and client names.* Everything below is **live** as of 28 Sep, 18:40 PHT
 (main v168, Book Session v55).
 
 ## The short version
@@ -14,7 +14,7 @@ Internal: it contains staff and client names.* Everything below is **live** as o
   name exactly as typed (the typed name 27 of 27 times, from 0 of 2), and code reads the engineer, arranger,
   project, client and times from the requester's own message and fills the rest from Airtable. No invented name
   has ever been booked, in either round.
-- **Code now writes the summary the requester approves** (Prepare Booking, live since 08:28 UTC). The calendar title
+- **Code now writes the summary the requester approves** (Prepare Booking, live since 16:28 PHT). The calendar title
   is in every summary (27 Sep: 23 of 97), in one fixed format, and a "yes" books exactly what was shown.
 - **New clients work end to end.** A live test booking with a made-up client wrote its first row to the New
   Clients sheet, with the title and the booking as shown.
@@ -23,14 +23,14 @@ Internal: it contains staff and client names.* Everything below is **live** as o
 
 ## What changed since 27 Sep
 
-| When (UTC) | What went live | What it does |
+| When (PHT) | What went live | What it does |
 |---|---|---|
-| 02:58 | main v161, Book Session v49 | Clients optional; new clients allowed and logged; client room preferences dropped |
-| 03:33 | main v162 + every sub-workflow | The four decisions from the 27 Sep report; the padded-time fix everywhere a time reaches the calendar |
-| 05:58–07:20 | Book Session v51–v53, Room Availability v10, Move v21, Find v5 | The Prepare Booking engine; client checks; Studio E's calendar id; real free alternatives when a room is taken |
-| **08:28** | **main v166, Book Session v54, Move v22** | **Prepare Booking on for everyone**; the arranger always asked; in-house arrangers; no self-consent |
-| 09:52 | main v167, Book Session v55 | Names and details from the requester's words; complete free-room lists; one combined client question; "10am-12nn"; "last Monday" |
-| 10:39 | main v168 | After a "no", the refused summary is no longer re-sent |
+| 10:58 | main v161, Book Session v49 | Clients optional; new clients allowed and logged; client room preferences dropped |
+| 11:33 | main v162 + every sub-workflow | The four decisions from the 27 Sep report; the padded-time fix everywhere a time reaches the calendar |
+| 13:58–15:20 | Book Session v51–v53, Room Availability v10, Move v21, Find v5 | The Prepare Booking engine; client checks; Studio E's calendar id; real free alternatives when a room is taken |
+| **16:28** | **main v166, Book Session v54, Move v22** | **Prepare Booking on for everyone**; the arranger always asked; in-house arrangers; no self-consent |
+| 17:52 | main v167, Book Session v55 | Names and details from the requester's words; complete free-room lists; one combined client question; "10am-12nn"; "last Monday" |
+| 18:25 | main v168 | After a "no", the refused summary is no longer re-sent |
 
 ## How we tested
 
@@ -52,17 +52,17 @@ Music and arranger cases, and tonight's corrections, time shifts, "Did you mean�
 | Run | Build | Conversations | Purpose |
 |---|---|---|---|
 | 27 Sep | main v160 (live) | 245 | The first test |
-| 28 Sep 04:02 | main v162 (live) | 162 | After the padded-time fix and the four decisions |
-| 28 Sep 06:38 | main v163 (candidate) | 162 | First Prepare Booking build |
-| 28 Sep 08:02 | main v165 (candidate) | 207 | The build that became v166 |
+| 28 Sep 12:02 | main v162 (live) | 162 | After the padded-time fix and the four decisions |
+| 28 Sep 14:38 | main v163 (candidate) | 162 | First Prepare Booking build |
+| 28 Sep 16:02 | main v165 (candidate) | 207 | The build that became v166 |
 | 28 Sep evening | main v167 / v168 (candidates), several runs | 54 + 27 + 50 + 72 + 20 + 9 | Names from the requester's words; the fixes below |
 | 28 Sep, after each import | live | 6 + 6 + 2 | Every called sub-workflow answering; roles, M booths, past date, combined question |
-| 28 Sep 10:16 | live, by hand | 1 summary + "no" | ROLETEST: title, 10:00–12:00 from "10am-12nn", Engineer Daryl Reyes (Post Engineer) from "Drey" |
-| 28 Sep 09:14 | live, by hand | 1 booking + cancel | The yes path and the New Clients row |
+| 28 Sep 18:16 | live, by hand | 1 summary + "no" | ROLETEST: title, 10:00–12:00 from "10am-12nn", Engineer Daryl Reyes (Post Engineer) from "Drey" |
+| 28 Sep 17:14 | live, by hand | 1 booking + cancel | The yes path and the New Clients row |
 
 ## Issue by issue
 
-**Status:** *Live* = live before tonight's imports. *v167* / *v168* = live since 09:52 / 10:39 UTC, 28 Sep.
+**Status:** *Live* = live before tonight's imports. *v167* / *v168* = live since 17:52 / 18:25 PHT, 28 Sep.
 
 ### From the 27 Sep test
 
