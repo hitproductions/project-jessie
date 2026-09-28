@@ -80,10 +80,15 @@ and Slack, no Airtable), runs on the same n8n instance.
   deliverables confirmed landed (Drew). **9 Oct** — cross-department orientation.
 - **12 Oct** — launch: ready-to-use for selected departments / key persons.
 
-**Working, and proven live:** the six Jessie sub-workflows and the main workflow are
-all active and green. The confirmation gate, the ownership refusals (`NOT_YOURS`),
-and Guard Probe's text rewrites all hold in real conversations. Last verified end to
-end 2026-09-06 — a "test" DM got a clean reply in ~19s, every node green.
+**Working, and proven live:** the main workflow and every sub-workflow are active and
+green. The confirmation gate, the ownership refusals (`NOT_YOURS`), Guard Probe's text
+rewrites and **Prepare Booking** (code writes the summary the requester approves) all
+hold in real conversations. Last verified end to end 2026-09-28 (PHT evening) on main
+v168 / Book Session v55: a live booking with a made-up new client (booked from the
+checked summary, first New Clients row written, then cancelled) and a "10am-12nn,
+engineer Drey" summary (10:00–12:00, Daryl Reyes (Post Engineer)), every node green.
+Where each build stands and what it fixed: [`VERSIONS.md`](VERSIONS.md). The latest
+eval: [`docs/eval/eval-report-2026-09-28.md`](docs/eval/eval-report-2026-09-28.md).
 
 **The biggest thing to understand — reliability, and it is not the workflows.**
 Jessie has gone silent to Slack repeatedly (2, 3, 5, 7-8 September), from minutes to
