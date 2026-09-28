@@ -20,11 +20,31 @@ detail: [`../VERSIONS.md`](../VERSIONS.md). Everything below is committed; nothi
 
 Last live check, 04:08: book → yes → cancel → yes, every node green, test booking removed.
 
+## The big one: Prepare Booking's "yes" had not really been tested
+
+Prepare Booking went live on 28 Sep at 16:28 PHT (main v166). What was tested before that was everything up to the
+summary, not what happens when the requester says yes:
+- **The eval twin never says yes.** By design it stops at the summary, so none of its 245 conversations reached a
+  booking.
+- **The one live booking** (v168, before QA) happened to work.
+
+Tonight's QA said yes and followed each booking to the calendar, and the first tries failed. On **2 of 4 yeses** the
+model called Prepare Booking again instead of Book Session:
+- **M1:** nothing was booked.
+- **M4:** it booked, but the reply was a fresh "Confirm to book." summary, as if it hadn't.
+
+**Fixed in v170 (Book Direct):** a verified yes books in code, with no model call. The first attempt, v169, dropped
+the booker reference from the event (so it couldn't be cancelled); it was live for 10 minutes before the rollback.
+Tonight's live checks confirm the fix.
+
+**The lesson for QA and the SOP testing: go through to the booking, not just to the summary.** The same gap exists
+for **moves**: still model-written, and not tested with a real yes tonight. (A series was: 5 Tuesdays in November
+booked correctly.)
+
 ## What changed, and why
 
 **1. A "yes" no longer needs the AI (book and cancel).**
-- Book (v170): a yes to a prepared summary books in code. The model used to re-prepare instead of booking —
-  missed until tonight because the eval twin never says yes.
+- Book (v170): a yes to a prepared summary books in code (see above).
 - Cancel (v177 / Cancel v18): code writes the cancel card (with a check code over the event); a yes cancels
   exactly that booking, unchanged, or refuses. Fixes QA bugs 5, 6, 8.
 - Live: book yes 9.6 s, cancel yes 7.5 s, **0 model calls**.
