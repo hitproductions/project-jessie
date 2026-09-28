@@ -77,6 +77,12 @@ n8n stored.
    - the standing holds that still block their booth set to **"Show as available"**: M1 - Rico, M4 - Tel,
      M4 - Japs, M8 - ANA.
    Then rebuild on the live main (`scripts/build-consent-fix.py` works from fresh pulls). Details in the QA handoff.
+   **Also in this pass — Read Pending Consent speed.** main reads the whole Consent Requests sheet on every message
+   (~1.1 s, measured tonight, the biggest pre-AI cost left) to see whether the sender owes a consent answer. Fix: the
+   cache refresh also stores who has a PENDING request; main reads the sheet only when the sender is on that list,
+   and falls back to reading it when the list is unavailable. Open Consent Request must refresh the cache right after
+   writing a request and **before** DMing the holder, or a quick "yes" is missed. Small remaining window: two
+   refreshes overlapping could write an older list — say how you close it. Test it with the consent live test.
 2. **Recurring bookings** — ChatGPT's review, below. Not yet checked against the code. Its earlier reviews were
    mostly right (one pagination claim was not worth the change), so verify each point before building.
 3. **Push** everything to GitHub once you have pulled and looked.
