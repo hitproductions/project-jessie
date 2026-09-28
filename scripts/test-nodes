@@ -243,7 +243,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
       '*Note:* Studio 7 is outside the usual rooms for Post Mixing.\n\nConfirm to book. (yes/no)',{roomTable:''},
       x=>/\*Note:\*/.test(x.output)],
     // a duration nobody asked for
-    ['assumed duration','states an assumed duration',SUM,{startOnly:true},x=>/^Assuming 3 hours/.test(x.output)],
+    ['assumed duration','states an assumed duration',SUM,{startOnly:true},x=>/^Assumed 3 hours\./.test(x.output)],
     ['assumed duration','does not restate one already given',SUM.replace('*M13','Assuming 3 hours.\n\n*M13'),{startOnly:true},
       x=>(x.output.match(/Assuming/g)||[]).length===1],
     ['assumed duration','says nothing when a range was given',SUM,{},x=>!/Assuming/.test(x.output)],
@@ -810,7 +810,11 @@ suite('Prepare Booking — render, send, read back at the yes', ()=>{
   const r0=render(REQ,Object.assign({},CC,{final_summary:'ORANGE / TL',final_client:''}));
   check('pb','no client: "Client: None" and a two-segment title',/\*Client:\* None/.test(r0.summary_text)&&/^\*ORANGE \/ TL\*/.test(r0.summary_text));
   check('pb','... and it reads back with an empty client',readBack(gpRun('x',asStep(r0),'no client').output,true).p.client==='');
-  check('pb','a start-only booking says the length it assumed',/Assuming 1 hour, the usual VO Recording length/.test(render(REQ,Object.assign({},CC,{assumed_minutes:60})).summary_text));
+  check('pb','a start-only booking says the length it assumed',/\*Note:\* Assumed 1 hour \(usual for VO Recording\)\./.test(render(REQ,Object.assign({},CC,{assumed_minutes:60})).summary_text));
+  // 29 Sep: the override note is shorter ("booking it as asked"); the yes must still read it back as an override.
+  const ro=render(Object.assign({},REQ,{room_override:true}),CC);
+  const rob=readBack(gpRun('x',asStep(ro)).output,true);
+  check('pb','an "unusual room" summary says so briefly and still books as an override',/isn't a usual VO Recording room - booking it as asked\./.test(ro.summary_text)&&rob.use===true&&rob.p.room_override===true,JSON.stringify({t:ro.summary_text.slice(-200),rob:rob.p&&rob.p.room_override,use:rob.use,why:rob.reason}));
   const rc=render(REQ,Object.assign({},CC,{verdict:'REJECTED',reason:'ROOM_OCCUPIED'}),null,{offer:true,open:{kind:'PREEMPT',room:'Studio F',incumbentTitle:'XYZ / Jem Lim / AEG'}});
   check('pb','a consent-eligible clash is summarised with the note, not requested',rc.needs_consent===true&&/if you confirm I will ask them to move/.test(rc.summary_text));
   const rl=render(Object.assign({},REQ,{session_type:'Localization Dubbing',rooms:'Studio 1, Studio A'}),Object.assign({},CC,{final_summary:'NET-KUBA / FP',final_client:'NET-KUBA'}));

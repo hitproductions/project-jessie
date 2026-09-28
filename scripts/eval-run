@@ -73,7 +73,7 @@ function summaryFields(reply) {
   const r = String(reply || '');
   const line = k => { const m = r.match(new RegExp('\\*?' + k + ':\\*?[ \\t]*([^\\n]+)', 'i')); return m ? m[1].replace(/\*/g, '').trim() : ''; };
   const tm = r.match(/^\s*\*?([^*\n]+?\s\/\s[^*\n]+?)\*?\s*$/m);
-  return { isSummary: /Confirm to book\.\s*$/i.test(r), engineer: line('Engineer').replace(/\s*\(.*$/, '').trim(), client: line('Client'),
+  return { isSummary: /(?:Confirm to book\.|Book it\? Reply yes or no\.)\s*$/i.test(r), engineer: line('Engineer').replace(/\s*\(.*$/, '').trim(), client: line('Client'),
     date: line('Date'), bookedBy: line('Booked by'), title: tm ? tm[1].trim() : '' };
 }
 function expectedDate(dateNotice, phrase) {
