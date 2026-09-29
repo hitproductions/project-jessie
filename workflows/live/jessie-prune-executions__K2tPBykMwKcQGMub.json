@@ -1,8 +1,8 @@
 {
   "active": true,
   "activeVersion": {
-    "authors": "Tara Lim",
-    "autosaved": false,
+    "authors": "Howard Luistro",
+    "autosaved": true,
     "connections": {
       "Delete Execution": {
         "main": [
@@ -49,26 +49,11 @@
         ]
       }
     },
-    "createdAt": "2026-09-08T08:37:47.026Z",
+    "createdAt": "2026-09-28T17:44:48.989Z",
     "description": "",
-    "name": "Version 2fc199d6",
+    "name": "Version 889464b9",
     "nodeGroups": [],
     "nodes": [
-      {
-        "id": "4718146f-c847-4b0b-90a7-1e6af2a7d73c",
-        "name": "Why this exists",
-        "parameters": {
-          "content": "## Nightly execution prune\n\nn8n stores the full data of every execution - about 250 KB per Jessie turn.\nOn 2026-09-02 and again on 2026-09-03 the SQLite database reached roughly\n750 MB across 4,161 executions and **both Jessie and Posty stopped receiving\nSlack events**. Toggling the workflows active did nothing, many times over.\nDeleting 3,781 old executions brought both back.\n\nRuns 04:00 Asia/Manila, off-peak, because the deletes hit the same SQLite\nfile a booking would be writing to.\n\n### Reading the run\n`List Executions` returns **one item per page**, not one per execution - two\nitems means two pages of 250 were walked. Look inside `json.data` for the\nexecutions. `Older Than Cutoff` reporting 0 is correct when nothing is older\nthan KEEP_DAYS.\n\n### Pagination, if it ever needs rebuilding\nThe working parameter carries **only `name` and `value`** - no `type`,\nand the block has no `paginationMode`. n8n omits both when they are at\ntheir defaults (qs, update-a-parameter). Writing `\"type\": \"query\"` or\n`\"type\": \"qs\"` into the JSON by hand makes the node fail validation with\n\"Parameter type must be one of: body, headers, qs\" - selecting Query in\nthe UI *removes* the field. Copy this node rather than hand-writing it.\n\n### Credential\nHeader Auth - name `X-N8N-API-KEY`, value = an n8n API key, key only.",
-          "height": 760,
-          "width": 460
-        },
-        "position": [
-          2240,
-          0
-        ],
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1
-      },
       {
         "id": "e85d489b-5e60-464a-827a-c36ace19c8bf",
         "name": "Every day 04:00",
@@ -130,7 +115,7 @@
           "url": "https://signal.hitpromanila.net/api/v1/executions"
         },
         "position": [
-          2992,
+          2976,
           208
         ],
         "type": "n8n-nodes-base.httpRequest",
@@ -143,7 +128,7 @@
           "jsCode": "// Keep successful runs KEEP_DAYS; keep anything that did NOT succeed far longer.\n//\n// Two-tier on purpose. Pruning at 3 days destroyed the evidence for the 2-3 Sept\n// outages before anyone could study them, and later made it impossible to tell\n// whether an old speed measurement had been taken under concurrent load. SQLite\n// pressure - the reason the window was short - was ruled out: no lock or disk\n// errors, contiguous execution ids, no latency creep before either stall, and the\n// heaviest hour of those three days ran clean.\n//\n// Failures are rare and tiny in volume, and they are the ones worth reading, so\n// they get a much longer window than the successes that make up the bulk.\n//\n// Capped per run so a backlog drains over several nights instead of landing\n// thousands of writes on SQLite at once - the deletes contend with the same\n// file a booking writes to.\nconst KEEP_DAYS        = 7;    // status === success\nconst KEEP_DAYS_FAILED = 30;   // error, crashed, canceled - keep for diagnosis\nconst MAX_PER_RUN      = 800;\n\n// Anything still in flight is never touched, whatever its age.\nconst IN_FLIGHT = ['running', 'waiting', 'new'];\n\nconst now       = Date.now();\nconst cutoffOk  = now - KEEP_DAYS * 24 * 60 * 60 * 1000;\nconst cutoffBad = now - KEEP_DAYS_FAILED * 24 * 60 * 60 * 1000;\nconst seen = {};\nconst out  = [];\n\n// The List node paginates, so input arrives either as one item per page (each\n// carrying a `data` array) or as one item per execution, depending on how n8n\n// splits the response. Handle both rather than assuming.\nfor (const item of $input.all()) {\n  const j = (item && item.json) || {};\n  const rows = Array.isArray(j.data) ? j.data : [j];\n  for (const e of rows) {\n    if (!e || !e.id || seen[e.id]) continue;\n\n    const status = String(e.status || '').toLowerCase();\n    if (IN_FLIGHT.indexOf(status) !== -1) continue;\n\n    // Unknown/blank status is treated as a failure - keep it longer rather than\n    // delete something we cannot classify.\n    const cutoff = status === 'success' ? cutoffOk : cutoffBad;\n\n    const started = Date.parse(e.startedAt || e.createdAt || '');\n    if (!started || started >= cutoff) continue;\n\n    seen[e.id] = 1;\n    out.push({ json: { id: e.id, startedAt: e.startedAt, status: status } });\n    if (out.length >= MAX_PER_RUN) return out;\n  }\n}\nreturn out;"
         },
         "position": [
-          3232,
+          3200,
           208
         ],
         "type": "n8n-nodes-base.code",
@@ -175,7 +160,7 @@
           "url": "=https://signal.hitpromanila.net/api/v1/executions/{{ $json.id }}"
         },
         "position": [
-          3472,
+          3424,
           208
         ],
         "retryOnFail": true,
@@ -189,28 +174,28 @@
           "jsCode": "const items = $input.all();\nconst ok = items.filter(i => !(i.json && i.json.error)).length;\nreturn [{ json: { pruned: ok, attempted: items.length, at: new Date().toISOString() } }];"
         },
         "position": [
-          3712,
+          3648,
           208
         ],
         "type": "n8n-nodes-base.code",
         "typeVersion": 2
       }
     ],
-    "updatedAt": "2026-09-08T08:37:48.000Z",
-    "versionId": "2fc199d6-1f98-4d7a-8ec2-3ecd2bc8d316",
+    "updatedAt": "2026-09-28T17:44:53.000Z",
+    "versionId": "889464b9-f2af-466d-9e64-c00f03459f6a",
     "workflowId": "K2tPBykMwKcQGMub",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-09-08T08:37:48.516Z",
+        "createdAt": "2026-09-28T17:44:53.491Z",
         "event": "activated",
-        "id": 713,
-        "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
-        "versionId": "2fc199d6-1f98-4d7a-8ec2-3ecd2bc8d316",
+        "id": 1522,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "889464b9-f2af-466d-9e64-c00f03459f6a",
         "workflowId": "K2tPBykMwKcQGMub"
       }
     ]
   },
-  "activeVersionId": "2fc199d6-1f98-4d7a-8ec2-3ecd2bc8d316",
+  "activeVersionId": "889464b9-f2af-466d-9e64-c00f03459f6a",
   "connections": {
     "Delete Execution": {
       "main": [
@@ -265,21 +250,6 @@
   "name": "Jessie — Prune Executions",
   "nodeGroups": [],
   "nodes": [
-    {
-      "id": "4718146f-c847-4b0b-90a7-1e6af2a7d73c",
-      "name": "Why this exists",
-      "parameters": {
-        "content": "## Nightly execution prune\n\nn8n stores the full data of every execution - about 250 KB per Jessie turn.\nOn 2026-09-02 and again on 2026-09-03 the SQLite database reached roughly\n750 MB across 4,161 executions and **both Jessie and Posty stopped receiving\nSlack events**. Toggling the workflows active did nothing, many times over.\nDeleting 3,781 old executions brought both back.\n\nRuns 04:00 Asia/Manila, off-peak, because the deletes hit the same SQLite\nfile a booking would be writing to.\n\n### Reading the run\n`List Executions` returns **one item per page**, not one per execution - two\nitems means two pages of 250 were walked. Look inside `json.data` for the\nexecutions. `Older Than Cutoff` reporting 0 is correct when nothing is older\nthan KEEP_DAYS.\n\n### Pagination, if it ever needs rebuilding\nThe working parameter carries **only `name` and `value`** - no `type`,\nand the block has no `paginationMode`. n8n omits both when they are at\ntheir defaults (qs, update-a-parameter). Writing `\"type\": \"query\"` or\n`\"type\": \"qs\"` into the JSON by hand makes the node fail validation with\n\"Parameter type must be one of: body, headers, qs\" - selecting Query in\nthe UI *removes* the field. Copy this node rather than hand-writing it.\n\n### Credential\nHeader Auth - name `X-N8N-API-KEY`, value = an n8n API key, key only.",
-        "height": 760,
-        "width": 460
-      },
-      "position": [
-        2240,
-        0
-      ],
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1
-    },
     {
       "id": "e85d489b-5e60-464a-827a-c36ace19c8bf",
       "name": "Every day 04:00",
@@ -341,7 +311,7 @@
         "url": "https://signal.hitpromanila.net/api/v1/executions"
       },
       "position": [
-        2992,
+        2976,
         208
       ],
       "type": "n8n-nodes-base.httpRequest",
@@ -354,7 +324,7 @@
         "jsCode": "// Keep successful runs KEEP_DAYS; keep anything that did NOT succeed far longer.\n//\n// Two-tier on purpose. Pruning at 3 days destroyed the evidence for the 2-3 Sept\n// outages before anyone could study them, and later made it impossible to tell\n// whether an old speed measurement had been taken under concurrent load. SQLite\n// pressure - the reason the window was short - was ruled out: no lock or disk\n// errors, contiguous execution ids, no latency creep before either stall, and the\n// heaviest hour of those three days ran clean.\n//\n// Failures are rare and tiny in volume, and they are the ones worth reading, so\n// they get a much longer window than the successes that make up the bulk.\n//\n// Capped per run so a backlog drains over several nights instead of landing\n// thousands of writes on SQLite at once - the deletes contend with the same\n// file a booking writes to.\nconst KEEP_DAYS        = 7;    // status === success\nconst KEEP_DAYS_FAILED = 30;   // error, crashed, canceled - keep for diagnosis\nconst MAX_PER_RUN      = 800;\n\n// Anything still in flight is never touched, whatever its age.\nconst IN_FLIGHT = ['running', 'waiting', 'new'];\n\nconst now       = Date.now();\nconst cutoffOk  = now - KEEP_DAYS * 24 * 60 * 60 * 1000;\nconst cutoffBad = now - KEEP_DAYS_FAILED * 24 * 60 * 60 * 1000;\nconst seen = {};\nconst out  = [];\n\n// The List node paginates, so input arrives either as one item per page (each\n// carrying a `data` array) or as one item per execution, depending on how n8n\n// splits the response. Handle both rather than assuming.\nfor (const item of $input.all()) {\n  const j = (item && item.json) || {};\n  const rows = Array.isArray(j.data) ? j.data : [j];\n  for (const e of rows) {\n    if (!e || !e.id || seen[e.id]) continue;\n\n    const status = String(e.status || '').toLowerCase();\n    if (IN_FLIGHT.indexOf(status) !== -1) continue;\n\n    // Unknown/blank status is treated as a failure - keep it longer rather than\n    // delete something we cannot classify.\n    const cutoff = status === 'success' ? cutoffOk : cutoffBad;\n\n    const started = Date.parse(e.startedAt || e.createdAt || '');\n    if (!started || started >= cutoff) continue;\n\n    seen[e.id] = 1;\n    out.push({ json: { id: e.id, startedAt: e.startedAt, status: status } });\n    if (out.length >= MAX_PER_RUN) return out;\n  }\n}\nreturn out;"
       },
       "position": [
-        3232,
+        3200,
         208
       ],
       "type": "n8n-nodes-base.code",
@@ -386,7 +356,7 @@
         "url": "=https://signal.hitpromanila.net/api/v1/executions/{{ $json.id }}"
       },
       "position": [
-        3472,
+        3424,
         208
       ],
       "retryOnFail": true,
@@ -400,7 +370,7 @@
         "jsCode": "const items = $input.all();\nconst ok = items.filter(i => !(i.json && i.json.error)).length;\nreturn [{ json: { pruned: ok, attempted: items.length, at: new Date().toISOString() } }];"
       },
       "position": [
-        3712,
+        3648,
         208
       ],
       "type": "n8n-nodes-base.code",
@@ -441,7 +411,7 @@
   },
   "tags": [],
   "triggerCount": 1,
-  "updatedAt": "2026-09-08T08:37:47.022Z",
-  "versionCounter": 22,
-  "versionId": "2fc199d6-1f98-4d7a-8ec2-3ecd2bc8d316"
+  "updatedAt": "2026-09-28T17:44:48.985Z",
+  "versionCounter": 24,
+  "versionId": "889464b9-f2af-466d-9e64-c00f03459f6a"
 }

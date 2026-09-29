@@ -2,17 +2,18 @@ Live n8n workflows, snapshot. Backed up nightly by GitHub Actions.
 
 Backlog Sync — Quotation to Tracker        active   backlog-sync-quotation-to-tracker__xo2LIyiqYrJnTLki.json
 Jessie — Book Series — v3 (v2 fixed)       active   jessie-book-series__UAwFoifgkfL1xNP2.json
-Jessie — Book Session — v55 (v54 fixed)    active   jessie-book-session__EUG3sGXkfsJSYIMz.json
-Jessie — Cancel Booking — v16 (v15 fixed)  active   jessie-cancel-booking__bAyDw7udhmY0NL38.json
+Jessie — Book Session — v65 (arranger question fix) active   jessie-book-session__EUG3sGXkfsJSYIMz.json
+Jessie — Cancel Booking — v20 (cancel without a date) active   jessie-cancel-booking__bAyDw7udhmY0NL38.json
 Jessie — Consent Sweep                     active   jessie-consent-sweep__QHHDevaWhMk8gSBX.json
-Jessie — Envoy Mirror                      inactive jessie-envoy-mirror__atJ87j360xVKHHzD.json
-Jessie — Expand Series — v3                active   jessie-expand-series__hkx9PXcgW9nrzY2a.json
+Jessie — Envoy Mirror                      active   jessie-envoy-mirror__atJ87j360xVKHHzD.json
+Jessie — Expand Series — v4                active   jessie-expand-series__hkx9PXcgW9nrzY2a.json
 Jessie — Finalize Consent                  active   jessie-finalize-consent__TO1UnZTZ2LhtE9J3.json
-Jessie — Find Booking — v5 (v4 fixed)      active   jessie-find-booking__yzirq12O227VTFp8.json
-Jessie — Move Booking — v22 (v21 fixed)    active   jessie-move-booking__t7lwR2km4tfN8DbM.json
+Jessie — Find Booking — v7 (find by title) active   jessie-find-booking__yzirq12O227VTFp8.json
+Jessie — Move Booking — v25 (move card)    active   jessie-move-booking__t7lwR2km4tfN8DbM.json
 Jessie — Open Consent Request              active   jessie-open-consent-request__nEHnCMMXS0am59Zy.json
 Jessie — Prune Executions                  active   jessie-prune-executions__K2tPBykMwKcQGMub.json
-Jessie — Room Availability — v10 (v9 fixed) active   jessie-room-availability__e7tBQB458nstrqei.json
+Jessie — Refresh Reference Cache — v2      active   jessie-refresh-reference-cache__DxByjma1WLGMLR0L.json
+Jessie — Room Availability — v11 (v10 fixed) active   jessie-room-availability__e7tBQB458nstrqei.json
 Music Projects - Intake                    active   music-projects-intake__BAXIPFh7JKaye7qY.json
 My workflow                                inactive my-workflow__JAGZ1SDEVg1ZHRQr.json
 Posty — Error Alert                        active   posty-error-alert__jl8vbMIWx399ixgJ.json
@@ -23,7 +24,7 @@ Posty — Xero Typo Check                    active   posty-xero-typo-check__cXs
 Project Jessie v2 BACKUP aug17_502pm       inactive project-jessie-v2-backup-aug17-502pm__1GcIAeLdJZLeB8js.json
 Project Jessie v2 backup 0814.513pm        inactive project-jessie-v2-backup-0814-513pm__jtNid6MGQiIsWL51.json
 Project Jessie v2 copy aug17_331pm         inactive project-jessie-v2-copy-aug17-331pm__9sTzJ45mOEIv4Las.json
-Project Jessie — v168 (v167 fixed)         active   project-jessie__uVVYVB2M7kxpLleI.json
+Project Jessie — v191 (find by title)      active   project-jessie__uVVYVB2M7kxpLleI.json
 Tel Proj                                   inactive tel-proj__GGGboD7zwOe9G6sC.json
 Timesheet Sync — Engineer Tabs to Post Logsheet active   timesheet-sync-engineer-tabs-to-post-logsheet__2S5mMSKZNRMGEtea.json
 ZZ Jessie Eval Twin (test copy - do not use) inactive zz-jessie-eval-twin-test-copy-do-not-use__KRZmVfKIwCiLREjz.json

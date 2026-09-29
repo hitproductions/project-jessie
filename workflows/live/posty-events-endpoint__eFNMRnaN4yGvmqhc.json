@@ -877,7 +877,7 @@
         ]
       }
     },
-    "createdAt": "2026-09-28T09:48:00.995Z",
+    "createdAt": "2026-09-28T12:29:33.950Z",
     "description": null,
     "name": null,
     "nodeGroups": [],
@@ -1089,7 +1089,7 @@
         },
         "position": [
           560,
-          150
+          320
         ],
         "type": "n8n-nodes-base.code",
         "typeVersion": 2
@@ -2415,7 +2415,7 @@
         },
         "position": [
           560,
-          320
+          150
         ],
         "type": "n8n-nodes-base.filter",
         "typeVersion": 2.2
@@ -2445,7 +2445,7 @@
         },
         "position": [
           840,
-          320
+          150
         ],
         "type": "n8n-nodes-base.slack",
         "typeVersion": 2.4,
@@ -3164,21 +3164,21 @@
         "typeVersion": 1.2
       }
     ],
-    "updatedAt": "2026-09-28T09:48:00.995Z",
-    "versionId": "446ff2f7-e64d-4040-a758-7b07d82ef586",
+    "updatedAt": "2026-09-28T12:29:33.950Z",
+    "versionId": "f47a28af-9186-411b-a4e9-f5087e17953f",
     "workflowId": "eFNMRnaN4yGvmqhc",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-09-28T09:48:01.499Z",
+        "createdAt": "2026-09-28T12:29:34.683Z",
         "event": "activated",
-        "id": 1370,
+        "id": 1452,
         "userId": "cb6c5679-14dc-4404-861b-38d9ee1c57ea",
-        "versionId": "446ff2f7-e64d-4040-a758-7b07d82ef586",
+        "versionId": "f47a28af-9186-411b-a4e9-f5087e17953f",
         "workflowId": "eFNMRnaN4yGvmqhc"
       }
     ]
   },
-  "activeVersionId": "446ff2f7-e64d-4040-a758-7b07d82ef586",
+  "activeVersionId": "f47a28af-9186-411b-a4e9-f5087e17953f",
   "connections": {
     "Ack Early": {
       "main": [
@@ -4270,7 +4270,7 @@
       },
       "position": [
         560,
-        150
+        320
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
@@ -5596,7 +5596,7 @@
       },
       "position": [
         560,
-        320
+        150
       ],
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2
@@ -5626,7 +5626,7 @@
       },
       "position": [
         840,
-        320
+        150
       ],
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.4,
@@ -6378,7 +6378,7 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 1,
-  "updatedAt": "2026-09-28T09:48:00.988Z",
-  "versionCounter": 83,
-  "versionId": "446ff2f7-e64d-4040-a758-7b07d82ef586"
+  "updatedAt": "2026-09-28T12:29:33.944Z",
+  "versionCounter": 84,
+  "versionId": "f47a28af-9186-411b-a4e9-f5087e17953f"
 }

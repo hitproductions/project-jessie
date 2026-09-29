@@ -1,0 +1,702 @@
+{
+  "active": true,
+  "activeVersion": {
+    "authors": "Howard Luistro",
+    "autosaved": true,
+    "connections": {
+      "All Bookers": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Build Cache",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "All Rooms": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "All Session Types",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "All Session Types": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "All Bookers",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Build Cache": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "Save Reference Cache",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Every 5 Minutes": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "All Rooms",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "Run Manually": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "All Rooms",
+              "type": "main"
+            }
+          ]
+        ]
+      },
+      "When Executed by Another Workflow": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "All Rooms",
+              "type": "main"
+            }
+          ]
+        ]
+      }
+    },
+    "createdAt": "2026-09-28T18:54:07.103Z",
+    "description": "",
+    "name": "Version 555ebebb",
+    "nodeGroups": [],
+    "nodes": [
+      {
+        "id": "ffdfd2a4-5031-4608-9e1f-91a695a20db9",
+        "name": "Run Manually",
+        "parameters": {},
+        "position": [
+          848,
+          -192
+        ],
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1
+      },
+      {
+        "id": "11d9e134-5ec4-4368-b53b-af7a769320fd",
+        "name": "Every 5 Minutes",
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes"
+              }
+            ]
+          }
+        },
+        "position": [
+          848,
+          0
+        ],
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2
+      },
+      {
+        "id": "4fd4f476-35ab-4ec8-8b3a-3b28b0145d8a",
+        "name": "When Executed by Another Workflow",
+        "parameters": {
+          "inputSource": "passthrough"
+        },
+        "position": [
+          848,
+          176
+        ],
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1
+      },
+      {
+        "alwaysOutputData": true,
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "S0hmu58Rb55jqAv0",
+            "name": "Airtable Personal Access Token account"
+          }
+        },
+        "executeOnce": true,
+        "id": "a29d8133-3ed8-4b6b-9e25-b7631ca19f67",
+        "name": "All Rooms",
+        "parameters": {
+          "base": {
+            "__rl": true,
+            "cachedResultName": "Project Jessie Knowledge Base",
+            "mode": "list",
+            "value": "app8GQxEInqJi1NRP"
+          },
+          "filterByFormula": "={{ '{Active / Bookable}' }}",
+          "operation": "search",
+          "options": {},
+          "table": {
+            "__rl": true,
+            "cachedResultName": "Rooms & Studios",
+            "mode": "list",
+            "value": "tblwZYK9ENUojZ21W"
+          }
+        },
+        "position": [
+          1152,
+          0
+        ],
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.2
+      },
+      {
+        "alwaysOutputData": true,
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "S0hmu58Rb55jqAv0",
+            "name": "Airtable Personal Access Token account"
+          }
+        },
+        "executeOnce": true,
+        "id": "0f909b65-fc08-4fdc-91da-0ddaf89b6aca",
+        "name": "All Session Types",
+        "parameters": {
+          "base": {
+            "__rl": true,
+            "cachedResultName": "Project Jessie Knowledge Base",
+            "mode": "list",
+            "value": "app8GQxEInqJi1NRP"
+          },
+          "operation": "search",
+          "options": {},
+          "table": {
+            "__rl": true,
+            "cachedResultName": "Session Types",
+            "mode": "list",
+            "value": "tblxEvRNPneUhQxUv"
+          }
+        },
+        "position": [
+          1392,
+          0
+        ],
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.2
+      },
+      {
+        "alwaysOutputData": true,
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "S0hmu58Rb55jqAv0",
+            "name": "Airtable Personal Access Token account"
+          }
+        },
+        "executeOnce": true,
+        "id": "f6324747-56e4-4946-a987-dc7150396241",
+        "name": "All Bookers",
+        "parameters": {
+          "base": {
+            "__rl": true,
+            "cachedResultName": "Project Jessie Knowledge Base",
+            "mode": "list",
+            "value": "app8GQxEInqJi1NRP"
+          },
+          "operation": "search",
+          "options": {},
+          "table": {
+            "__rl": true,
+            "cachedResultName": "Bookers",
+            "mode": "list",
+            "value": "tbllRId3gq1auTA64"
+          }
+        },
+        "position": [
+          1648,
+          0
+        ],
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.2
+      },
+      {
+        "id": "b3028b69-f351-4f7c-a542-260b40c800a4",
+        "name": "Build Cache",
+        "parameters": {
+          "jsCode": "// Build Cache: exactly ONE item for Save Reference Cache, or a thrown error so the previous cache is never\n// overwritten by an empty or failed read. Accepts nested ({id, fields}) and flattened ({id, ...fields}) records\n// and always writes {id, fields}, the shape main's Booked For / Room Table / tool inputs read.\nconst REQUIRED = { 'All Rooms': 'Room Name', 'All Session Types': 'Type', 'All Bookers': 'Name' };\nfunction read(name) {\n  const rows = $(name).all().map(i => i.json);\n  if (!rows.length) throw new Error(name + ': no records returned; cache not changed.');\n  const seen = new Set();\n  return rows.map(r => {\n    if (!r || r.error || typeof r.id !== 'string' || !r.id.startsWith('rec'))\n      throw new Error(name + ': invalid or failed Airtable read; cache not changed.');\n    if (seen.has(r.id)) throw new Error(name + ': duplicate record ' + r.id + '; cache not changed.');\n    seen.add(r.id);\n    let fields;\n    if (r.fields && typeof r.fields === 'object' && !Array.isArray(r.fields)) fields = r.fields;\n    else { const { id, createdTime, ...rest } = r; fields = rest; }\n    if (!String(fields[REQUIRED[name]] || '').trim())\n      throw new Error(name + ': missing ' + REQUIRED[name] + ' in ' + r.id + '; cache not changed.');\n    return { id: r.id, fields };\n  });\n}\nconst data = { rooms: read('All Rooms'), sessionTypes: read('All Session Types'), bookers: read('All Bookers') };\nreturn [{ json: { cache_key: 'jessie-reference', payload: JSON.stringify(data), refreshed_at: new Date().toISOString() } }];"
+        },
+        "position": [
+          1904,
+          0
+        ],
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2
+      },
+      {
+        "id": "62f8ffae-63dd-410f-980b-7d64b2e68f87",
+        "name": "Save Reference Cache",
+        "notes": "Select the existing Jessie Reference Cache table. Its cache_key, payload, refreshed_at columns must all be String. Keep the three field mappings and cache_key equality condition.",
+        "notesInFlow": true,
+        "parameters": {
+          "columns": {
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false,
+            "mappingMode": "defineBelow",
+            "matchingColumns": [],
+            "schema": [
+              {
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "cache_key",
+                "id": "cache_key",
+                "readOnly": false,
+                "removed": false,
+                "required": false,
+                "type": "string"
+              },
+              {
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "payload",
+                "id": "payload",
+                "readOnly": false,
+                "removed": false,
+                "required": false,
+                "type": "string"
+              },
+              {
+                "defaultMatch": false,
+                "display": true,
+                "displayName": "refreshed_at",
+                "id": "refreshed_at",
+                "readOnly": false,
+                "removed": false,
+                "required": false,
+                "type": "string"
+              }
+            ],
+            "value": {
+              "cache_key": "={{ $json.cache_key }}",
+              "payload": "={{ $json.payload }}",
+              "refreshed_at": "={{ $json.refreshed_at }}"
+            }
+          },
+          "dataTableId": {
+            "__rl": true,
+            "cachedResultName": "Jessie Reference Cache",
+            "cachedResultUrl": "/projects/518sXYqvqTl1cuns/datatables/CsdJhgDxCsqq9K9j",
+            "mode": "list",
+            "value": "CsdJhgDxCsqq9K9j"
+          },
+          "filters": {
+            "conditions": [
+              {
+                "keyName": "cache_key",
+                "keyValue": "jessie-reference"
+              }
+            ]
+          },
+          "matchType": "allConditions",
+          "operation": "upsert",
+          "options": {}
+        },
+        "position": [
+          2144,
+          0
+        ],
+        "type": "n8n-nodes-base.dataTable",
+        "typeVersion": 1
+      }
+    ],
+    "updatedAt": "2026-09-28T18:54:08.000Z",
+    "versionId": "555ebebb-255f-46f9-a011-bbd90611e668",
+    "workflowId": "DxByjma1WLGMLR0L",
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-28T18:54:08.596Z",
+        "event": "activated",
+        "id": 1533,
+        "userId": "146478c9-471a-4651-8e62-0216984196e9",
+        "versionId": "555ebebb-255f-46f9-a011-bbd90611e668",
+        "workflowId": "DxByjma1WLGMLR0L"
+      }
+    ]
+  },
+  "activeVersionId": "555ebebb-255f-46f9-a011-bbd90611e668",
+  "connections": {
+    "All Bookers": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build Cache",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "All Rooms": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "All Session Types",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "All Session Types": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "All Bookers",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Build Cache": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Save Reference Cache",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "All Rooms",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run Manually": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "All Rooms",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "All Rooms",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-09-28T18:15:56.826Z",
+  "description": null,
+  "id": "DxByjma1WLGMLR0L",
+  "isArchived": false,
+  "meta": null,
+  "name": "Jessie — Refresh Reference Cache — v2",
+  "nodeGroups": [],
+  "nodes": [
+    {
+      "id": "ffdfd2a4-5031-4608-9e1f-91a695a20db9",
+      "name": "Run Manually",
+      "parameters": {},
+      "position": [
+        848,
+        -192
+      ],
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
+    },
+    {
+      "id": "11d9e134-5ec4-4368-b53b-af7a769320fd",
+      "name": "Every 5 Minutes",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "position": [
+        848,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "4fd4f476-35ab-4ec8-8b3a-3b28b0145d8a",
+      "name": "When Executed by Another Workflow",
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "position": [
+        848,
+        176
+      ],
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "executeOnce": true,
+      "id": "a29d8133-3ed8-4b6b-9e25-b7631ca19f67",
+      "name": "All Rooms",
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "mode": "list",
+          "value": "app8GQxEInqJi1NRP"
+        },
+        "filterByFormula": "={{ '{Active / Bookable}' }}",
+        "operation": "search",
+        "options": {},
+        "table": {
+          "__rl": true,
+          "cachedResultName": "Rooms & Studios",
+          "mode": "list",
+          "value": "tblwZYK9ENUojZ21W"
+        }
+      },
+      "position": [
+        1152,
+        0
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "executeOnce": true,
+      "id": "0f909b65-fc08-4fdc-91da-0ddaf89b6aca",
+      "name": "All Session Types",
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "mode": "list",
+          "value": "app8GQxEInqJi1NRP"
+        },
+        "operation": "search",
+        "options": {},
+        "table": {
+          "__rl": true,
+          "cachedResultName": "Session Types",
+          "mode": "list",
+          "value": "tblxEvRNPneUhQxUv"
+        }
+      },
+      "position": [
+        1392,
+        0
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "executeOnce": true,
+      "id": "f6324747-56e4-4946-a987-dc7150396241",
+      "name": "All Bookers",
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "mode": "list",
+          "value": "app8GQxEInqJi1NRP"
+        },
+        "operation": "search",
+        "options": {},
+        "table": {
+          "__rl": true,
+          "cachedResultName": "Bookers",
+          "mode": "list",
+          "value": "tbllRId3gq1auTA64"
+        }
+      },
+      "position": [
+        1648,
+        0
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "b3028b69-f351-4f7c-a542-260b40c800a4",
+      "name": "Build Cache",
+      "parameters": {
+        "jsCode": "// Build Cache: exactly ONE item for Save Reference Cache, or a thrown error so the previous cache is never\n// overwritten by an empty or failed read. Accepts nested ({id, fields}) and flattened ({id, ...fields}) records\n// and always writes {id, fields}, the shape main's Booked For / Room Table / tool inputs read.\nconst REQUIRED = { 'All Rooms': 'Room Name', 'All Session Types': 'Type', 'All Bookers': 'Name' };\nfunction read(name) {\n  const rows = $(name).all().map(i => i.json);\n  if (!rows.length) throw new Error(name + ': no records returned; cache not changed.');\n  const seen = new Set();\n  return rows.map(r => {\n    if (!r || r.error || typeof r.id !== 'string' || !r.id.startsWith('rec'))\n      throw new Error(name + ': invalid or failed Airtable read; cache not changed.');\n    if (seen.has(r.id)) throw new Error(name + ': duplicate record ' + r.id + '; cache not changed.');\n    seen.add(r.id);\n    let fields;\n    if (r.fields && typeof r.fields === 'object' && !Array.isArray(r.fields)) fields = r.fields;\n    else { const { id, createdTime, ...rest } = r; fields = rest; }\n    if (!String(fields[REQUIRED[name]] || '').trim())\n      throw new Error(name + ': missing ' + REQUIRED[name] + ' in ' + r.id + '; cache not changed.');\n    return { id: r.id, fields };\n  });\n}\nconst data = { rooms: read('All Rooms'), sessionTypes: read('All Session Types'), bookers: read('All Bookers') };\nreturn [{ json: { cache_key: 'jessie-reference', payload: JSON.stringify(data), refreshed_at: new Date().toISOString() } }];"
+      },
+      "position": [
+        1904,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "62f8ffae-63dd-410f-980b-7d64b2e68f87",
+      "name": "Save Reference Cache",
+      "notes": "Select the existing Jessie Reference Cache table. Its cache_key, payload, refreshed_at columns must all be String. Keep the three field mappings and cache_key equality condition.",
+      "notesInFlow": true,
+      "parameters": {
+        "columns": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "cache_key",
+              "id": "cache_key",
+              "readOnly": false,
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "payload",
+              "id": "payload",
+              "readOnly": false,
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "refreshed_at",
+              "id": "refreshed_at",
+              "readOnly": false,
+              "removed": false,
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "cache_key": "={{ $json.cache_key }}",
+            "payload": "={{ $json.payload }}",
+            "refreshed_at": "={{ $json.refreshed_at }}"
+          }
+        },
+        "dataTableId": {
+          "__rl": true,
+          "cachedResultName": "Jessie Reference Cache",
+          "cachedResultUrl": "/projects/518sXYqvqTl1cuns/datatables/CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "value": "CsdJhgDxCsqq9K9j"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "matchType": "allConditions",
+        "operation": "upsert",
+        "options": {}
+      },
+      "position": [
+        2144,
+        0
+      ],
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1
+    }
+  ],
+  "pinData": {},
+  "settings": {
+    "availableInMCP": false,
+    "binaryMode": "separate",
+    "executionOrder": "v1"
+  },
+  "shared": [
+    {
+      "createdAt": "2026-09-28T18:15:56.837Z",
+      "project": {
+        "createdAt": "2026-06-16T08:07:47.559Z",
+        "creatorId": "146478c9-471a-4651-8e62-0216984196e9",
+        "customTelemetryTags": [],
+        "description": null,
+        "icon": null,
+        "id": "518sXYqvqTl1cuns",
+        "name": "Howard Luistro <howard@hitproductions.net>",
+        "type": "personal",
+        "updatedAt": "2026-07-30T08:01:27.418Z"
+      },
+      "projectId": "518sXYqvqTl1cuns",
+      "role": "workflow:owner",
+      "updatedAt": "2026-09-28T18:15:56.837Z",
+      "workflowId": "DxByjma1WLGMLR0L"
+    }
+  ],
+  "sourceWorkflowId": null,
+  "staticData": {
+    "node:Every 5 Minutes": {
+      "recurrenceRules": []
+    },
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-09-28T18:54:56.945Z",
+  "versionCounter": 47,
+  "versionId": "555ebebb-255f-46f9-a011-bbd90611e668"
+}

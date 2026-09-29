@@ -4,6 +4,17 @@
     "authors": "Howard Luistro",
     "autosaved": false,
     "connections": {
+      "Find By Title": {
+        "main": [
+          [
+            {
+              "index": 0,
+              "node": "List Day Events",
+              "type": "main"
+            }
+          ]
+        ]
+      },
       "List Day Events": {
         "main": [
           [
@@ -20,16 +31,16 @@
           [
             {
               "index": 0,
-              "node": "List Day Events",
+              "node": "Find By Title",
               "type": "main"
             }
           ]
         ]
       }
     },
-    "createdAt": "2026-09-28T07:20:43.156Z",
-    "description": "Studio E calendar id",
-    "name": "v5 - v4 fixed",
+    "createdAt": "2026-09-29T09:52:39.874Z",
+    "description": "Fixes PENDING 56 (lookup side): a booking named without a date, or on a guessed date, is found among upcoming bookings",
+    "name": "v7 - find by title",
     "nodeGroups": [],
     "nodes": [
       {
@@ -40,6 +51,9 @@
             "values": [
               {
                 "name": "booking_date"
+              },
+              {
+                "name": "title"
               }
             ]
           }
@@ -65,7 +79,7 @@
           "authentication": "predefinedCredentialType",
           "nodeCredentialType": "googleCalendarOAuth2Api",
           "options": {},
-          "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent(DateTime.fromISO((String($json.booking_date || '').match(/\\d{4}-\\d{2}-\\d{2}/) || [$json.booking_date])[0] + 'T00:00:00', { zone: 'Asia/Manila' }).toISO()) }}&timeMax={{ encodeURIComponent(DateTime.fromISO((String($json.booking_date || '').match(/\\d{4}-\\d{2}-\\d{2}/) || [$json.booking_date])[0] + 'T00:00:00', { zone: 'Asia/Manila' }).plus({ days: 1 }).toISO()) }}&singleEvents=true&orderBy=startTime&maxResults=250"
+          "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent(DateTime.fromISO((String($('When Executed by Another Workflow').first().json.booking_date || '').match(/\\d{4}-\\d{2}-\\d{2}/) || [DateTime.now().setZone('Asia/Manila').toISODate()])[0] + 'T00:00:00', { zone: 'Asia/Manila' }).toISO()) }}&timeMax={{ encodeURIComponent(DateTime.fromISO((String($('When Executed by Another Workflow').first().json.booking_date || '').match(/\\d{4}-\\d{2}-\\d{2}/) || [DateTime.now().setZone('Asia/Manila').toISODate()])[0] + 'T00:00:00', { zone: 'Asia/Manila' }).plus({ days: 1 }).toISO()) }}&singleEvents=true&orderBy=startTime&maxResults=250"
         },
         "position": [
           736,
@@ -78,7 +92,7 @@
         "id": "000c6b6b-c34a-4f53-bc05-8ab39ad1d833",
         "name": "Shape Results",
         "parameters": {
-          "jsCode": "// Shape the day's events into the few fields Jessie should reason about, and\n// drop everything else.\n//\n// The raw Google payload was going straight to the model, and on 2026-08-30 it\n// read `creator` - which is always howard@hitproductions.net, the account n8n\n// authenticates with - and told Tara her own booking \"was made by Howard, not\n// you\". Who booked something lives in the description as \"Booked by: ...\", and\n// nothing else in a calendar event says it. A field she is not given is a field\n// she cannot misread.\n// Model output occasionally carries invisible characters. On 2026-08-30 a\n// variation selector (U+FE0F) glued to the end of an ISO timestamp made Room\n// Availability answer BAD_WINDOW, and the model then presented a booking\n// summary as though the room were free. Every string the model hands this\n// workflow is scrubbed once, here, rather than at each place one is read.\n// Tabs and newlines survive - a description is allowed to contain them.\nconst clean = s => String(s == null ? '' : s)\n  .replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F\\u200B-\\u200F\\u2028\\u2029\\u202A-\\u202E\\u2060-\\u2064\\uFE00-\\uFE0F\\uFEFF]/g, '')\n  .trim();\nconst REQ = (function (o) {\n  const out = {};\n  for (const k in o) out[k] = (typeof o[k] === 'string') ? clean(o[k]) : o[k];\n  return out;\n})($('When Executed by Another Workflow').first().json || {});\n// PENDING 51 / gotcha 18 (2026-09-28): the model glues junk onto timestamps (\"...+08:00hq\", \"2027-10-07p\").\n// Keep only the ISO text, here and in the calendar query, so a padded value neither fails the lookup nor\n// reaches the calendar.\n{ const _iso = s => { const v = String(s == null ? '' : s); const m = v.match(/\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?)?/); return m ? m[0] : v; };\n  [].forEach(k => { if (typeof REQ[k] === 'string' && REQ[k]) REQ[k] = _iso(REQ[k]); });\n  [\"booking_date\"].forEach(k => { if (typeof REQ[k] === 'string' && REQ[k]) REQ[k] = _iso(REQ[k]).slice(0, 10); }); }\nconst raw = $input.first().json || {};\nconst date = String(REQ.booking_date || '').trim();\n\nconst ROOMS = {\n  'hitproductions.net_3737303833303637363538@resource.calendar.google.com': 'Studio 1',\n  'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com': 'Studio 2',\n  'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com': 'Studio 3',\n  'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com': 'Studio 4',\n  'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com': 'Studio 5',\n  'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com': 'Studio 6',\n  'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com': 'Studio 7',\n  'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com': 'Studio 8',\n  'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com': 'Studio A',\n  'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com': 'Studio B',\n  'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com': 'Studio C',\n  'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com': 'Studio D',\n  'c_1888r4bbc2lhqgndmprism70nft64@resource.calendar.google.com': 'Studio E',\n  'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com': 'Studio F',\n  'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com': 'Studio M',\n  'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com': 'M1',\n  'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com': 'M2',\n  'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com': 'M3',\n  'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com': 'M4',\n  'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com': 'M5',\n  'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com': 'M6',\n  'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com': 'M7',\n  'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com': 'M8',\n  'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com': 'Salin',\n  'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com': 'Katha',\n  'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com': 'Likha',\n  'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com': 'Lobby'\n};\nconst NAMES = {};\nfor (const k in ROOMS) NAMES[ROOMS[k].toLowerCase()] = ROOMS[k];\n\nif (!date) {\n  return [{ json: { status: 'MISSING_DATE', bookings: [],\n    human: 'No date was given, so nothing was looked up. Ask the requester which date the booking is on.' } }];\n}\nconst items = Array.isArray(raw.items) ? raw.items : null;\nif (!items) {\n  return [{ json: { status: 'LOOKUP_FAILED', bookings: [],\n    human: 'The calendar could not be read for that date. Tell the requester and offer to try again.' } }];\n}\n\nconst hhmm = iso => {\n  const d = new Date(iso);\n  return d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });\n};\n// Department bookings are whole days written as midnight-to-midnight timestamps\n// rather than as date-only events, so they came out \"12:00 AM - 12:00 AM\".\nconst isWholeDay = (s, e) => {\n  if (!s || !e) return false;\n  const m = iso => new Date(iso).toLocaleString('en-US',\n    { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: false });\n  return m(s) === '00:00' && m(e) === '00:00';\n};\nconst roomOf = ev => {\n  const found = [];\n  for (const a of (ev.attendees || [])) {\n    const nm = ROOMS[String(a.email || '').toLowerCase()];\n    if (nm && found.indexOf(nm) === -1) found.push(nm);\n  }\n  if (found.length) return found.join(' + ');\n  const loc = String(ev.location || '').toLowerCase();\n  for (const key in NAMES) if (loc.indexOf(key) !== -1) return NAMES[key];\n  const first = String(ev.summary || '').split(' - ')[0].trim();\n  return NAMES[first.toLowerCase()] || '';\n};\n\nconst bookings = [];\nfor (const ev of items) {\n  if (!ev || ev.status === 'cancelled') continue;\n  const desc = String(ev.description || '');\n  const by = desc.match(/Booked by:\\s*([^|]+)/);\n  const eng = desc.match(/Engineer:\\s*([^|]+)/);\n  const s = (ev.start || {}).dateTime, e = (ev.end || {}).dateTime;\n  bookings.push({\n    id: ev.id,\n    title: ev.summary || '(no title)',\n    time: (!s || !e || isWholeDay(s, e)) ? 'all day' : hhmm(s) + ' - ' + hhmm(e),\n    room: roomOf(ev) || 'not identifiable',\n    booked_by: by ? by[1].trim() : 'not recorded - made outside Jessie',\n    engineer: eng ? eng[1].trim() : ''\n  });\n}\n\nreturn [{ json: { status: 'OK', date: date, count: bookings.length, bookings: bookings,\n  human: bookings.length\n    ? 'These are the bookings on ' + date + '. \"booked_by\" is who made the booking; there is no other '\n      + 'source for that. Use the id exactly as given if you cancel or move one.'\n    : 'Nothing is booked on ' + date + '. Tell the requester and ask them to check the date.' } }];\n"
+          "jsCode": "// Shape the day's events into the few fields Jessie should reason about, and\n// drop everything else.\n//\n// The raw Google payload was going straight to the model, and on 2026-08-30 it\n// read `creator` - which is always howard@hitproductions.net, the account n8n\n// authenticates with - and told Tara her own booking \"was made by Howard, not\n// you\". Who booked something lives in the description as \"Booked by: ...\", and\n// nothing else in a calendar event says it. A field she is not given is a field\n// she cannot misread.\n// Model output occasionally carries invisible characters. On 2026-08-30 a\n// variation selector (U+FE0F) glued to the end of an ISO timestamp made Room\n// Availability answer BAD_WINDOW, and the model then presented a booking\n// summary as though the room were free. Every string the model hands this\n// workflow is scrubbed once, here, rather than at each place one is read.\n// Tabs and newlines survive - a description is allowed to contain them.\nconst clean = s => String(s == null ? '' : s)\n  .replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F\\u200B-\\u200F\\u2028\\u2029\\u202A-\\u202E\\u2060-\\u2064\\uFE00-\\uFE0F\\uFEFF]/g, '')\n  .trim();\nconst REQ = (function (o) {\n  const out = {};\n  for (const k in o) out[k] = (typeof o[k] === 'string') ? clean(o[k]) : o[k];\n  return out;\n})($('When Executed by Another Workflow').first().json || {});\n// PENDING 51 / gotcha 18 (2026-09-28): the model glues junk onto timestamps (\"...+08:00hq\", \"2027-10-07p\").\n// Keep only the ISO text, here and in the calendar query, so a padded value neither fails the lookup nor\n// reaches the calendar.\n{ const _iso = s => { const v = String(s == null ? '' : s); const m = v.match(/\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?)?/); return m ? m[0] : v; };\n  [].forEach(k => { if (typeof REQ[k] === 'string' && REQ[k]) REQ[k] = _iso(REQ[k]); });\n  [\"booking_date\"].forEach(k => { if (typeof REQ[k] === 'string' && REQ[k]) REQ[k] = _iso(REQ[k]).slice(0, 10); }); }\nconst raw = $input.first().json || {};\nconst date = String(REQ.booking_date || '').trim();\n\nconst ROOMS = {\n  'hitproductions.net_3737303833303637363538@resource.calendar.google.com': 'Studio 1',\n  'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com': 'Studio 2',\n  'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com': 'Studio 3',\n  'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com': 'Studio 4',\n  'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com': 'Studio 5',\n  'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com': 'Studio 6',\n  'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com': 'Studio 7',\n  'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com': 'Studio 8',\n  'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com': 'Studio A',\n  'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com': 'Studio B',\n  'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com': 'Studio C',\n  'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com': 'Studio D',\n  'c_1888r4bbc2lhqgndmprism70nft64@resource.calendar.google.com': 'Studio E',\n  'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com': 'Studio F',\n  'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com': 'Studio M',\n  'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com': 'M1',\n  'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com': 'M2',\n  'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com': 'M3',\n  'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com': 'M4',\n  'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com': 'M5',\n  'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com': 'M6',\n  'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com': 'M7',\n  'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com': 'M8',\n  'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com': 'Salin',\n  'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com': 'Katha',\n  'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com': 'Likha',\n  'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com': 'Lobby'\n};\nconst NAMES = {};\nfor (const k in ROOMS) NAMES[ROOMS[k].toLowerCase()] = ROOMS[k];\n\nconst title = String(REQ.title || '').trim();   // v7: the booking's name, as the requester gave it\nif (!date && !title) {\n  return [{ json: { status: 'MISSING_DATE', bookings: [],\n    human: 'No date was given, so nothing was looked up. Ask the requester which date the booking is on.' } }];\n}\n// A second page (nextPageToken) means this read is incomplete: say it failed rather than list half a day.\nconst items = Array.isArray(raw.items) && !raw.nextPageToken ? raw.items : null;\nif (!items) {\n  return [{ json: { status: 'LOOKUP_FAILED', bookings: [],\n    human: 'The calendar could not be read for that date. Tell the requester and offer to try again.' } }];\n}\n\nconst hhmm = iso => {\n  const d = new Date(iso);\n  return d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });\n};\n// Department bookings are whole days written as midnight-to-midnight timestamps\n// rather than as date-only events, so they came out \"12:00 AM - 12:00 AM\".\nconst isWholeDay = (s, e) => {\n  if (!s || !e) return false;\n  const m = iso => new Date(iso).toLocaleString('en-US',\n    { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: false });\n  return m(s) === '00:00' && m(e) === '00:00';\n};\nconst roomOf = ev => {\n  const found = [];\n  for (const a of (ev.attendees || [])) {\n    const nm = ROOMS[String(a.email || '').toLowerCase()];\n    if (nm && found.indexOf(nm) === -1) found.push(nm);\n  }\n  if (found.length) return found.join(' + ');\n  const loc = String(ev.location || '').toLowerCase();\n  for (const key in NAMES) if (loc.indexOf(key) !== -1) return NAMES[key];\n  const first = String(ev.summary || '').split(' - ')[0].trim();\n  return NAMES[first.toLowerCase()] || '';\n};\n\nconst bookings = [];\nfor (const ev of items) {\n  if (!ev || ev.status === 'cancelled') continue;\n  const desc = String(ev.description || '');\n  const by = desc.match(/Booked by:\\s*([^|]+)/);\n  const eng = desc.match(/Engineer:\\s*([^|]+)/);\n  const s = (ev.start || {}).dateTime, e = (ev.end || {}).dateTime;\n  bookings.push({\n    id: ev.id,\n    title: ev.summary || '(no title)',\n    time: (!s || !e || isWholeDay(s, e)) ? 'all day' : hhmm(s) + ' - ' + hhmm(e),\n    room: roomOf(ev) || 'not identifiable',\n    booked_by: by ? by[1].trim() : 'not recorded - made outside Jessie',\n    engineer: eng ? eng[1].trim() : ''\n  });\n}\n\n// --- v7: the booking by name, among upcoming bookings --------------------------------------------------------------\n// \"cancel QANODATE\" was looked up on today's date (the model's guess) and found nothing. When a title is given and\n// nothing that day carries it - or no date was given - the upcoming bookings whose title contains it are returned\n// with their dates, so the model can use the real one.\nconst _n = s => String(s || '').toLowerCase().replace(/\\s+/g, ' ').trim();\nconst _has = t => !!title && _n(t).indexOf(_n(title)) !== -1;\nlet upcoming = [];\nif (title && !bookings.some(b => _has(b.title))) {\n  let _W = {}; try { _W = $('Find By Title').first().json || {}; } catch (e) {}\n  const _wi = Array.isArray(_W.items) && !_W.nextPageToken ? _W.items : [];\n  const _day = iso => { const d = /^\\d{4}-\\d{2}-\\d{2}$/.test(iso) ? new Date(iso + 'T12:00:00+08:00') : new Date(iso);\n    return d.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }); };\n  for (const ev of _wi) {\n    if (!ev || ev.status === 'cancelled' || !_has(ev.summary)) continue;\n    const desc = String(ev.description || ''), by = desc.match(/Booked by:\\s*([^|]+)/), eng = desc.match(/Engineer:\\s*([^|]+)/);\n    const s = (ev.start || {}).dateTime || (ev.start || {}).date || '', e = (ev.end || {}).dateTime || (ev.end || {}).date || '';\n    const iso = /^\\d{4}-\\d{2}-\\d{2}$/.test(s) ? s : new Date(s).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });\n    upcoming.push({ id: ev.id, title: ev.summary, booking_date: iso, date: _day(s),\n      time: (!(ev.start || {}).dateTime || isWholeDay(s, e)) ? 'all day' : hhmm(s) + ' - ' + hhmm(e),\n      room: roomOf(ev) || 'not identifiable', booked_by: by ? by[1].trim() : 'not recorded - made outside Jessie', engineer: eng ? eng[1].trim() : '' });\n    if (upcoming.length >= 10) break;\n  }\n  {   // a name was asked about and nothing that day carries it: always say what the search found\n    return [{ json: { status: 'OK', date: date, count: bookings.length, bookings: date ? bookings : [], upcoming,\n      human: upcoming.length\n        ? (date ? 'Nothing on ' + date + ' is titled \"' + title + '\". ' : '') + 'Upcoming bookings named \"' + title + '\":\\n'\n          + upcoming.map(u => '- ' + u.title + ' on ' + u.date + ', ' + u.time + ', ' + u.room + ' (booked by ' + u.booked_by + ')').join('\\n')\n          + '\\nIf one of these is the booking, use its title and booking_date exactly as given. If several could be, ask which date.'\n        : (date ? 'Nothing on ' + date + ' is titled \"' + title + '\", and n' : 'N') + 'o upcoming booking is named \"' + title + '\". Ask the requester which date the booking is on, or to check the name.' } }];\n  }\n}\n\nreturn [{ json: { status: 'OK', date: date, count: bookings.length, bookings: bookings,\n  human: bookings.length\n    ? 'These are the bookings on ' + date + '. \"booked_by\" is who made the booking; there is no other '\n      + 'source for that. Use the id exactly as given if you cancel or move one.'\n    : 'Nothing is booked on ' + date + '. Tell the requester and ask them to check the date.' } }];\n"
         },
         "position": [
           960,
@@ -86,80 +100,83 @@
         ],
         "type": "n8n-nodes-base.code",
         "typeVersion": 2
+      },
+      {
+        "alwaysOutputData": true,
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "6D1r3kaq6KaFdL0a",
+            "name": "Google Calendar account"
+          }
+        },
+        "id": "47d187cf-366f-4272-ae9d-237ce6fe36f1",
+        "name": "Find By Title",
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleCalendarOAuth2Api",
+          "options": {},
+          "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?q={{ encodeURIComponent(String(($('When Executed by Another Workflow').first().json).title || '').trim() || 'none') }}&timeMin={{ encodeURIComponent(DateTime.now().toISO()) }}&timeMax={{ encodeURIComponent(DateTime.now().plus(String(($('When Executed by Another Workflow').first().json).title || '').trim() ? { days: 450 } : { minutes: 1 }).toISO()) }}&singleEvents=true&orderBy=startTime&maxResults=250"
+        },
+        "position": [
+          560,
+          -112
+        ],
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2
       }
     ],
-    "updatedAt": "2026-09-28T10:39:00.000Z",
-    "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
+    "updatedAt": "2026-09-29T09:52:40.000Z",
+    "versionId": "dd2270ea-db43-4e45-948e-dcf3a1cb4aab",
     "workflowId": "yzirq12O227VTFp8",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-09-28T07:20:43.279Z",
+        "createdAt": "2026-09-29T09:52:40.004Z",
         "event": "activated",
-        "id": 1311,
+        "id": 1684,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
+        "versionId": "dd2270ea-db43-4e45-948e-dcf3a1cb4aab",
         "workflowId": "yzirq12O227VTFp8"
       },
       {
-        "createdAt": "2026-09-28T10:26:11.722Z",
+        "createdAt": "2026-09-29T09:52:40.366Z",
         "event": "activated",
-        "id": 1404,
+        "id": 1686,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
+        "versionId": "dd2270ea-db43-4e45-948e-dcf3a1cb4aab",
         "workflowId": "yzirq12O227VTFp8"
       },
       {
-        "createdAt": "2026-09-28T10:38:59.636Z",
-        "event": "activated",
-        "id": 1424,
-        "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
-        "workflowId": "yzirq12O227VTFp8"
-      },
-      {
-        "createdAt": "2026-09-28T10:39:00.105Z",
-        "event": "activated",
-        "id": 1426,
-        "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
-        "workflowId": "yzirq12O227VTFp8"
-      },
-      {
-        "createdAt": "2026-09-28T07:20:43.249Z",
+        "createdAt": "2026-09-29T09:52:39.976Z",
         "event": "deactivated",
-        "id": 1310,
+        "id": 1683,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
+        "versionId": "dd2270ea-db43-4e45-948e-dcf3a1cb4aab",
         "workflowId": "yzirq12O227VTFp8"
       },
       {
-        "createdAt": "2026-09-28T10:26:11.685Z",
+        "createdAt": "2026-09-29T09:52:40.337Z",
         "event": "deactivated",
-        "id": 1403,
+        "id": 1685,
         "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
-        "workflowId": "yzirq12O227VTFp8"
-      },
-      {
-        "createdAt": "2026-09-28T10:38:59.603Z",
-        "event": "deactivated",
-        "id": 1423,
-        "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
-        "workflowId": "yzirq12O227VTFp8"
-      },
-      {
-        "createdAt": "2026-09-28T10:39:00.068Z",
-        "event": "deactivated",
-        "id": 1425,
-        "userId": "146478c9-471a-4651-8e62-0216984196e9",
-        "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
+        "versionId": "dd2270ea-db43-4e45-948e-dcf3a1cb4aab",
         "workflowId": "yzirq12O227VTFp8"
       }
     ]
   },
-  "activeVersionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc",
+  "activeVersionId": "dd2270ea-db43-4e45-948e-dcf3a1cb4aab",
   "connections": {
+    "Find By Title": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "List Day Events",
+            "type": "main"
+          }
+        ]
+      ]
+    },
     "List Day Events": {
       "main": [
         [
@@ -176,7 +193,7 @@
         [
           {
             "index": 0,
-            "node": "List Day Events",
+            "node": "Find By Title",
             "type": "main"
           }
         ]
@@ -188,7 +205,7 @@
   "id": "yzirq12O227VTFp8",
   "isArchived": false,
   "meta": null,
-  "name": "Jessie — Find Booking — v5 (v4 fixed)",
+  "name": "Jessie — Find Booking — v7 (find by title)",
   "nodeGroups": [],
   "nodes": [
     {
@@ -199,6 +216,9 @@
           "values": [
             {
               "name": "booking_date"
+            },
+            {
+              "name": "title"
             }
           ]
         }
@@ -224,7 +244,7 @@
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleCalendarOAuth2Api",
         "options": {},
-        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent(DateTime.fromISO((String($json.booking_date || '').match(/\\d{4}-\\d{2}-\\d{2}/) || [$json.booking_date])[0] + 'T00:00:00', { zone: 'Asia/Manila' }).toISO()) }}&timeMax={{ encodeURIComponent(DateTime.fromISO((String($json.booking_date || '').match(/\\d{4}-\\d{2}-\\d{2}/) || [$json.booking_date])[0] + 'T00:00:00', { zone: 'Asia/Manila' }).plus({ days: 1 }).toISO()) }}&singleEvents=true&orderBy=startTime&maxResults=250"
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent(DateTime.fromISO((String($('When Executed by Another Workflow').first().json.booking_date || '').match(/\\d{4}-\\d{2}-\\d{2}/) || [DateTime.now().setZone('Asia/Manila').toISODate()])[0] + 'T00:00:00', { zone: 'Asia/Manila' }).toISO()) }}&timeMax={{ encodeURIComponent(DateTime.fromISO((String($('When Executed by Another Workflow').first().json.booking_date || '').match(/\\d{4}-\\d{2}-\\d{2}/) || [DateTime.now().setZone('Asia/Manila').toISODate()])[0] + 'T00:00:00', { zone: 'Asia/Manila' }).plus({ days: 1 }).toISO()) }}&singleEvents=true&orderBy=startTime&maxResults=250"
       },
       "position": [
         736,
@@ -237,7 +257,7 @@
       "id": "000c6b6b-c34a-4f53-bc05-8ab39ad1d833",
       "name": "Shape Results",
       "parameters": {
-        "jsCode": "// Shape the day's events into the few fields Jessie should reason about, and\n// drop everything else.\n//\n// The raw Google payload was going straight to the model, and on 2026-08-30 it\n// read `creator` - which is always howard@hitproductions.net, the account n8n\n// authenticates with - and told Tara her own booking \"was made by Howard, not\n// you\". Who booked something lives in the description as \"Booked by: ...\", and\n// nothing else in a calendar event says it. A field she is not given is a field\n// she cannot misread.\n// Model output occasionally carries invisible characters. On 2026-08-30 a\n// variation selector (U+FE0F) glued to the end of an ISO timestamp made Room\n// Availability answer BAD_WINDOW, and the model then presented a booking\n// summary as though the room were free. Every string the model hands this\n// workflow is scrubbed once, here, rather than at each place one is read.\n// Tabs and newlines survive - a description is allowed to contain them.\nconst clean = s => String(s == null ? '' : s)\n  .replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F\\u200B-\\u200F\\u2028\\u2029\\u202A-\\u202E\\u2060-\\u2064\\uFE00-\\uFE0F\\uFEFF]/g, '')\n  .trim();\nconst REQ = (function (o) {\n  const out = {};\n  for (const k in o) out[k] = (typeof o[k] === 'string') ? clean(o[k]) : o[k];\n  return out;\n})($('When Executed by Another Workflow').first().json || {});\n// PENDING 51 / gotcha 18 (2026-09-28): the model glues junk onto timestamps (\"...+08:00hq\", \"2027-10-07p\").\n// Keep only the ISO text, here and in the calendar query, so a padded value neither fails the lookup nor\n// reaches the calendar.\n{ const _iso = s => { const v = String(s == null ? '' : s); const m = v.match(/\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?)?/); return m ? m[0] : v; };\n  [].forEach(k => { if (typeof REQ[k] === 'string' && REQ[k]) REQ[k] = _iso(REQ[k]); });\n  [\"booking_date\"].forEach(k => { if (typeof REQ[k] === 'string' && REQ[k]) REQ[k] = _iso(REQ[k]).slice(0, 10); }); }\nconst raw = $input.first().json || {};\nconst date = String(REQ.booking_date || '').trim();\n\nconst ROOMS = {\n  'hitproductions.net_3737303833303637363538@resource.calendar.google.com': 'Studio 1',\n  'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com': 'Studio 2',\n  'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com': 'Studio 3',\n  'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com': 'Studio 4',\n  'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com': 'Studio 5',\n  'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com': 'Studio 6',\n  'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com': 'Studio 7',\n  'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com': 'Studio 8',\n  'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com': 'Studio A',\n  'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com': 'Studio B',\n  'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com': 'Studio C',\n  'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com': 'Studio D',\n  'c_1888r4bbc2lhqgndmprism70nft64@resource.calendar.google.com': 'Studio E',\n  'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com': 'Studio F',\n  'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com': 'Studio M',\n  'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com': 'M1',\n  'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com': 'M2',\n  'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com': 'M3',\n  'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com': 'M4',\n  'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com': 'M5',\n  'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com': 'M6',\n  'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com': 'M7',\n  'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com': 'M8',\n  'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com': 'Salin',\n  'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com': 'Katha',\n  'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com': 'Likha',\n  'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com': 'Lobby'\n};\nconst NAMES = {};\nfor (const k in ROOMS) NAMES[ROOMS[k].toLowerCase()] = ROOMS[k];\n\nif (!date) {\n  return [{ json: { status: 'MISSING_DATE', bookings: [],\n    human: 'No date was given, so nothing was looked up. Ask the requester which date the booking is on.' } }];\n}\nconst items = Array.isArray(raw.items) ? raw.items : null;\nif (!items) {\n  return [{ json: { status: 'LOOKUP_FAILED', bookings: [],\n    human: 'The calendar could not be read for that date. Tell the requester and offer to try again.' } }];\n}\n\nconst hhmm = iso => {\n  const d = new Date(iso);\n  return d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });\n};\n// Department bookings are whole days written as midnight-to-midnight timestamps\n// rather than as date-only events, so they came out \"12:00 AM - 12:00 AM\".\nconst isWholeDay = (s, e) => {\n  if (!s || !e) return false;\n  const m = iso => new Date(iso).toLocaleString('en-US',\n    { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: false });\n  return m(s) === '00:00' && m(e) === '00:00';\n};\nconst roomOf = ev => {\n  const found = [];\n  for (const a of (ev.attendees || [])) {\n    const nm = ROOMS[String(a.email || '').toLowerCase()];\n    if (nm && found.indexOf(nm) === -1) found.push(nm);\n  }\n  if (found.length) return found.join(' + ');\n  const loc = String(ev.location || '').toLowerCase();\n  for (const key in NAMES) if (loc.indexOf(key) !== -1) return NAMES[key];\n  const first = String(ev.summary || '').split(' - ')[0].trim();\n  return NAMES[first.toLowerCase()] || '';\n};\n\nconst bookings = [];\nfor (const ev of items) {\n  if (!ev || ev.status === 'cancelled') continue;\n  const desc = String(ev.description || '');\n  const by = desc.match(/Booked by:\\s*([^|]+)/);\n  const eng = desc.match(/Engineer:\\s*([^|]+)/);\n  const s = (ev.start || {}).dateTime, e = (ev.end || {}).dateTime;\n  bookings.push({\n    id: ev.id,\n    title: ev.summary || '(no title)',\n    time: (!s || !e || isWholeDay(s, e)) ? 'all day' : hhmm(s) + ' - ' + hhmm(e),\n    room: roomOf(ev) || 'not identifiable',\n    booked_by: by ? by[1].trim() : 'not recorded - made outside Jessie',\n    engineer: eng ? eng[1].trim() : ''\n  });\n}\n\nreturn [{ json: { status: 'OK', date: date, count: bookings.length, bookings: bookings,\n  human: bookings.length\n    ? 'These are the bookings on ' + date + '. \"booked_by\" is who made the booking; there is no other '\n      + 'source for that. Use the id exactly as given if you cancel or move one.'\n    : 'Nothing is booked on ' + date + '. Tell the requester and ask them to check the date.' } }];\n"
+        "jsCode": "// Shape the day's events into the few fields Jessie should reason about, and\n// drop everything else.\n//\n// The raw Google payload was going straight to the model, and on 2026-08-30 it\n// read `creator` - which is always howard@hitproductions.net, the account n8n\n// authenticates with - and told Tara her own booking \"was made by Howard, not\n// you\". Who booked something lives in the description as \"Booked by: ...\", and\n// nothing else in a calendar event says it. A field she is not given is a field\n// she cannot misread.\n// Model output occasionally carries invisible characters. On 2026-08-30 a\n// variation selector (U+FE0F) glued to the end of an ISO timestamp made Room\n// Availability answer BAD_WINDOW, and the model then presented a booking\n// summary as though the room were free. Every string the model hands this\n// workflow is scrubbed once, here, rather than at each place one is read.\n// Tabs and newlines survive - a description is allowed to contain them.\nconst clean = s => String(s == null ? '' : s)\n  .replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F\\u200B-\\u200F\\u2028\\u2029\\u202A-\\u202E\\u2060-\\u2064\\uFE00-\\uFE0F\\uFEFF]/g, '')\n  .trim();\nconst REQ = (function (o) {\n  const out = {};\n  for (const k in o) out[k] = (typeof o[k] === 'string') ? clean(o[k]) : o[k];\n  return out;\n})($('When Executed by Another Workflow').first().json || {});\n// PENDING 51 / gotcha 18 (2026-09-28): the model glues junk onto timestamps (\"...+08:00hq\", \"2027-10-07p\").\n// Keep only the ISO text, here and in the calendar query, so a padded value neither fails the lookup nor\n// reaches the calendar.\n{ const _iso = s => { const v = String(s == null ? '' : s); const m = v.match(/\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?)?/); return m ? m[0] : v; };\n  [].forEach(k => { if (typeof REQ[k] === 'string' && REQ[k]) REQ[k] = _iso(REQ[k]); });\n  [\"booking_date\"].forEach(k => { if (typeof REQ[k] === 'string' && REQ[k]) REQ[k] = _iso(REQ[k]).slice(0, 10); }); }\nconst raw = $input.first().json || {};\nconst date = String(REQ.booking_date || '').trim();\n\nconst ROOMS = {\n  'hitproductions.net_3737303833303637363538@resource.calendar.google.com': 'Studio 1',\n  'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com': 'Studio 2',\n  'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com': 'Studio 3',\n  'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com': 'Studio 4',\n  'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com': 'Studio 5',\n  'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com': 'Studio 6',\n  'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com': 'Studio 7',\n  'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com': 'Studio 8',\n  'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com': 'Studio A',\n  'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com': 'Studio B',\n  'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com': 'Studio C',\n  'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com': 'Studio D',\n  'c_1888r4bbc2lhqgndmprism70nft64@resource.calendar.google.com': 'Studio E',\n  'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com': 'Studio F',\n  'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com': 'Studio M',\n  'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com': 'M1',\n  'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com': 'M2',\n  'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com': 'M3',\n  'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com': 'M4',\n  'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com': 'M5',\n  'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com': 'M6',\n  'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com': 'M7',\n  'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com': 'M8',\n  'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com': 'Salin',\n  'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com': 'Katha',\n  'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com': 'Likha',\n  'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com': 'Lobby'\n};\nconst NAMES = {};\nfor (const k in ROOMS) NAMES[ROOMS[k].toLowerCase()] = ROOMS[k];\n\nconst title = String(REQ.title || '').trim();   // v7: the booking's name, as the requester gave it\nif (!date && !title) {\n  return [{ json: { status: 'MISSING_DATE', bookings: [],\n    human: 'No date was given, so nothing was looked up. Ask the requester which date the booking is on.' } }];\n}\n// A second page (nextPageToken) means this read is incomplete: say it failed rather than list half a day.\nconst items = Array.isArray(raw.items) && !raw.nextPageToken ? raw.items : null;\nif (!items) {\n  return [{ json: { status: 'LOOKUP_FAILED', bookings: [],\n    human: 'The calendar could not be read for that date. Tell the requester and offer to try again.' } }];\n}\n\nconst hhmm = iso => {\n  const d = new Date(iso);\n  return d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });\n};\n// Department bookings are whole days written as midnight-to-midnight timestamps\n// rather than as date-only events, so they came out \"12:00 AM - 12:00 AM\".\nconst isWholeDay = (s, e) => {\n  if (!s || !e) return false;\n  const m = iso => new Date(iso).toLocaleString('en-US',\n    { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: false });\n  return m(s) === '00:00' && m(e) === '00:00';\n};\nconst roomOf = ev => {\n  const found = [];\n  for (const a of (ev.attendees || [])) {\n    const nm = ROOMS[String(a.email || '').toLowerCase()];\n    if (nm && found.indexOf(nm) === -1) found.push(nm);\n  }\n  if (found.length) return found.join(' + ');\n  const loc = String(ev.location || '').toLowerCase();\n  for (const key in NAMES) if (loc.indexOf(key) !== -1) return NAMES[key];\n  const first = String(ev.summary || '').split(' - ')[0].trim();\n  return NAMES[first.toLowerCase()] || '';\n};\n\nconst bookings = [];\nfor (const ev of items) {\n  if (!ev || ev.status === 'cancelled') continue;\n  const desc = String(ev.description || '');\n  const by = desc.match(/Booked by:\\s*([^|]+)/);\n  const eng = desc.match(/Engineer:\\s*([^|]+)/);\n  const s = (ev.start || {}).dateTime, e = (ev.end || {}).dateTime;\n  bookings.push({\n    id: ev.id,\n    title: ev.summary || '(no title)',\n    time: (!s || !e || isWholeDay(s, e)) ? 'all day' : hhmm(s) + ' - ' + hhmm(e),\n    room: roomOf(ev) || 'not identifiable',\n    booked_by: by ? by[1].trim() : 'not recorded - made outside Jessie',\n    engineer: eng ? eng[1].trim() : ''\n  });\n}\n\n// --- v7: the booking by name, among upcoming bookings --------------------------------------------------------------\n// \"cancel QANODATE\" was looked up on today's date (the model's guess) and found nothing. When a title is given and\n// nothing that day carries it - or no date was given - the upcoming bookings whose title contains it are returned\n// with their dates, so the model can use the real one.\nconst _n = s => String(s || '').toLowerCase().replace(/\\s+/g, ' ').trim();\nconst _has = t => !!title && _n(t).indexOf(_n(title)) !== -1;\nlet upcoming = [];\nif (title && !bookings.some(b => _has(b.title))) {\n  let _W = {}; try { _W = $('Find By Title').first().json || {}; } catch (e) {}\n  const _wi = Array.isArray(_W.items) && !_W.nextPageToken ? _W.items : [];\n  const _day = iso => { const d = /^\\d{4}-\\d{2}-\\d{2}$/.test(iso) ? new Date(iso + 'T12:00:00+08:00') : new Date(iso);\n    return d.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }); };\n  for (const ev of _wi) {\n    if (!ev || ev.status === 'cancelled' || !_has(ev.summary)) continue;\n    const desc = String(ev.description || ''), by = desc.match(/Booked by:\\s*([^|]+)/), eng = desc.match(/Engineer:\\s*([^|]+)/);\n    const s = (ev.start || {}).dateTime || (ev.start || {}).date || '', e = (ev.end || {}).dateTime || (ev.end || {}).date || '';\n    const iso = /^\\d{4}-\\d{2}-\\d{2}$/.test(s) ? s : new Date(s).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });\n    upcoming.push({ id: ev.id, title: ev.summary, booking_date: iso, date: _day(s),\n      time: (!(ev.start || {}).dateTime || isWholeDay(s, e)) ? 'all day' : hhmm(s) + ' - ' + hhmm(e),\n      room: roomOf(ev) || 'not identifiable', booked_by: by ? by[1].trim() : 'not recorded - made outside Jessie', engineer: eng ? eng[1].trim() : '' });\n    if (upcoming.length >= 10) break;\n  }\n  {   // a name was asked about and nothing that day carries it: always say what the search found\n    return [{ json: { status: 'OK', date: date, count: bookings.length, bookings: date ? bookings : [], upcoming,\n      human: upcoming.length\n        ? (date ? 'Nothing on ' + date + ' is titled \"' + title + '\". ' : '') + 'Upcoming bookings named \"' + title + '\":\\n'\n          + upcoming.map(u => '- ' + u.title + ' on ' + u.date + ', ' + u.time + ', ' + u.room + ' (booked by ' + u.booked_by + ')').join('\\n')\n          + '\\nIf one of these is the booking, use its title and booking_date exactly as given. If several could be, ask which date.'\n        : (date ? 'Nothing on ' + date + ' is titled \"' + title + '\", and n' : 'N') + 'o upcoming booking is named \"' + title + '\". Ask the requester which date the booking is on, or to check the name.' } }];\n  }\n}\n\nreturn [{ json: { status: 'OK', date: date, count: bookings.length, bookings: bookings,\n  human: bookings.length\n    ? 'These are the bookings on ' + date + '. \"booked_by\" is who made the booking; there is no other '\n      + 'source for that. Use the id exactly as given if you cancel or move one.'\n    : 'Nothing is booked on ' + date + '. Tell the requester and ask them to check the date.' } }];\n"
       },
       "position": [
         960,
@@ -245,6 +265,30 @@
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "id": "47d187cf-366f-4272-ae9d-237ce6fe36f1",
+      "name": "Find By Title",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {},
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?q={{ encodeURIComponent(String(($('When Executed by Another Workflow').first().json).title || '').trim() || 'none') }}&timeMin={{ encodeURIComponent(DateTime.now().toISO()) }}&timeMax={{ encodeURIComponent(DateTime.now().plus(String(($('When Executed by Another Workflow').first().json).title || '').trim() ? { days: 450 } : { minutes: 1 }).toISO()) }}&singleEvents=true&orderBy=startTime&maxResults=250"
+      },
+      "position": [
+        560,
+        -112
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
     }
   ],
   "pinData": {},
@@ -277,7 +321,7 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 0,
-  "updatedAt": "2026-09-28T10:38:59.530Z",
-  "versionCounter": 7,
-  "versionId": "6d38ca63-52cd-47d5-b347-3e3dc3e25dcc"
+  "updatedAt": "2026-09-29T09:52:39.871Z",
+  "versionCounter": 9,
+  "versionId": "dd2270ea-db43-4e45-948e-dcf3a1cb4aab"
 }
