@@ -680,6 +680,12 @@ the task runner), for whoever has shell access to the box.
     `workflows/move-booking-v25.json`, which already held the consent rebuild's unimported Move candidate (same
     number, different change); git kept the old one (`060afd9`). Before writing `workflows/<name>-vN.json`, run
     `git log -- workflows/<name>-vN.json`: if it exists, take the next free number.
+25. **A Code node must name the nodes it reads literally, and must not read the AI Agent.** v193's Turn Log Row failed on
+    every turn with "Unknown error" (the gotcha 11 signature) - it looked nodes up through a variable (`const has = n =>
+    $(n).first()`) and read `$('Jessie AI Agent')` directly; nothing else in main does either. n8n works out which nodes'
+    data to give the code runner from the literal `$('Name')` strings. With "continue on error" set, it then passed its
+    input (Slack's receipt) to the sheet, so nothing looked broken. Take the agent's tool steps from Guard Probe (its
+    input), and write `$('Book Direct')` etc. out, one try each.
 
 ## Not done
 

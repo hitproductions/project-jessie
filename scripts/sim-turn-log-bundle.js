@@ -6,7 +6,7 @@
 const fs = require('fs'), path = require('path');
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
-const M = WF(process.env.MAIN || 'project-jessie-v193.json'), OM = WF('imported/project-jessie-v192-imported.json');
+const M = WF(process.env.MAIN || 'project-jessie-v194.json'), OM = WF('imported/project-jessie-v192-imported.json');
 const B = WF(process.env.BOOK || 'book-session-v67.json'), OB = WF('imported/book-session-v66-imported.json');
 let pass = 0, fail = 0;
 const ok = (c, msg, d) => { if (c) { pass++; console.log('  ok    ' + msg); } else { fail++; console.log('  FAIL  ' + msg + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
@@ -16,7 +16,10 @@ const R = id => { const run = JSON.parse(fs.readFileSync(path.join(process.argv[
 const $of = (rec, over = {}) => n => { if (over[n]) return wrap(over[n]); const it = rec(n); if (!it || !it.length) throw new Error('unexecuted ' + n); return wrap(it); };
 
 console.log('Turn Log Row');
-const tl = (id, input) => new Function('$', '$input', '$execution', '$workflow', code(M, 'Turn Log Row'))($of(R(id)), wrap([{ json: input }]), { id: id }, { name: M.name })[0].json;
+// v194: the tool calls come from Guard Probe's toolsLog, so Guard runs first on the recorded agent output.
+const gpOut = id => { const rec = R(id); const ag = rec('Jessie AI Agent'); if (!ag) return null;
+  return new Function('$input', '$', code(M, 'Guard Probe'))(wrap([{ json: ag[0].json }]), $of(rec))[0].json; };
+const tl = (id, input) => { const g = gpOut(id); return new Function('$', '$input', '$execution', '$workflow', code(M, 'Turn Log Row'))($of(R(id), g ? { 'Guard Probe': [{ json: g }] } : {}), wrap([{ json: input }]), { id: id }, { name: M.name })[0].json; };
 let r = tl('16739', { ok: true, message: { text: '*QATIME / Jem Lim / DR*\n*Date:* ...' } });
 ok(r.Exec === '16739' && r.User === 'Howard Luistro' && /qamove - november 17/.test(r.Message) && r.Path === 'agent', 'an agent turn: exec, who, their message, path', r);
 ok(/Find_Booking\(booking_date=2027-11-17\) -> OK/.test(r.Tools) && /Prepare_Cancel\(title=QAMOVE \/ Jem Lim \/ DR, booking_date=2027-11-17\) -> PREPARED/.test(r.Tools), 'each tool with its key inputs and result', r.Tools);
@@ -26,12 +29,13 @@ ok(r.Path === 'book direct' && /Book Direct -> CREATED/.test(r.Tools) && r.Reply
 r = tl('16739', { _dup: true });
 ok(r.Path === 'duplicate dropped' && /nothing sent/.test(r.Reply), 'a dropped late copy is logged too');
 r = new Function('$', '$input', '$execution', '$workflow', code(M, 'Turn Log Row'))(() => { throw new Error('boom'); }, wrap([{ json: {} }]), {}, {})[0].json;
-ok(Object.keys(r).join() === 'Time,Exec,User,Message,Path,Tools,Reply,Claim,Seconds,Build' && /log error/.test(r.Reply), 'never throws: a broken read still gives a row with the same columns');
+ok(Object.keys(r).join() === 'Time,Exec,User,Message,Path,Tools,Reply,Claim,Seconds,Build' && /^\d{4}-\d{2}-\d{2} /.test(r.Time), 'never throws: every read failing still gives a row with the same ten columns');
 const to = (n, b = 0) => ((((M.connections[n] || {}).main || [])[b]) || []).map(t => t.node);
 ok(JSON.stringify(to('Send Reply')) === '["Clear Ack","Turn Log Row"]' && JSON.stringify(to('Duplicate?', 0)) === '["Clear Ack","Turn Log Row"]' && JSON.stringify(to('Turn Log Row')) === '["Log Turn"]', 'wiring: Send Reply and the dropped-duplicate branch -> Turn Log Row -> Log Turn; Clear Ack unchanged');
 const lt = M.nodes.find(n => n.name === 'Log Turn');
 ok(lt.parameters.sheetName.value === 'Turn Log' && lt.onError === 'continueRegularOutput' && lt.parameters.documentId.value === '1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo', 'Log Turn appends to the Jessie Log sheet, tab Turn Log, and cannot fail a turn');
 ok(!/\$\('(?:Book Session|Prepare Booking|Cancel Booking|Move Booking|Find Booking|Room Availability|Prepare Cancel|Book Series|Expand Series)'\)/.test(code(M, 'Turn Log Row')), 'never reads a tool node (gotcha 11)');
+ok(!/\$\('Jessie AI Agent'\)/.test(code(M, 'Turn Log Row')) && !/\$\((?!['"])/.test(code(M, 'Turn Log Row')), 'v194: never reads the AI Agent, never looks a node up by a variable name (v193 failed on both: "Unknown error")');
 
 console.log('Booked For - PENDING 61, a "no" to a move card');
 { const rec = R('16685'), ME = 'U08V3CKDGJF', T = 1790690000;
