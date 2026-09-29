@@ -445,6 +445,18 @@ down. Our own probes do not see it, which also fits: they come from a different 
 Security Events and the tunnel's connection log (cloudflared on the VM) for 15:41:01 and 16:16:24-16:16:51 PHT.
 Same session: the 15:41:01 PHT message (above) is the same pattern.
 
+## Data point: 29 September, 20:43 PHT - Cloudflare challenging every request, including ours
+
+At 20:43:36 PHT every request to `signal.hitpromanila.net` - the Slack webhook (`/webhook/jessie-slack-webhook/webhook`),
+the n8n API (`/api/v1/...`) and `/healthz` - was answered by Cloudflare itself: HTTP 403, `server: cloudflare`,
+`cf-mitigated: challenge`, a "Just a moment..." page (cf-ray a42b131e2b60ddd8-MNL). From a home connection too, which
+had always reached n8n before (401 on the webhook, 200 on healthz). Jessie had answered normally at 20:36 PHT. This is
+the edge serving a managed challenge to everything - a zone setting switched on (Bot Fight Mode, a challenge rule, or
+security level), most likely during the Cloudflare Pro / Super Bot Fight Mode set-up (PENDING 21), before the
+exception for the webhook was in. Slack cannot pass a challenge, so every delivery fails; after enough failures Slack
+turns event delivery off (as on 15 Sep). **Fix:** a WAF skip rule (or security level off) for `/webhook/*` and
+`/api/*` on that hostname, before any bot-protection setting is on. *Recovery time: to fill in.*
+
 ## What to do when it next drops
 
 Do these **while it is confirmed down**, and note the time.
