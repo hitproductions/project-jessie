@@ -50,6 +50,8 @@ ones move to the bottom instead of being renumbered.
 | 56 | **A cancel with no date guesses the date from the conversation** instead of looking it up | **RESOLVED 29 Sep, verified live through Slack 17:53-17:55 PHT** (Cancel v20, Find v7, main v191): "cancel QANODATE" with no date -> Find Booking by name -> card for 7 Oct -> cancelled |
 | 57 | **A late Slack retry after a re-send runs twice**: two identical summaries (29 Sep 15:41, 16:16) | **LIVE 29 Sep 17:20 PHT:** main v189 Duplicate Check |
 | 58 | **Lowercase initials / a bare "bp" answer refused**; an unbacked "not on the staff list" | **LIVE 29 Sep 15:59 PHT:** main v188. Bookers: BP Valenzuela's Initials to BPV (Tel), keep BP in Info |
+| 59 | **Series summaries and events:** model-written summary lines lose their bold labels and gain a leading space; no Booking Type line; the created events carry no "Type:" (Book Series does not pass the booking type) | Build (after launch unless quick): prepared series summaries; pass bookingType in Book Series |
+| 60 | **Two cancels in one message: the model sometimes prepares only the first** ("cancel QAS3 ... and LIKHA - BD ..." - one card, no Next line); three dates of one title worked | Watch; a deterministic split would need the titles parsed from the message |
 
 ### 🟢 Additive: fine after launch
 
@@ -361,6 +363,19 @@ second "bp" went through. Booked For only read initials typed in capitals and on
 v188 reads initials in any case, reads a bare answer to Jessie's "Who is the arranger / engineer?", and Guard Probe
 replaces a staff-list refusal nothing backed. **Airtable (Tel, asked 29 Sep):** BP Valenzuela's Initials to BPV (what she
 uses); keep "BP" in her Info "Goes by" so "bp" still resolves.
+
+**59. Series summaries and events (live Slack test 29 Sep 18:16 PHT, execs 17135-17138).** "Book Studio 8 every Tuesday
+from November 2 to November 16 ..." booked all three correctly, but the summary (model-written; only the dates list is
+rebuilt in code) had " Time: 10:00 AM – 12:00 PM" - a leading space, no bold label - on every detail line and no Booking
+Type line, and the three events' descriptions have no "Type: External" where single bookings do: Book Series does not
+pass the booking type on to its per-date Book Session call (CLAUDE.md gotcha 21). Cosmetic in the summary; the missing
+Type matters only to anything reading the event description.
+
+**60. Two cancels in one message: the model sometimes prepares only the first** (live 29 Sep 18:22 PHT, exec 17201).
+"cancel QAS3 on November 24 and LIKHA - BD on November 25" -> Find Booking and Prepare Cancel for QAS3 only; the card had no
+"Next:" line, so the Likha booking had to be asked for again. The queue (main v187) shows only cards the model prepared;
+"cancel QASERIES on November 2, November 9 and November 16" (three dates, one title) prepared all three and chained.
+Nothing is cancelled wrongly - one booking is simply left for a second request.
 
 **37. Consent paths that have never run live.** (a) A **priority (PREEMPT) request timing out**: the Sweep
 marks it `EXPIRED` and nothing moves. Unit-tested and wired, never exercised end to end. It can run now with
