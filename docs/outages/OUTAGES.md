@@ -422,6 +422,29 @@ delivery that never reached n8n. Something between Slack and n8n (the Cloudflare
 individual requests, not only whole windows. Cloudflare's logs for 15:41:01 PHT would show whether the first attempt
 was answered at the edge.
 
+## Data point: 29 September, 16:16 PHT - three of four deliveries in 30 s arrived 61 s late
+
+The clearest case yet of single deliveries failing while n8n is idle and healthy. Between 16:16:24 and 16:16:51 PHT
+Slack sent four events; three first reached n8n exactly 61 s later (Slack's first retry), one arrived on time:
+
+| Sent (Slack ts) | Event | First reached n8n |
+|---|---|---|
+| 16:16:24 | Jessie's summary (echo) | 16:17:25 (exec 16953), 61 s late |
+| 16:16:31 | requester "yes" | 16:17:32 (exec 16954), 61 s late |
+| 16:16:40 | requester "yes" (re-sent) | 16:16:41 (exec 16951), on time - booked |
+| 16:16:51 | Jessie's "Booked." (echo) | 16:17:52 (exec 16956), 61 s late |
+
+n8n had finished the previous turn at 16:16:24 and was idle. The late "yes" was answered "That's already booked -
+nothing else was changed" (the repeat-yes guard, bug 17), so nothing was double-booked. Probed from a home connection
+at 16:19-16:21: 150 of 150 unsigned POSTs to the trigger answered 401 (reached n8n), average 0.44 s, slowest 2.1 s.
+
+So some deliveries fail on the way in and succeed on Slack's retry a minute later, interleaved with ones that get
+through - more like a fraction of requests failing (one bad tunnel connection among cloudflared's several, or an edge
+rule such as rate limiting or bot protection applied to Slack's datacenter IPs) than a window where everything is
+down. Our own probes do not see it, which also fits: they come from a different network. **To settle it:** Cloudflare
+Security Events and the tunnel's connection log (cloudflared on the VM) for 15:41:01 and 16:16:24-16:16:51 PHT.
+Same session: the 15:41:01 PHT message (above) is the same pattern.
+
 ## What to do when it next drops
 
 Do these **while it is confirmed down**, and note the time.
