@@ -17,7 +17,15 @@ def load(p):
     try: return json.load(open(p))
     except Exception as e: sys.exit(f"cannot read {p}: {e}")
 
-def nodes(w): return {n.get("name"): json.dumps(n.get("parameters", {}), sort_keys=True) for n in w.get("nodes", [])}
+# n8n leaves a parameter out of the saved workflow when it has its default value; a build may state it. These count
+# as equal (found 29 Sep: a Code node's mode "runOnceForAllItems" in the build, absent in the download).
+DEFAULTS = {"n8n-nodes-base.code": {"mode": "runOnceForAllItems"}}
+def params(n):
+    p = dict(n.get("parameters", {}))
+    for k, v in DEFAULTS.get(n.get("type"), {}).items():
+        if p.get(k) == v: p.pop(k)
+    return json.dumps(p, sort_keys=True)
+def nodes(w): return {n.get("name"): params(n) for n in w.get("nodes", [])}
 def stable(t): return re.sub(r"\s+[—-]\s+v\d+\b.*$", "", str(t or "")).strip()
 
 if len(sys.argv) != 4 or sys.argv[1] not in ("before", "after"):
