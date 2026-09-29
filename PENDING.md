@@ -47,7 +47,7 @@ ones move to the bottom instead of being renumbered.
 | 37 | Never run live: priority request timing out; same-day / next-day M-booth windows | Test now / watch at launch |
 | 38, 16 | 2027 test events still on the calendar | **38 mostly done 29 Sep:** today's five cancelled through Jessie; BROWSE, NET-KUBA / JP, M4 - Howard, PROJ ORANGE, NOREGRESSION, CELEBTEST removed by Apps Script (14:35 PHT); the consent-test M1/M4 holds are gone. SMOKETEST stays. **Left: GUARDCHK (16)** |
 | 55 | **Two cancels in one message show one card.** Both were prepared, only the last card reached Slack | Build (main) |
-| 56 | **A cancel with no date guesses the date from the conversation** instead of looking it up | **Cancel v20 + main v190 LIVE 17:43 PHT**; live test showed the model looks it up with Find Booking first -> **Find v7 + main v191 built** (candidates) |
+| 56 | **A cancel with no date guesses the date from the conversation** instead of looking it up | **RESOLVED 29 Sep, verified live through Slack 17:53-17:55 PHT** (Cancel v20, Find v7, main v191): "cancel QANODATE" with no date -> Find Booking by name -> card for 7 Oct -> cancelled |
 | 57 | **A late Slack retry after a re-send runs twice**: two identical summaries (29 Sep 15:41, 16:16) | **LIVE 29 Sep 17:20 PHT:** main v189 Duplicate Check |
 | 58 | **Lowercase initials / a bare "bp" answer refused**; an unbacked "not on the staff list" | **LIVE 29 Sep 15:59 PHT:** main v188. Bookers: BP Valenzuela's Initials to BPV (Tel), keep BP in Info |
 
