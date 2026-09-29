@@ -56,7 +56,7 @@ Started 2026-09-28. Earlier builds are in `git log`.
 
 | Version | Live | Fixes (found in) | Adds |
 |---|---|---|---|
-| v63 (bugs 11 + 13 fix) | *candidate* | With no room named, the model picked one itself, sometimes a taken one, and summarised it as if asked for (QA bugs 11/13, long-standing) | Prepare mode: when the requester's messages name no room, the highest-ranked free room for the session type (Priority in order, then Last Resort; never conference rooms or the lobby); the summary notes "I picked Studio 7 ... OK with that room?"; none free -> NO_ROOM, offer other times (`scripts/build-room-suggest.py`, `scripts/sim-room-suggest.js`) |
+| v63 (bugs 11 + 13 fix) | 2026-09-29 14:54 | With no room named, the model picked one itself, sometimes a taken one, and summarised it as if asked for (QA bugs 11/13, long-standing) | Prepare mode: when the requester's messages name no room, the highest-ranked free room for the session type (Priority in order, then Last Resort; never conference rooms or the lobby); the summary notes "I picked Studio 7 ... OK with that room?"; none free -> NO_ROOM, offer other times (`scripts/build-room-suggest.py`, `scripts/sim-room-suggest.js`) |
 | v62 (move instead) | 2026-09-29 14:02 | With move_instead set, prepare mode prepared a new booking (v61) | MOVE_INSTEAD: nothing prepared; Move Booking named with title, date and new times |
 | v61 (own booking) | 2026-09-29 13:52 | A clash with the requester's own booking offered other rooms (v60) | Says it overlaps your own booking and asks whether to move it |
 | v60 (instruction leak) | 2026-09-29 13:41 | The two "not the usual room" refusals ended with instructions the model pasted to users (bug 3) | with main v183 |
