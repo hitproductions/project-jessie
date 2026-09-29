@@ -49,7 +49,7 @@ ones move to the bottom instead of being renumbered.
 | 55 | **Two cancels in one message show one card.** Both were prepared, only the last card reached Slack | Build (main) |
 | 56 | **A cancel with no date guesses the date from the conversation** instead of looking it up | Build / watch |
 | 57 | **A late Slack retry after a re-send runs twice**: two identical summaries (29 Sep 15:41) | Build (main): skip a message identical to one the same person sent in the last ~2 minutes |
-| 58 | **Lowercase initials / a bare "bp" answer refused**; an unbacked "not on the staff list" | **Built 29 Sep:** main v188 (candidate). Bookers: BP Valenzuela's Initials to BPV (Tel), keep BP in Info |
+| 58 | **Lowercase initials / a bare "bp" answer refused**; an unbacked "not on the staff list" | **LIVE 29 Sep 15:59 PHT:** main v188. Bookers: BP Valenzuela's Initials to BPV (Tel), keep BP in Info |
 
 ### 🟢 Additive: fine after launch
 
