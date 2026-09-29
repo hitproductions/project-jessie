@@ -149,6 +149,8 @@ Anything learned goes into a file, or the next session rediscovers it the hard w
 - every new build → a row in [`VERSIONS.md`](VERSIONS.md): what it fixes and **which version had the problem**.
   Numbers only go up; a fix to v166 is v167 labelled "fixes v166: …", never a renamed file (scripts sort by the
   number, and `verify-ids` / `backup-live` key on the n8n workflow names, which do not change)
+- label styles: `vN (vN-1 fixed)` only when the build repairs a problem the previous build introduced; otherwise
+  2–4 words saying what it fixes or adds, e.g. `v182 (date + room fixes)` (see `VERSIONS.md`)
 - every import → **label it in two places**: set the workflow title in the file to `<stable title> — v169 (v168
   fixed)` before `n8n-write put`, then publish with the version name: `./scripts/n8n-write activate <id> "v169 -
   v168 fixed" "<one line>"` (this is also the Active toggle that reloads tool inputs). `verify-ids` and `backup-live`
