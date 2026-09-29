@@ -19,7 +19,7 @@ ones move to the bottom instead of being renumbered.
 |---|---|---|
 | 33 | Launch switches: year shift, **three** `DEV_REDIRECT`s, drop `TEST_COORD` (the tag is live on Howard). **HAIST Dev stays** for now as an emergency backup (decided 28 Sep) | Howard, on 12 Oct |
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
-| 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism) | IT: Cloudflare account |
+| 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism); 29 Sep: single deliveries also failing and arriving 61 s late on Slack's retry (OUTAGES, 15:41 and 16:16) | **Parked 29 Sep:** waiting on Sir Pao to upgrade Cloudflare to Pro, then Super Bot Fight Mode with the Slack webhook as an exception |
 | 22 | Automatic backup off since 16 Sep; manual backups only (last 2026-09-25) | Follows 21 |
 | 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | **Tel's to-do (28 Sep):** Tel reports it working; her confirmation marks it DONE in the sprint checklist |
 | 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | **Applied 28 Sep 15:20 PHT** in Book Session v53, Room Availability v10, Move v21, Find v5 (main's disabled node goes with v165). IT still to confirm the old id is retired |
