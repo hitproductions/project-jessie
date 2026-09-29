@@ -116,7 +116,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
                                                         startOnlyNotice:ctx.startOnly?'THEY GAVE A START TIME AND NO END TIME.':''}})};
     if(name==='Room Table')   return {first:()=>({json:{roomTable:ctx.roomTable===undefined?ROOMS:ctx.roomTable,
                                                         referenceData:JSON.stringify({types:[{type:'VO Recording',min:60,max:180},{type:'Music Vocal Recording',min:60,max:120},{type:'Localization Editing',min:240,max:null}]})}})};
-    if(name==='Booked For')   return {first:()=>({json:{bookedFor:ctx.bookedFor||'',requesterText:ctx.requesterText||'',botText:ctx.botText||''}})};
+    if(name==='Booked For')   return {first:()=>({json:{bookedFor:ctx.bookedFor||'',requesterText:ctx.requesterText||'',botText:ctx.botText||'',...(ctx.bf||{})}})};
     if(ctx.executed && Object.prototype.hasOwnProperty.call(ctx.executed,name))
       return {isExecuted:ctx.executed[name],first:()=>({json:{}})};
     return {first:()=>({json:{}})};
@@ -208,8 +208,16 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v168','v168 \\(live, 28 Sep\\)'],
     ['v182','29 Sep: it was added to a greeting'],
     ['v183','v183 \\(QA bug 3\\)'],
+    ['v185','v185: a move of the booking just made'],
   ];
   const t2=[
+    // v185: the move confirmation shows the times that will be used
+    ['v185','a move of the booking just made shows 3-5 PM, not the model\'s 3-4','*QAMOVE / Jem Lim / DR* on Wednesday, November 17, 2027 from 3:00 PM – 4:00 PM in Studio 8.\n\nMove it? Reply yes or no.',{bf:{changeJustBooked:true,moveStart:'15:00',moveEnd:'17:00'}},
+      x=>/from 3:00 PM – 5:00 PM in Studio 8/.test(x.output)],
+    ['v185','old and new times both shown: only the new one is set','Move *QAMOVE* from 2:00 PM – 4:00 PM to 3:00 PM – 4:00 PM?\n\nMove it? Reply yes or no.',{bf:{changeJustBooked:true,moveStart:'15:00',moveEnd:'17:00'}},
+      x=>/from 2:00 PM – 4:00 PM to 3:00 PM – 5:00 PM/.test(x.output)],
+    ['v185','no change after a booking: a move summary is left alone','Move *X* to 3:00 PM – 4:00 PM?\n\nMove it? Reply yes or no.',{},
+      x=>/3:00 PM – 4:00 PM/.test(x.output)],
     // v183 (QA 28-29 Sep): tool instructions never reach the requester; no Event ID; Cancel Booking's card; series dates
     ['v183','a leaked tool instruction is dropped (bug 3)','Studio 7 is free then. Suggest one of those instead of Studio 7. If they say to go ahead with what they asked for, book it.',{},
       x=>x.output==='Studio 7 is free then.'],
@@ -662,6 +670,13 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
       check('v184','"actually make it 3pm instead" after Booked. is a change to that booking',r2.changeJustBooked===true&&r2.justBooked&&r2.justBooked.title==='QATIME / Jem Lim / DR'&&r2.justBooked.iso==='2027-11-16',JSON.stringify(r2.justBooked));
       check('v184','...the new time keeps the length (3-5 PM)',r2.moveStart==='15:00'&&r2.moveEnd==='17:00',r2.moveStart+'-'+r2.moveEnd);
       check('v184','...and the model is told to move it, not book again',/THEY ARE CHANGING THE BOOKING THEY JUST MADE: "QATIME \/ Jem Lim \/ DR"/.test(r2.notice)&&/call Move Booking/.test(r2.notice)&&/new time 3:00 PM to 5:00 PM on 2027-11-16/.test(r2.notice),r2.notice);
+      // v185: the same change sent twice (the live case), then the yes to the move
+      const H2=[U(11,'actually make it 3pm instead'),J(10,'Studio 8 is taken from 2:00 PM to 4:00 PM by "QATIME / Jem Lim / DR".'),...H('actually make it 3pm instead')];
+      r2=run(H2[0],H2);
+      check('v185','"make it 3pm instead" sent twice still gives 3-5 PM',r2.changeJustBooked&&r2.moveStart==='15:00'&&r2.moveEnd==='17:00',r2.moveStart+'-'+r2.moveEnd);
+      const H3=[U(13,'yes'),J(12,'*QATIME / Jem Lim / DR* ... 3:00 PM – 5:00 PM\n\nMove it? Reply yes or no.'),...H2];
+      r2=run(H3[0],H3);
+      check('v185','...and at the yes to the move the times are still 3-5 PM',r2.changeJustBooked&&r2.moveStart==='15:00'&&r2.moveEnd==='17:00',r2.moveStart+'-'+r2.moveEnd);
       r2=run(U(9,'can we extend it to 5pm'),H('can we extend it to 5pm'));
       check('v184','"extend it to 5pm" after Booked. moves only the end (2-5 PM)',r2.changeJustBooked&&r2.moveStart==='14:00'&&r2.moveEnd==='17:00');
       r2=run(U(9,'can you also book studio 7 at 3pm'),H('can you also book studio 7 at 3pm'));
@@ -802,6 +817,17 @@ suite('Prepare Booking - the date under discussion wins over a date nobody typed
   check('v182','all-day already right: left alone',st(G,B,'2027-09-30')==='2027-09-30'&&en(G,B,'2027-10-01')==='2027-10-01');
   check('v182','the typed time range still wins (v167) alongside the date fix',st(G,{saidWords:'tomorrow 2pm to 4pm',timeStart:'14:00',timesMentioned:['14:00','16:00']},'2027-10-01T15:00:00+08:00')==='2027-09-30T14:00:00+08:00',st(G,{saidWords:'tomorrow 2pm to 4pm',timeStart:'14:00',timesMentioned:['14:00','16:00']},'2027-10-01T15:00:00+08:00'));
   check('v182','an empty start stays empty (MISSING_DETAILS still asks)',st(G,B,'')==='');
+  { const mv=W.nodes.find(n=>n.name==='Move Booking').parameters.workflowInputs.value;
+    if(/changeJustBooked/.test(mv.new_start_iso||'')){
+      const mk2=key=>{ const e=mv[key]; const i=e.indexOf('{{'), j=e.lastIndexOf(' }}'); let x=e.slice(i+2,j).trim(); const k=x.indexOf("$fromAI("); let depth=0,end=k; for(;end<x.length;end++){ if(x[end]==='(') depth++; else if(x[end]===')'){ depth--; if(depth===0){ end++; break; } } } x=x.slice(0,k)+'__m'+x.slice(end);
+        return (bf,m)=>new Function('$','__m','return ('+x+');')(n=>({first:()=>({json:n==='Booked For'?bf:{}})}),m); };
+      const ms=mk2('new_start_iso'), me=mk2('new_end_iso');
+      const JB={changeJustBooked:true,moveStart:'15:00',moveEnd:'17:00',justBooked:{iso:'2027-11-17'}};
+      check('v185','Move Booking gets 3-5 PM for the change, whatever the model sends',ms(JB,'2027-11-17T15:00:00+08:00')==='2027-11-17T15:00:00+08:00'&&me(JB,'2027-11-17T16:00:00+08:00')==='2027-11-17T17:00:00+08:00',me(JB,'2027-11-17T16:00:00+08:00'));
+      check('v185','a new day the model worked out is kept ("tomorrow 3pm")',ms(JB,'2027-11-18T15:00:00+08:00')==='2027-11-18T15:00:00+08:00');
+      check('v185','no change after a booking: the model\'s times stand',me({},'2027-11-17T16:00:00+08:00')==='2027-11-17T16:00:00+08:00');
+      check('v185','a room-only change (no times worked out): the model\'s times stand',me({changeJustBooked:true,justBooked:{iso:'2027-11-17'}},'2027-11-17T16:00:00+08:00')==='2027-11-17T16:00:00+08:00');
+    } }
   if(/timeForced/.test(v.start_iso)){
     const F={saidWords:'book studio 7 tomorrow 2pm to 4pm actually make it 3pm instead',timeStart:'15:00',timeEnd:'17:00',timeForced:true,timesMentioned:['14:00','16:00','15:00','17:00']};
     check('v183','a forced change wins even though 4 PM was mentioned before',st(G,F,'2027-09-30T14:00:00+08:00')==='2027-09-30T15:00:00+08:00'&&en(G,F,'2027-09-30T16:00:00+08:00')==='2027-09-30T17:00:00+08:00',en(G,F,'2027-09-30T16:00:00+08:00'));
