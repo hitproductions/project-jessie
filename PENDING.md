@@ -48,6 +48,7 @@ ones move to the bottom instead of being renumbered.
 | 38, 16 | 2027 test events still on the calendar | **38 mostly done 29 Sep:** today's five cancelled through Jessie; BROWSE, NET-KUBA / JP, M4 - Howard, PROJ ORANGE, NOREGRESSION, CELEBTEST removed by Apps Script (14:35 PHT); the consent-test M1/M4 holds are gone. SMOKETEST stays. **Left: GUARDCHK (16)** |
 | 55 | **Two cancels in one message show one card.** Both were prepared, only the last card reached Slack | Build (main) |
 | 56 | **A cancel with no date guesses the date from the conversation** instead of looking it up | Build / watch |
+| 57 | **A late Slack retry after a re-send runs twice**: two identical summaries (29 Sep 15:41) | Build (main): skip a message identical to one the same person sent in the last ~2 minutes |
 
 ### 🟢 Additive: fine after launch
 
@@ -344,6 +345,12 @@ was looked up on 21 Nov, the date of a booking just cancelled, when the one left
 november and qatime as well" (exec 16735) was looked up on 18 Nov only. Both times Jessie said she found nothing and
 asked for the date, so it cost a turn, not a wrong cancel. A title with no date could be searched across the
 requester's upcoming bookings instead.
+
+**57. A late Slack retry after a re-send is handled twice.** 29 Sep 15:41 PHT: a message's first delivery never reached
+n8n, the requester re-sent it 32 s later, and Slack's retry of the original then arrived (61 s late). Both ran, so two
+identical summaries went out. Harmless here (a summary, not a booking: every booking still needs its own yes), but
+confusing. Each copy has its own Slack message id, so dedupe on the id does not catch it; skipping a message whose text
+is identical to one the same person sent within about 2 minutes would. See `docs/outages/OUTAGES.md` (29 Sep, 15:41).
 
 **37. Consent paths that have never run live.** (a) A **priority (PREEMPT) request timing out**: the Sweep
 marks it `EXPIRED` and nothing moves. Unit-tested and wired, never exercised end to end. It can run now with

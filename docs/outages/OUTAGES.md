@@ -410,6 +410,18 @@ late retry of anything sent during the gap). Turns then ran normally from 14:09:
 did not disable event dispatch; as with every drop, only Cloudflare Security Events for 14:04–14:09 PHT would say whether
 the edge refused those deliveries.
 
+## Data point: 29 September, one message delivered 61 s late (15:41 PHT)
+
+Not a drop: one delivery missed, and Slack's own retry brought it in. The requester's message sent at **15:41:01 PHT**
+(Slack `ts` 1790667661.31) first reached n8n at **15:42:02** (exec 16877) - 61 s later, which is Slack's first retry
+after an event is not acknowledged. The first attempt left no execution at all: n8n was idle (the turn before finished
+at 15:41:00 in 0.1 s) and every other event in 15:40-15:42 arrived within about a second. The requester saw no
+reaction, re-sent the same text at 15:41:33 (exec 16875, processed at once), and the retry then ran as well, so two
+identical summaries went out. Same shape as the morning's "hello" (sent 11:54:48, delivered 61 s late): a single
+delivery that never reached n8n. Something between Slack and n8n (the Cloudflare edge or the tunnel) is dropping
+individual requests, not only whole windows. Cloudflare's logs for 15:41:01 PHT would show whether the first attempt
+was answered at the edge.
+
 ## What to do when it next drops
 
 Do these **while it is confirmed down**, and note the time.
