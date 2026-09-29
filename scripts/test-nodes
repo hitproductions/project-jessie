@@ -209,6 +209,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v182','29 Sep: it was added to a greeting'],
     ['v183','v183 \\(QA bug 3\\)'],
     ['v185','v185: a move of the booking just made'],
+    ['v188','v188 \\(live QA 29 Sep\\): "not on the staff list"'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -268,7 +269,11 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>!/Also free/.test(x.output)],
     ['v167','no availability step, nothing added','Free studios: Studio 1, Studio 2, Studio 4',{steps:[]},
       x=>!/Also free/.test(x.output)],
-    ['v167','the refusal instructions never reach the requester','Nothing was booked. "Daryl Aquino" is not on the Hit Productions staff list, so they cannot be the engineer. Did the requester mean Daryl Reyes? Confirm the engineer with the requester, then present the summary again using the exact name from the staff list. Never add a surname they did not give.',{},
+    ['v188','an unbacked "not on the staff list" is replaced','"bp" is not on the Hit Productions staff list. Who is the arranger?',{steps:[]},
+      x=>/didn't check that name properly/.test(x.output)&&!/staff list/.test(x.output)],
+    ['v188','a staff check this turn backs it: left alone','"bpv" is not on the Hit Productions staff list. Who is the arranger?',{steps:[{action:{tool:'Prepare_Booking'},observation:'[{"verdict":"REJECTED","reason":"ENGINEER_UNKNOWN"}]'}]},
+      x=>/"bpv" is not on the Hit Productions staff list/.test(x.output)],
+    ['v167','the refusal instructions never reach the requester','Nothing was booked. "Daryl Aquino" is not on the Hit Productions staff list, so they cannot be the engineer. Did the requester mean Daryl Reyes? Confirm the engineer with the requester, then present the summary again using the exact name from the staff list. Never add a surname they did not give.',{steps:[{action:{tool:'Prepare_Booking'},observation:'[{"verdict":"REJECTED","reason":"ENGINEER_UNKNOWN"}]'}]},
       x=>/Did you mean Daryl Reyes\?/.test(x.output)&&!/Confirm the engineer|Never add|requester mean/.test(x.output)],
     // a date with no year — both older patterns need one
     ['undated weekday','fixes an undated weekday','Studio 7 is taken next Wednesday, September 9.',ctx2027,
@@ -550,7 +555,8 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
     {Name:'Richard Genabe',Initials:'RG',Info:'Post Engineer, Goes by Richard, Chard, RG.'},
     {Name:'Letty Sarmiento',Initials:'LS',Info:'Project Manager, Goes by Letty, LS.'},
     {Name:'Lyn Sajonas',Initials:'LS',Info:'Head of Finance, Goes by Miss Lyn, Lyn, LS.'},
-    {Name:'Brian Cua',Initials:'BC',Info:'Music Arranger, Goes by Brian, BC.'}];
+    {Name:'Brian Cua',Initials:'BC',Info:'Music Arranger, Goes by Brian, BC.'},
+    {Name:'BP Valenzuela',Initials:'BP ',Info:'Music Arranger, Goes by BP.'}];
   const BOT={bot_id:'B1'};
   // msgs newest first; the last element of hist is the oldest.
   const run=(trigger,hist,opts={})=>{
@@ -652,7 +658,24 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
     check('v167','a stranger is passed as typed',E('Book Studio 7 tomorrow 2-4pm, engineer Juan').engineer==='Juan');
     check('v167','"engineer: none" names nobody',E('Book Studio 7 tomorrow 2-4pm, engineer: none').engineer==='');
     check('v167','"no engineer yet" names nobody',E('Book Studio 7 tomorrow 2-4pm, no engineer yet').engineer==='');
-    check('v167','lower-case initials are not guessed',E('Book Studio 7 tomorrow 2-4pm, engineer rg').engineer==='');
+    // v188 (decided 29 Sep): initials count in any case - people type them in lowercase
+    if(!/INISTOP/.test(code)) check('v167','lower-case initials are not guessed (before v188)',E('Book Studio 7 tomorrow 2-4pm, engineer rg').engineer==='');
+    if(/INISTOP/.test(code)){
+    check('v188','lower-case initials count: "engineer rg"',E('Book Studio 7 tomorrow 2-4pm, engineer rg').engineer==='Richard Genabe');
+    check('v188','"arranger bc"',E('Book Studio C tomorrow 2-5pm, band recording, engineer Drey, arranger bc').arranger==='Brian Cua');
+    check('v188','a stop word is never initials: "engineer na"',E('Book Studio 7 tomorrow 2-4pm, engineer na').engineer==='');
+    { const Q="Who is the arranger for this session? (If there isn't one, just say no arranger.)", REQ0=U(7,'Book a music recording next Friday 10am-12nn, my own project QAPERSONAL, no client, engineer Drey');
+      let h=[U(9,'bp'),J(8,Q),REQ0], r=run(h[0],h);
+      check('v188','a bare "bp" to "Who is the arranger?" is BP Valenzuela',r.arranger==='BP Valenzuela'&&r.arrangerResolved===true&&/THE ARRANGER IS BP Valenzuela/.test(r.notice),JSON.stringify([r.arranger,r.notice]));
+      check('v188','  and the engineer from the request is kept',r.engineer==='Daryl Reyes');
+      h=[U(9,'Brian Cua'),J(8,'"bpv" is not on the Hit Productions staff list. Who is the arranger?'),REQ0]; r=run(h[0],h);
+      check('v188','a bare full name after a refusal',r.arranger==='Brian Cua');
+      h=[U(9,'no arranger'),J(8,Q),REQ0]; r=run(h[0],h);
+      check('v188','"no arranger" names nobody',r.arranger==='');
+      h=[U(9,'bp'),J(8,'*QAPERSONAL / DR* ... Book it? Reply yes or no.'),REQ0]; r=run(h[0],h);
+      check('v188','a bare "bp" when nobody was asked for names no one',r.arranger==='');
+      h=[U(9,'rg'),J(8,'Who is the engineer?'),U(7,'Book Studio 7 tomorrow 2-4pm VO, project X, client Jem Lim')]; r=run(h[0],h);
+      check('v188','a bare "rg" to "Who is the engineer?"',r.engineer==='Richard Genabe'); } }
     r=E('Book Studio C tomorrow 2-5pm, band recording, engineer Daryl, arranger Brian');
     check('v167','the arranger too',r.engineer==='Daryl Reyes'&&r.arranger==='Brian Cua'&&/THE ARRANGER IS Brian Cua/.test(r.notice),JSON.stringify([r.engineer,r.arranger]));
     r=E('Book Studio F for Tara next Thursday 1-4pm, engineer Drey');

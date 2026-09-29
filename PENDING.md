@@ -49,6 +49,7 @@ ones move to the bottom instead of being renumbered.
 | 55 | **Two cancels in one message show one card.** Both were prepared, only the last card reached Slack | Build (main) |
 | 56 | **A cancel with no date guesses the date from the conversation** instead of looking it up | Build / watch |
 | 57 | **A late Slack retry after a re-send runs twice**: two identical summaries (29 Sep 15:41) | Build (main): skip a message identical to one the same person sent in the last ~2 minutes |
+| 58 | **Lowercase initials / a bare "bp" answer refused**; an unbacked "not on the staff list" | **Built 29 Sep:** main v188 (candidate). Bookers: BP Valenzuela's Initials to BPV (Tel), keep BP in Info |
 
 ### 🟢 Additive: fine after launch
 
@@ -351,6 +352,15 @@ n8n, the requester re-sent it 32 s later, and Slack's retry of the original then
 identical summaries went out. Harmless here (a summary, not a booking: every booking still needs its own yes), but
 confusing. Each copy has its own Slack message id, so dedupe on the id does not catch it; skipping a message whose text
 is identical to one the same person sent within about 2 minutes would. See `docs/outages/OUTAGES.md` (29 Sep, 15:41).
+
+**58. Lowercase initials, and a bare answer to "Who is the arranger?".** Live QA 29 Sep 15:45 PHT (execs 16886-16897):
+asked for the arranger, the requester answered "bpv", then "bp" (BP Valenzuela). "bpv" is not on record (her Initials
+are "BP " with a trailing space, and BPV is not in Info), so that refusal was right. But the first "bp" got '"bp" is
+not on the Hit Productions staff list' with no tool call at all - the model copied the previous refusal - and only the
+second "bp" went through. Booked For only read initials typed in capitals and only after a role word. **Built:** main
+v188 reads initials in any case, reads a bare answer to Jessie's "Who is the arranger / engineer?", and Guard Probe
+replaces a staff-list refusal nothing backed. **Airtable (Tel, asked 29 Sep):** BP Valenzuela's Initials to BPV (what she
+uses); keep "BP" in her Info "Goes by" so "bp" still resolves.
 
 **37. Consent paths that have never run live.** (a) A **priority (PREEMPT) request timing out**: the Sweep
 marks it `EXPIRED` and nothing moves. Unit-tested and wired, never exercised end to end. It can run now with
