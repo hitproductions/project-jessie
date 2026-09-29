@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""main v187 (two cancels, start time) - live QA 29 Sep.
+"""main v187 (bug 15 + two-cancel fix) - live QA 29 Sep.
   scripts/build-two-cancels.py <main-pull> <main-out>
 
 PENDING 55  "qamove - november 17 / qatime - nov 16": both cards were prepared, only the last reached Slack, and the
@@ -127,7 +127,7 @@ try {
 return [{ json: { output: text, directCancel: { status: st, reason: why, nextShown } } }];"""
 
 def main_fix(w):
-    w["name"] = "Project Jessie — v187 (two cancels, start time)"
+    w["name"] = "Project Jessie — v187 (bug 15 + two-cancel fix)"
     g = node(w, "Guard Probe")["parameters"]
     c = sub1(g["jsCode"], GP_CARD_OLD, GP_CARD_NEW, "guard cards")
     c = sub1(c, GP_15_ANCHOR, GP_15_NEW + GP_15_ANCHOR, "guard bug 15")
