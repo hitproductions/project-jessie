@@ -62,6 +62,32 @@ known.
 ./scripts/n8n pull <workflow-id> <file>
 ```
 
+## No direct n8n access (from 29 Sep 2026) - how changes reach n8n now
+
+**IT's decision: Claude does not connect to the n8n server** (`signal.hitpromanila.net`: API, webhooks, healthz). So
+none of the scripts that talk to n8n are run any more - `n8n`, `n8n-write`, `health`, `verify-ids`, `backup-live`,
+`test-nodes --live`, `eval-run`, `eval-twin`, `reapply-main-fixes` - not even to "just check". Everything offline still
+works: the build scripts, `test-nodes` with five file paths, `test-gate <file>`, the sims.
+
+**Deploying goes through GitHub** (agreed with IT): n8n pulls, nothing reaches in.
+1. Build and test the candidate offline as before; commit it.
+2. Write `deploy/next.json`: for each workflow, `workflow_id`, `file` (the new build), `base` (the build it replaces -
+   the file of what is live now), `version_name` (e.g. `v192 - move range fix`) and `description`. `"dry_run": true`
+   does every read and check and stops before writing. Push.
+3. The person deploying opens **Jessie — Deploy from GitHub** in n8n and presses Execute workflow. It checks each live
+   workflow still matches its `base` (a browser edit since then refuses the whole run - this replaces "pull first"),
+   imports, publishes with the version name, reads it back and checks stored == built.
+4. It writes **`deploy/last-result.json`** to the repo: pull it, confirm `ok: true` and `stored_matches_built` for each,
+   then update `VERSIONS.md`. A refusal shows as the run's error message in n8n instead.
+
+Only the Jessie workflow ids in the deployer's Config can be deployed to. Its two credentials (a GitHub token for this
+repo, and an n8n API key as Header Auth) live in n8n only. Built by `scripts/build-deployer.py`, tested by
+`scripts/sim-deployer.js`. Fallback: the person imports the file by hand (workflow ⋯ → Import from File, Save, Publish
+with the version name) and downloads it back into `workflows/imported/` so stored == built can be checked offline.
+
+**What is lost:** reading executions (`health`, tool calls, timings) - ask the person testing to paste or download an
+execution, or add an n8n workflow that writes run summaries to the repo; and `eval-run`, until it runs inside n8n.
+
 ## Where things stand
 
 **Launch is 12 October 2026** (amended sprint, 2026-09-21 — was 25 Sep). Jessie is

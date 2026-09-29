@@ -1,0 +1,10 @@
+{
+  "note": "Read by 'Jessie — Deploy from GitHub' in n8n. Each entry deploys only if the live workflow still matches its base. Order is kept.",
+  "dry_run": true,
+  "deploys": [
+    { "workflow_id": "EUG3sGXkfsJSYIMz", "file": "workflows/book-session-v66.json", "base": "workflows/book-session-v65.json",
+      "version_name": "v66 - proposed time", "description": "With no time typed, the summary says the time was proposed and asks what time they want" },
+    { "workflow_id": "uVVYVB2M7kxpLleI", "file": "workflows/project-jessie-v192.json", "base": "workflows/project-jessie-v191.json",
+      "version_name": "v192 - move range fix", "description": "A time range right after Booked. (3-6pm) is read as the new time, not a new start" }
+  ]
+}

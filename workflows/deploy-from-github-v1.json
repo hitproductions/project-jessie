@@ -1,0 +1,495 @@
+{
+  "name": "Jessie — Deploy from GitHub — v1",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "fb683b9e-3ac2-4b2d-9a98-1704805a9228",
+      "name": "Deploy",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deploy settings. n8n is the server's own API from inside its container; change it if n8n listens elsewhere.\nreturn [{ json: { owner: 'hitproductions', repo: 'project-jessie', branch: 'main',\n  manifest: 'deploy/next.json', result: 'deploy/last-result.json', n8n: 'http://localhost:5678',\n  allowed: {\"uVVYVB2M7kxpLleI\": \"Project Jessie\", \"EUG3sGXkfsJSYIMz\": \"Jessie — Book Session\", \"bAyDw7udhmY0NL38\": \"Jessie — Cancel Booking\", \"t7lwR2km4tfN8DbM\": \"Jessie — Move Booking\", \"yzirq12O227VTFp8\": \"Jessie — Find Booking\", \"e7tBQB458nstrqei\": \"Jessie — Room Availability\", \"hkx9PXcgW9nrzY2a\": \"Jessie — Expand Series\", \"UAwFoifgkfL1xNP2\": \"Jessie — Book Series\", \"K2tPBykMwKcQGMub\": \"Jessie — Prune Executions\", \"nEHnCMMXS0am59Zy\": \"Jessie — Open Consent Request\", \"TO1UnZTZ2LhtE9J3\": \"Jessie — Finalize Consent\", \"QHHDevaWhMk8gSBX\": \"Jessie — Consent Sweep\", \"DxByjma1WLGMLR0L\": \"Jessie — Refresh Reference Cache\", \"atJ87j360xVKHHzD\": \"Jessie — Envoy Mirror\"} } }];\n"
+      },
+      "id": "85e03805-0ea5-486e-8e3b-851e6b880bbf",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Config').first().json.owner }}/{{ $('Config').first().json.repo }}/contents/{{ $('Config').first().json.manifest }}?ref={{ $('Config').first().json.branch }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.raw+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        }
+      },
+      "id": "7612c0e3-e6e3-4292-aea5-f9b395e70946",
+      "name": "Get Manifest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reads deploy/next.json: { \"deploys\": [ { workflow_id, file, base, version_name, description } ] }.\n// Refuses the whole run (nothing is deployed) if any entry is not a Jessie workflow or not a workflows/*.json file.\nconst cfg = $('Config').first().json, m = $input.first().json || {};\nconst list = [].concat(m.deploys || []);\nif (!list.length) throw new Error('Refused: deploy/next.json lists no deploys.');\nconst bad = [];\nlist.forEach((d, i) => {\n  if (!cfg.allowed[d.workflow_id]) bad.push('#' + (i + 1) + ' ' + d.workflow_id + ' is not a Jessie workflow');\n  for (const k of ['file', 'base']) if (!/^workflows\\/[A-Za-z0-9._-]+\\.json$/.test(String(d[k] || ''))) bad.push('#' + (i + 1) + ' ' + k + ' \"' + d[k] + '\" is not a workflows/*.json file');\n  if (!String(d.version_name || '').trim()) bad.push('#' + (i + 1) + ' has no version_name');\n});\nif (bad.length) throw new Error('Refused, nothing deployed: ' + bad.join('; '));\nreturn list.map((d, i) => ({ json: { i, workflow_id: d.workflow_id, file: d.file, base: d.base, version_name: String(d.version_name).trim(),\n  description: String(d.description || '').trim(), expect: cfg.allowed[d.workflow_id] } }));\n"
+      },
+      "id": "c119c7dc-f19f-4a9e-a200-3050ddf91f46",
+      "name": "Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Config').first().json.owner }}/{{ $('Config').first().json.repo }}/contents/{{ $('Plan').all()[$itemIndex].json.file }}?ref={{ $('Config').first().json.branch }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.raw+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        }
+      },
+      "id": "ccca973d-3332-4d11-b9ad-a1842c76dd81",
+      "name": "Get File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Config').first().json.owner }}/{{ $('Config').first().json.repo }}/contents/{{ $('Plan').all()[$itemIndex].json.base }}?ref={{ $('Config').first().json.branch }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.raw+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        }
+      },
+      "id": "eb3debdc-3599-40d3-a637-286034e17835",
+      "name": "Get Base",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.n8n }}/api/v1/workflows/{{ $('Plan').all()[$itemIndex].json.workflow_id }}",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "9fb8304e-c2c1-40e1-8f12-c24a52b24e69",
+      "name": "Get Live",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst stable = v => Array.isArray(v) ? '[' + v.map(stable).join(',') + ']'\n  : (v && typeof v === 'object') ? '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}'\n  : JSON.stringify(v === undefined ? null : v);\nconst nodeMap = w => { const m = {}; for (const n of ((w && w.nodes) || [])) m[n.name] = stable(n.parameters || {}); return m; };\nconst diff = (a, b) => { const A = nodeMap(a), B = nodeMap(b); return [...new Set(Object.keys(A).concat(Object.keys(B)))].filter(k => A[k] !== B[k]); };\nconst stableTitle = t => String(t || '').replace(/\\s+[—-]\\s+v\\d+\\b.*$/, '').trim();\n\n// All entries are checked before anything is written; one failure refuses the whole run.\nconst plan = $('Plan').all().map(i => i.json), files = $('Get File').all().map(i => i.json);\nconst bases = $('Get Base').all().map(i => i.json), lives = $('Get Live').all().map(i => i.json);\nconst ALLOW = ['saveExecutionProgress', 'saveManualExecutions', 'saveDataErrorExecution', 'saveDataSuccessExecution', 'executionTimeout', 'errorWorkflow', 'timezone', 'executionOrder'];\nconst bad = [], out = [];\nplan.forEach((p, i) => {\n  const f = files[i] || {}, b = bases[i] || {}, l = lives[i] || {};\n  const tag = '#' + (i + 1) + ' ' + p.file;\n  if (!Array.isArray(f.nodes)) { bad.push(tag + ': could not read the file from GitHub'); return; }\n  if (!Array.isArray(b.nodes)) { bad.push(tag + ': could not read the base ' + p.base + ' from GitHub'); return; }\n  if (!Array.isArray(l.nodes) || l.id !== p.workflow_id) { bad.push(tag + ': could not read the live workflow ' + p.workflow_id); return; }\n  if (stableTitle(f.name) !== p.expect || stableTitle(l.name) !== p.expect) { bad.push(tag + ': title \"' + f.name + '\" / live \"' + l.name + '\" is not ' + p.expect); return; }\n  const changed = diff(l, b);\n  if (changed.length) { bad.push(tag + ': the live workflow is not ' + p.base + ' - changed since (browser edit or another import?): ' + changed.slice(0, 8).join(', ')); return; }\n  const s = {}; for (const k of ALLOW) if (f.settings && f.settings[k] !== undefined) s[k] = f.settings[k];\n  if (!Object.keys(s).length) s.executionOrder = 'v1';\n  out.push({ json: { workflow_id: p.workflow_id, file: p.file, base: p.base, version_name: p.version_name, description: p.description,\n    live_name_before: l.name, body: { name: f.name, nodes: f.nodes, connections: f.connections, settings: s } } });\n});\nif (bad.length) throw new Error('Refused, nothing deployed: ' + bad.join(' | '));\n// \"dry_run\": true in deploy/next.json - every read and check, then stop before anything is written.\nif ($('Get Manifest').first().json.dry_run === true)\n  throw new Error('DRY RUN OK - nothing written. Would deploy: ' + out.map(o => o.json.version_name + ' to ' + o.json.live_name_before).join('; '));\nreturn out;\n"
+      },
+      "id": "8330531c-aebb-4263-ba6c-1dd3c235503f",
+      "name": "Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Config').first().json.n8n }}/api/v1/workflows/{{ $json.workflow_id }}",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}"
+      },
+      "id": "00054997-47c5-4b29-b70a-4ad36b30b84a",
+      "name": "Put",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.n8n }}/api/v1/workflows/{{ $('Check').all()[$itemIndex].json.workflow_id }}/activate",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: $('Check').all()[$itemIndex].json.version_name, description: $('Check').all()[$itemIndex].json.description }) }}"
+      },
+      "id": "0e97eba3-ef69-419c-9304-24d87b900b31",
+      "name": "Publish",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.n8n }}/api/v1/workflows/{{ $('Check').all()[$itemIndex].json.workflow_id }}",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "2230344d-c348-42bd-b704-4f3f61efacea",
+      "name": "Get Stored",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst stable = v => Array.isArray(v) ? '[' + v.map(stable).join(',') + ']'\n  : (v && typeof v === 'object') ? '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}'\n  : JSON.stringify(v === undefined ? null : v);\nconst nodeMap = w => { const m = {}; for (const n of ((w && w.nodes) || [])) m[n.name] = stable(n.parameters || {}); return m; };\nconst diff = (a, b) => { const A = nodeMap(a), B = nodeMap(b); return [...new Set(Object.keys(A).concat(Object.keys(B)))].filter(k => A[k] !== B[k]); };\nconst stableTitle = t => String(t || '').replace(/\\s+[—-]\\s+v\\d+\\b.*$/, '').trim();\n\n// stored == built, per workflow; the result goes back to the repo as deploy/last-result.json.\nconst done = $('Check').all().map(i => i.json), stored = $('Get Stored').all().map(i => i.json), pub = $('Publish').all().map(i => i.json);\nconst results = done.map((d, i) => {\n  const s = stored[i] || {}, changed = diff(s, d.body);\n  return { workflow_id: d.workflow_id, file: d.file, base: d.base, version_name: d.version_name, before: d.live_name_before,\n    stored_name: s.name || '', active: s.active === true, stored_matches_built: Array.isArray(s.nodes) && changed.length === 0 && s.name === d.body.name,\n    differing_nodes: changed.slice(0, 20), published: !(pub[i] && pub[i].error) };\n});\nconst ok = results.every(r => r.stored_matches_built && r.active && r.published);\nconst result = { ran_at: new Date().toISOString(), ok, results };\nconst text = JSON.stringify(result, null, 2) + '\\n';\nlet b64 = ''; try { b64 = Buffer.from(text, 'utf8').toString('base64'); } catch (e) { b64 = btoa(unescape(encodeURIComponent(text))); }\nreturn [{ json: { ...result, summary: (ok ? 'OK' : 'CHECK') + ' - ' + results.map(r => r.version_name).join(', '), content_b64: b64 } }];\n"
+      },
+      "id": "2472f0a6-97f5-4999-bab5-87622cacda9c",
+      "name": "Verify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Config').first().json.owner }}/{{ $('Config').first().json.repo }}/contents/{{ $('Config').first().json.result }}?ref={{ $('Config').first().json.branch }}",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        }
+      },
+      "id": "ad65d074-fce2-4ce8-98ea-061ea7fca98a",
+      "name": "Get Result SHA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/{{ $('Config').first().json.owner }}/{{ $('Config').first().json.repo }}/contents/{{ $('Config').first().json.result }}",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify(Object.assign({ message: 'n8n deploy: ' + $('Verify').first().json.summary, content: $('Verify').first().json.content_b64, branch: $('Config').first().json.branch }, ($json && $json.sha) ? { sha: $json.sha } : {})) }}"
+      },
+      "id": "9b36477c-41aa-4487-b8d0-66716ba706af",
+      "name": "Write Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2860,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Deploy from GitHub\nPress **Execute workflow**. It deploys what `deploy/next.json` in the repo lists, only if each live workflow still matches the build it replaces; otherwise it refuses and changes nothing. The result is written to `deploy/last-result.json`.\n\n**Credentials** (set once on the HTTP nodes): *GitHub API* on Get Manifest / Get File / Get Base / Get Result SHA / Write Result; *n8n API* (Header Auth, `X-N8N-API-KEY`) on Get Live / Put / Publish / Get Stored.",
+        "height": 260,
+        "width": 520
+      },
+      "id": "66e4c0f9-7e08-4020-ac02-97bf67aacdd7",
+      "name": "Read me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -320
+      ]
+    }
+  ],
+  "connections": {
+    "Deploy": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Get Manifest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Manifest": {
+      "main": [
+        [
+          {
+            "node": "Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan": {
+      "main": [
+        [
+          {
+            "node": "Get File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get File": {
+      "main": [
+        [
+          {
+            "node": "Get Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Base": {
+      "main": [
+        [
+          {
+            "node": "Get Live",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Live": {
+      "main": [
+        [
+          {
+            "node": "Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check": {
+      "main": [
+        [
+          {
+            "node": "Put",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Put": {
+      "main": [
+        [
+          {
+            "node": "Publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish": {
+      "main": [
+        [
+          {
+            "node": "Get Stored",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Stored": {
+      "main": [
+        [
+          {
+            "node": "Verify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify": {
+      "main": [
+        [
+          {
+            "node": "Get Result SHA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Result SHA": {
+      "main": [
+        [
+          {
+            "node": "Write Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
