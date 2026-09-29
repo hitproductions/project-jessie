@@ -52,7 +52,9 @@ ones move to the bottom instead of being renumbered.
 | 58 | **Lowercase initials / a bare "bp" answer refused**; an unbacked "not on the staff list" | **LIVE 29 Sep 15:59 PHT:** main v188. Bookers: BP Valenzuela's Initials to BPV (Tel), keep BP in Info |
 | 59 | **Series summaries and events:** model-written summary lines lose their bold labels and gain a leading space; no Booking Type line; the created events carry no "Type:" (Book Series does not pass the booking type) | Build (after launch unless quick): prepared series summaries; pass bookingType in Book Series |
 | 60 | **Two cancels in one message: the model sometimes prepares only the first** ("cancel QAS3 ... and LIKHA - BD ..." - one card, no Next line); three dates of one title worked | Watch; a deterministic split would need the titles parsed from the message |
-| 61 | **"no" to a move card re-offered the corrected move** instead of cancelling it (29 Sep 22:29: the earlier "3-6pm not 6-7" still counted); a second "no" cancelled | Build (main): a "no" to a move card ends the change |
+| 61 | **"no" to a move card re-offered the corrected move** instead of cancelling it (29 Sep 22:29: the earlier "3-6pm not 6-7" still counted); a second "no" cancelled | **LIVE 29 Sep 23:10 (main v193), verified 23:16 through Slack** |
+| 62 | **"This week" availability checks one day** (29 Sep 23:17: only Monday 27 Sep, already past in QA dates) - visible since v193 names the dates checked | Build (main): resolve "this week" / "next week" to the remaining weekdays and check each |
+| 63 | **A change right after a series moves one date without asking which** ("make it 3pm instead" after a 2-date series -> the 9 Nov date only) | Build / decide: ask which date, or move them all |
 
 ### 🟢 Additive: fine after launch
 
