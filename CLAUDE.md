@@ -124,7 +124,8 @@ open risk, and it is not in the workflows.**
 
 **Safety nets already in place:**
 - a daily pruner (04:00) keeps the execution table from filling the SQLite database
-- a GitHub Action backs up every live workflow twice a day into `workflows/live/`
+- `./scripts/backup-live` snapshots every live workflow into `workflows/live/`, run by hand after imports (the GitHub
+  Action that ran it twice a day was deleted 29 Sep 2026: Cloudflare challenged GitHub's servers)
 - `./scripts/verify-ids` catches a swapped Slack app or a changed workflow id
 
 **Not yet in place:** an external uptime monitor — the one thing that would catch an
@@ -197,8 +198,8 @@ knowledge accumulates.
   Saving does not reload tool definitions — the agent keeps calling the old schema.
 - **The API key lives in `.env` only.** Never in a message, a commit, or a shared file.
 - **The repo is the only record and the only rollback.** One shared n8n login and
-  no restorable history on the free plan. A GitHub Action backs up every live
-  workflow nightly into `workflows/live/` (`scripts/backup-live`); commit your own
+  no restorable history on the free plan. Run `./scripts/backup-live` after every
+  import to snapshot the live workflows into `workflows/live/`, and commit your own
   changes so the folder never falls behind what n8n runs.
 - Bookings in the live calendar are real. QA runs on year-shifted dates (2027) on purpose.
 
@@ -263,7 +264,7 @@ only script that writes to n8n.
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
 | `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
 | `./scripts/verify-ids` | all twelve Jessie workflow ids (incl. the three consent workflows) resolve to **active** workflows with the right names, and the Jessie bot id still points at the live app |
-| `./scripts/backup-live` | snapshot every live workflow into `workflows/live/` (also run nightly by the GitHub Action) |
+| `./scripts/backup-live` | snapshot every live workflow into `workflows/live/`; run by hand after imports |
 | `./scripts/reapply-main-fixes` · `--check` | after someone else imports main: report which of our main fixes survived, and re-apply the missing ones **on top of** their version (never imports; flags structural gaps for a hand merge) |
 
 ## The one principle
@@ -678,5 +679,5 @@ the task runner), for whoever has shell access to the box.
 This file, `PENDING.md`, `VERSIONS.md` (which build fixed what) and the current workflow files are the whole working
 tree. Every superseded build, every old handoff, and the reasoning behind each fix
 live in git history — `git log` is the record of why things are the way they are,
-and the commit messages are long on purpose. `workflows/live/` is the nightly
-backup of what n8n is actually running, written by the GitHub Action.
+and the commit messages are long on purpose. `workflows/live/` is the backup of what n8n is actually running, written by
+`./scripts/backup-live`.
