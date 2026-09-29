@@ -44,7 +44,8 @@ ok(r._dup !== true, '16951: the second "yes", on time -> handled (it booked)', r
   ok(r._dup !== true, "someone else's identical message does not count"); }
 const to = (w, n, b = 0) => ((((w.connections[n] || {}).main || [])[b]) || []).map(t => t.node);
 ok(JSON.stringify(to(M, 'Gate Context')) === '["Duplicate Check"]' && JSON.stringify(to(M, 'Duplicate Check')) === '["Duplicate?"]'
-   && JSON.stringify(to(M, 'Duplicate?', 0)) === '["Clear Ack"]' && JSON.stringify(to(M, 'Duplicate?', 1)) === JSON.stringify(to(OLDM, 'Gate Context')),
+   && ['["Clear Ack"]', '["Clear Ack","Turn Log Row"]'].includes(JSON.stringify(to(M, 'Duplicate?', 0))) &&   // v193 also logs the drop
+    JSON.stringify(to(M, 'Duplicate?', 1)) === JSON.stringify(to(OLDM, 'Gate Context')),
    'wiring: Gate Context -> Duplicate Check -> Duplicate? -> (dropped: Clear Ack, nothing sent) / (else: as before)');
 ok(/\$json\._dup === true/.test(node(M, 'Duplicate?').parameters.conditions.conditions[0].leftValue), 'Duplicate? tests only the _dup flag');
 
