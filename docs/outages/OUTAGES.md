@@ -391,7 +391,7 @@ recovery; the Slack app's Event Subscriptions stayed enabled and "Verified" thro
 September, no cause is visible from our side; Cloudflare's Security Events for 09:47–11:55 PHT is the lookup that
 would settle it.
 
-## Data point: 29 September, second drop — silent from ~14:05 PHT (ongoing at 14:08 PHT)
+## Data point: 29 September, second drop — silent ~14:05–14:08 PHT (about 4 minutes, recovered on its own)
 
 **Last Slack event that reached n8n:** 14:04:46 PHT (exec 16675, Jessie's own "Moved …" reply echoed back), right after a
 normal run of live QA turns that had been arriving within about a second (13:59–14:04). Howard then got no reaction or
@@ -404,7 +404,11 @@ reply; nothing reached n8n after 14:04:46.
 Same shape as the morning drop (09:47–11:55): n8n healthy and reachable from here, Slack's deliveries not arriving. Two
 drops in one day, each a few minutes after an import, is worth noting but not yet a pattern: the morning one began two
 minutes after the v181 import, this one about two minutes after v186, and in both cases turns ran normally in between.
-*Recovery time: to fill in.*
+**Recovered 14:08:56 PHT:** exec 16680 at 14:08:57, a new message (its Slack `ts` is 14:08:56, so a fresh send and not a
+late retry of anything sent during the gap). Turns then ran normally from 14:09:57 on. Whatever the requester sent between
+14:05 and 14:08 never reached n8n, not even as a Slack retry. Nothing was changed to fix it. Short enough that Slack
+did not disable event dispatch; as with every drop, only Cloudflare Security Events for 14:04–14:09 PHT would say whether
+the edge refused those deliveries.
 
 ## What to do when it next drops
 
