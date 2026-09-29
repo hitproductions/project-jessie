@@ -26,6 +26,7 @@ Started 2026-09-28. Earlier builds are in `git log`.
 
 | Version | Live | Fixes (found in) | Adds |
 |---|---|---|---|
+| v184 (change after booking) | 2026-09-29 13:52 | Live QA: "Booked." then "actually make it 3pm instead" was prepared as a second booking and clashed with the first (v183) | A change right after a booking is a move of that booking, with the new times (`scripts/build-change-after-booking.py`) |
 | v183 (QA bug fixes) | 2026-09-29 13:41 | QA N2: "make it 3pm instead" dropped the length, 2-4 became 3-4 (long-standing); a tool instruction reached the requester (bug 3, long-standing); a model-written cancel card showed an Event ID (bug B); a series summary's December Tuesdays said "(Mon)" (bug 19) and had no Booked by (bug 14) | Start/end changes keep or set the length; any sentence naming "the requester" or a tool is dropped; series dates written from Expand Series; a card from Cancel Booking shown as written (`scripts/build-qa-fixes-29sep.py`) |
 | v182 (date + room fixes) | 2026-09-29 13:21 | Live QA 29 Sep ("tomorrow at Salin"): the model sent 1 Oct on follow-up turns though "tomorrow" was 30 Sep (v181) - Prepare Booking now uses the one date under discussion when the requester never typed the model's date; "And which day is it for?" added to a greeting (v181); "from 12:00 AM to 12:00 AM" for an all-day clash (v181) | `scripts/build-date-room-fixes.py`, `scripts/sim-date-room-fixes.js` |
 | v181 | 2026-09-29 09:45 | ChatGPT review of v180: prompt/notice conflicts (1-6) | Cancel notice no longer says "call Cancel Booking" when the direct cancel declined; Clients lookup for unlabelled names; session type only for booking lookups; series exempt from Prepare Booking; List Events 2-week default removed; "not found" is not "deleted" (`scripts/build-prompt-fixes.py`) |
@@ -52,6 +53,7 @@ Started 2026-09-28. Earlier builds are in `git log`.
 
 | Version | Live | Fixes (found in) | Adds |
 |---|---|---|---|
+| v61 (own booking) | 2026-09-29 13:52 | A clash with the requester's own booking offered other rooms (v60) | Says it overlaps your own booking and asks whether to move it |
 | v60 (instruction leak) | 2026-09-29 13:41 | The two "not the usual room" refusals ended with instructions the model pasted to users (bug 3) | with main v183 |
 | v59 (room fixes) | 2026-09-29 13:21 | Conference room taken: nothing offered, so the model named rooms that were also taken (v58) - the other conference rooms free in that window are offered; an all-day clash is said to be "all day" (v58) | with main v182 |
 | v55 | 2026-09-28 17:52 | Near-miss engineer names refused instead of resolved (v54); no role on the engineer line (v54); External/Personal and the client asked a turn apart (v54); "last Monday" answered as a missing date (v54) | Name, role and initials filled from Bookers |
