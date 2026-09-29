@@ -654,6 +654,25 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
     check('v167','a correction in a newer message wins',r.engineer==='Tara Lim',r.engineer);
     check('v167','saidWords holds what they typed, lower case',/\bdrey\b/.test(r.saidWords)&&/\btara\b/.test(r.saidWords),r.saidWords);
     check('v167','a message with no engineer leaves it empty',E('which studios are free tomorrow 2-4pm?').engineer==='');
+    if(/changeJustBooked/.test(code)){
+      // v184 (live QA 29 Sep): a change right after "Booked." is a move of that booking
+      const BSUM=J(6,'*QATIME / Jem Lim / DR*\n*Client:* Jem Lim\n*Project:* QATIME\n*Date:* Tuesday, November 16, 2027\n*Time:* 2:00 PM – 4:00 PM\n*Room:* Studio 8\n*Booked by:* Howard Luistro\n\n_check 61b5811c_\n\nBook it? Reply yes or no.');
+      const H=t=>[U(9,t),J(8,'Booked.'),U(7,'yes'),BSUM,U(5,'Book Studio 8 on Tuesday, November 16 from 2pm to 4pm, VO recording, project QATIME, client Jem Lim, engineer Drey')];
+      let r2=run(U(9,'actually make it 3pm instead'),H('actually make it 3pm instead'));
+      check('v184','"actually make it 3pm instead" after Booked. is a change to that booking',r2.changeJustBooked===true&&r2.justBooked&&r2.justBooked.title==='QATIME / Jem Lim / DR'&&r2.justBooked.iso==='2027-11-16',JSON.stringify(r2.justBooked));
+      check('v184','...the new time keeps the length (3-5 PM)',r2.moveStart==='15:00'&&r2.moveEnd==='17:00',r2.moveStart+'-'+r2.moveEnd);
+      check('v184','...and the model is told to move it, not book again',/THEY ARE CHANGING THE BOOKING THEY JUST MADE: "QATIME \/ Jem Lim \/ DR"/.test(r2.notice)&&/call Move Booking/.test(r2.notice)&&/new time 3:00 PM to 5:00 PM on 2027-11-16/.test(r2.notice),r2.notice);
+      r2=run(U(9,'can we extend it to 5pm'),H('can we extend it to 5pm'));
+      check('v184','"extend it to 5pm" after Booked. moves only the end (2-5 PM)',r2.changeJustBooked&&r2.moveStart==='14:00'&&r2.moveEnd==='17:00');
+      r2=run(U(9,'can you also book studio 7 at 3pm'),H('can you also book studio 7 at 3pm'));
+      check('v184','"also book ..." after Booked. is a new booking, not a change',!r2.changeJustBooked);
+      r2=run(U(9,'thanks!'),H('thanks!'));
+      check('v184','"thanks!" after Booked. changes nothing',!r2.changeJustBooked&&!/CHANGING THE BOOKING/.test(r2.notice));
+      r2=run(U(9,'actually move it to studio 7'),H('actually move it to studio 7'));
+      check('v184','a room change after Booked. is a change too (times left to the model)',r2.changeJustBooked&&!r2.moveStart);
+      r2=run(U(9,'make it 3pm'),[U(9,'make it 3pm'),J(8,'Booked.'),U(7,'yes'),J(6,'Studio 8 is free then.'),U(5,'book studio 8 tomorrow 2-4pm')]);
+      check('v184','no summary before Booked.: nothing to change, no notice',!r2.changeJustBooked);
+    }
     if(/timeChange/.test(code)){
       // v183 (QA N2): one new time after a range is a change
       const SUM=J(8,'*ORBIT / Jem Lim / TL*\n*Time:* 2:00 PM – 4:00 PM\n*Room:* Studio 7\n\nBook it? Reply yes or no.');

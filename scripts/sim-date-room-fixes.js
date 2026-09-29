@@ -10,7 +10,7 @@
 const fs = require('fs'), path = require('path');
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
-const NEW = WF('book-session-v60.json'), OLD = WF('book-session-v58.json');
+const NEW = WF(process.env.BOOK || 'book-session-v61.json'), OLD = WF('book-session-v58.json');
 let pass = 0, fail = 0;
 const ok = (c, msg, d) => { if (c) { pass++; console.log('  ok    ' + msg); } else { fail++; console.log('  FAIL  ' + msg + (d === undefined ? '' : '  :: ' + d)); } };
 
@@ -57,6 +57,20 @@ o = cc(OLD, [allDay('k', 'Katha', 'KATHA - S&A')]);
 ok(!/all day/.test(o.human), '  (old build: no "all day", the model wrote 12:00 AM to 12:00 AM)', o.human);
 r = cc(NEW, [timed('k', 'Katha', 'KATHA - S&A', '13:30', '15:00')]);
 ok(/Katha is taken by "KATHA - S&A"/.test(r.human) && !/all day/.test(r.human), 'a timed clash is not called all day', r.human);
+
+// v61 (live QA 29 Sep): a clash that is the requester's own booking asks to move it
+if (/own_booking/.test(code(NEW, 'Check Conflicts'))) {
+  const mine = { ...timed('q', 'Katha', 'QATIME / Jem Lim / DR', '14:00', '16:00'), description: 'Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U08V3CKDGJF' };
+  const theirs = { ...timed('t', 'Katha', 'OTHER / X / TL', '14:00', '16:00'), description: 'Booked by: Tara Lim | ref: U026N6E1R' };
+  r = cc(NEW, [mine]);
+  ok(r.reason === 'ROOM_OCCUPIED' && r.own_booking === true && /overlaps a booking you already have: "QATIME \/ Jem Lim \/ DR" \(Katha, 2:00 PM – 4:00 PM\)/.test(r.human), 'own booking in the way -> says so and asks to move it', r.human);
+  r = cc(NEW, [theirs]);
+  ok(r.reason === 'ROOM_OCCUPIED' && !r.own_booking && /is taken/.test(r.human), "someone else's booking -> the usual room-taken answer", r.human);
+  r = cc(NEW, [mine, theirs]);
+  ok(!r.own_booking, 'own and someone else\'s both in the way -> the usual answer');
+  o = cc(OLD, [mine]);
+  ok(!o.own_booking, '  (old build: own booking treated as any clash)');
+}
 
 console.log('\n' + (fail ? fail + ' failing, ' : '') + pass + ' passing');
 process.exit(fail ? 1 : 0);
