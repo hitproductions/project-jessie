@@ -40,7 +40,7 @@ booking log keeps their BOOKED rows — the 7 deleted directly from the calendar
 6. Cancel confirmation card written by the model without Find Booking; M4's card showed an invented room/time (Studio 8, 2-4 PM vs real Studio 7, 2-3 PM). Correct booking was still cancelled (Cancel Booking matches title+date).
 7. (mine, fixed) v169 direct bookings lacked "Booked by ... | ref:" -> uncancellable. Rolled back after 10 min; v170 fixes; sim-book-direct.js guards it.
 8. Minor: Gemini called Cancel_Booking before showing the booking (refused NOT_CONFIRMED, guard held) - M2, M4, ORBIT.
-9. Minor: summaries inconsistent on "Booking Type" line (M1/M3 had it, M4/ORBIT did not).
+9. Minor: summaries inconsistent on "Booking Type" line (M1/M3 had it, M4/ORBIT did not). ROOT CAUSE (29 Sep): the line was left out whenever the model sent no booking type - Check Conflicts worked it out for the event, Render Summary showed the empty input. Fix: Book Session v64.
 10. Minor: F2 "this week" reply did not state the dates checked.
 11. Minor: Localization picked Studio 1 / booth Studio A itself without asking, then refused them as taken (M2); celebrity picked Studio 7 itself (M3).
 12. QA-N2: "Book ... 2pm to 4pm" then "actually make it 3pm instead" -> 3:00-4:00 PM "Assuming 1 hour" (exec 15819). The requested 2-hour length was dropped; a start change should keep the length (3-5 PM).
