@@ -7,7 +7,7 @@
 // renders a card, main's Prepared Cancel reads that exact text back, and Cancel Booking accepts it only while the
 // booking is unchanged.
 const fs = require('fs'), path = require('path');
-const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
+const WF = f => JSON.parse(fs.readFileSync(path.isAbsolute(f) ? f : path.join(__dirname, '..', 'workflows', f)));
 const C18 = WF('cancel-booking-v18.json'), C17 = WF('cancel-booking-v17.json'), M = WF(process.env.MAIN || 'project-jessie-v177.json'), M175 = WF('project-jessie-v175.json');
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
 const node = (w, n) => w.nodes.find(x => x.name === n);
@@ -92,7 +92,9 @@ const steps = [{ action: { tool: 'Find_Booking' }, observation: '[]' }, { action
 const gout = new Function('$input', '$', gp)(wrap([{ json: { ...gin[0].json, output: 'Here is the booking. Want me to cancel it?', intermediateSteps: steps } }]), n => wrap(rec(n) || [{ json: {} }]))[0].json;
 ok(gout.output === sent, 'the model\'s own wording is replaced by the card', gout.output);
 const gout2 = new Function('$input', '$', gp)(wrap([{ json: { ...gin[0].json, output: 'Which booking?', intermediateSteps: [{ action: { tool: 'Find_Booking' }, observation: '[]' }] } }]), n => wrap(rec(n) || [{ json: {} }]))[0].json;
-ok(gout2.output === 'Which booking?', 'no Prepare Cancel this turn -> reply untouched');
+// Other Guard Probe rules may still add a line (e.g. its missing-date question, depending on the recording); the
+// point is that no card replaces the model's reply.
+ok(/^Which booking\?/.test(gout2.output) && !/_check /.test(gout2.output), 'no Prepare Cancel this turn -> the model\'s reply, no card', gout2.output);
 
 console.log('Prompt');
 const sm = node(M, 'Jessie AI Agent').parameters.options.systemMessage;

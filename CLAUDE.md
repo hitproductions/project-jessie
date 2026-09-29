@@ -242,6 +242,7 @@ only script that writes to n8n.
 |---|---|
 | `./scripts/n8n list` · `pull <id> <file>` · `execs` · `exec <id>` | read workflows and executions from n8n |
 | `./scripts/n8n-write put <id> <file>` · `activate <id>` · `deactivate <id>` | **writes to n8n** — schema-clean import, and the Active toggle for a tool-schema reload |
+| `./scripts/test-all` · `--local` | **every offline check against what is live, in one command** — run before every import; then the live smoke test in [`docs/qa/CHECKLIST.md`](docs/qa/CHECKLIST.md) |
 | `./scripts/test-nodes` · `--live` | 300+ offline checks + 28 gate scenarios, on a candidate file or on what is deployed |
 | `./scripts/test-gate` | the confirmation gate and date resolver on their own |
 | `./scripts/test-consent` · `<file>` · `--live` | the consent engine's `Build Request`: M-booth deadline tiers, the PREEMPT window, and recipient routing (test-nodes does not load the consent workflows) |

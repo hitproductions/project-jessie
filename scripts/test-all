@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# Every offline check, run against what n8n has LIVE, in one command. Added 2026-09-29 (QA checklist, docs/qa/CHECKLIST.md).
+#
+#   ./scripts/test-all            pull every live workflow, fetch recordings, run everything
+#   ./scripts/test-all --local    use the pulls and recordings from the last run (no network)
+#
+# Reads only: nothing is imported, nothing is booked. Live pulls and recordings go to diagnostics/test-all/
+# (git-ignored - recordings hold real Slack messages). The sims that were one-off build comparisons
+# (sim-get-booker, sim-ref-cache, sim-booking-review, sim-consent) are not run here.
+set -uo pipefail
+here="$(cd "$(dirname "$0")/.." && pwd)"; cd "$here"
+out="$here/diagnostics/test-all"; L="$out/live"; R="$out/rec"
+mkdir -p "$L" "$R"
+
+# id -> file base (the name test-dates and friends look for)
+WF="uVVYVB2M7kxpLleI:project-jessie EUG3sGXkfsJSYIMz:book-session bAyDw7udhmY0NL38:cancel-booking
+t7lwR2km4tfN8DbM:move-booking yzirq12O227VTFp8:find-booking e7tBQB458nstrqei:room-availability
+hkx9PXcgW9nrzY2a:expand-series UAwFoifgkfL1xNP2:book-series nEHnCMMXS0am59Zy:open-consent-request
+TO1UnZTZ2LhtE9J3:finalize-consent QHHDevaWhMk8gSBX:consent-sweep DxByjma1WLGMLR0L:refresh-reference-cache"
+
+if [ "${1:-}" != "--local" ]; then
+  echo "== pulling live workflows"
+  for p in $WF; do ./scripts/n8n pull "${p%%:*}" "$L/${p#*:}-v1.json" >/dev/null || { echo "pull failed: $p"; exit 2; }; done
+  # Which local file is live (matched on node parameters), so a drifted instance is visible.
+  python3 - "$L" "$here/workflows" <<'EOF'
+import json, os, re, sys
+live, wdir = sys.argv[1:]
+sig = lambda w: json.dumps(sorted((n["name"], n["parameters"]) for n in w["nodes"]), sort_keys=True)
+files = os.listdir(wdir)
+for f in sorted(os.listdir(live)):
+    base = f[:-8]; s = sig(json.load(open(os.path.join(live, f))))
+    cands = sorted((x for x in files if re.fullmatch(re.escape(base) + r"-v\d+\.json", x)), key=lambda x: -int(re.search(r"-v(\d+)", x)[1]))
+    hit = next((x for x in cands if sig(json.load(open(os.path.join(wdir, x)))) == s), None)
+    print("  %-26s %s" % (base, hit or "LIVE MATCHES NO FILE IN workflows/ (changed in the n8n UI?)"))
+EOF
+  echo "== fetching recordings"
+  python3 - "$R" <<'EOF'
+# rec/main.json: newest main run that reached the agent. rec/main-prepared.json: newest main run where Prepare
+# Booking returned a summary (sim-short-marker needs one). Only the last 60 runs are searched.
+import json, os, subprocess, sys
+R = sys.argv[1]; env = dict(l.strip().split("=", 1) for l in open(".env") if "=" in l and not l.startswith("#"))
+base, key = env["N8N_BASE_URL"].strip('"'), env["N8N_API_KEY"].strip('"')
+# curl, not urllib: Cloudflare answers Python's default client with a 403.
+get = lambda p: json.loads(subprocess.run(["curl", "-sS", "-H", "X-N8N-API-KEY: " + key, "-H", "Accept: application/json", base + p], capture_output=True, check=True).stdout)
+want = {"main.json": lambda rd: "Jessie AI Agent" in rd,
+        "main-prepared.json": lambda rd: "PREPARED" in json.dumps(rd.get("Prepare Booking", ""))}
+for e in get("/api/v1/executions?workflowId=uVVYVB2M7kxpLleI&limit=60")["data"]:
+    if not want: break
+    if e.get("status") != "success": continue
+    full = get("/api/v1/executions/%s?includeData=true" % e["id"]); rd = ((full.get("data") or {}).get("resultData") or {}).get("runData") or {}
+    for name, test in list(want.items()):
+        if test(rd): json.dump(full, open(os.path.join(R, name), "w")); print("  %-20s execution %s" % (name, e["id"])); del want[name]
+for name in want: print("  %-20s none in the last 60 runs - that sim is skipped" % name)
+EOF
+fi
+
+M="$L/project-jessie-v1.json"; B="$L/book-session-v1.json"; C="$L/cancel-booking-v1.json"
+F="$L/find-booking-v1.json"; MV="$L/move-booking-v1.json"
+pass=(); fail=(); skip=()
+run() {  # run <label> <command...>
+  local label="$1"; shift
+  printf '\n== %s\n' "$label"
+  local log; log="$("$@" 2>&1)"; local rc=$?
+  printf '%s\n' "$log" | grep -E 'FAIL|fail|Error|error|passed|pass|OK' | grep -vE '^\s*ok\b' | tail -6
+  if [ $rc -eq 0 ]; then pass+=("$label"); else fail+=("$label"); printf '%s\n' "$log" > "$out/$(echo "$label" | tr ' /' '__').log"; fi
+}
+have() { [ -f "$1" ] || { skip+=("$2 (no recording)"); return 1; }; }
+
+run "test-gate"            ./scripts/test-gate "$M"
+run "test-nodes"           ./scripts/test-nodes "$M" "$B" "$C" "$F" "$MV"
+run "check-fromai"         ./scripts/check-fromai "$M" "$B" "$C" "$F" "$MV"
+run "test-dates"           env WF_DIR="$L" ./scripts/test-dates
+run "test-consent"         ./scripts/test-consent "$L/open-consent-request-v1.json"
+run "sim-repeat-yes"       node scripts/sim-repeat-yes.js "$M"
+run "sim-book-direct"      node scripts/sim-book-direct.js "$M"
+run "sim-date-guard"       env MAIN="$M" BOOK="$B" node scripts/sim-date-guard.js
+run "sim-title-initials"   env BOOK="$B" node scripts/sim-title-initials.js
+have "$R/main.json" sim-prepare-cancel && run "sim-prepare-cancel" env MAIN="$M" node scripts/sim-prepare-cancel.js "$R/main.json"
+have "$R/main-prepared.json" sim-short-marker && run "sim-short-marker" node scripts/sim-short-marker.js "$M" "$R/main-prepared.json"
+[ "${1:-}" != "--local" ] && run "verify-ids" ./scripts/verify-ids
+[ "${1:-}" != "--local" ] && run "reapply-main-fixes" ./scripts/reapply-main-fixes --check
+
+printf '\n== summary\n  passed:  %s\n' "${#pass[@]}"
+[ ${#skip[@]} -gt 0 ] && printf '  skipped: %s\n' "${skip[*]}"
+if [ ${#fail[@]} -gt 0 ]; then printf '  FAILED:  %s\n  full logs: %s/\n' "${fail[*]}" "$out"; exit 1; fi
+echo "  all passed"

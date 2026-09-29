@@ -22,7 +22,7 @@ Started 2026-09-28. Earlier builds are in `git log`.
 
 | Version | Live | Fixes (found in) | Adds |
 |---|---|---|---|
-| v181 | built, not imported | ChatGPT review of v180: prompt/notice conflicts (1-6) | Cancel notice no longer says "call Cancel Booking" when the direct cancel declined; Clients lookup for unlabelled names; session type only for booking lookups; series exempt from Prepare Booking; List Events 2-week default removed; "not found" is not "deleted" (`scripts/build-prompt-fixes.py`) |
+| v181 | 2026-09-29 09:45 | ChatGPT review of v180: prompt/notice conflicts (1-6) | Cancel notice no longer says "call Cancel Booking" when the direct cancel declined; Clients lookup for unlabelled names; session type only for booking lookups; series exempt from Prepare Booking; List Events 2-week default removed; "not found" is not "deleted" (`scripts/build-prompt-fixes.py`) |
 | v180 | 2026-09-29 04:53 | v179's series check missed dates written without a year ("Dec 7") | Series notice counts dates with or without a year |
 | v179 | 2026-09-29 04:50 | v178's series check missed dates written on one line | Series notice counts dates anywhere after "Dates:" |
 | v178 | 2026-09-29 04:44 | QA bugs 16-18 (v177): "Friday next week" read as this Friday and "every Tuesday" as a date; a repeated yes retried and called the room taken; a series yes re-sent the summary | Gate date fixes; "That's already booked" in code; series-approved notice to the model. `scripts/sim-repeat-yes.js` |

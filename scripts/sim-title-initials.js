@@ -2,7 +2,7 @@
 // now for two-segment Localization titles too. Replays Howard's NET-KUBA booking of 2026-09-26.
 //   node scripts/sim-title-initials.js
 const fs = require('fs');
-const CHECK = JSON.parse(fs.readFileSync(process.env.BOOK || 'workflows/book-session-v48.json', 'utf8'))
+const CHECK = JSON.parse(fs.readFileSync(process.env.BOOK || 'workflows/book-session-v58.json', 'utf8'))
   .nodes.find(n => n.name === 'Check Conflicts').parameters.jsCode;
 let fails = 0; const ok = (c, m) => { console.log((c ? '  ok    ' : '  FAIL  ') + m); if (!c) fails++; };
 Date.now = () => Date.UTC(2026, 8, 26, 7, 26, 0);
@@ -32,7 +32,8 @@ r = run(Object.assign({}, base, { summary: 'EPIC / Jem Lim / DJ x PX', engineer:
                                   description: 'Engineer: Daryl Reyes (Music Engineer) | Arranger: Paolo Lim' }));
 ok(r.final_summary === 'EPIC / Jem Lim / DR x PL', 'three-segment music title still corrected as before -> ' + r.final_summary);
 r = run(Object.assign({}, base, { summary: 'SOMETHING / JP', engineer: 'Jek Panganiban (Loc Engineer)', session_type: 'Post Mixing' }));
-ok(r.final_summary === 'SOMETHING / JP', 'a two-segment title outside Localization is left alone');
+// Since Book v49 (clients optional) a two-segment title is PROJECT / initials, so wrong initials are corrected too.
+ok(r.final_summary === 'SOMETHING / FP', 'a two-segment PROJECT / initials title gets the engineer\'s initials -> ' + r.final_summary);
 r = run(Object.assign({}, base, { summary: 'M5 - Howard', rooms: 'M5', session_type: '', engineer: '' }));
 ok(r.final_summary === 'M5 - Howard', 'an internal-room title is untouched');
 console.log(fails ? '\n' + fails + ' FAILED' : '\nall passed'); process.exit(fails ? 1 : 0);

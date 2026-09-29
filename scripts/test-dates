@@ -4,9 +4,9 @@
 // calendar with a model-supplied value must clean it BEFORE the query and fail closed when the read fails -
 // Room Availability used to answer "every room free" on 40% of checks. test-nodes does not load these nodes.
 //
-//   ./scripts/test-dates          the newest file of each workflow in workflows/
+//   ./scripts/test-dates          the newest file of each workflow in workflows/ (or $WF_DIR)
 const fs = require('fs'), path = require('path');
-const DIR = path.join(__dirname, '..', 'workflows');
+const DIR = process.env.WF_DIR || path.join(__dirname, '..', 'workflows');   // WF_DIR: test-all's live pulls
 const newest = base => { const f = fs.readdirSync(DIR).filter(x => new RegExp('^' + base + '-v\\d+\\.json$').test(x))
   .sort((a, b) => +a.match(/-v(\d+)/)[1] - +b.match(/-v(\d+)/)[1]).pop(); if (!f) throw new Error('no ' + base); return f; };
 const W = base => { const f = newest(base); const w = JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8')); w._file = f; return w; };
