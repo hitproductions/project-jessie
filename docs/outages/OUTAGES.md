@@ -360,6 +360,29 @@ no Slack trigger, was deactivated at ~04:05:08 — no known mechanism links eith
 Same shape as 2 September's "61 s late: a Slack retry". Without an external monitor (PENDING 15) or Cloudflare's Security
 Events for that minute, whether the first attempt met a 403 at the edge cannot be told.
 
+## Data point: 29 September — silent from ~09:48 PHT (ongoing at 10:24 PHT)
+
+**Onset window: between 09:47:33 and 10:14 PHT** (01:47:33–02:14 UTC).
+- **Last Slack event that reached n8n:** 09:47:33 PHT, exec 16291 (Jessie's own reply to a QA booking request, echoed
+  back by Slack). The request before it came in at 09:46:22 PHT (exec 16289), so events were flowing normally in both
+  directions until then.
+- **First known miss:** Howard DM'd "hello" at **10:14 PHT**. No execution, no reaction, no reply. Nothing reached n8n
+  after 09:47:33.
+- **Just before the onset:** main v181 was imported at ~09:42 PHT (updatedAt 01:41:55 UTC). The two turns above ran on
+  it normally afterwards, so the import did not stop delivery by itself; recorded because it is the nearest change.
+
+**Checked 10:20–10:24 PHT, from a home connection (Cloudflare MNL):**
+- n8n up: `/healthz` 200 `{"status":"ok"}` in 0.08 s (cf-ray `a427822e5c2e7d23-MNL`); API 200; editor 200.
+- Jessie's trigger listening: unsigned POST to `/webhook/jessie-slack-webhook/webhook` → **401** (reached n8n, rejected
+  for no signature). GETs to both `jessie-slack-webhook` and `posty-slack-webhook` → "not registered for GET" (live).
+- n8n's scheduled jobs kept running: Consent Sweep 10:10 and 10:20, Refresh Reference Cache 10:20.
+- Posty's last Slack event was at 09:00 PHT; it gets too little traffic to say whether it is affected too.
+
+So n8n, the tunnel and the webhook registration all look healthy from our side, and **Slack's deliveries are not
+arriving** — the same shape as 3, 5, 7–8 and 15 September. **Not yet done:** the datacenter probe (step 1), Cloudflare
+Security Events for 09:47–10:24 PHT (step 3), the Slack app's Event Subscriptions status (step 4) and the container log
+(step 5). *Recovery time: to fill in.*
+
 ## What to do when it next drops
 
 Do these **while it is confirmed down**, and note the time.
