@@ -360,7 +360,7 @@ no Slack trigger, was deactivated at ~04:05:08 — no known mechanism links eith
 Same shape as 2 September's "61 s late: a Slack retry". Without an external monitor (PENDING 15) or Cloudflare's Security
 Events for that minute, whether the first attempt met a 403 at the edge cannot be told.
 
-## Data point: 29 September — silent from ~09:48 PHT (ongoing at 10:24 PHT)
+## Data point: 29 September — silent for about 2 hours (~09:48 to ~11:55 PHT)
 
 **Onset window: between 09:47:33 and 10:14 PHT** (01:47:33–02:14 UTC).
 - **Last Slack event that reached n8n:** 09:47:33 PHT, exec 16291 (Jessie's own reply to a QA booking request, echoed
@@ -381,7 +381,15 @@ Events for that minute, whether the first attempt met a 403 at the edge cannot b
 So n8n, the tunnel and the webhook registration all look healthy from our side, and **Slack's deliveries are not
 arriving** — the same shape as 3, 5, 7–8 and 15 September. **Not yet done:** the datacenter probe (step 1), Cloudflare
 Security Events for 09:47–10:24 PHT (step 3), the Slack app's Event Subscriptions status (step 4) and the container log
-(step 5). *Recovery time: to fill in.*
+(step 5).
+
+**Recovery: by 11:55 PHT (03:55 UTC).** The first Slack event to arrive again was Howard's "what can i book for a
+meeting?", sent 11:55:23 and processed 11:55:24 (exec 16361); nothing arrived between 09:47:33 and then. Delivery was
+still uneven at the very start: a "hello" sent at 11:54:48 was processed at 11:55:49 (exec 16364), 61 s late — Slack's
+one-minute retry — so it was answered after the question sent 35 s after it. Nothing was changed on our side before
+recovery; the Slack app's Event Subscriptions stayed enabled and "Verified" throughout (checked ~10:30 PHT). As on 15
+September, no cause is visible from our side; Cloudflare's Security Events for 09:47–11:55 PHT is the lookup that
+would settle it.
 
 ## What to do when it next drops
 

@@ -203,8 +203,18 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v164','v164 \\(QA E1\\)'],
     ['v167','v167 \\(eval 2026-09-28\\)'],
     ['v168','v168 \\(live, 28 Sep\\)'],
+    ['v182','29 Sep: it was added to a greeting'],
   ];
   const t2=[
+    // v182 (live QA 29 Sep): no date question on a greeting; "12:00 AM to 12:00 AM" is "all day"
+    ['v182','a greeting gets no date question','Hi Howard! What do you need?',{requesterText:'what can i book for a meeting?'},
+      x=>x.output==='Hi Howard! What do you need?'],
+    ['v182','a question about the booking still gets it','What session type is this, and who is the client?',{requesterText:'book studio 7 at 2pm'},
+      x=>/And which day is it for\?/.test(x.output)],
+    ['v182','"from 12:00 AM to 12:00 AM" becomes "all day"','Salin is taken by "SALIN - MUSIC DEPT" tomorrow from 12:00 AM to 12:00 AM.',{},
+      x=>/Salin is taken by "SALIN - MUSIC DEPT" tomorrow all day\./.test(x.output)],
+    ['v182','a real 12:00 AM start is left alone','Studio 7 is taken from 12:00 AM to 3:00 AM.',{},
+      x=>/from 12:00 AM to 3:00 AM/.test(x.output)],
     // v168: a "no" never gets the refused summary back
     ['v168','after a no, the same prepared summary is replaced by the question','x',{steps:[{action:{tool:'Prepare_Booking'},observation:JSON.stringify([{status:'PREPARED',summary_text:"*ROLETEST / Jem Lim / DR*\n*Time:* 10:00 AM – 12:00 PM\n\n_check de53563e_\n\nReply only with \"yes\" to book, or \"no\" to change anything.\nConfirm to book."}])}],decline:'THEY SAID NO',botText:"*ROLETEST / Jem Lim / DR*\n*Time:* 10:00 AM – 12:00 PM\n\n_check de53563e_\n\nReply only with \"yes\" to book, or \"no\" to change anything.\nConfirm to book."},
       x=>/nothing was booked\. What would you like to change\?/.test(x.output)&&!/_check/.test(x.output)],
@@ -704,6 +714,29 @@ suite('Booking tools — engineer and arranger from what the requester typed (v1
       check('v167',name+': an all-day date is untouched',en(P,'2027-10-09')==='2027-10-09');
     }
   }
+});
+
+// ── v182: Prepare Booking uses the one date under discussion ────────────────────
+suite('Prepare Booking - the date under discussion wins over a date nobody typed (v182)', ()=>{
+  const W=JSON.parse(fs.readFileSync(path.join(T,'main.json'),'utf8'));
+  const v=W.nodes.find(n=>n.name==='Prepare Booking').parameters.workflowInputs.value;
+  if(!/datesUnderDiscussion/.test(v.start_iso||'')){ console.log('  skip  not in this build'); return; }
+  const mk=key=>{ const e=v[key]; const i=e.indexOf('{{'), j=e.lastIndexOf(' }}'); let x=e.slice(i+2,j).trim();
+    const k=x.indexOf("$fromAI("), end=x.indexOf(", 'string', '')",k)+", 'string', '')".length; x=x.slice(0,k)+'__m'+x.slice(end);
+    return (gate,bf,m)=>new Function('$','__m','return ('+x+');')(n=>({first:()=>({json:n==='Gate Context'?gate:(n==='Booked For'?bf:{})})}),m); };
+  const st=mk('start_iso'), en=mk('end_iso');
+  const G={datesUnderDiscussion:'2027-09-30'}, B={saidWords:'tomorrow at salin this is for kite for their business dev meeting at 2pm external'};
+  check('v182','the 29 Sep case: 1 Oct nobody typed -> 30 Sep, time kept',st(G,B,'2027-10-01T14:00:00+08:00')==='2027-09-30T14:00:00+08:00'&&en(G,B,'2027-10-01T15:00:00+08:00')==='2027-09-30T15:00:00+08:00',st(G,B,'2027-10-01T14:00:00+08:00'));
+  check('v182','the right date is left alone',st(G,B,'2027-09-30T14:00:00+08:00')==='2027-09-30T14:00:00+08:00');
+  check('v182','a date the requester typed ("october 1") is left alone (Book Session asks)',st(G,{saidWords:B.saidWords+' i said tomorrow so why is it october 1'},'2027-10-01T14:00:00+08:00')==='2027-10-01T14:00:00+08:00');
+  check('v182','"oct 1st" counts as typed',st(G,{saidWords:'book likha on oct 1st at 2pm'},'2027-10-01T14:00:00+08:00')==='2027-10-01T14:00:00+08:00');
+  check('v182','its weekday typed ("friday") counts as typed',st(G,{saidWords:'book likha friday 2pm'},'2027-10-01T14:00:00+08:00')==='2027-10-01T14:00:00+08:00');
+  check('v182','two dates under discussion: left alone',st({datesUnderDiscussion:'2027-09-30,2027-10-07'},B,'2027-10-01T14:00:00+08:00')==='2027-10-01T14:00:00+08:00');
+  check('v182','no date under discussion: left alone',st({datesUnderDiscussion:''},B,'2027-10-01T14:00:00+08:00')==='2027-10-01T14:00:00+08:00');
+  check('v182','all-day: start becomes the day, end the day after',st(G,B,'2027-10-01')==='2027-09-30'&&en(G,B,'2027-10-02')==='2027-10-01',en(G,B,'2027-10-02'));
+  check('v182','all-day already right: left alone',st(G,B,'2027-09-30')==='2027-09-30'&&en(G,B,'2027-10-01')==='2027-10-01');
+  check('v182','the typed time range still wins (v167) alongside the date fix',st(G,{saidWords:'tomorrow 2pm to 4pm',timeStart:'14:00',timesMentioned:['14:00','16:00']},'2027-10-01T15:00:00+08:00')==='2027-09-30T14:00:00+08:00',st(G,{saidWords:'tomorrow 2pm to 4pm',timeStart:'14:00',timesMentioned:['14:00','16:00']},'2027-10-01T15:00:00+08:00'));
+  check('v182','an empty start stays empty (MISSING_DETAILS still asks)',st(G,B,'')==='');
 });
 
 // ── Engineers and arrangers must be real people in Bookers ────────────────────
