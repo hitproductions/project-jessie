@@ -88,7 +88,7 @@ const cases = [
   ['n refuses a booking',    'n', [usr('n'), bookSummary],
    { confirmed: false, declineNotice: /SAID NO/ }],
   ['y approves a cancel',    'y', [usr('y'), cancelSummary],
-   { confirmedCancel: true, cancelNotice: /ALREADY APPROVED/ }],
+   { confirmedCancel: true, cancelNotice: /^NOTHING HAS BEEN CANCELLED YET[\s\S]*several bookings[\s\S]*call Prepare Cancel/ }],
   // the old suffix still sits in Slack history after the change, so it has to
   // keep working or the first confirmation after the import fails
   ['legacy (y/n) marker',    'yes', [usr('yes'), bot('*Room:* Studio F\n\nConfirm to book. (y/n)')],
@@ -117,7 +117,7 @@ const cases = [
   ['one-line marker approves a booking', 'yes', [usr('yes'), bot('*Room:* Studio F\n\nBook it? Reply yes or no.')],
    { confirmed: true, confirmedCancel: false, confirmedMove: false }],
   ['one-line marker approves a cancel',  'yes', [usr('yes'), bot('*MERMAID / X / KSC*\n_check 1234abcd_\n\nCancel it? Reply yes or no.')],
-   { confirmedCancel: true, confirmed: false, cancelNotice: /ALREADY APPROVED/ }],
+   { confirmedCancel: true, confirmed: false, cancelNotice: /^NOTHING HAS BEEN CANCELLED\. [\s\S]*Prepare Cancel again[\s\S]*Do not call Cancel Booking/ }],
   ['one-line marker approves a move',    'y', [usr('y'), bot('ALPHA / X / TL\n\nMove it? Reply yes or no.')],
    { confirmedMove: true, confirmed: false, confirmedCancel: false }],
   ['no to the one-line marker',          'no', [usr('no'), bot('*Room:* Studio F\n\nBook it? Reply yes or no.')],
