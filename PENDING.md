@@ -48,7 +48,7 @@ ones move to the bottom instead of being renumbered.
 | 38, 16 | 2027 test events still on the calendar | **38 mostly done 29 Sep:** today's five cancelled through Jessie; BROWSE, NET-KUBA / JP, M4 - Howard, PROJ ORANGE, NOREGRESSION, CELEBTEST removed by Apps Script (14:35 PHT); the consent-test M1/M4 holds are gone. SMOKETEST stays. **Left: GUARDCHK (16)** |
 | 55 | **Two cancels in one message show one card.** Both were prepared, only the last card reached Slack | Build (main) |
 | 56 | **A cancel with no date guesses the date from the conversation** instead of looking it up | Build / watch |
-| 57 | **A late Slack retry after a re-send runs twice**: two identical summaries (29 Sep 15:41) | Build (main): skip a message identical to one the same person sent in the last ~2 minutes |
+| 57 | **A late Slack retry after a re-send runs twice**: two identical summaries (29 Sep 15:41, 16:16) | **Built 29 Sep:** main v189 Duplicate Check (candidate) |
 | 58 | **Lowercase initials / a bare "bp" answer refused**; an unbacked "not on the staff list" | **LIVE 29 Sep 15:59 PHT:** main v188. Bookers: BP Valenzuela's Initials to BPV (Tel), keep BP in Info |
 
 ### 🟢 Additive: fine after launch
