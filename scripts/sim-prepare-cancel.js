@@ -73,12 +73,14 @@ ok(/card_code/.test(tool.check_code), "the model's Cancel Booking call carries t
 console.log('main - wiring and replies');
 const to = (w, n, b = 0) => ((((w.connections[n] || {}).main || [])[b]) || []).map(t => t.node);
 ok(JSON.stringify(to(M, 'Book Direct?', 1)) === '["Prepared Cancel"]' && JSON.stringify(to(M, 'Prepared Cancel')) === '["Cancel Direct?"]', 'after Book Direct? declines: Prepared Cancel -> Cancel Direct?');
-ok(JSON.stringify(to(M, 'Cancel Direct?', 0)) === '["Cancel Direct"]' && JSON.stringify(to(M, 'Cancel Direct')) === '["Cancel Direct Reply"]' && JSON.stringify(to(M, 'Cancel Direct Reply')) === '["Send Reply"]', 'direct path: Cancel Direct -> reply -> Send Reply, the AI Agent is not on it');
+// v187 (PENDING 55) puts Next Cancel? between Cancel Direct and its reply (sim-two-cancels.js covers that branch)
+const _cd = JSON.stringify(to(M, 'Cancel Direct'));
+ok(JSON.stringify(to(M, 'Cancel Direct?', 0)) === '["Cancel Direct"]' && (_cd === '["Cancel Direct Reply"]' || (_cd === '["Next Cancel?"]' && JSON.stringify(to(M, 'Next Cancel?', 1)) === '["Cancel Direct Reply"]')) && JSON.stringify(to(M, 'Cancel Direct Reply')) === '["Send Reply"]', 'direct path: Cancel Direct -> reply -> Send Reply, the AI Agent is not on it');
 const _rest = to(M, 'Cancel Direct?', 1);   // v178 puts Already Done? (bug 17) between Cancel Direct? and the agent
 ok(JSON.stringify(_rest) === '["Jessie AI Agent"]' || (JSON.stringify(_rest) === '["Already Done?"]' && JSON.stringify(to(M, 'Already Done?', 1)) === '["Jessie AI Agent"]'), 'everything else goes to the AI Agent as before');
 ok(node(M, 'Cancel Direct').parameters.workflowId.value === 'bAyDw7udhmY0NL38' && node(M, 'Cancel Direct').parameters.workflowInputs.value.event_id === '', 'Cancel Direct calls Cancel Booking with the card, never a model event id');
 ok(JSON.stringify(M.connections['Prepare Cancel']) === JSON.stringify(M.connections['Cancel Booking']), 'Prepare Cancel is wired to the agent like the other tools');
-const reply = res => new Function('$input', code(M, 'Cancel Direct Reply'))(wrap([{ json: res }]))[0].json.output;
+const reply = res => new Function('$input', '$', code(M, 'Cancel Direct Reply'))(wrap([{ json: res }]), n => n === 'Cancel Direct' ? wrap([{ json: res }]) : wrap([{ json: {} }]))[0].json.output;   // v187 reads Cancel Direct by name
 ok(reply({ status: 'CANCELLED', human: 'Cancelled "QATEST / Jem Lim / TL".' }) === 'Cancelled "QATEST / Jem Lim / TL".', 'CANCELLED -> "Cancelled ..."');
 ok(/may already have been cancelled/.test(reply({ status: 'REJECTED', reason: 'NOT_ON_CALENDAR', human: 'Nothing was cancelled - call Cancel Booking again...' })), 'a repeated yes -> "may already have been cancelled", no model instructions leaked');
 ok(/changed since I showed it/.test(reply({ status: 'REJECTED', reason: 'CHANGED' })), 'CHANGED -> asks them to ask again');
