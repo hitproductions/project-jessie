@@ -52,7 +52,9 @@ for (const [base, n, keys] of [['move-booking', 'Resolve Booking', ['new_start_i
   const REQ = new Function('$', head + '\n' + c.slice(i, j) + '\nreturn REQ;')(() => ({ first: () => ({ json: PAD }) }));
   check(base + ': padded dates and times are cleaned', keys.every(k => /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}\+08:00)?$/.test(REQ[k])), keys.map(k => REQ[k]).join(' '));
   const seg = N(w, 'List Day Events').parameters.url.match(/timeMin=\{\{([\s\S]*?)\}\}/)[1];
-  check(base + ': the day query gets a real date', new Function('$json', 'DateTime', 'return ' + seg)({ booking_date: PAD.booking_date }, DT) === encodeURIComponent('2027-10-07T00:00:00+08:00'));
+  // Cancel v20 reads the date from the trigger by name ($) - the node's input is Find By Title's result; the others use $json
+  const $trig = () => ({ first: () => ({ json: { booking_date: PAD.booking_date } }) });
+  check(base + ': the day query gets a real date', new Function('$json', '$', 'DateTime', 'return ' + seg)({ booking_date: PAD.booking_date }, $trig, DT) === encodeURIComponent('2027-10-07T00:00:00+08:00'));
 }
 
 // Series: dates and HH:MM times
