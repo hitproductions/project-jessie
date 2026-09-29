@@ -45,7 +45,9 @@ ones move to the bottom instead of being renumbered.
 | 44 | Tells the requester "Booked" even when the room declines seconds later (clash she can't see) | Build |
 | 35 | Timestamp junk-guard not yet in Move Booking / Expand Series | LIVE 28 Sep with 51 (Move v20, Expand v2) |
 | 37 | Never run live: priority request timing out; same-day / next-day M-booth windows | Test now / watch at launch |
-| 38, 16 | 2027 test events still on the calendar | Howard (manual) |
+| 38, 16 | 2027 test events still on the calendar | 29 Sep: today's five cleared through Jessie; the six older ones by Apps Script (first run changed nothing, re-run pending). SMOKETEST stays |
+| 55 | **Two cancels in one message show one card.** Both were prepared, only the last card reached Slack | Build (main) |
+| 56 | **A cancel with no date guesses the date from the conversation** instead of looking it up | Build / watch |
 
 ### 🟢 Additive: fine after launch
 
@@ -330,6 +332,18 @@ model gluing visible junk onto timestamps (`…+08:00ភាsa`). `isoOnly()` now
 (v8) and Book Session (v44+), but Move Booking and Expand Series also take model-supplied times and would
 still reject such a value. Not seen there yet. A small, contained change in two sub-workflows (CLAUDE.md
 gotcha 16).
+
+**55. Two cancels in one message show only one card.** Found in live QA 29 Sep (exec 16739): "qamove - november 17 /
+qatime - nov 16". The model called Prepare Cancel twice and both came back PREPARED, but only QATIME's card reached
+Slack, and the "yes" cancelled QATIME only. QAMOVE needed a second request. Nothing was cancelled wrongly: Cancel
+Direct acts on the card that was shown. Either show every prepared card with one confirmation for all of them, or
+prepare only the first and say the next will follow.
+
+**56. A cancel with no date guesses the date from the conversation.** Live QA 29 Sep: "cancel QANEW" (exec 16715)
+was looked up on 21 Nov, the date of a booking just cancelled, when the one left was on 18 Nov. "cancel qamove from
+november and qatime as well" (exec 16735) was looked up on 18 Nov only. Both times Jessie said she found nothing and
+asked for the date, so it cost a turn, not a wrong cancel. A title with no date could be searched across the
+requester's upcoming bookings instead.
 
 **37. Consent paths that have never run live.** (a) A **priority (PREEMPT) request timing out**: the Sweep
 marks it `EXPIRED` and nothing moves. Unit-tested and wired, never exercised end to end. It can run now with
