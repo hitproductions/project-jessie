@@ -30,6 +30,9 @@ if [ "${1:-}" = "--live" ]; then
   api bAyDw7udhmY0NL38 > "$tmp/cancel.json"
   api yzirq12O227VTFp8 > "$tmp/find.json"
   api t7lwR2km4tfN8DbM > "$tmp/move.json"
+  # 29 Sep: MAIN was left unset here, so the gate check at the end ran on the newest *repo file*, not on live -
+  # a candidate in workflows/ made "--live" report the candidate's gate result.
+  MAIN="$tmp/main.json"
   echo "testing the live workflows"
 elif [ $# -gt 0 ] && [ $# -ne 5 ]; then
   # 2026-09-25: "test-nodes main <file>" used to fall through to the newest repo files and report on
@@ -204,8 +207,32 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v167','v167 \\(eval 2026-09-28\\)'],
     ['v168','v168 \\(live, 28 Sep\\)'],
     ['v182','29 Sep: it was added to a greeting'],
+    ['v183','v183 \\(QA bug 3\\)'],
   ];
   const t2=[
+    // v183 (QA 28-29 Sep): tool instructions never reach the requester; no Event ID; Cancel Booking's card; series dates
+    ['v183','a leaked tool instruction is dropped (bug 3)','Studio 7 is free then. Suggest one of those instead of Studio 7. If they say to go ahead with what they asked for, book it.',{},
+      x=>x.output==='Studio 7 is free then.'],
+    ['v183','"say exactly that to the requester" is dropped, the refusal kept','"M1 - Rico" was booked by someone else, and you do not have authority to cancel it. Say exactly that to the requester and stop.',{},
+      x=>/you do not have authority to cancel it\.$/.test(x.output)&&!/requester/.test(x.output)],
+    ['v183','a sentence naming a tool is dropped','I will call Prepare Booking with that now. Which room would you like?',{},
+      x=>x.output==='Which room would you like?'],
+    ['v183','"Suggest these instead:" reads as the usual rooms','VO Recording is not normally run in Studio 3. Suggest these instead: Studio 7, Studio 8.',{},
+      x=>/The usual rooms for it are: Studio 7, Studio 8\./.test(x.output)],
+    ['v183','an ordinary reply is untouched','Studio 7 is free next Thursday from 2:00 PM to 4:00 PM. Want me to hold it?',{},
+      x=>x.output==='Studio 7 is free next Thursday from 2:00 PM to 4:00 PM. Want me to hold it?'],
+    ['v183','an Event ID line never reaches the requester (bug B)','*M1 - Rico*\n*Date:* Wednesday, September 29, 2027\n*Room:* M1\n*Event ID:* jmuq10se2757bdh88rqock5i8c_20270928T160000Z\n\nWhich one?',{},
+      x=>!/Event ID|jmuq10se/.test(x.output)&&/\*Room:\* M1/.test(x.output)],
+    ['v183','a card from Cancel Booking is sent as it is (bug A)','Here is the booking, shall I cancel it?',{steps:[{action:{tool:'Cancel_Booking'},observation:JSON.stringify([{status:'PREPARED',card_text:"*CARDTEST / X / TL*\n*Date:* Thursday, November 4, 2027\n*Time:* 2:00 PM – 3:00 PM\n*Room:* Studio 7\n*Booked by:* Tara Lim\n_check abcd1234_\n\nReply only with \"yes\" to cancel, or \"no\" to keep it.\nConfirm to cancel."}])}]},
+      x=>/^\*CARDTEST \/ X \/ TL\*/.test(x.output)&&/_check abcd1234_/.test(x.output)&&!/shall I/.test(x.output)],
+    ['v183','a series summary gets its dates from Expand Series, weekdays right (bug 19)','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n- December 14 (Mon)\nTime: 2:00 PM – 5:00 PM\nRoom: Studio 7\n\nConfirm to book.',{steps:[{action:{tool:'Expand_Series'},observation:'[{"status":"OK","count":2,"occurrences":[{"start_iso":"2027-12-07T14:00:00+08:00","end_iso":"2027-12-07T17:00:00+08:00","all_day":false},{"start_iso":"2027-12-14T14:00:00+08:00","end_iso":"2027-12-14T17:00:00+08:00","all_day":false}]}]'}]},
+      x=>/- Tuesday, 7 December 2027\n- Tuesday, 14 December 2027/.test(x.output)&&!/\(Mon\)/.test(x.output)&&/\*Dates \(2\):\*/.test(x.output)],
+    ['v183','...and says who booked it (bug 14)','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n- December 14 (Mon)\nTime: 2:00 PM – 5:00 PM\n\nConfirm to book.',{steps:[{action:{tool:'Expand_Series'},observation:'[{"status":"OK","count":2,"occurrences":[{"start_iso":"2027-12-07T14:00:00+08:00","end_iso":"2027-12-07T17:00:00+08:00","all_day":false},{"start_iso":"2027-12-14T14:00:00+08:00","end_iso":"2027-12-14T17:00:00+08:00","all_day":false}]}]'}]},
+      x=>/\*Booked by:\* Tara Lim\n/.test(x.output)&&x.output.indexOf("Booked by")<x.output.indexOf("Confirm to book")],
+    ['v183','an inline "Dates: Dec 7, 14" line is replaced too','*SERIES / X / TL*\nDates: Dec 7, 14\nTime: 2:00 PM – 5:00 PM\n\nConfirm to book.',{steps:[{action:{tool:'Expand_Series'},observation:'[{"status":"OK","count":2,"occurrences":[{"start_iso":"2027-12-07T14:00:00+08:00","end_iso":"2027-12-07T17:00:00+08:00","all_day":false},{"start_iso":"2027-12-14T14:00:00+08:00","end_iso":"2027-12-14T17:00:00+08:00","all_day":false}]}]'}]},
+      x=>/- Tuesday, 7 December 2027/.test(x.output)&&!/Dec 7, 14/.test(x.output)],
+    ['v183','no Expand Series this turn: the summary is left alone','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n\nConfirm to book.',{steps:[]},
+      x=>/- December 7/.test(x.output)],
     // v182 (live QA 29 Sep): no date question on a greeting; "12:00 AM to 12:00 AM" is "all day"
     ['v182','a greeting gets no date question','Hi Howard! What do you need?',{requesterText:'what can i book for a meeting?'},
       x=>x.output==='Hi Howard! What do you need?'],
@@ -627,6 +654,25 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
     check('v167','a correction in a newer message wins',r.engineer==='Tara Lim',r.engineer);
     check('v167','saidWords holds what they typed, lower case',/\bdrey\b/.test(r.saidWords)&&/\btara\b/.test(r.saidWords),r.saidWords);
     check('v167','a message with no engineer leaves it empty',E('which studios are free tomorrow 2-4pm?').engineer==='');
+    if(/timeChange/.test(code)){
+      // v183 (QA N2): one new time after a range is a change
+      const SUM=J(8,'*ORBIT / Jem Lim / TL*\n*Time:* 2:00 PM – 4:00 PM\n*Room:* Studio 7\n\nBook it? Reply yes or no.');
+      const REQ1=U(7,'Book Studio 7 tomorrow 2pm to 4pm VO, project ORBIT, client Jem Lim, engineer Tara');
+      const C=t=>{const q=run(U(9,t),[U(9,t),SUM,REQ1]);return q.timeStart+'-'+q.timeEnd+(q.timeForced?' forced':'');};
+      check('v183','"actually make it 3pm instead" keeps the 2-hour length (3-5 PM)',C('actually make it 3pm instead')==='15:00-17:00 forced',C('actually make it 3pm instead'));
+      check('v183','"push it to 3pm" moves the start too',C('push it to 3pm')==='15:00-17:00 forced');
+      check('v183','"extend it to 5pm" moves only the end',C('can we extend it to 5pm')==='14:00-17:00 forced',C('can we extend it to 5pm'));
+      check('v183','"until 6pm" moves only the end',C('make it until 6pm')==='14:00-18:00 forced');
+      check('v183','"3pm for 3 hours" is left to the model (a length was given)',C('make it 3pm for 3 hours')==='-');
+      check('v183','an earlier end than the start is not taken',C('until 1pm')==='-');
+      let q=run(U(9,'book studio 7 tomorrow at 3pm'),[]);
+      check('v183','a start with no earlier range is not a change',q.timeStart===''&&!q.timeChange);
+      q=run(U(11,'ok'),[U(11,'ok'),J(10,'Studio 7 is taken then; Studio 8 is free 3:00 PM - 5:00 PM.'),U(9,'actually make it 3pm instead'),SUM,REQ1]);
+      check('v183','a later message ("ok") means the change is no longer forced',q.timeStart==='15:00'&&q.timeForced===false,JSON.stringify([q.timeStart,q.timeForced]));
+      q=run(U(9,'make it 4pm'),[U(9,'make it 4pm'),J(8,'*X / Y / TL*\n*Time:* 2:00 PM – 3:00 PM\n\nBook it? Reply yes or no.'),U(7,'book studio 7 tomorrow at 2pm vo')]);
+      check('v183','the length can come from Jessie\'s summary alone (1 h -> 4-5 PM)',q.timeStart==='16:00'&&q.timeEnd==='17:00',JSON.stringify([q.timeStart,q.timeEnd]));
+      check('v183','the model is told the new times',/time 3:00 PM to 5:00 PM \(they moved the start; same length as before\)/.test(run(U(9,'actually make it 3pm instead'),[U(9,'actually make it 3pm instead'),SUM,REQ1]).notice));
+    }
     if(/timesMentioned/.test(code)){
       // project, client, times
       r=E('Book Studio 7 next Friday 2pm to 4pm, VO recording, project ORBIT, client Jem Lim, engineer Drey');
@@ -737,6 +783,11 @@ suite('Prepare Booking - the date under discussion wins over a date nobody typed
   check('v182','all-day already right: left alone',st(G,B,'2027-09-30')==='2027-09-30'&&en(G,B,'2027-10-01')==='2027-10-01');
   check('v182','the typed time range still wins (v167) alongside the date fix',st(G,{saidWords:'tomorrow 2pm to 4pm',timeStart:'14:00',timesMentioned:['14:00','16:00']},'2027-10-01T15:00:00+08:00')==='2027-09-30T14:00:00+08:00',st(G,{saidWords:'tomorrow 2pm to 4pm',timeStart:'14:00',timesMentioned:['14:00','16:00']},'2027-10-01T15:00:00+08:00'));
   check('v182','an empty start stays empty (MISSING_DETAILS still asks)',st(G,B,'')==='');
+  if(/timeForced/.test(v.start_iso)){
+    const F={saidWords:'book studio 7 tomorrow 2pm to 4pm actually make it 3pm instead',timeStart:'15:00',timeEnd:'17:00',timeForced:true,timesMentioned:['14:00','16:00','15:00','17:00']};
+    check('v183','a forced change wins even though 4 PM was mentioned before',st(G,F,'2027-09-30T14:00:00+08:00')==='2027-09-30T15:00:00+08:00'&&en(G,F,'2027-09-30T16:00:00+08:00')==='2027-09-30T17:00:00+08:00',en(G,F,'2027-09-30T16:00:00+08:00'));
+    check('v183','not forced: a mentioned time still stands',en(G,{...F,timeForced:false},'2027-09-30T16:00:00+08:00')==='2027-09-30T16:00:00+08:00');
+  }
 });
 
 // ── Engineers and arrangers must be real people in Bookers ────────────────────
@@ -1060,7 +1111,8 @@ suite('Check Ownership — who may cancel what', ()=>{
     ['own booking by title',{...base,title:'ALPHA / X / TL'},r=>r.verdict==='CLEAR'],
     ["someone else's",{...base,title:'THEIRS / Y / KSC'},r=>r.reason==='NOT_YOURS'],
     ['no ref marker',{...base,title:'OLD / Z / XX'},r=>r.reason==='NO_REFERENCE'],
-    ['not confirmed',{...base,confirmed:false,title:'ALPHA / X / TL'},r=>r.reason==='NOT_CONFIRMED'],
+    ['not confirmed',{...base,confirmed:false,title:'ALPHA / X / TL'},r=>/v19 \(29 Sep QA\)/.test(s) ? (r.verdict==='PREPARED'&&/_check [0-9a-f]{8}_/.test(r.card_text)&&/\*Booked by:\*/.test(r.card_text)&&!/Event ID/.test(r.card_text)) : r.reason==='NOT_CONFIRMED'],
+    ["not confirmed, someone else's: refused before any card (v19)",{...base,confirmed:false,title:'THEIRS / Y / KSC'},r=>/v19 \(29 Sep QA\)/.test(s) ? r.reason==='NOT_YOURS' : r.reason==='NOT_CONFIRMED'],
     ['no date',{...base,booking_date:'',title:'ALPHA / X / TL'},r=>r.reason==='MISSING_DATE'],
     ['nothing supplied',{...base,title:''},r=>r.reason==='MISSING_DETAILS'],
     ['title matches nothing',{...base,title:'GHOST / N / ZZ'},r=>r.reason==='NOT_ON_CALENDAR'],

@@ -631,6 +631,12 @@ the task runner), for whoever has shell access to the box.
     whether Book Series must pass it on to its per-date Book Session call. Missing one fails quietly: that path
     simply behaves the old way.
 
+22. **`test-nodes --live` tested the gate on the newest repo file, not on live** (until 2026-09-29). It pulled the live
+    workflows for the node checks but left `MAIN` unset, so `test-gate` ran on the newest `workflows/project-jessie-v*.json`.
+    With a candidate in the folder, "--live" reported the candidate's gate result. Found when a new gate case passed on
+    "live" while failing on the live build itself. Fixed; if a live result ever looks too good, run
+    `./scripts/test-gate <pulled file>` directly.
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the

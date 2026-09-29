@@ -83,6 +83,10 @@ const cases = [
    { startOnlyNotice: /START TIME AND NO END/ }],
   ['an explicit length clears it', 'make it 3 hours', [],
    { startOnlyNotice: '' }],
+  // v183 (QA N2): a new time after a summary with a range is a change, not a start time on its own
+  ['"make it 3pm instead" after a 2-4 PM summary is not start-only', 'actually make it 3pm instead',
+   [usr('actually make it 3pm instead'), bot('*ORBIT / Jem Lim / TL*\n*Time:* 2:00 PM – 4:00 PM\n\nBook it? Reply yes or no.')],
+   { startOnlyNotice: '' }],
   ['y approves a booking',   'y', [usr('y'), bookSummary],
    { confirmed: true, confirmedCancel: false }],
   ['n refuses a booking',    'n', [usr('n'), bookSummary],
