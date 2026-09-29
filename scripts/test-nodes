@@ -681,6 +681,8 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
       check('v184','"extend it to 5pm" after Booked. moves only the end (2-5 PM)',r2.changeJustBooked&&r2.moveStart==='14:00'&&r2.moveEnd==='17:00');
       r2=run(U(9,'can you also book studio 7 at 3pm'),H('can you also book studio 7 at 3pm'));
       check('v184','"also book ..." after Booked. is a new booking, not a change',!r2.changeJustBooked);
+      if(/how about/.test(code)){ r2=run(U(9,'how about 3pm'),H('how about 3pm'));
+        check('v186','"how about 3pm" after Booked. is a change too',r2.changeJustBooked&&r2.moveStart==='15:00'&&r2.moveEnd==='17:00',r2.moveStart+'-'+r2.moveEnd); }
       r2=run(U(9,'thanks!'),H('thanks!'));
       check('v184','"thanks!" after Booked. changes nothing',!r2.changeJustBooked&&!/CHANGING THE BOOKING/.test(r2.notice));
       r2=run(U(9,'actually move it to studio 7'),H('actually move it to studio 7'));

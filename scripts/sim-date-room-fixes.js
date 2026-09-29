@@ -10,7 +10,7 @@
 const fs = require('fs'), path = require('path');
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
-const NEW = WF(process.env.BOOK || 'book-session-v61.json'), OLD = WF('book-session-v58.json');
+const NEW = WF(process.env.BOOK || 'book-session-v62.json'), OLD = WF('book-session-v58.json');
 let pass = 0, fail = 0;
 const ok = (c, msg, d) => { if (c) { pass++; console.log('  ok    ' + msg); } else { fail++; console.log('  FAIL  ' + msg + (d === undefined ? '' : '  :: ' + d)); } };
 
@@ -70,6 +70,17 @@ if (/own_booking/.test(code(NEW, 'Check Conflicts'))) {
   ok(!r.own_booking, 'own and someone else\'s both in the way -> the usual answer');
   o = cc(OLD, [mine]);
   ok(!o.own_booking, '  (old build: own booking treated as any clash)');
+}
+
+// v62 (live QA 29 Sep): with move_instead set, prepare mode prepares nothing and points at Move Booking
+if (/MOVE_INSTEAD/.test(code(NEW, 'Check Conflicts'))) {
+  const MI = JSON.stringify({ title: 'QAMOVE / Jem Lim / DR', iso: '2027-10-01', date: 'Friday, October 1, 2027', time: '2:00 PM – 4:00 PM', room: 'Studio 8', start: '15:00', end: '17:00' });
+  r = cc(NEW, [], { move_instead: MI });
+  ok(r.reason === 'MOVE_INSTEAD' && /Call Move Booking for it now: title "QAMOVE \/ Jem Lim \/ DR", booking_date 2027-10-01, new_start 2027-10-01T15:00:00\+08:00, new_end 2027-10-01T17:00:00\+08:00/.test(r.human), 'a change after a booking -> MOVE_INSTEAD with the exact move', r.human);
+  r = cc(NEW, [], { move_instead: '' });
+  ok(r.reason !== 'MOVE_INSTEAD', 'no change -> prepares as usual', r.reason);
+  r = cc(NEW, [], { move_instead: MI, mode: '' });
+  ok(r.reason !== 'MOVE_INSTEAD', 'not prepare mode (a real booking) -> never refused for it', r.reason);
 }
 
 console.log('\n' + (fail ? fail + ' failing, ' : '') + pass + ' passing');

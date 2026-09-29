@@ -26,6 +26,7 @@ Started 2026-09-28. Earlier builds are in `git log`.
 
 | Version | Live | Fixes (found in) | Adds |
 |---|---|---|---|
+| v186 (move instead) | *candidate* | A change after "Booked." was recognised (3-5 PM) but the model prepared a second booking anyway, ignoring the prompt notice (v185) | Prepare Booking gets move_instead and refuses with MOVE_INSTEAD, pointing at Move Booking with the exact move; more change words (`scripts/build-move-instead.py`) |
 | v185 (move times) | 2026-09-29 13:57 | The change after "Booked." moved 2-4 to 3-4, not 3-5: two "make it 3pm" messages were read together and gave no times, so the model guessed an hour (v184) | Newest message with a time decides; Move Booking's new start/end come from those times; the move confirmation shows them (`scripts/build-move-times.py`) |
 | v184 (change after booking) | 2026-09-29 13:52 | Live QA: "Booked." then "actually make it 3pm instead" was prepared as a second booking and clashed with the first (v183) | A change right after a booking is a move of that booking, with the new times (`scripts/build-change-after-booking.py`) |
 | v183 (QA bug fixes) | 2026-09-29 13:41 | QA N2: "make it 3pm instead" dropped the length, 2-4 became 3-4 (long-standing); a tool instruction reached the requester (bug 3, long-standing); a model-written cancel card showed an Event ID (bug B); a series summary's December Tuesdays said "(Mon)" (bug 19) and had no Booked by (bug 14) | Start/end changes keep or set the length; any sentence naming "the requester" or a tool is dropped; series dates written from Expand Series; a card from Cancel Booking shown as written (`scripts/build-qa-fixes-29sep.py`) |
@@ -54,6 +55,7 @@ Started 2026-09-28. Earlier builds are in `git log`.
 
 | Version | Live | Fixes (found in) | Adds |
 |---|---|---|---|
+| v62 (move instead) | *candidate* | With move_instead set, prepare mode prepared a new booking (v61) | MOVE_INSTEAD: nothing prepared; Move Booking named with title, date and new times |
 | v61 (own booking) | 2026-09-29 13:52 | A clash with the requester's own booking offered other rooms (v60) | Says it overlaps your own booking and asks whether to move it |
 | v60 (instruction leak) | 2026-09-29 13:41 | The two "not the usual room" refusals ended with instructions the model pasted to users (bug 3) | with main v183 |
 | v59 (room fixes) | 2026-09-29 13:21 | Conference room taken: nothing offered, so the model named rooms that were also taken (v58) - the other conference rooms free in that window are offered; an all-day clash is said to be "all day" (v58) | with main v182 |
