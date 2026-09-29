@@ -83,10 +83,17 @@ and Slack, no Airtable), runs on the same n8n instance.
 **Working, and proven live:** the main workflow and every sub-workflow are active and
 green. The confirmation gate, the ownership refusals (`NOT_YOURS`), Guard Probe's text
 rewrites and **Prepare Booking** (code writes the summary the requester approves) all
-hold in real conversations. Last verified end to end 2026-09-28 (PHT evening) on main
-v168 / Book Session v55: a live booking with a made-up new client (booked from the
-checked summary, first New Clients row written, then cancelled) and a "10am-12nn,
-engineer Drey" summary (10:00–12:00, Daryl Reyes (Post Engineer)), every node green.
+hold in real conversations. Last verified end to end 2026-09-29 (17:24–17:55 PHT) through
+Slack on main v191 / Book Session v65 / Move v25 / Cancel v20 / Find v7: book, "make it 3pm
+instead" (card Now 2–4 / Moving to 3–5), "make it 5pm instead" after "Moved" (3–5 → 5–7),
+cancel; and a dateless "cancel QANODATE" found by name and cancelled - one event throughout,
+calendar clean after, every node green. Today's builds and what each fixed:
+[`docs/eod/EOD-2026-09-29.md`](docs/eod/EOD-2026-09-29.md).
+
+**Testing through Slack.** An end-to-end test can be run by sending the test messages in the
+tester's DM with Jessie through the Slack connector (with the tester's go-ahead for the exact
+list), waiting for the execution whose trigger `ts` is that message, and checking the reply,
+the tool calls and the calendar before the next message. Stop at the first wrong reply.
 Where each build stands and what it fixed: [`VERSIONS.md`](VERSIONS.md). The latest
 eval: [`docs/eval/eval-report-2026-09-28.md`](docs/eval/eval-report-2026-09-28.md).
 
@@ -636,6 +643,16 @@ the task runner), for whoever has shell access to the box.
     With a candidate in the folder, "--live" reported the candidate's gate result. Found when a new gate case passed on
     "live" while failing on the live build itself. Fixed; if a live result ever looks too good, run
     `./scripts/test-gate <pulled file>` directly.
+
+23. **A fix in a tool the model does not call does nothing.** Cancel Booking v20 could find a booking by title, but
+    "cancel QANODATE" never reached it: the model looked the booking up with Find Booking first (with today's date) and
+    asked for the date. The offline sims passed because they called Cancel Booking directly. Before building, check
+    which tool the model actually calls on that turn (the live execution's `intermediateSteps`), and put the fix there
+    or in every tool on the path. Then test it through Slack, not only offline.
+24. **A build number can collide with an unimported candidate.** Today's Move Booking v25 was written to
+    `workflows/move-booking-v25.json`, which already held the consent rebuild's unimported Move candidate (same
+    number, different change); git kept the old one (`060afd9`). Before writing `workflows/<name>-vN.json`, run
+    `git log -- workflows/<name>-vN.json`: if it exists, take the next free number.
 
 ## Not done
 
