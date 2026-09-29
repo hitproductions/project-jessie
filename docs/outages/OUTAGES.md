@@ -391,6 +391,21 @@ recovery; the Slack app's Event Subscriptions stayed enabled and "Verified" thro
 September, no cause is visible from our side; Cloudflare's Security Events for 09:47–11:55 PHT is the lookup that
 would settle it.
 
+## Data point: 29 September, second drop — silent from ~14:05 PHT (ongoing at 14:08 PHT)
+
+**Last Slack event that reached n8n:** 14:04:46 PHT (exec 16675, Jessie's own "Moved …" reply echoed back), right after a
+normal run of live QA turns that had been arriving within about a second (13:59–14:04). Howard then got no reaction or
+reply; nothing reached n8n after 14:04:46.
+- **Nearest change:** main v186 + Book Session v62 imported at 14:02:46–14:02:48 PHT. Four turns ran normally on them
+  afterwards (14:02:59–14:04:46), so, as in the morning, the import did not stop delivery by itself.
+- **Checked 14:08 PHT, home connection:** `/healthz` 200 (0.26 s); unsigned POST to `jessie-slack-webhook` → 401 (n8n
+  reached, listening); GET → "not registered for GET" (live); Refresh Reference Cache ran at 14:05, Consent Sweep at 14:00.
+
+Same shape as the morning drop (09:47–11:55): n8n healthy and reachable from here, Slack's deliveries not arriving. Two
+drops in one day, each a few minutes after an import, is worth noting but not yet a pattern: the morning one began two
+minutes after the v181 import, this one about two minutes after v186, and in both cases turns ran normally in between.
+*Recovery time: to fill in.*
+
 ## What to do when it next drops
 
 Do these **while it is confirmed down**, and note the time.
