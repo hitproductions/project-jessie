@@ -455,7 +455,10 @@ the edge serving a managed challenge to everything - a zone setting switched on 
 security level), most likely during the Cloudflare Pro / Super Bot Fight Mode set-up (PENDING 21), before the
 exception for the webhook was in. Slack cannot pass a challenge, so every delivery fails; after enough failures Slack
 turns event delivery off (as on 15 Sep). **Fix:** a WAF skip rule (or security level off) for `/webhook/*` and
-`/api/*` on that hostname, before any bot-protection setting is on. *Recovery time: to fill in.*
+`/api/*` on that hostname, before any bot-protection setting is on. **Recovered by 22:29 PHT at the latest:** the n8n UI
+was usable for the hand imports from ~22:05, and Slack messages were answered normally from 22:29 (seen in the DM; the
+exact time is unknown because, from 29 Sep ~20:50, Claude no longer reads n8n's executions). Afterwards IT decided Claude
+does not connect to the n8n server at all (CLAUDE.md, "No direct n8n access").
 
 ## What to do when it next drops
 
