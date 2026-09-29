@@ -69,21 +69,21 @@ none of the scripts that talk to n8n are run any more - `n8n`, `n8n-write`, `hea
 `test-nodes --live`, `eval-run`, `eval-twin`, `reapply-main-fixes` - not even to "just check". Everything offline still
 works: the build scripts, `test-nodes` with five file paths, `test-gate <file>`, the sims.
 
-**Deploying goes through GitHub** (agreed with IT): n8n pulls, nothing reaches in.
-1. Build and test the candidate offline as before; commit it.
-2. Write `deploy/next.json`: for each workflow, `workflow_id`, `file` (the new build), `base` (the build it replaces -
-   the file of what is live now), `version_name` (e.g. `v192 - move range fix`) and `description`. `"dry_run": true`
-   does every read and check and stops before writing. Push.
-3. The person deploying opens **Jessie — Deploy from GitHub** in n8n and presses Execute workflow. It checks each live
-   workflow still matches its `base` (a browser edit since then refuses the whole run - this replaces "pull first"),
-   imports, publishes with the version name, reads it back and checks stored == built.
-4. It writes **`deploy/last-result.json`** to the repo: pull it, confirm `ok: true` and `stored_matches_built` for each,
-   then update `VERSIONS.md`. A refusal shows as the run's error message in n8n instead.
+**Deploying is by hand, in the n8n UI (route 1, chosen 29 Sep).** Claude builds and tests offline and pushes; the
+person deploying imports. Every import, every workflow, in this order:
+1. **Say it in Slack** before importing (two people importing the same workflow overwrite each other).
+2. **Download the live workflow first** (open it → ⋯ → Download) into `workflows/imported/<name>-live-before-vN.json`,
+   and run `./scripts/check-import before <that file> <the build it should match>`. MATCHES = safe. DIFFERS = someone
+   changed it since that build: do not import; rebuild on top of the download (this replaces "pull first").
+3. **Import** into that same workflow: ⋯ → Import from File → the exact file from the instructions → **Save** →
+   **Publish** with the version name (e.g. `v192 - move range fix`) and its one-line description. Publishing is also
+   the Active toggle that reloads tool inputs.
+4. **Download it again** into `workflows/imported/<name>-vN-imported.json` and run
+   `./scripts/check-import after <that file> <the build>` (stored == built). Then update `VERSIONS.md` and commit.
 
-Only the Jessie workflow ids in the deployer's Config can be deployed to. Its two credentials (a GitHub token for this
-repo, and an n8n API key as Header Auth) live in n8n only. Built by `scripts/build-deployer.py`, tested by
-`scripts/sim-deployer.js`. Fallback: the person imports the file by hand (workflow ⋯ → Import from File, Save, Publish
-with the version name) and downloads it back into `workflows/imported/` so stored == built can be checked offline.
+`check-import` reads files only. **Route 2 is parked:** `Jessie — Deploy from GitHub` (`scripts/build-deployer.py`,
+`deploy/next.json`, `scripts/sim-deployer.js`) - n8n pulls the builds from this repo and does steps 2-4 itself. IT is
+fine with it; it needs a fine-grained GitHub token for the org and an n8n API key credential. Not imported.
 
 **What is lost:** reading executions (`health`, tool calls, timings) - ask the person testing to paste or download an
 execution, or add an n8n workflow that writes run summaries to the repo; and `eval-run`, until it runs inside n8n.

@@ -1,6 +1,7 @@
 {
   "note": "Read by 'Jessie — Deploy from GitHub' in n8n. Each entry deploys only if the live workflow still matches its base. Order is kept.",
   "dry_run": true,
+  "parked": "Route 2 is parked (29 Sep): deploys are by hand for now. Kept for when the deployer is set up.",
   "deploys": [
     { "workflow_id": "EUG3sGXkfsJSYIMz", "file": "workflows/book-session-v66.json", "base": "workflows/book-session-v65.json",
       "version_name": "v66 - proposed time", "description": "With no time typed, the summary says the time was proposed and asks what time they want" },

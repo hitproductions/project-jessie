@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""Offline check for a hand import (route 1, from 29 Sep 2026: nobody's scripts connect to n8n any more).
+
+  ./scripts/check-import before <downloaded.json> <build it should match>
+      Before importing: is the live workflow (downloaded from n8n: workflow ⋯ → Download) still the build it
+      replaced? If not, someone edited it in the browser or imported something else - rebuild on top of the
+      download, do not import over it.
+  ./scripts/check-import after <downloaded.json> <build that was imported>
+      After importing and publishing: is what n8n stored the build? (stored == built)
+
+Compares every node's parameters, the node list, the connections and the title. Reads files only; never contacts n8n.
+Exit 0 = matches, 1 = differs, 2 = usage.
+"""
+import json, re, sys
+
+def load(p):
+    try: return json.load(open(p))
+    except Exception as e: sys.exit(f"cannot read {p}: {e}")
+
+def nodes(w): return {n.get("name"): json.dumps(n.get("parameters", {}), sort_keys=True) for n in w.get("nodes", [])}
+def stable(t): return re.sub(r"\s+[—-]\s+v\d+\b.*$", "", str(t or "")).strip()
+
+if len(sys.argv) != 4 or sys.argv[1] not in ("before", "after"):
+    print(__doc__.strip()); sys.exit(2)
+mode, got_p, want_p = sys.argv[1:]
+got, want = load(got_p), load(want_p)
+A, B = nodes(got), nodes(want)
+only_got = sorted(set(A) - set(B)); only_want = sorted(set(B) - set(A))
+changed = sorted(k for k in set(A) & set(B) if A[k] != B[k])
+conn_same = json.dumps(got.get("connections", {}), sort_keys=True) == json.dumps(want.get("connections", {}), sort_keys=True)
+problems = []
+if stable(got.get("name")) != stable(want.get("name")):
+    problems.append(f'a different workflow: "{got.get("name")}" is not "{want.get("name")}"')
+if mode == "after" and got.get("name") != want.get("name"):
+    problems.append(f'title is "{got.get("name")}", expected "{want.get("name")}" (was the title set / the right file imported?)')
+if changed: problems.append("nodes that differ: " + ", ".join(changed))
+if only_got: problems.append("nodes only in the download: " + ", ".join(only_got))
+if only_want: problems.append("nodes only in the build: " + ", ".join(only_want))
+if not conn_same: problems.append("the connections differ")
+
+print(f"{mode}: {got_p}  vs  {want_p}")
+print(f'  download: "{got.get("name")}"   ({len(A)} nodes)')
+print(f'  build:    "{want.get("name")}"   ({len(B)} nodes)')
+if not problems:
+    print("  MATCHES" + (" - safe to import over it" if mode == "before" else " - stored == built"))
+    sys.exit(0)
+for p in problems: print("  DIFFERS - " + p)
+print("  -> " + ("do NOT import: the live workflow changed since that build; rebuild on top of this download"
+                 if mode == "before" else "the import did not land as built: check the file, re-import, and download again"))
+sys.exit(1)
