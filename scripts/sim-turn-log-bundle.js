@@ -31,7 +31,8 @@ ok(r.Path === 'duplicate dropped' && /nothing sent/.test(r.Reply), 'a dropped la
 r = new Function('$', '$input', '$execution', '$workflow', code(M, 'Turn Log Row'))(() => { throw new Error('boom'); }, wrap([{ json: {} }]), {}, {})[0].json;
 ok(Object.keys(r).join() === 'Time,Exec,User,Message,Path,Tools,Reply,Claim,Seconds,Build' && /^\d{4}-\d{2}-\d{2} /.test(r.Time), 'never throws: every read failing still gives a row with the same ten columns');
 const to = (n, b = 0) => ((((M.connections[n] || {}).main || [])[b]) || []).map(t => t.node);
-ok(JSON.stringify(to('Send Reply')) === '["Clear Ack","Turn Log Row"]' && JSON.stringify(to('Duplicate?', 0)) === '["Clear Ack","Turn Log Row"]' && JSON.stringify(to('Turn Log Row')) === '["Log Turn"]', 'wiring: Send Reply and the dropped-duplicate branch -> Turn Log Row -> Log Turn; Clear Ack unchanged');
+const _both = a => JSON.stringify(a.slice().sort()) === '["Clear Ack","Turn Log Row"]';   // either order: the canvas reorders them on save
+ok(_both(to('Send Reply')) && _both(to('Duplicate?', 0)) && JSON.stringify(to('Turn Log Row')) === '["Log Turn"]', 'wiring: Send Reply and the dropped-duplicate branch -> Turn Log Row -> Log Turn; Clear Ack unchanged');
 const lt = M.nodes.find(n => n.name === 'Log Turn');
 ok(lt.parameters.sheetName.value === 'Turn Log' && lt.onError === 'continueRegularOutput' && lt.parameters.documentId.value === '1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo', 'Log Turn appends to the Jessie Log sheet, tab Turn Log, and cannot fail a turn');
 ok(!/\$\('(?:Book Session|Prepare Booking|Cancel Booking|Move Booking|Find Booking|Room Availability|Prepare Cancel|Book Series|Expand Series)'\)/.test(code(M, 'Turn Log Row')), 'never reads a tool node (gotcha 11)');
