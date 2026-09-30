@@ -39,7 +39,7 @@ ones move to the bottom instead of being renumbered.
 | 34 | A1: free rooms sometimes left out of an availability answer | v165 eval: "which studios" dropped the M booths 3/3. **LIVE 28 Sep 17:52 PHT** (main v167 Guard Probe adds any free room the reply left out); live eval: M booths listed |
 | 26 | Can claim "I've asked the current holder" without doing it | **LIVE 28 Sep 16:28 PHT** (main v166 Guard Probe: withdrawn unless Book Session / Move opened it that turn) |
 | 69 | **Short, plain-language booking chat** (DIGICON video demo to Sir Vic, end of week - working in Slack): the summary shows only the title, Date, Time and Room; questions and notes brief, never "terms and conditions" | **Decided 30 Sep: hide the rest always** (the engineer is in the title's initials; session type and booking type are for the system, not the booker) - every detail still gathered and written to the calendar event. **Scheduled Fri 2 Oct morning** with 70, after 68, 44 and the 1 Oct Slack run |
-| 70 | **Booking type becomes four categories: Advertising, Entertainment, Internal, Personal** (was External / Personal), asked only when it cannot be worked out, in few words | Decided 30 Sep (with Tara): automated where possible - a client who is staff (Bookers, e.g. the arrangers as clients) is Personal; a new client who is not staff is never Personal or Internal, so the only question is "Is this an advertising or entertainment project?". **Needs before building:** the Advertising / Entertainment rule (Sir Vic's input), what counts as Internal, and Clients `Client Type` recoded to the four (Tel) |
+| 70 | **Booking type becomes four categories: Advertising, Entertainment, Internal, Personal** (was External / Personal), asked only when it cannot be worked out, in few words | **Decided 30 Sep:** in order - (1) what the requester said; (2) the client's record wins (a Hit convention VO can be Internal - department alone is not enough); (3) a client who is staff = Personal; (4) no client -> "Is this a Hit project or your own?" (Internal / Personal); (5) a new client who is not staff -> department default (Audio Post, Music = Advertising; Localization = Entertainment), else "Advertising or entertainment?". Internal = Hit's own work, no client. **Tel recodes Clients `Client Type` to the four by Thu 1 Oct.** Build Fri 2 Oct with 69 |
 | 27 | Can open the same consent request twice | Build |
 | 28 | Booking over your own booking asks *you* for consent | **LIVE 28 Sep 16:28 PHT** (Book Session v54, Move v22: SELF_BOOKING → "you already have it") |
 | 23 | After "room taken", re-offers the same failed slot | **Built 28 Sep:** ROOM_OCCUPIED lists the usual rooms actually free in that window (Book Session v53, live) |
@@ -633,10 +633,16 @@ over-explained; the type should be worked out wherever it can be, and asked in a
   it is their own project.
 - **Advertising / Entertainment:** from the client's record; a new client who is not staff is never Personal or
   Internal, so the only question left is **"Is this an advertising or entertainment project?"**
-- **Internal:** to be defined (Hit's own work with no outside client?).
-- **Needs:** the Advertising / Entertainment rule (Sir Vic's input - e.g. by department?), the Internal definition, and
-  Clients `Client Type` recoded to the four values (Tel). Until the Clients table is recoded, existing records read
-  External, which maps to nothing - so the recode has to land before the switch, or External asks the one question.
+- **Internal:** Hit's own work with no outside client (decided 30 Sep).
+- **The rule, in order (decided 30 Sep):** (1) what the requester said ("personal", "my own" / "Hit project",
+  "internal" / "TVC", "ad", "commercial" / "dubbing", "series"); (2) the client's record wins - department alone is not
+  enough, a Hit convention VO recording can be Internal; several types on the record -> one short question with those;
+  (3) a client who is staff (Bookers) -> Personal; (4) no client -> "Is this a Hit project or your own?"; (5) a new client
+  who is not staff -> the department's default (Audio Post, Music -> Advertising; Localization -> Entertainment), else
+  "Advertising or entertainment?". Open: whether (5) should ask instead of defaulting, since the short summary no longer
+  shows the booking type.
+- **Tel, by Thu 1 Oct:** Clients `Client Type` -> Advertising / Entertainment / Internal / Personal, every client
+  recoded (in-house arrangers Personal, Hit's own projects Internal). A client still on External after that asks (5).
 - **Touches:** Book Session (Check Conflicts' booking-type step, NEED_BOOKING_TYPE wording, Render Summary, the
   calendar `Type:` segment, New Clients sheet), main (Booked For's words, the prompt's booking-type lines, Guard
   Probe's summary line), Book Series (passes the type), the Log sheet.
