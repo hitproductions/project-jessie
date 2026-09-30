@@ -113,8 +113,9 @@ hold in real conversations. Last verified end to end 2026-09-29 (17:24–17:55 P
 Slack on main v191 / Book Session v65 / Move v25 / Cancel v20 / Find v7: book, "make it 3pm
 instead" (card Now 2–4 / Moving to 3–5), "make it 5pm instead" after "Moved" (3–5 → 5–7),
 cancel; and a dateless "cancel QANODATE" found by name and cancelled - one event throughout,
-calendar clean after, every node green. Live since 30 Sep 15:33 PHT: main v196 / Book Session v72
-(hand imports, each summary checked through Slack - the full end-to-end checklist has not been rerun on them yet).
+calendar clean after, every node green. Live since 30 Sep 17:12 PHT: main v201 / Book Session v72 /
+Room Availability v12 (hand imports, each change tried through Slack - the full end-to-end checklist has not been rerun
+on them yet; PENDING 68, Move Direct, comes first).
 The latest builds and what each fixed: [`docs/eod/EOD-2026-09-30.md`](docs/eod/EOD-2026-09-30.md).
 
 **Testing through Slack.** An end-to-end test can be run by sending the test messages in the

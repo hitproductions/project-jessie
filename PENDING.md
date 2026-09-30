@@ -17,6 +17,7 @@ ones move to the bottom instead of being renumbered.
 
 | # | What | Blocked on / owner |
 |---|---|---|
+| 68 | **Move Direct: a yes to a move card moves once, in code, not through the model.** 30 Sep 17:18 (QASER, main v201): at the yes to the 9 Nov card the model called Move Booking twice in parallel - two replacements (one with the room declined), then "could not remove the original" (it was already removed by the first call). Bookings (Book Direct) and cancels (Cancel Direct) already skip the model at the yes; moves never did, so every series fix today worked around it | **Build first, before the 1 Oct Slack end-to-end run:** a Move Direct branch beside Cancel Direct - Booked For's approvedMove (v200) -> Move Booking once -> a code reply ('Moved ...' + the next series card). Cleanup: the extra 9 Nov 2027 QASER (Studio 8 declined, no location) |
 | 33 | Launch switches: year shift, **three** `DEV_REDIRECT`s, drop `TEST_COORD` (the tag is live on Howard). **HAIST Dev stays** for now as an emergency backup (decided 28 Sep) | Howard, on 12 Oct |
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism); 29 Sep: single deliveries also failing and arriving 61 s late on Slack's retry (OUTAGES, 15:41 and 16:16) | **Parked 29 Sep:** waiting on Sir Pao to upgrade Cloudflare to Pro, then Super Bot Fight Mode with the Slack webhook as an exception |
@@ -54,7 +55,7 @@ ones move to the bottom instead of being renumbered.
 | 60 | **Two cancels in one message: the model sometimes prepares only the first** ("cancel QAS3 ... and LIKHA - BD ..." - one card, no Next line); three dates of one title worked | Watch; a deterministic split would need the titles parsed from the message |
 | 61 | **"no" to a move card re-offered the corrected move** instead of cancelling it (29 Sep 22:29: the earlier "3-6pm not 6-7" still counted); a second "no" cancelled | **LIVE 29 Sep 23:10 (main v193), verified 23:16 through Slack** |
 | 62 | **"This week" availability checks one day** (29 Sep 23:17: one Monday-to-Sunday window starting on a day already past - a room was "taken" if anything touched it all week; "Dates checked" named only Monday) | **LIVE 30 Sep ~16:14: Room Availability v12 (multi-day check fix) + main v197 (this-week range fix); verified 16:15-16:16 against the calendar.** A window over several days is answered day by day, the same hours each day (whole days when midnight to midnight, up to 14 days): per room free / taken by what and when, or each day's free rooms; "this week" runs from today |
-| 63 | **A change right after a series moves one date without asking which** ("make it 3pm instead" after a 2-date series -> the 9 Nov date only) | **LIVE 30 Sep ~16:35: main v198 (series change fix)** - the question works; "all" carded the wrong date and one yes moved both (16:38). main v199 (16:51, re-activated) got the first card right; one yes still moved both (16:56). **LIVE 30 Sep ~17:03: main v200 (approved move fix)** - verified 17:06: a yes moves exactly the card shown (2 Nov only). The next card's yes was then answered "already moved" - **LIVE 30 Sep ~17:12: main v201 (next card + engineer fix).** Also seen: the model-written series summary had " Type: External" unbolded and "Engineer: Howard" (PENDING 59). Decided 30 Sep: ask which date - a date named gets the normal move card; "all" goes one card at a time, each with its own yes |
+| 63 | **A change right after a series moves one date without asking which** ("make it 3pm instead" after a 2-date series -> the 9 Nov date only) | **LIVE 30 Sep: main v198-v201.** Decided: ask which date. Verified live: the question, a picked date, "all" -> the 2 Nov card (code) with Next, the yes moves 2 Nov only (v200), the next card's yes goes through (v201). **Left: item 68** - at the 9 Nov yes the model called Move Booking twice at once: one extra 9 Nov event (room declined), and a misleading "partial" message |
 | 64 | **Session-type shorthand as project / client** ("book isr ..." -> ISR / ISR / EG), and any client that is only the project again | **LIVE 30 Sep ~13:20:** Book Session v68. Optional: Tel adds an "Also known as" field to Session Types (e.g. VO Recording: ISR, In-Studio Recording) - needs main's Room Table to pass it on as `aka` |
 | 65 | **A colleague booked for became the engineer** ("book orange studio 7 for anj" -> "Angelo Villegas is down as the engineer"; Anj is a Music Arranger), and a music session type was assumed | **LIVE 30 Sep ~14:03: Book Session v70 (for-person fix) + main v196 (client nickname search); verified 14:06-14:16** (which-Anj asked; "angela" -> QAANJ / Angela Dela Calzada / HL, External, no "(for ...)"). Decided 30 Sep: with no engineer named and a requester who is an engineer, the requester is the engineer - in code from Book Session v71 (LIVE 30 Sep), with a note on the summary. The two Anjs: Angelo Villegas (Bookers, Music Arranger) and Angela Dela Calzada (Clients, Advertising Producer, Notes "Goes by Anj") - asked which one. Still open: the session type was assumed (Music Vocal Recording) with none typed - a judgement call, like QA M2. Nicknames shared by two clients, or a client's nickname that is only in the Name, are not covered: a "Goes by" in Clients Notes is what makes it work |
 | 66 | **The date is forgotten when the requester answers within seconds** ("no client" 3 s after the question -> "What is the date for this booking?"; "tomorrow" was in the request) - static data is saved only when a turn finishes | Built: main v195 (date carry fix) reads the date from the requester's earlier messages when nothing is carried. **LIVE 30 Sep ~13:28, verified 13:29** (Turn Log: v194 exec 18503 MISSING_DATE with the reply 3 s after the last row; v195 exec 18526, same 3 s gap, date carried). Other static-data carries (the epoch) have the same race - a reset answered within seconds is the case to watch |
@@ -250,6 +251,22 @@ hit is a disabled, unconnected node, so main can wait for its next import. Comma
 retired rather than hidden from one account.
 
 ---
+
+### 68. Move Direct - the move at the yes, without the model
+
+*Raised 30 Sep 2026 17:20, after the QASER series tests (main v198-v201).* Every move card is written by code now (Move
+Booking v25, Guard Probe's series cards), and since v200 the yes moves exactly the card shown - but the yes still goes
+through the model, which calls Move Booking itself. Three live failures today, all the model: it carded the wrong date
+(v198), moved both dates on one yes (v198, v199), and at 17:18 called Move Booking twice in parallel for the same card
+(v201) - two replacements for 9 Nov (the second one's room declined), the original deleted by the first call, and the
+second reporting PARTIAL ("could not remove the original") for an original that was already gone.
+
+**Build** (the Book Direct / Cancel Direct pattern, main only): Prepared Cancel (or a Prepared Move node beside it)
+flags `_moveDirect` when Gate Context says the move is confirmed and Booked For's `approvedMove` is set -> a `Move
+Direct?` IF -> `Move Direct` (Execute Workflow: Move Booking, once, with the card's title / date / new times / room,
+confirmed) -> `Move Direct Reply` in code: 'Moved "TITLE" on DATE to TIME.' plus Booked For's `seriesNextCard` when
+there is one; PARTIAL / REJECTED answered in plain words. The Turn Log path column gains "move direct". Sim: the
+QASER run end to end, and a single booking's move. Then the 1 Oct end-to-end Slack run covers it.
 
 ## 🟠 Soon: details
 
