@@ -70,6 +70,7 @@ ones move to the bottom instead of being renumbered.
 | 13, 18, 39 | Speed: first Code node ~3.5s, first outbound call ~4s, new staff-list reads ~1s | Server / later |
 | 40 | Leftover snapshot files from renames in `workflows/live/` | **Done 28 Sep:** approved; current snapshots refreshed first, then the 5 old-name files removed (all 5 ids still active under their current names) |
 | 41 | `Booked For` notice quotes three words instead of the name | **LIVE 28 Sep 16:28 PHT** (main v166) |
+| 67 | **Day-by-day availability layout:** a blank line between days, and within each day the studios, the M booths and the vocal booths on separate lines | Build (Room Availability + Guard Probe); parked 30 Sep |
 
 **Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31, 32, 45. **Item 14** is a permanent
 known constraint, not a task.
@@ -771,6 +772,30 @@ wrote "for Japs next Thursday", because the capture takes up to three words. Har
 resolves correctly), but `matched` should be trimmed to the words that actually matched.
 
 ---
+
+### 67. Day-by-day availability: a clearer layout
+
+*Parked 30 Sep 2026, after the PENDING 62 fix went live (Room Availability v12).* "What studios are free this week?"
+now answers day by day, but each day is one long comma list - M booths, studios and vocal booths mixed together
+(16:16 PHT: "Thursday, September 30: M2, M3, M5, M7, Studio 1, Studio 2, ... Studio M"). Wanted:
+
+```
+Thursday, September 30
+Studios: Studio 1, Studio 2, ... Studio M
+M booths: M2, M3, M5, M7
+Vocal booths: Studio A, Studio B, Studio D
+
+Friday, October 1
+...
+```
+
+- A blank line after each day.
+- Within a day, one line each for studios, M booths and vocal booths (vocal booths are the Airtable `Vocal Booth`
+  flag; M booths are M1-M8; conference rooms only when the requester asked about rooms, not studios).
+- Written by code, not the model: Room Availability builds the lines (`days[].groups`), and Guard Probe sends them as
+  they are, as it does for other code-written replies - the model merges and reorders lists otherwise.
+- Also to decide then: a question with no time after one that had a time ("what studios are free this week?" after
+  "... from 2pm to 4pm") reused 2-4 PM; the header says so. Keep, or check the whole day.
 
 ## ✅ Resolved
 
