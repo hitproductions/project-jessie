@@ -38,7 +38,8 @@ ones move to the bottom instead of being renumbered.
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
 | 34 | A1: free rooms sometimes left out of an availability answer | v165 eval: "which studios" dropped the M booths 3/3. **LIVE 28 Sep 17:52 PHT** (main v167 Guard Probe adds any free room the reply left out); live eval: M booths listed |
 | 26 | Can claim "I've asked the current holder" without doing it | **LIVE 28 Sep 16:28 PHT** (main v166 Guard Probe: withdrawn unless Book Session / Move opened it that turn) |
-| 69 | **Short booking summary** (for a presentation, end of week): only the title, Date, Time and Room - the same checks and data behind it | **Scheduled Fri 2 Oct morning**, after 68, the 1 Oct Slack run and 44, before the human QA round. Needs the full booking stored by check code (the reference cache data table), because the yes books from the summary text today |
+| 69 | **Short, plain-language booking chat** (DIGICON video demo to Sir Vic, end of week - working in Slack): the summary shows only the title, Date, Time and Room; questions and notes brief, never "terms and conditions" | **Decided 30 Sep: hide the rest always** (the engineer is in the title's initials; session type and booking type are for the system, not the booker) - every detail still gathered and written to the calendar event. **Scheduled Fri 2 Oct morning** with 70, after 68, 44 and the 1 Oct Slack run |
+| 70 | **Booking type becomes four categories: Advertising, Entertainment, Internal, Personal** (was External / Personal), asked only when it cannot be worked out, in few words | Decided 30 Sep (with Tara): automated where possible - a client who is staff (Bookers, e.g. the arrangers as clients) is Personal; a new client who is not staff is never Personal or Internal, so the only question is "Is this an advertising or entertainment project?". **Needs before building:** the Advertising / Entertainment rule (Sir Vic's input), what counts as Internal, and Clients `Client Type` recoded to the four (Tel) |
 | 27 | Can open the same consent request twice | Build |
 | 28 | Booking over your own booking asks *you* for consent | **LIVE 28 Sep 16:28 PHT** (Book Session v54, Move v22: SELF_BOOKING → "you already have it") |
 | 23 | After "room taken", re-offers the same failed slot | **Built 28 Sep:** ROOM_OCCUPIED lists the usual rooms actually free in that window (Book Session v53, live) |
@@ -617,9 +618,28 @@ code (it can be made smaller) and the confirmation line; Prepared Booking looks 
 and books all of them. Notes that need an answer stay (the room picked, the proposed time, the length heads-up, the
 self-engineer note). A lookup that fails refuses and re-prepares - it never books with missing fields. Old rows are
 pruned by the daily 04:00 job.
-**Trade-off, decided when built:** the requester no longer sees the session type, engineer name or booking type
-before the yes (the title still shows the client and initials). Hide them always, or only when the requester typed
-them themselves.
+**Decided 30 Sep: hide them always.** The engineer is already in the title's initials; the session type and booking
+type are for the system (and the calendar event keeps all of them), not for the booker. Also: the whole exchange
+should read like a short conversation, not terms and conditions - every question and note in as few words as it
+takes (Tara: "LESS WORDS better"). Needed working in Slack by the end of the week for the DIGICON video demo.
+
+### 70. Booking type: Advertising, Entertainment, Internal, Personal
+
+*Decided 30 Sep 2026 (Howard with Tara), for the end-of-week demo.* External / Personal becomes four categories. The
+question "Is this booking External (Hit Productions work) or Personal (their own project)?" read as clunky and
+over-explained; the type should be worked out wherever it can be, and asked in a few words only when it cannot.
+
+- **Personal:** the client is a Hit employee (in Bookers - e.g. the arrangers listed as clients), or the requester says
+  it is their own project.
+- **Advertising / Entertainment:** from the client's record; a new client who is not staff is never Personal or
+  Internal, so the only question left is **"Is this an advertising or entertainment project?"**
+- **Internal:** to be defined (Hit's own work with no outside client?).
+- **Needs:** the Advertising / Entertainment rule (Sir Vic's input - e.g. by department?), the Internal definition, and
+  Clients `Client Type` recoded to the four values (Tel). Until the Clients table is recoded, existing records read
+  External, which maps to nothing - so the recode has to land before the switch, or External asks the one question.
+- **Touches:** Book Session (Check Conflicts' booking-type step, NEED_BOOKING_TYPE wording, Render Summary, the
+  calendar `Type:` segment, New Clients sheet), main (Booked For's words, the prompt's booking-type lines, Guard
+  Probe's summary line), Book Series (passes the type), the Log sheet.
 
 ## 🟢 Additive: details
 
