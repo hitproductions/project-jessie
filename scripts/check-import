@@ -8,7 +8,9 @@
   ./scripts/check-import after <downloaded.json> <build that was imported>
       After importing and publishing: is what n8n stored the build? (stored == built)
 
-Compares every node's parameters, the node list, the connections and the title. Reads files only; never contacts n8n.
+Compares every node's parameters and settings (deactivated, type and version, credentials, on-error, execute-once,
+always-output), the node list, the connections and the title. Reads files only; never contacts n8n.
+30 Sep: a v199 import was stored with all 69 nodes deactivated and this still said MATCHES - it compared parameters only.
 Exit 0 = matches, 1 = differs, 2 = usage.
 """
 import json, re, sys
@@ -25,7 +27,10 @@ def params(n):
     for k, v in DEFAULTS.get(n.get("type"), {}).items():
         if p.get(k) == v: p.pop(k)
     return json.dumps(p, sort_keys=True)
-def nodes(w): return {n.get("name"): params(n) for n in w.get("nodes", [])}
+FLAGS = ("disabled", "type", "typeVersion", "credentials", "onError", "executeOnce", "alwaysOutputData", "retryOnFail")
+def flags(n): return json.dumps({k: n.get(k) for k in FLAGS if n.get(k) not in (None, False)}, sort_keys=True)
+def nodes(w): return {n.get("name"): params(n) + flags(n) for n in w.get("nodes", [])}
+def off(w): return sorted(n.get("name") for n in w.get("nodes", []) if n.get("disabled"))
 def stable(t): return re.sub(r"\s+[—-]\s+v\d+\b.*$", "", str(t or "")).strip()
 
 if len(sys.argv) != 4 or sys.argv[1] not in ("before", "after"):
@@ -41,6 +46,13 @@ if stable(got.get("name")) != stable(want.get("name")):
     problems.append(f'a different workflow: "{got.get("name")}" is not "{want.get("name")}"')
 if mode == "after" and got.get("name") != want.get("name"):
     problems.append(f'title is "{got.get("name")}", expected "{want.get("name")}" (was the title set / the right file imported?)')
+off_got, off_want = off(got), off(want)
+if off_got != off_want:
+    extra = [n for n in off_got if n not in off_want]
+    if extra: problems.append(f"DEACTIVATED in the download but not in the build ({len(extra)} of {len(A)}): " + ", ".join(extra[:8]) + (" ..." if len(extra) > 8 else ""))
+    back = [n for n in off_want if n not in off_got]
+    if back: problems.append("deactivated in the build but active in the download: " + ", ".join(back))
+    changed = [k for k in changed if k not in extra and k not in back]
 if changed: problems.append("nodes that differ: " + ", ".join(changed))
 if only_got: problems.append("nodes only in the download: " + ", ".join(only_got))
 if only_want: problems.append("nodes only in the build: " + ", ".join(only_want))
