@@ -471,7 +471,10 @@ Seen without any access to the server (IT's rule from 29 Sep), from Slack and th
 - Cannot tell from outside whether n8n is down or Slack's deliveries are blocked at the edge: both look the same from
   Slack and the sheet. A heartbeat (a scheduled n8n workflow writing a timestamp to the sheet every few minutes) would
   tell them apart without anyone connecting to the server. **Who can check:** IT - is n8n up; Cloudflare Security
-  Events from ~09:28 PHT. *Recovery time: to fill in.*
+  Events from ~09:28 PHT. **Recovered between 11:19 and 11:56 PHT** (the 11:56:22 "hello" was answered at 11:56:29; the
+  11:19 one never was) - roughly 2 to 2.5 hours. The zone showed the Pro plan by then, with a spike of challenged requests
+  at 10:35 in Cloudflare's security analytics (screenshot, 30 Sep); whether Slack's deliveries were among them is not
+  yet confirmed (Security -> Events, path /webhook/, from 09:20).
 
 ## What to do when it next drops
 
