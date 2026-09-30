@@ -699,6 +699,12 @@ the task runner), for whoever has shell access to the box.
     fell back to splitting the whole Info - which kept most nicknames but lost the first one ("Enrico"). Read up to
     the line break (`/goes by\s+([^\n]*)/i`), never to `$`. Found 30 Sep building PENDING 65 (v70 / v196).
 
+28. **Ctrl+Z after clearing the canvas restores the nodes, but not always the connection order.** On 30 Sep someone
+    deleted everything before importing (the usual routine), remembered the live download was still needed, and undid
+    it. The download then differed from the last build only in the order of two connection lists - harmless, but
+    `check-import before` rightly said DIFFERS. Download the live workflow *before* clearing the canvas. When only
+    connection order differs, rebuild on the download (the sims accept either order).
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the
