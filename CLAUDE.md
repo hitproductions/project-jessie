@@ -693,6 +693,11 @@ the task runner), for whoever has shell access to the box.
     for the date. Anything static data carries must also be recoverable from the Slack history (main v195 does that for
     the date). And two overlapping turns each save their whole snapshot, so the later one wins.
 
+27. **Airtable long text can end in a line break, and `(.*)$` then matches nothing.** `Info` for Angelo Villegas, Rico
+    Gonzales, Alec Elijah Gan and Cristel Cube ends in `\n`; `/goes by\s+(.*)$/i` failed on all four, and the code
+    fell back to splitting the whole Info - which kept most nicknames but lost the first one ("Enrico"). Read up to
+    the line break (`/goes by\s+([^\n]*)/i`), never to `$`. Found 30 Sep building PENDING 65 (v70 / v196).
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the
