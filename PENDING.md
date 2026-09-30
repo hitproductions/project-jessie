@@ -38,6 +38,7 @@ ones move to the bottom instead of being renumbered.
 | 47 | Date guard LIVE (main v159 / book v47): watch for DATE_MISMATCH refusals in QA | Everyone (report false refusals) |
 | 34 | A1: free rooms sometimes left out of an availability answer | v165 eval: "which studios" dropped the M booths 3/3. **LIVE 28 Sep 17:52 PHT** (main v167 Guard Probe adds any free room the reply left out); live eval: M booths listed |
 | 26 | Can claim "I've asked the current holder" without doing it | **LIVE 28 Sep 16:28 PHT** (main v166 Guard Probe: withdrawn unless Book Session / Move opened it that turn) |
+| 69 | **Short booking summary** (for a presentation, end of week): only the title, Date, Time and Room - the same checks and data behind it | **Scheduled Fri 2 Oct morning**, after 68, the 1 Oct Slack run and 44, before the human QA round. Needs the full booking stored by check code (the reference cache data table), because the yes books from the summary text today |
 | 27 | Can open the same consent request twice | Build |
 | 28 | Booking over your own booking asks *you* for consent | **LIVE 28 Sep 16:28 PHT** (Book Session v54, Move v22: SELF_BOOKING → "you already have it") |
 | 23 | After "room taken", re-offers the same failed slot | **Built 28 Sep:** ROOM_OCCUPIED lists the usual rooms actually free in that window (Book Session v53, live) |
@@ -594,6 +595,31 @@ held (the calendar has standing "M2 - Peemo" / "M6 - Marketing" events), nothing
 both; from 03:35:31 UTC `All Rooms` returns 27 rooms and Room Table lists M2 and M6.
 
 ---
+
+### 69. Short booking summary
+
+*Asked 30 Sep 2026 for a presentation at the end of the week; scheduled Fri 2 Oct morning, after the functional fixes
+(68, 44) and the 1 Oct Slack run, and before the human QA round so it is tested in its final form.* Wanted:
+
+```
+DIGICON / Vic Icasas / TL
+Date: Thursday, September 30, 2027
+Time: 5:00 PM – 7:00 PM
+Room: Studio 8
+```
+
+Keep every check and every detail gathered (client, session type, engineer, arranger, department, booking type, booked
+by) - only the message is shorter. **Why it is not just deleting lines:** at the yes, Prepared Booking reads Jessie's
+newest message back, verifies the `_check_` code and Book Session books *those* lines; hidden lines would be lost.
+**Build:** Render Summary also writes the full field set to the existing reference-cache data table under
+`cache_key = prep-<check code>` (no new table to create); the message shows the title, Date, Time and Room, the check
+code (it can be made smaller) and the confirmation line; Prepared Booking looks the fields up by the code at the yes
+and books all of them. Notes that need an answer stay (the room picked, the proposed time, the length heads-up, the
+self-engineer note). A lookup that fails refuses and re-prepares - it never books with missing fields. Old rows are
+pruned by the daily 04:00 job.
+**Trade-off, decided when built:** the requester no longer sees the session type, engineer name or booking type
+before the yes (the title still shows the client and initials). Hide them always, or only when the requester typed
+them themselves.
 
 ## 🟢 Additive: details
 
