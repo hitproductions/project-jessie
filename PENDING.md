@@ -55,6 +55,8 @@ ones move to the bottom instead of being renumbered.
 | 61 | **"no" to a move card re-offered the corrected move** instead of cancelling it (29 Sep 22:29: the earlier "3-6pm not 6-7" still counted); a second "no" cancelled | **LIVE 29 Sep 23:10 (main v193), verified 23:16 through Slack** |
 | 62 | **"This week" availability checks one day** (29 Sep 23:17: only Monday 27 Sep, already past in QA dates) - visible since v193 names the dates checked | Build (main): resolve "this week" / "next week" to the remaining weekdays and check each |
 | 63 | **A change right after a series moves one date without asking which** ("make it 3pm instead" after a 2-date series -> the 9 Nov date only) | Build / decide: ask which date, or move them all |
+| 64 | **Session-type shorthand as project / client** ("book isr ..." -> ISR / ISR / EG) | **Built 30 Sep:** Book Session v68 (candidate). Optional: Tel adds an "Also known as" field to Session Types (e.g. VO Recording: ISR, In-Studio Recording) - needs main's Room Table to pass it on as `aka` |
+| 65 | **A colleague booked for became the engineer** ("book orange studio 7 for anj" -> "Angelo Villegas is down as the engineer"; Anj is a Music Arranger), and a music session type was assumed | Investigate from the Turn Log once rows 2-11 are cleared |
 
 ### 🟢 Additive: fine after launch
 
