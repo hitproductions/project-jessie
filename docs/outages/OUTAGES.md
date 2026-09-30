@@ -460,6 +460,19 @@ was usable for the hand imports from ~22:05, and Slack messages were answered no
 exact time is unknown because, from 29 Sep ~20:50, Claude no longer reads n8n's executions). Afterwards IT decided Claude
 does not connect to the n8n server at all (CLAUDE.md, "No direct n8n access").
 
+## Data point: 30 September - silent from ~09:30 PHT (ongoing at 11:21)
+
+Seen without any access to the server (IT's rule from 29 Sep), from Slack and the Turn Log only:
+- **Last turn processed: 09:30:22 PHT** - the Jessie Log sheet (Turn Log tab) was last modified then, right after
+  Jessie's 09:30:19 reply; nothing since.
+- **11:19:39 "hello" got no reaction and no reply** - it never reached n8n (or n8n was not running).
+- **Already patchy at 09:28:** "is anj a producer" sent three times (09:28:30, 09:28:44, 09:29:06), one answer
+  (09:29:18). The eyes reaction on the 09:28:02 "no" was never cleared.
+- Cannot tell from outside whether n8n is down or Slack's deliveries are blocked at the edge: both look the same from
+  Slack and the sheet. A heartbeat (a scheduled n8n workflow writing a timestamp to the sheet every few minutes) would
+  tell them apart without anyone connecting to the server. **Who can check:** IT - is n8n up; Cloudflare Security
+  Events from ~09:28 PHT. *Recovery time: to fill in.*
+
 ## What to do when it next drops
 
 Do these **while it is confirmed down**, and note the time.
