@@ -687,6 +687,12 @@ the task runner), for whoever has shell access to the box.
     input (Slack's receipt) to the sheet, so nothing looked broken. Take the agent's tool steps from Guard Probe (its
     input), and write `$('Book Direct')` etc. out, one try each.
 
+26. **Workflow static data is saved only when an execution finishes.** Gate Context's carried date lives there, and since
+    v193 a turn runs on after its reply (the Turn Log sheet write). A requester answering within ~3 s starts a new
+    execution that loads the store before the last one saved it: on 30 Sep "no client" lost "tomorrow" and Jessie asked
+    for the date. Anything static data carries must also be recoverable from the Slack history (main v195 does that for
+    the date). And two overlapping turns each save their whole snapshot, so the later one wins.
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the

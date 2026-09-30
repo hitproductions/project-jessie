@@ -23,7 +23,7 @@ const tl = (id, input) => { const g = gpOut(id); return new Function('$', '$inpu
 let r = tl('16739', { ok: true, message: { text: '*QATIME / Jem Lim / DR*\n*Date:* ...' } });
 ok(r.Exec === '16739' && r.User === 'Howard Luistro' && /qamove - november 17/.test(r.Message) && r.Path === 'agent', 'an agent turn: exec, who, their message, path', r);
 ok(/Find_Booking\(booking_date=2027-11-17\) -> OK/.test(r.Tools) && /Prepare_Cancel\(title=QAMOVE \/ Jem Lim \/ DR, booking_date=2027-11-17\) -> PREPARED/.test(r.Tools), 'each tool with its key inputs and result', r.Tools);
-ok(/QATIME/.test(r.Reply) && /^\d+\.\d$/.test(r.Seconds) && /v193/.test(r.Build) && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(r.Time), 'the reply, seconds, build, and a PHT timestamp', [r.Reply, r.Seconds, r.Build, r.Time]);
+ok(/QATIME/.test(r.Reply) && /^\d+\.\d$/.test(r.Seconds) && / — v\d+ /.test(r.Build) && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(r.Time), 'the reply, seconds, build, and a PHT timestamp', [r.Reply, r.Seconds, r.Build, r.Time]);
 r = tl('16682', { ok: true, message: { text: 'Booked.' } });
 ok(r.Path === 'book direct' && /Book Direct -> CREATED/.test(r.Tools) && r.Reply === 'Booked.', 'a yes booked in code: path book direct, its result', r);
 r = tl('16739', { _dup: true });

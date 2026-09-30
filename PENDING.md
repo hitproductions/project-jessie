@@ -57,6 +57,7 @@ ones move to the bottom instead of being renumbered.
 | 63 | **A change right after a series moves one date without asking which** ("make it 3pm instead" after a 2-date series -> the 9 Nov date only) | Build / decide: ask which date, or move them all |
 | 64 | **Session-type shorthand as project / client** ("book isr ..." -> ISR / ISR / EG), and any client that is only the project again | **LIVE 30 Sep ~13:20:** Book Session v68. Optional: Tel adds an "Also known as" field to Session Types (e.g. VO Recording: ISR, In-Studio Recording) - needs main's Room Table to pass it on as `aka` |
 | 65 | **A colleague booked for became the engineer** ("book orange studio 7 for anj" -> "Angelo Villegas is down as the engineer"; Anj is a Music Arranger), and a music session type was assumed | Investigate from the Turn Log once rows 2-11 are cleared |
+| 66 | **The date is forgotten when the requester answers within seconds** ("no client" 3 s after the question -> "What is the date for this booking?"; "tomorrow" was in the request) - static data is saved only when a turn finishes | Built: main v195 (date carry fix) reads the date from the requester's earlier messages when nothing is carried. Candidate, not imported. Other static-data carries (the epoch) have the same race - a reset answered within seconds is the case to watch |
 
 ### 🟢 Additive: fine after launch
 
