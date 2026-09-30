@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Room Availability v12 (week check fix) + main v197 (week check fix) - PENDING 62.
+"""Room Availability v12 (multi-day check fix) + main v197 (this-week range fix) - PENDING 62.
   scripts/build-week-check.py <ra-live> <ra-out> <main-live> <main-out>
 
 29 Sep 23:17 PHT: "this week" availability came back "Studio 7 is taken in that window by SPORT / Alex Gorne / AEG.
@@ -112,12 +112,12 @@ DESC_NEW = ("Find out whether a room is free, or which rooms are free, in a wind
             "and it answers day by day, the same hours each day; relay that list day by day.")
 
 def ra(w):
-    w["name"] = "Jessie — Room Availability — v12 (week check fix)"
+    w["name"] = "Jessie — Room Availability — v12 (multi-day check fix)"
     c = node(w, "Compute Availability")["parameters"]; c["jsCode"] = sub1(c["jsCode"], RA_ANCHOR, RA_BLOCK + RA_ANCHOR, "ra anchor")
     return w
 
 def main(w):
-    w["name"] = "Project Jessie — v197 (week check fix)"
+    w["name"] = "Project Jessie — v197 (this-week range fix)"
     g = node(w, "Gate Context")["parameters"]; g["jsCode"] = sub1(g["jsCode"], GATE_OLD, GATE_NEW, "gate")
     p = node(w, "Guard Probe")["parameters"]; p["jsCode"] = sub1(p["jsCode"], GP_OLD, GP_NEW, "guard")
     p["jsCode"] = sub1(p["jsCode"], STRIP_OLD, STRIP_NEW, "strip")

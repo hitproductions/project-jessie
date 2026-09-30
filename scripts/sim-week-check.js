@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Offline tests for Room Availability v12 + main v197 (week check fix) - PENDING 62. 29 Sep 23:17 PHT: "this week" was
+// Offline tests for Room Availability v12 (multi-day check fix) + main v197 (this-week range fix) - PENDING 62. 29 Sep 23:17 PHT: "this week" was
 // checked as one Monday-to-Sunday block, starting on a day already past.
 //   node scripts/sim-week-check.js
 const fs = require('fs'), path = require('path');
