@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Book Session v68 (ISR shorthand fix) - live QA 30 Sep 12:44 PHT.
+"""Book Session v68 (client + ISR fix) - live QA 30 Sep 12:44 PHT.
   scripts/build-session-shorthand.py <book-live> <book-out>
 
 "book isr for studio 8 with rico tomorrow at 9am" was summarised as ISR / ISR / EG - Client: ISR, Project: ISR. ISR is
@@ -12,6 +12,8 @@ one). A nickname in either slot, when the requester never wrote "project ISR" / 
 once: "Just to check - by ISR, do you mean an In-Studio Recording (a VO Recording session)? What's the project name, and
 who is the client?" If it was asked already (asked_text) and ISR is still in the slot, it only asks for the project
 name, so it cannot loop.
+And the general case: a client that is only the project again ("ORANGE / ORANGE / ..."), with no client named by the
+requester, is dropped - the summary shows "Client: None" and Jessie asks who the client is.
 """
 import json, sys
 
@@ -42,11 +44,21 @@ if (__prep) {
         ? 'Nothing was prepared. "' + _w + '" is the session type (' + _a.type + '), not the ' + _hit[0] + '. Ask exactly this, in one message: "What\'s the project name, and who is the client?"'
         : 'Nothing was prepared. Ask exactly this, in one message: "Just to check - by ' + _w + ', do you mean an ' + _a.long + ' (a ' + _a.type + ' session)? What\'s the project name, and who is the client?"' } }];
   }
+  // v68: the client is only the project again ("ORANGE / ORANGE / ..."), and the requester never named a client ->
+  // no client was given. Dropped, so the summary shows "Client: None" and Jessie asks who the client is (Guard Probe
+  // asks whenever "Client: None" was not said). Localization's Project Code / initials titles have no client slot.
+  const _cl = String(REQ.client || '').trim() || (_seg.length >= 3 ? _seg[1] : '');
+  // named = they typed that same name as the client: "client orange", "for orange", "producer: orange"
+  const _named = !!_cl && new RegExp('\\b(?:client|for|produ[a-z]*)\\s*(?:is|:|=)?\\s*' + _cl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(String(REQ.requester_text || ''));
+  if (_cl && _seg[0] && _n(_cl) === _n(_seg[0]) && !_named && !/^(localization|qc)\b/i.test(String(REQ.session_type || '').trim())) {
+    REQ.client = '';
+    if (_seg.length >= 3) REQ.summary = [_seg[0], _seg[_seg.length - 1]].join(' / ');
+  }
 }
 """
 
 def fix(w):
-    w["name"] = "Jessie — Book Session — v68 (ISR shorthand fix)"
+    w["name"] = "Jessie — Book Session — v68 (client + ISR fix)"
     c = node(w, "Check Conflicts")["parameters"]; c["jsCode"] = sub1(c["jsCode"], ANCHOR, BLOCK, "anchor")
     return w
 

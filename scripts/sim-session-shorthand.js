@@ -38,5 +38,23 @@ ok(r.reason !== 'SESSION_SHORTHAND', 'not prepare mode (the yes, a series, a con
 { const R = JSON.parse(REQ0.reference_data); R.types.find(t => t.type === 'Music Mixing').aka = ['MMX'];
   r = cc(B, { summary: 'MMX / Jem Lim / DR', client: 'Jem Lim', requester_text: 'book an mmx tomorrow at 2pm', reference_data: JSON.stringify(R) });
   ok(r.reason === 'SESSION_SHORTHAND' && r.session_type === 'Music Mixing', 'a nickname from Session Types ("aka" in the reference data) is recognised too', r); }
+console.log('The general case - the client is only the project again');
+const rs = (w, req) => { const R = [{ json: { ...REQ0, ...req } }];
+  const $c = n => { const it = n === 'When Executed by Another Workflow' ? R : rec(n); if (!it) throw new Error('unexecuted ' + n); return wrap(it); };
+  const c = new Function('$', '$input', '$getWorkflowStaticData', code(w, 'Check Conflicts'))($c, wrap([{ json: { items: [] } }]), () => ({}))[0].json;
+  const $r = n => n === 'When Executed by Another Workflow' ? wrap(R) : n === 'Check Conflicts' ? wrap([{ json: c }]) : n === 'Decide Preempt' ? (() => { throw 1; })() : wrap(rec(n) || [{ json: {} }]);
+  return { c, s: new Function('$', '$input', code(w, 'Render Summary'))($r, wrap([{ json: c }]))[0].json.summary_text }; };
+let x = rs(B, { summary: 'ORANGE / ORANGE / DR', client: 'ORANGE', requester_text: 'book orange studio 8 tomorrow 2-4pm vo, engineer drey' });
+ok(/\*Client:\* None/.test(x.s) && /^\*ORANGE \/ DR\*/.test(x.s), '"book orange ..." as ORANGE / ORANGE / DR -> "Client: None", title ORANGE / DR (Jessie then asks who the client is)', x.s.split('\n').slice(0, 3));
+ok(/\*Client:\* ORANGE/.test(rs(OB, { summary: 'ORANGE / ORANGE / DR', client: 'ORANGE', requester_text: 'book orange studio 8 tomorrow 2-4pm vo, engineer drey' }).s), '  (v67: Client: ORANGE)');
+x = rs(B, { summary: 'ORANGE / ORANGE / DR', client: 'ORANGE', requester_text: 'book orange for orange, studio 8 tomorrow 2-4pm vo' });
+ok(/\*Client:\* ORANGE/.test(x.s), '"for orange" typed -> the client stands', x.s.split('\n')[1]);
+x = rs(B, { summary: 'ORANGE / ORANGE / DR', client: 'ORANGE', requester_text: 'project orange, client orange, studio 8 tomorrow 2-4pm' });
+ok(/\*Client:\* ORANGE/.test(x.s), '"client orange" typed -> the client stands');
+x = rs(B, { summary: 'ORANGE / ORANGE / DR', client: 'ORANGE', requester_text: 'book orange for studio 8 tomorrow 2-4pm vo, engineer drey' });
+ok(/\*Client:\* None/.test(x.s), '"for studio 8" is not naming the client -> still Client: None', x.s.split('\n')[1]);
+x = rs(B, { summary: 'ORANGE / Jem Lim / DR', client: 'Jem Lim', requester_text: 'book orange studio 8 tomorrow 2-4pm, client Jem Lim' });
+ok(/\*Client:\* Jem Lim/.test(x.s), 'a real client -> unchanged');
+
 console.log(`\n${fail ? 'FAIL' : 'OK'} - ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
