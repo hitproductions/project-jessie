@@ -6,7 +6,7 @@
 const fs = require('fs'), path = require('path');
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
-const M = WF(process.env.MAIN || 'project-jessie-v200.json'), O99 = WF('project-jessie-v199.json'), OM = WF('imported/project-jessie-v197-imported.json'), O98 = WF('imported/project-jessie-v198-imported.json');
+const M = WF(process.env.MAIN || 'project-jessie-v201.json'), O99 = WF('project-jessie-v199.json'), O200 = WF('imported/project-jessie-v200-imported.json'), OM = WF('imported/project-jessie-v197-imported.json'), O98 = WF('imported/project-jessie-v198-imported.json');
 let pass = 0, fail = 0;
 const ok = (c, msg, d) => { if (c) { pass++; console.log('  ok    ' + msg); } else { fail++; console.log('  FAIL  ' + msg + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 500))); } };
 const wrap = it => ({ first: () => it[0], all: () => it, last: () => it[it.length - 1] });
@@ -133,6 +133,22 @@ console.log('v200 - the yes moves what the card showed (live 30 Sep 16:56: one y
   const single = bf(M, [U('book qaone ...'), B('*QAONE / DR*\n*Date:* Tuesday, November 2, 2027\n*Time:* 10:00 AM – 12:00 PM\n*Room:* Studio 8\n\nBook it? Reply yes or no.'), U('yes'), B('Booked.'), U('move it to studio 7 at 3pm'),
     B('*QAONE / DR*\n*Now:* Tuesday, November 2, 2027, 10:00 AM – 12:00 PM, Studio 8\n*Moving to:* Tuesday, November 2, 2027, 3:00 PM – 5:00 PM, Studio 7\n\nMove it? Reply yes or no.'), U('yes')]);
   ok(single.approvedMove && single.approvedMove.new_rooms === 'Studio 7' && single.approvedMove.booking_date === '2027-11-02', 'any move card (not only a series): the yes moves what it showed, a new room included', single.approvedMove); }
+
+console.log('v201 - the yes to the next card, and the series summary engineer (live 30 Sep 17:04-17:07)');
+{ const pc = (w, lastBot) => { const hist = [{ text: 'yes', user: ME, ts: '1790900003.1' }, { text: lastBot, bot_id: 'B1', ts: '1790900002.1' }];
+    const $ = n => ({ first: () => ({ json: n === 'Gate Context' ? { gate: { saidYes: true }, confirmedCancel: false } : n === 'Slack Trigger' ? hist[0] : {} }), all: () => (n === 'Get Recent Messages' ? hist : []).map(j => ({ json: j })) });
+    return new Function('$', '$input', code(w, 'Prepared Cancel'))($, wrap([{ json: {} }]))[0].json._alreadyDone; };
+  const movedCard = 'Moved "QASER / HL" on Tuesday, November 2, 2027 to 3:00 PM – 5:00 PM.\n\n*QASER / HL*\n*Now:* Tuesday, November 9, 2027, 10:00 AM – 12:00 PM, Studio 8\n*Moving to:* Tuesday, November 9, 2027, 3:00 PM – 5:00 PM, Studio 8\n\nMove it? Reply yes or no.';
+  ok(pc(M, movedCard) === '', '"Moved ..." with the next card after it -> the yes goes on (it is that card\'s yes)', pc(M, movedCard));
+  ok(pc(O200, movedCard) === "That's already moved - nothing else was changed.", "  (v200: \"That's already moved\" - 9 Nov never moved)");
+  ok(pc(M, 'Moved "QASER / HL" to Tuesday, November 2, 2027, 3:00 PM – 5:00 PM in Studio 8.') === "That's already moved - nothing else was changed.", 'a plain "Moved ..." then yes -> still "already moved"');
+  ok(pc(M, 'Booked.') === "That's already booked - nothing else was changed.", 'a plain "Booked." then yes -> still "already booked"');
+  const ser = '*QASER / HL*\n*Dates (2):*\n- Tuesday, 2 November 2027\n- Tuesday, 9 November 2027\n*Time:* 10:00 AM – 12:00 PM\n*Room:* Studio 8\n*Session Type:* VO Recording\n*Client:* None\n*Engineer:* Howard\n*Booked by:* Howard Luistro\n\nBook it? Reply yes or no.';
+  const out = gp(M, {}, [], ser);
+  ok(/\*Engineer:\* Howard Luistro\n/.test(out), 'series summary "Engineer: Howard" -> "Howard Luistro" (one person in Bookers)', out.split('\n').filter(l => /Engineer/.test(l)));
+  ok(/\*Engineer:\* Howard\n/.test(gp(O200, {}, [], ser)), '  (v200: "Howard")');
+  ok(/\*Engineer:\* Drey\b|\*Engineer:\* Daryl Reyes/.test(gp(M, {}, [], ser.replace('*Engineer:* Howard', '*Engineer:* Drey'))) , 'a nickname ("Drey") -> resolved or left, never guessed');
+  ok(/\*Engineer:\* Nobody Here/.test(gp(M, {}, [], ser.replace('*Engineer:* Howard', '*Engineer:* Nobody Here'))), 'a name nobody on staff has -> left as it is'); }
 
 console.log(`\n${fail ? 'FAIL' : 'OK'} - ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
