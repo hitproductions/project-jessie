@@ -6,7 +6,7 @@
 const fs = require('fs'), path = require('path');
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
-const M = WF(process.env.MAIN || 'project-jessie-v199.json'), OM = WF('imported/project-jessie-v197-imported.json'), O98 = WF('imported/project-jessie-v198-imported.json');
+const M = WF(process.env.MAIN || 'project-jessie-v200.json'), O99 = WF('project-jessie-v199.json'), OM = WF('imported/project-jessie-v197-imported.json'), O98 = WF('imported/project-jessie-v198-imported.json');
 let pass = 0, fail = 0;
 const ok = (c, msg, d) => { if (c) { pass++; console.log('  ok    ' + msg); } else { fail++; console.log('  FAIL  ' + msg + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 500))); } };
 const wrap = it => ({ first: () => it[0], all: () => it, last: () => it[it.length - 1] });
@@ -102,6 +102,37 @@ console.log('v199 - the live QASER test (30 Sep 16:38): "all" -> the model carde
   ok(!/APPROVED IS THE CARD IN YOUR LAST MESSAGE ONLY/.test(bf(O98, [...conv, B(want), U('yes')]).notice || ''), '  (v198: nothing said - it moved both)');
   b = bf(M, [...conv.slice(0, 6), U('the 9th')]); o2 = gp(M, b, mv({ status: 'REJECTED', reason: 'NOT_CONFIRMED', card_text: card9.replace(/November 9/g, 'November 2') }), 'x');
   ok(/^\*QASER \/ HL\*\n\*Now:\* Tuesday, November 9, 2027/.test(o2) && !/_Next:/.test(o2), 'one date picked ("the 9th") -> that date\'s card, even if the model carded another', o2); }
+
+console.log('v200 - the yes moves what the card showed (live 30 Sep 16:56: one yes moved both dates on v199)');
+{ const QS = SUM.replace(/QATYPE2 \/ Jem Lim \/ DR/g, 'QASER / HL');
+  const card2 = '*QASER / HL*\n*Now:* Tuesday, November 2, 2027, 10:00 AM – 12:00 PM, Studio 8\n*Moving to:* Tuesday, November 2, 2027, 3:00 PM – 5:00 PM, Studio 8\n'
+    + "_Next: QASER / HL on Tuesday, November 9, 2027 - I'll show it after this one._\n\nMove it? Reply yes or no.";
+  const conv = [U('book qaser ...'), B(QS), U('yes'), B(BOOKED), U('make it 3pm instead'), B(ASK), U('all'), B(card2), U('yes')];
+  const b = bf(M, conv);
+  ok(JSON.stringify(b.approvedMove) === JSON.stringify({ title: 'QASER / HL', booking_date: '2027-11-02', new_start_iso: '2027-11-02T15:00:00+08:00', new_end_iso: '2027-11-02T17:00:00+08:00', new_rooms: '',
+     date_label: 'Tuesday, November 2, 2027', to_label: '3:00 PM – 5:00 PM' }), 'the yes -> approvedMove = the card: 2 Nov, 3-5 PM, same room', b.approvedMove);
+  // the Move Booking tool inputs, as n8n would evaluate them, for the model's SECOND call (9 Nov)
+  const V = M.nodes.find(n => n.name === 'Move Booking').parameters.workflowInputs.value;
+  const evalIn = (k, fromAI) => new Function('$', '$fromAI', 'return ' + V[k].replace(/^=\{\{ /, '').replace(/ \}\}$/, ''))(
+    n => ({ first: () => ({ json: n === 'Booked For' ? b : n === 'Gate Context' ? { confirmedMove: true } : {} }) }), () => fromAI);
+  const second = { title: 'QASER / HL', booking_date: '2027-11-09', new_start_iso: '2027-11-09T15:00:00+08:00', new_end_iso: '2027-11-09T17:00:00+08:00', new_rooms: '' };
+  ok(['title', 'booking_date', 'new_start_iso', 'new_end_iso'].every(k => evalIn(k, second[k]) === b.approvedMove[k]), 'the model asks to move 9 Nov too -> Move Booking still gets 2 Nov (the card)',
+     ['booking_date', 'new_start_iso'].map(k => evalIn(k, second[k])));
+  ok(evalIn('new_rooms', 'Studio 7') === '', 'a room the card did not show is not used');
+  const bNo = { ...b };
+  const evalNo = (k, v) => new Function('$', '$fromAI', 'return ' + V[k].replace(/^=\{\{ /, '').replace(/ \}\}$/, ''))(
+    n => ({ first: () => ({ json: n === 'Booked For' ? bNo : n === 'Gate Context' ? { confirmedMove: false } : {} }) }), () => v);
+  ok(evalNo('booking_date', '2027-11-09') === '2027-11-09', 'not an approved move (no yes to a card) -> the model\'s value, as before');
+  ok(!bf(O99, conv).approvedMove, '  (v199: nothing fixed the inputs - it moved both)');
+  const NC = b.seriesNextCard;
+  const o3 = gp(M, b, mv({ status: 'MOVED', title: 'QASER / HL' }), 'Moved both sessions to 3:00 PM – 5:00 PM:\n- November 2, 2027 (Tue)\n- November 9, 2027 (Tue)');
+  ok(o3 === 'Moved "QASER / HL" on Tuesday, November 2, 2027 to 3:00 PM – 5:00 PM.\n\n' + NC, 'the reply: code-written "Moved ... on 2 Nov" then the 9 Nov card - not "Moved both sessions"', o3);
+  ok(/\*Now:\* Tuesday, November 9, 2027, 10:00 AM – 12:00 PM/.test(NC), '  the 9 Nov card shows where 9 Nov really is (it did not move)');
+  const b2 = bf(M, [...conv.slice(0, -1), U('yes'), B('Moved "QASER / HL" on Tuesday, November 2, 2027 to 3:00 PM – 5:00 PM.\n\n' + NC), U('yes')]);
+  ok(b2.approvedMove && b2.approvedMove.booking_date === '2027-11-09' && b2.approvedMove.new_start_iso === '2027-11-09T15:00:00+08:00', 'the next yes -> the 9 Nov card is the move', b2.approvedMove);
+  const single = bf(M, [U('book qaone ...'), B('*QAONE / DR*\n*Date:* Tuesday, November 2, 2027\n*Time:* 10:00 AM – 12:00 PM\n*Room:* Studio 8\n\nBook it? Reply yes or no.'), U('yes'), B('Booked.'), U('move it to studio 7 at 3pm'),
+    B('*QAONE / DR*\n*Now:* Tuesday, November 2, 2027, 10:00 AM – 12:00 PM, Studio 8\n*Moving to:* Tuesday, November 2, 2027, 3:00 PM – 5:00 PM, Studio 7\n\nMove it? Reply yes or no.'), U('yes')]);
+  ok(single.approvedMove && single.approvedMove.new_rooms === 'Studio 7' && single.approvedMove.booking_date === '2027-11-02', 'any move card (not only a series): the yes moves what it showed, a new room included', single.approvedMove); }
 
 console.log(`\n${fail ? 'FAIL' : 'OK'} - ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
