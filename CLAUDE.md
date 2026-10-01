@@ -49,7 +49,8 @@ Then orient them, in plain language, drawing on *Where things stand* below:
 - what Jessie is, and that launch is **12 October 2026** (dev freeze 23 Sep)
 - the live versions, and whether anything is failing (`./scripts/health`)
 - what changed since the last commit (`git log`)
-- the biggest open risk (the outages — unsolved, see `docs/outages/OUTAGES.md`) and the
+- the biggest open risk (the outages - a Cloudflare exemption rule for the webhooks went in on 1 Oct; being watched, see
+  `docs/outages/OUTAGES.md`) and the
   one or two most pressing items from `PENDING.md`
 
 And whenever you are about to change a workflow, **pull it first and build from
@@ -149,6 +150,9 @@ and the one lookup that would settle it. Two theories in it were confidently wro
 that is written up there too. `docs/outages/MONITOR-SETUP.md` is the external monitor that would
 timestamp these properly and probe from outside our network. **This is the largest
 open risk, and it is not in the workflows.**
+**1 Oct 2026: the fix went in** - a Cloudflare exemption (skip) rule for Jessie's and Posty's webhooks, set after the
+zone moved to Pro; both bots answered again immediately. It went silent at ~09:30 PHT on 30 Sep and 1 Oct, so watch
+that window for a few days before calling it solved (PENDING 21).
 
 **Safety nets already in place:**
 - a daily pruner (04:00) keeps the execution table from filling the SQLite database
