@@ -1043,7 +1043,7 @@ suite('Check Conflicts — department, booking type, Localization title (v52)', 
   if(T73){ r=run(Object.assign({},base,{session_type:'VO Recording',client:'Acme'}),[{id:'r3',fields:{Name:'Acme','Client Type':['Entertainment']}}]);
     check('v73','the record wins over "client work" (Entertainment)',r.REQ&&r.REQ.bookingType==='Entertainment',JSON.stringify(r.REQ&&r.REQ.bookingType)); }
   r=run(Object.assign({},base,{session_type:'VO Recording',client:'Sharon Ambas',requester_text:''}),[{id:'r2',fields:{Name:'Sharon Ambas','Client Type':['External','Personal']}}]);
-  check('d52','a client tagged both asks External or Personal',r.reason==='NEED_BOOKING_TYPE'&&(!T73||/Advertising or personal\?/.test(r.human)),r.human);
+  check('d52','a client tagged both asks External or Personal',r.reason==='NEED_BOOKING_TYPE'&&(!T73||/Advertising or personal\?|Is this advertising work, or personal\?/.test(r.human)),r.human);
   check('d52','a booking type they gave is kept',run(Object.assign({},base,{session_type:'VO Recording',client:'Sharon Ambas',bookingType:'Personal',requester_text:T73?'my own project':base.requester_text}),[{id:'r2',fields:{Name:'Sharon Ambas','Client Type':['External','Personal']}}]).REQ.bookingType==='Personal');
   if(whole.indexOf('CLIENT_CHECK')>=0) check('d52','a new client: booking type from their own words ("client work")',run(Object.assign({},base,{session_type:'VO Recording',client:'Brightline Media'}),[{}]).REQ.bookingType===(T73?'Advertising':'External'));
   else check('d52','a new client leaves the booking type to them (v52)',!run(Object.assign({},base,{session_type:'VO Recording',client:'Brightline Media'}),[{}]).reason);

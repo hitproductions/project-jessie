@@ -51,7 +51,20 @@ ok(T('book', { description: by('Ana Cadelina', 'U0BGQABJY11') }) === 'Internal',
 ok(T('book', { description: by('Cristel Cube', 'U0XXX') }) === 'Entertainment', 'a Localization booker -> Entertainment');
 ok(go(B, { ...BASE, summary: 'QATYPE / Acme / DR', client: 'Acme' }, { 'Get Client': client('Acme', ['Entertainment']) }).c.final_booking_type === 'Entertainment', 'the client\'s record wins over the department (Entertainment)');
 r = go(B, { ...BASE, summary: 'QATYPE / Acme / DR', client: 'Acme' }, { 'Get Client': client('Acme', ['Advertising', 'Personal']) });
-ok(r.c.reason === 'NEED_BOOKING_TYPE' && /"Advertising or personal\?"/.test(r.c.human), 'a record with two types -> "Advertising or personal?"', r.c.human);
+const V78 = /v78 \(decided 1 Oct\)/.test(code(B, 'Check Conflicts'));   // v78: "Is this advertising work, or personal?"
+ok(r.c.reason === 'NEED_BOOKING_TYPE' && (V78 ? /"Is this advertising work, or personal\?"/ : /"Advertising or personal\?"/).test(r.c.human), 'a record with two types -> ' + (V78 ? '"Is this advertising work, or personal?"' : '"Advertising or personal?"'), r.c.human);
+if (V78) {
+  // main's word-for-word relay (Guard Probe v203): the text that reaches Slack
+  const relay = h => { const m = String(h || '').match(/(?:Ask exactly this|naming both)[^"]*"((?:[^"\\]|\\.)+)"/); return m ? m[1].replace(/\\"/g, '"') : null; };
+  r = go(B, { ...BASE, summary: 'QATYPE / Leslie Tan / DR', client: 'Leslie Tan' }, { 'Get Client': client('Leslie Tan', ['Advertising', 'Internal'], 'Advertising Producer') });
+  ok(relay(r.c.human) === 'Is this advertising work, or internal?', 'live 15:30 case (Leslie Tan) -> "Is this advertising work, or internal?"', [r.c.human, relay(r.c.human)]);
+  r = go(B, { ...BASE, summary: 'QATYPE / Acme / DR', client: 'Acme' }, { 'Get Client': client('Acme', ['Advertising', 'Entertainment']) });
+  ok(relay(r.c.human) === 'Is this advertising work, or entertainment work?', 'Advertising + Entertainment tags -> "Is this advertising work, or entertainment work?"', relay(r.c.human));
+  r = go(B, { ...BASE, description: by('Nobody Listed', 'U0NONE'), requester_text: 'book studio 8 nov 18 2-4pm vo recording, engineer drey' });
+  const rl = relay(r.c.human);
+  ok(r.c.reason === 'NEED_BOOKING_TYPE' && rl === 'Who’s the client? (or "none") And is this advertising work, entertainment work, internal, or personal?', 'client + all four, relayed whole (v77 relayed "Who’s the client (or")', [r.c.reason, rl]);
+  ok(go(B, { ...BASE, description: by('Nobody Listed', 'U0NONE'), requester_text: BASE.requester_text + ', no client\nadvertising work' }).c.final_booking_type === 'Advertising', 'the answer "advertising work" -> Advertising');
+}
 ok(go(B, { ...BASE, bookingType: 'Personal', requester_text: BASE.requester_text + ', no client' }).c.final_booking_type === 'Advertising', 'a type the model sent but nobody said is not used');
 r = go(B, { ...BASE, description: by('BP Valenzuela', 'U0BP'), engineer: 'Drey', session_type: 'Music Vocal Recording', rooms: 'Studio F', requester_text: 'book studio f nov 18 2-4pm, music vocal recording, engineer drey, arranger me' });
 ok(r.c.reason === 'NEED_BOOKING_TYPE' && /"Client work or your own project\?"/.test(r.c.human), 'an arranger with no client -> "Client work or your own project?"', r.c.human);
