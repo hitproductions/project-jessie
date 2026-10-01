@@ -59,7 +59,9 @@ console.log('Guard Probe - series labels (PENDING 59) and "this week" dates (bug
     n => n === 'Slack Trigger' && said ? wrap([{ json: { text: said, user: 'U08V3CKDGJF' } }]) : wrap(rec(n) || [{ json: {} }]))[0].json.output;
   const SER = '*QASERIES / Jem Lim / DR*\n*Dates (3):*\n- Tuesday, 2 November 2027\n- Tuesday, 9 November 2027\n- Tuesday, 16 November 2027\n Time: 10:00 AM – 12:00 PM\n Room: Studio 8\n Session Type: VO Recording\n Client: Jem Lim\n Engineer: Daryl Reyes\n Department: Audio Post\n*Booked by:* Howard Luistro\n\nBook it? Reply yes or no.';
   let o = gp(M, SER, []);
-  ok(/\n\*Time:\* 10:00 AM – 12:00 PM\n\*Room:\* Studio 8\n\*Session Type:\* VO Recording\n\*Client:\* Jem Lim\n\*Engineer:\* Daryl Reyes\n\*Department:\* Audio Post\n/.test(o), 'series summary: " Time: ..." -> "*Time:* ..." on every detail line', o);
+  ok(/v204 \(PENDING 69\)/.test(code(M, 'Guard Probe'))   // v204: the series card is cut to title, dates, time, room
+    ? /\n\*Time:\* 10:00 AM – 12:00 PM\n\*Room:\* Studio 8\n/.test(o) && !/Client:|Engineer:|Session Type:/.test(o)
+    : /\n\*Time:\* 10:00 AM – 12:00 PM\n\*Room:\* Studio 8\n\*Session Type:\* VO Recording\n\*Client:\* Jem Lim\n\*Engineer:\* Daryl Reyes\n\*Department:\* Audio Post\n/.test(o), 'series summary: " Time: ..." -> "*Time:* ..." on every detail line', o);
   ok(/\n Time: /.test(gp(OM, SER, [])), '  (v192: the leading space, no bold label)');
   ok(gp(M, 'The Time: 3pm slot is taken.', []) === 'The Time: 3pm slot is taken.', 'not a series summary -> untouched');
   const RA = d => ({ action: { tool: 'Room_Availability', toolInput: { window_start: d + 'T10:00:00+08:00', window_end: d + 'T12:00:00+08:00', window_room: 'Studio 7' } }, observation: '[{"status":"OK"}]' });
