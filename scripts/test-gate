@@ -166,6 +166,16 @@ const cases = [
   // overrides "today" for this case. See docs/design/date-resolution.md.
   ['next on a Monday is the following week', 'book studio 7 next thursday', [],
    { dateNotice: /Thursday, 16 September 2027/ }, Date.UTC(2026, 8, 6, 8, 20, 0)],
+  // v209 (live 1 Oct 16:51): "later" / "this afternoon" is today; a time shift ("an hour later") is not a date.
+  // (the two "not a date" cases first - a date found by an earlier case is carried, as in a real conversation)
+  ['an hour later is not a date', 'make it an hour later', [],
+   { dateNotice: '' }],
+  ['later this week is not today', 'book studio 7 later this week', [],
+   { dateNotice: /^(?!.*Monday, 30 August 2027)/ }],
+  ['later = today',            'book studio 3 for DASHING 4-6pm later', [],
+   { dateNotice: /Monday, 30 August 2027/ }],
+  ['this afternoon = today',   'book studio 7 this afternoon 2-4pm', [],
+   { dateNotice: /Monday, 30 August 2027/ }],
 ];
 
 let failed = 0;
