@@ -476,6 +476,18 @@ Seen without any access to the server (IT's rule from 29 Sep), from Slack and th
   at 10:35 in Cloudflare's security analytics (screenshot, 30 Sep); whether Slack's deliveries were among them is not
   yet confirmed (Security -> Events, path /webhook/, from 09:20).
 
+## Data point: 1 October - silent again from ~09:29 PHT (ongoing at 10:40)
+
+- **Last turn processed: 09:28:45 PHT** - the Jessie Log sheet's last write, right after Jessie's 09:28:42 reply (the
+  DASHING summary). The requester's "yes" at 09:29:16 and again at 10:35:00 got no reaction and no reply; DASHING was
+  not booked (calendar checked).
+- **Same minute as 30 Sep** (last write 09:30:22, silent until 11:19-11:56). Two days running at ~09:29-09:30 PHT =
+  **~01:30 UTC** points at something on a daily schedule - on the VM (a cron job, a backup or snapshot, an update, a
+  restart), the tunnel (cloudflared re-connecting / a token refresh), or Cloudflare - rather than at random blocking.
+- **Who can check (IT):** what runs on the n8n host and the tunnel at 01:30 UTC daily; cloudflared and n8n logs from
+  01:25 UTC on 30 Sep and 1 Oct; Cloudflare Security -> Events for path `/webhook/` from 01:25 UTC. If it recovers
+  around 11:20-11:56 again, the recovery time is a second clue.
+
 ## What to do when it next drops
 
 Do these **while it is confirmed down**, and note the time.
