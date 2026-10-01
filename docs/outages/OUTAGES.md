@@ -487,6 +487,10 @@ Seen without any access to the server (IT's rule from 29 Sep), from Slack and th
 - **Who can check (IT):** what runs on the n8n host and the tunnel at 01:30 UTC daily; cloudflared and n8n logs from
   01:25 UTC on 30 Sep and 1 Oct; Cloudflare Security -> Events for path `/webhook/` from 01:25 UTC. If it recovers
   around 11:20-11:56 again, the recovery time is a second clue.
+- **Back up ~10:45 PHT, 1 Oct:** a Cloudflare exemption (skip) rule was set for Jessie's and Posty's webhooks, and both
+  answer again. So today's silence was Cloudflare's bot protection blocking Slack, as in PENDING 21. Still open: why it
+  started at the same minute two days running (a daily security-setting change or reset at 01:30 UTC?) - keep watching
+  09:25-09:35 PHT tomorrow. The rule itself (which expression, which protections it skips) to be copied here.
 
 ## What to do when it next drops
 
