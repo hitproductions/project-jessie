@@ -110,11 +110,7 @@ and Slack, no Airtable), runs on the same n8n instance.
 **Working, and proven live:** the main workflow and every sub-workflow are active and
 green. The confirmation gate, the ownership refusals (`NOT_YOURS`), Guard Probe's text
 rewrites and **Prepare Booking** (code writes the summary the requester approves) all
-hold in real conversations. Last verified end to end 2026-09-29 (17:24–17:55 PHT) through
-Slack on main v191 / Book Session v65 / Move v25 / Cancel v20 / Find v7: book, "make it 3pm
-instead" (card Now 2–4 / Moving to 3–5), "make it 5pm instead" after "Moved" (3–5 → 5–7),
-cancel; and a dateless "cancel QANODATE" found by name and cancelled - one event throughout,
-calendar clean after, every node green. Live since 30 Sep 17:12 PHT: main v201 / Book Session v72 /
+hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 PHT) through Slack on main v206 / Book Session v74 / Cancel v21 / Move v25 / Room Availability v12: book (short card, engineer defaulted), "make it 3pm instead" (Move Direct), the short cancel card and cancel, an internal-room card and "no", "is studio 7 free this week?" day by day, and a series (short card with the Expand Series dates, "none" carried on, "no") - one event at a time, calendar clean after. Before that, 2026-09-29 on main v191: book, move, move again, cancel, and a dateless cancel by name. Live since 30 Sep 17:12 PHT: main v201 / Book Session v72 /
 Room Availability v12 (hand imports, each change tried through Slack - the full end-to-end checklist has not been rerun
 on them yet; PENDING 68, Move Direct, comes first).
 The latest builds and what each fixed: [`docs/eod/EOD-2026-09-30.md`](docs/eod/EOD-2026-09-30.md).
