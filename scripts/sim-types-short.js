@@ -4,7 +4,8 @@
 const fs = require('fs'), path = require('path');
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
-const B = WF(process.env.BOOK || 'book-session-v73.json'), OB = WF('imported/book-session-v72-imported.json');
+const B = WF(process.env.BOOK || 'book-session-v74.json'), OB = WF('imported/book-session-v72-imported.json');
+const NOTE74 = !/self_engineer\) notes\.push/.test(code(B, 'Render Summary'));   // v74: the engineer note was removed
 let pass = 0, fail = 0;
 const ok = (c, msg, d) => { if (c) { pass++; console.log('  ok    ' + msg); } else { fail++; console.log('  FAIL  ' + msg + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 500))); } };
 const wrap = it => ({ first: () => it[0], all: () => it, last: () => it[it.length - 1] });
@@ -79,11 +80,11 @@ ok(/Howard Luistro/.test(r.F.Engineer) && !/down as the engineer/.test(r.s), '"m
 r = go(B, { ...BASE, engineer: 'Howard Luistro', description: by('Howard Luistro', 'U08V3CKDGJF', 'Howard Luistro'), requester_text: 'book studio 8 nov 18 2-4pm vo, no client\nme' });
 ok(!/down as the engineer/.test(r.s), 'a bare "me" answer -> no note');
 r = go(B, { ...BASE, engineer: '', description: 'Booked by: Howard Luistro | ref: U08V3CKDGJF', requester_text: 'book studio 8 nov 18 2-4pm vo, no client' });
-ok(/You’re down as the engineer\./.test(r.s), 'nobody named -> "You’re down as the engineer."', r.s);
+ok(/Howard Luistro/.test(r.F.Engineer) && /\/ HL\*/.test(r.s) && (NOTE74 ? !/down as the engineer/.test(r.s) : /You’re down as the engineer\./.test(r.s)), 'nobody named -> Howard Luistro engineers (v74: no note - the title\'s initials say who)', [r.F.Engineer, r.s]);
 { const ANG = { json: { id: 'recA', fields: { Name: 'Angela Dela Calzada', Notes: ' Goes by Anj', 'Client Type': ['Advertising'], 'Booker Type': 'Advertising Producer' } } };
   r = go(B, { summary: 'DASHING / Angelo Villegas / AV', client: 'Angelo Villegas', engineer: 'Angelo Villegas', session_type: 'VO Recording', rooms: 'Studio 8', bookingType: '',
     description: 'Engineer: Angelo Villegas | Booked by: Howard Luistro (for Angelo Villegas) | ref: U08V3CKDGJF', requester_text: 'book studio 8 for me nov 18 3-6pm, project dashing for anj\nangela', asked_text: 'Just to check - by Anj, do you mean Angelo Villegas (Music Arranger) or Angela Dela Calzada (Advertising Producer, a client)?' }, { 'Client Aliases': [ANG] });
-  ok(r.c.verdict === 'CLEAR' && /Howard Luistro/.test(r.F.Engineer) && /You’re down as the engineer/.test(r.s) && r.F.Client === 'Angela Dela Calzada', 'the live DASHING case: "angela" -> you engineer, not "Who is the engineer?"', [r.c.reason, r.F.Engineer, r.s]); }
+  ok(r.c.verdict === 'CLEAR' && /Howard Luistro/.test(r.F.Engineer) && r.F.Client === 'Angela Dela Calzada', 'the live DASHING case: "angela" -> you engineer, not "Who is the engineer?"', [r.c.reason, r.F.Engineer, r.s]); }
 
 console.log('Notes and questions, short');
 r = go(B, { ...BASE, start_iso: '2027-11-18T09:00:00+08:00', end_iso: '2027-11-18T18:00:00+08:00', requester_text: 'book qatype studio 8 nov 18 9am-6pm vo recording, engineer drey, no client' });

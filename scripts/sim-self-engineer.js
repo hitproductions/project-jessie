@@ -7,6 +7,7 @@ const FULL = require('./lib-full-summary.js');   // v73: the stored fields as th
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
 const B = WF(process.env.BOOK || 'book-session-v72.json'), OB = WF('imported/book-session-v70-imported.json'), O71 = WF('imported/book-session-v71-imported.json');
+const NONOTE = !/self_engineer\) notes\.push/.test(code(B, 'Render Summary'));   // Book Session v74: no note (the title's initials say who engineers)
 let pass = 0, fail = 0;
 const ok = (c, msg, d) => { if (c) { pass++; console.log('  ok    ' + msg); } else { fail++; console.log('  FAIL  ' + msg + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
 const wrap = it => ({ first: () => it[0], all: () => it, last: () => it[it.length - 1] });
@@ -25,7 +26,7 @@ const BASE = { summary: 'QASELF / HL', client: '', engineer: '', bookingType: 'E
   description: 'Booked by: Howard Luistro | ref: U08V3CKDGJF', requester_text: 'book qaself studio 7 tomorrow 2pm to 4pm, vo recording, no client, external', asked_text: '' };
 
 let r = go(B, BASE);
-ok(/\*Engineer:\* Howard Luistro \(Post Engineer\)/.test(r.s) && /^\*QASELF \/ HL\*/.test(r.s) && r.s.indexOf(NOTE) !== -1 && /Engineer: Howard Luistro/.test(r.c.final_description || ''),
+ok(/\*Engineer:\* Howard Luistro \(Post Engineer\)/.test(r.s) && /^\*QASELF \/ HL\*/.test(r.s) && (NONOTE ? /Howard Luistro/.test(r.s) : r.s.indexOf(NOTE) !== -1) && /Engineer: Howard Luistro/.test(r.c.final_description || ''),
    'no engineer named, requester is a Post Engineer -> Engineer: Howard Luistro (Post Engineer), QASELF / HL, and the note', r.s || r.c);
 ok(!/\*Engineer:\*/.test(go(OB, BASE).s), '  (v70: no Engineer line - it was up to the model)');
 r = go(B, { ...BASE, engineer: 'Drey', description: 'Engineer: Drey | Booked by: Howard Luistro | ref: U08V3CKDGJF', summary: 'QASELF / DR' });
@@ -46,9 +47,9 @@ ok(!(r.c.final_description || '').includes('Engineer: Howard'), 'not prepare mod
 console.log('v72 - the model already put the requester in (live QA 30 Sep 15:29, QASELF)');
 const ME = { ...BASE, engineer: 'Howard Luistro', description: 'Engineer: Howard Luistro | Booked by: Howard Luistro | ref: U08V3CKDGJF' };
 r = go(B, ME);
-ok(/\*Engineer:\* Howard Luistro \(Post Engineer\)/.test(r.s) && r.s.indexOf(NOTE) !== -1, 'the live case: Engineer: Howard Luistro from the model, nobody named -> the note', r.s || r.c);
+ok(/\*Engineer:\* Howard Luistro \(Post Engineer\)/.test(r.s) && (NONOTE ? /Howard Luistro/.test(r.s) : r.s.indexOf(NOTE) !== -1), 'the live case: Engineer: Howard Luistro from the model, nobody named -> the note', r.s || r.c);
 ok(go(O71, ME).s.indexOf(NOTE) === -1, '  (v71: no note)');
-ok(go(B, { ...ME, engineer: 'Howard', description: 'Engineer: Howard | Booked by: Howard Luistro | ref: U08V3CKDGJF' }).s.indexOf(NOTE) !== -1, '"Howard" (first name) from the model -> the note');
+ok(go(B, { ...ME, engineer: 'Howard', description: 'Engineer: Howard | Booked by: Howard Luistro | ref: U08V3CKDGJF' }).s.indexOf(NOTE) !== -1 || NONOTE, '"Howard" (first name) from the model -> the note (v74: none)');
 for (const t of ['book qaself studio 7 tomorrow 2pm to 4pm, vo recording, engineer howard', "book qaself studio 7 tomorrow 2pm to 4pm, vo recording, i'll engineer", 'book qaself studio 7 tomorrow 2pm to 4pm, vo recording, engineer me', 'book qaself studio 7 tomorrow 2pm to 4pm, vo recording, with howie'])
   ok(go(B, { ...ME, requester_text: t + ', no client, external' }).s.indexOf(NOTE) === -1, 'named themselves ("' + t.split(', ').pop() + '") -> no note');
 r = go(B, { ...BASE, engineer: 'Drey', summary: 'QASELF / DR', description: 'Engineer: Drey | Booked by: Howard Luistro | ref: U08V3CKDGJF' });
