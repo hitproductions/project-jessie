@@ -97,6 +97,18 @@ if (/v81 \(live 1 Oct 17:03\)/.test(code(B, 'Check Conflicts'))) {
   ok(S('Meeting', "book studio 8 tomorrow 2-4pm, let's meet the client, vo recording").reason === 'SESSION_TYPE_IS' && true, '"meet" is not taken over a full "vo recording"');
   ok(S('VO Recording', 'book studio 8 tomorrow 2-4pm even if late, vo').reason !== 'NEED_SESSION_TYPE', '"even" is not "event"');
 }
+if (/v82 \(live 1 Oct 19:11\)/.test(code(B, 'Check Conflicts'))) {
+  console.log('v82 - a studio with no session type sent (live 19:11: "CATS / Howard Luistro")');
+  const N = (txt, rooms, asked = '') => go(B, { ...BASE, session_type: '', rooms, summary: 'CATS / Howard Luistro', requester_text: txt, asked_text: asked, __keep80: true }, {}).c;
+  let c = N('book studio 8 tonight for project CATS 3-6pm', 'Studio 8');
+  ok(c.reason === 'NEED_SESSION_TYPE' && relay(c.human) === 'What kind of session is this?', 'live 19:11: no type sent for Studio 8 -> "What kind of session is this?"', [c.reason, relay(c.human)]);
+  c = N('mixing\nbook studio 8 tonight for project CATS 3-6pm', 'Studio 8', 'What kind of session is this?');
+  ok(/^Which one - /.test(relay(c.human) || ''), '... then "mixing" -> the choices', relay(c.human));
+  c = N('post mixing\nbook studio 8 tonight for project CATS 3-6pm', 'Studio 8', 'Which one - Post Mixing, Music Mixing, Localization Mixing or Localization Atmos Mixing?');
+  ok(c.reason === 'SESSION_TYPE_IS' && c.session_type === 'Post Mixing', '... then "post mixing" (model still sent none) -> told Post Mixing', [c.reason, c.session_type]);
+  ok(N('book likha tonight 3-6pm for a meeting', 'Likha').reason !== 'NEED_SESSION_TYPE', 'a conference room with no type -> not asked (internal)');
+  ok(N('book m3 tomorrow', 'M3').reason !== 'NEED_SESSION_TYPE', 'an M booth hold with no type -> not asked');
+}
 console.log('Live 16:40 - "for anj\'s project": which Anj?');
 const ANGELA = [{ json: { id: 'recA', fields: { Name: 'Angela Dela Calzada', Notes: 'Goes by Anj', 'Booker Type': 'Advertising Producer', 'Client Type': ['Advertising'] } } }];
 r = go(B, { ...BASE, summary: 'DASHING / HL', client: '', engineer: 'Howard Luistro', session_type: 'Localization Editing', rooms: 'Studio 3', description: 'Engineer: Howard Luistro | Booked by: ' + ME + ' (for Angelo Villegas) | ref: ' + REF, requester_text: "book studio 3 for anj's project DASHING 4-6pm later" }, { 'Client Aliases': ANGELA });
