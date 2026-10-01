@@ -91,5 +91,12 @@ ok(JSON.stringify(to('Booked For')) === '["Prepared Key"]' && JSON.stringify(to(
 const RP = M.nodes.find(n => n.name === 'Read Prepared');
 ok(RP.parameters.operation === 'get' && RP.parameters.dataTableId.value === 'CsdJhgDxCsqq9K9j' && RP.alwaysOutputData && RP.onError === 'continueRegularOutput', 'Read Prepared: the reference-cache table, never stops the turn');
 
+console.log('main v203 - Book Session\'s questions go out word for word');
+{ const gq = (human, out) => new Function('$input', '$', code(M, 'Guard Probe'))(wrap([{ json: { output: out, intermediateSteps: [{ action: { tool: 'Prepare_Booking' }, observation: JSON.stringify([{ verdict: 'REJECTED', reason: 'X', human }]) }] } }]),
+    n => wrap(mrec(n) || [{ json: {} }]))[0].json.output;
+  ok(gq('Nothing was prepared. Ask exactly this, in one message: "Who’s the client? (or \\"none\\")" Then prepare it again.', 'Sure! Who is the client for this one, and is it advertising?') === 'Who’s the client? (or "none")', 'the model\'s padded question -> exactly "Who’s the client? (or "none")"');
+  ok(gq('Nothing was prepared - the requester has not said which day. Ask exactly this: "Which day?" Do not assume today.', 'What date would you like?') === 'Which day?', '"Which day?"');
+  ok(gq('Studio 7 is taken then.', 'Studio 7 is taken then - want Studio 8?') === 'Studio 7 is taken then - want Studio 8?', 'a refusal with no scripted question -> the model\'s reply, as before'); }
+
 console.log(`\n${fail ? 'FAIL' : 'OK'} - ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

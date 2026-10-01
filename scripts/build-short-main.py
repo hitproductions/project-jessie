@@ -15,7 +15,9 @@ Small fixes found 1 Oct:
   "Who is the assigned engineer?" (Book Session v71 already did this for single bookings);
 - a change typed while a move card is showing is a change to THAT booking (it went to the date just moved);
 - a move card whose new time and room are where the booking already is becomes "That's already at ...".
-- the prompt asks for missing details in as few words as possible.
+- the prompt asks for missing details in as few words as possible;
+- Book Session's questions (client, type, engineer, arranger, date, which Anj ...) are sent word for word by Guard Probe,
+  not relayed by the model.
 """
 import json, sys, copy, uuid
 
@@ -81,7 +83,25 @@ GP_DEC_NEW = """    const _code = (text.match(/_check ([0-9a-f]{6,})_/) || [])[1
 
 # Guard: a move card that changes nothing
 GP_SAME_ANCHOR = "// v194: a compact list of this turn's tool calls"
-GP_SAME = r"""// --- v203: a move card whose new time and room are where the booking already is --------------------------------------
+GP_SAME = r"""// --- v203: Book Session's questions go out word for word -----------------------------------------------------------
+// Book Session writes the question ("Ask exactly this: "Who's the client? (or "none")"") and the model was trusted to
+// relay it - it reworded and padded them. When the latest booking call this turn refused with such a question, that
+// question is the reply.
+try {
+  const _s9 = (($input.first().json || {}).intermediateSteps) || [];
+  for (let i = _s9.length - 1; i >= 0; i--) {
+    const _t9 = String(((_s9[i] || {}).action || {}).tool || '').replace(/[_\s]+/g, ' ').toLowerCase();
+    if (!/^(prepare booking|book session)$/.test(_t9)) continue;
+    let _o9 = null; try { _o9 = [].concat(JSON.parse(String((_s9[i] || {}).observation || '')))[0]; } catch (e) {}
+    if (_o9 && _o9.verdict === 'REJECTED' && !_prepared) {
+      const _m9 = String(_o9.human || '').match(/(?:Ask exactly this|naming both)[^"]*"((?:[^"\\]|\\.)+)"/);
+      if (_m9) text = _m9[1].replace(/\\"/g, '"');
+    }
+    break;
+  }
+} catch (e) {}
+
+// --- v203: a move card whose new time and room are where the booking already is --------------------------------------
 // 1 Oct (QAMD): "make it 3pm" on a series already at 3-5 PM gave 3-5 -> 3-5 cards, and a yes re-created the event.
 try {
   const _nw = (text.match(/\*Now:\*\s*([^\n]+)/) || [])[1], _mv = (text.match(/\*Moving to:\*\s*([^\n]+)/) || [])[1];
