@@ -47,12 +47,11 @@ no longer shows it.
 1. **What the requester typed** - "personal", "my own" -> Personal; "internal", "Hit project", "Digicon", "meeting" ->
    Internal; "TVC", "ad", "commercial" -> Advertising; "dubbing", "series", "film" -> Entertainment.
 2. **The client's record** - its `Client Type` (one value). A named producer (`Booker Type` *... Producer*) -> Advertising.
-3. **The client is staff** (in Bookers) -> Personal.
-4. **A conference room or the Lobby, no client** -> Internal (no question).
-5. **The requester's defaults** - their own override, else their department's row. Someone in two departments: the
+3. **A conference room or the Lobby, no client** -> Internal (no question).
+4. **The requester's defaults** - their own override, else their department's row. Someone in two departments: the
    session decides (a Localization session type or project code -> Entertainment; otherwise their other department).
-   A Music requester with no client -> step 6 ("Client work or your own project?").
-6. **Ask one short question** with only that row's plausible types: "Advertising or internal?"
+   A Music requester with no client -> step 5 ("Client work or your own project?").
+5. **Ask one short question** with only that row's plausible types: "Advertising or internal?"
 
 **Engineer:**
 1. Named by the requester ("engineer Drey", "with Drey").
