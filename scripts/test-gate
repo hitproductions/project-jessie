@@ -176,6 +176,13 @@ const cases = [
    { dateNotice: /Monday, 30 August 2027/ }],
   ['this afternoon = today',   'book studio 7 this afternoon 2-4pm', [],
    { dateNotice: /Monday, 30 August 2027/ }],
+  // v210 (live 2 Oct 01:50): "ye" / "yea" are a yes too (still a literal list)
+  ['ye approves a booking',    'ye', [usr('ye'), bookSummary],
+   { confirmed: true, confirmedCancel: false }],
+  ['yea approves a booking',   'yea', [usr('yea'), bookSummary],
+   { confirmed: true }],
+  ['yesterday is not a yes',   'yesterday', [usr('yesterday'), bookSummary],
+   { confirmed: false }],
 ];
 
 let failed = 0;
