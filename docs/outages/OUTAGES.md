@@ -492,6 +492,16 @@ Seen without any access to the server (IT's rule from 29 Sep), from Slack and th
   started at the same minute two days running (a daily security-setting change or reset at 01:30 UTC?) - keep watching
   09:25-09:35 PHT tomorrow. The rule itself (which expression, which protections it skips) to be copied here.
 
+## Data point: 1 October 11:18 PHT - late deliveries after the exemption rule
+
+Turn Log (CSV, 1 Oct): "move to 10am instead" sent 11:18:02 and again 11:18:20 reached n8n only at **11:19:09 (66 s)**
+and **11:19:57 (97 s)** - Slack's first delivery failed and its retry got through - and the "reset" sent between them
+(11:18:42) arrived on time. The two late copies were dropped by the Duplicate Check (a reset had been answered since),
+so the requester saw silence. Earlier the same morning, before the rule: "hello" 67 s and "angela" 72 s late.
+**So some deliveries still fail after the 1 Oct exemption rule** - either the rule does not match every Slack request
+(path, method, or a security feature it does not skip) or something else drops them. Cloudflare Security -> Events for
+`/webhook/` around 11:18 PHT (03:18 UTC) on 1 Oct would show which.
+
 ## What to do when it next drops
 
 Do these **while it is confirmed down**, and note the time.
