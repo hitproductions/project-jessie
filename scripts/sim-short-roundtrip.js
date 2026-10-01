@@ -84,7 +84,7 @@ ok(!bf(M, [U('book qamd studio 8 nov 2 10am, no engineer')]).engineerDefault, '"
 console.log('The prompt and the tools');
 const sm = M.nodes.find(n => n.name === 'Jessie AI Agent').parameters.options.systemMessage;
 ok(/## Booking type/.test(sm) && !/External or Personal/.test(sm) && /Advertising\*, \*Entertainment\*, \*Internal\* or \*Personal/.test(sm), 'the prompt: four types, worked out by Prepare Booking');
-ok(/Who's engineering\?/.test(sm) && /in as few words as possible/.test(sm), 'the prompt: short questions');
+ok(/Who's (?:engineering|the engineer)\?/.test(sm) && /in as few words as possible/.test(sm), 'the prompt: short questions');
 ok(['Prepare Booking', 'Book Session', 'Book Series'].every(t => /Advertising, Entertainment, Internal or Personal/.test(M.nodes.find(n => n.name === t).parameters.workflowInputs.value.bookingType)), 'the three bookingType inputs');
 const to = n => ((((M.connections[n] || {}).main || [])[0]) || []).map(t => t.node);
 ok(JSON.stringify(to('Booked For')) === '["Prepared Key"]' && JSON.stringify(to('Prepared Key')) === '["Read Prepared"]' && JSON.stringify(to('Read Prepared')) === '["Prepared Booking"]', 'wiring: Booked For -> Prepared Key -> Read Prepared -> Prepared Booking');

@@ -90,7 +90,7 @@ console.log('Notes and questions, short');
 r = go(B, { ...BASE, start_iso: '2027-11-18T09:00:00+08:00', end_iso: '2027-11-18T18:00:00+08:00', requester_text: 'book qatype studio 8 nov 18 9am-6pm vo recording, engineer drey, no client' });
 ok(/Heads up: 9 hours is longer than VO Recording usually runs \(1 hour – 3 hours\)\./.test(r.s), 'the length heads-up', r.s);
 const arr = code(B, 'Check Conflicts');
-ok(/Who\\u2019s the arranger\?/.test(arr) && /Ask exactly this: "Which day\?"/.test(arr) && /"Who\\u2019s engineering\?"/.test(arr), 'shorter arranger / date / engineer questions');
+ok(/Who\\u2019s the arranger\?/.test(arr) && /Ask exactly this: "Which day\?"/.test(arr) && /"Who\\u2019s (?:engineering|the engineer)\?"/.test(arr), 'shorter arranger / date / engineer questions');
 
 console.log('Wiring');
 const to = n => ((((B.connections[n] || {}).main || [])[0]) || []).map(t => t.node);
