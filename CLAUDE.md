@@ -113,7 +113,7 @@ rewrites and **Prepare Booking** (code writes the summary the requester approves
 hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 PHT, series rerun 14:53–14:56 on main v207 / Book Session v75; the four booking types 15:12–15:24 on main v208 / Book Session v77 - Advertising, Entertainment from Netflix's record, Internal for a Likha meeting, Personal from "my own project", each booked, read back from the event and cancelled) through Slack on main v206 / Book Session v74 / Cancel v21 / Move v25 / Room Availability v12: book (short card, engineer defaulted), "make it 3pm instead" (Move Direct), the short cancel card and cancel, an internal-room card and "no", "is studio 7 free this week?" day by day, and a series (short card with the Expand Series dates, "none" carried on, "no") - one event at a time, calendar clean after. Before that, 2026-09-29 on main v191: book, move, move again, cancel, and a dateless cancel by name. Live since 30 Sep 17:12 PHT: main v201 / Book Session v72 /
 Room Availability v12 (hand imports, each change tried through Slack - the full end-to-end checklist has not been rerun
 on them yet; PENDING 68, Move Direct, comes first).
-The latest builds and what each fixed: [`docs/eod/EOD-2026-09-30.md`](docs/eod/EOD-2026-09-30.md).
+The latest builds and what each fixed: [`docs/eod/EOD-2026-10-01.md`](docs/eod/EOD-2026-10-01.md).
 
 **Testing through Slack.** An end-to-end test can be run by sending the test messages in the
 tester's DM with Jessie through the Slack connector (with the tester's go-ahead for the exact
