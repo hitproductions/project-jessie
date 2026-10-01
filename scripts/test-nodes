@@ -519,6 +519,12 @@ suite('Check Conflicts — booked-for is never the client', ()=>{
   check('bf','on-behalf external, no client, PROJECT / initials -> CLEAR',run({description:forK,bookingType:'External',client:'',summary:'SMOKETEST2 / TL'})==='CLEAR');
   check('bf','on-behalf external, client IS the booked-for -> MISSING_CLIENT',run({description:forK,bookingType:'External',client:'Kristine Trocino',summary:'X / Kristine Trocino / TL'})==='MISSING_CLIENT');
   check('bf','on-behalf external, booked-for in the title client slot -> MISSING_CLIENT',run({description:forK,bookingType:'External',client:'Acme Records',summary:'X / Kristine Trocino / TL'})==='MISSING_CLIENT');
+  if(/v76: client work under the four types/.test(whole)){   // v76: the guard ran only for "External" - no booking has that type since v73
+    check('bf','v76: on-behalf Advertising, client IS the booked-for -> MISSING_CLIENT',run({description:forK,bookingType:'Advertising',client:'Kristine Trocino',summary:'X / Kristine Trocino / TL'})==='MISSING_CLIENT');
+    check('bf','v76: on-behalf Entertainment, booked-for in the title -> MISSING_CLIENT',run({description:forK,bookingType:'Entertainment',client:'',summary:'X / Kristine Trocino / TL'})==='MISSING_CLIENT');
+    check('bf','v76: on-behalf Advertising, distinct real client -> CLEAR',run({description:forK,bookingType:'Advertising',client:'Acme Records',summary:'X / Acme Records / TL'})==='CLEAR');
+    check('bf','v76: on-behalf Internal / Personal -> not this guard',run({description:forK,bookingType:'Internal',client:'',summary:'X / Kristine Trocino / TL'})==='CLEAR'&&run({description:forK,bookingType:'Personal',client:'',summary:'X / Kristine Trocino / TL'})==='CLEAR');
+  }
   check('bf','on-behalf external, distinct real client -> CLEAR',run({description:forK,bookingType:'External',client:'Acme Records',summary:'SMOKETEST2 / Acme Records / TL'})==='CLEAR');
   check('bf','self-booking (no for-person) -> CLEAR, guard skipped',run({description:'Engineer: Tara Lim | Booked by: Howard Luistro | ref: U1',bookingType:'External',client:'',summary:'X / Acme / TL'})==='CLEAR');
   // Booked For hands over a canonical name; the client slot may hold only the first name or a nickname.
