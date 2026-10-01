@@ -30,9 +30,9 @@ no longer shows it.
 | Department / role | Default type | Also possible | Engineer | Client | Usual rooms |
 |---|---|---|---|---|---|
 | Audio Post (Post Engineer) | Advertising | Internal (Digicon, meetings) | self, unless they name one | usually yes | studios |
-| Music - Arranger | Advertising | Personal, Internal | ask: "Who's engineering?" (a music engineer); arranger = self | usually yes | studios |
+| Music - Arranger | Advertising | Personal, Internal | ask: "Who's engineering?" (a music engineer); arranger = self | usually yes - **no client: ask "Client work or your own project?"** (arrangers book their own sessions without saying so) | studios |
 | Music - Music Engineer | Advertising | Entertainment (localization, artist recording) | self; ask for the arranger | usually yes | studios |
-| Localization | Entertainment | - | self (Loc Engineer) | project code | studios / booths |
+| Localization | Entertainment - **always, including people also in Audio Post: the session (a Localization session type / project code) decides** | - | self (Loc Engineer) | project code | studios / booths |
 | Sales & Accounts | Advertising | Internal | ask (they book for Post / Music) | usually yes | studios, conference rooms, M booths for clients |
 | Marketing, Business Development | Internal | - | none | no | conference rooms (Dilan: Studio E) |
 | Video Post | Internal | Advertising? | none | no | conference rooms, Studio E |
@@ -49,8 +49,9 @@ no longer shows it.
 2. **The client's record** - its `Client Type` (one value). A named producer (`Booker Type` *... Producer*) -> Advertising.
 3. **The client is staff** (in Bookers) -> Personal.
 4. **A conference room or the Lobby, no client** -> Internal (no question).
-5. **The requester's defaults** - their own override, else their department's row. Two departments with different
-   defaults -> step 6.
+5. **The requester's defaults** - their own override, else their department's row. Someone in two departments: the
+   session decides (a Localization session type or project code -> Entertainment; otherwise their other department).
+   A Music requester with no client -> step 6 ("Client work or your own project?").
 6. **Ask one short question** with only that row's plausible types: "Advertising or internal?"
 
 **Engineer:**
