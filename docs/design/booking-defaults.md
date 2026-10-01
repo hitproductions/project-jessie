@@ -7,8 +7,8 @@ is booking and what they typed, and asks only what is left, in a few words.*
 
 | Type | What it is |
 |---|---|
-| **Advertising** | Client work done by Audio Post and Music |
-| **Entertainment** | Client work done by Localization, sometimes Music (artist recording, localization music) |
+| **Advertising** | Client work done by Audio Post, Music, and Sales & Accounts |
+| **Entertainment** | Client work done by Localization; sometimes Music (artist recording, localization music) and Audio Post (films, non-advertising post-production) |
 | **Internal** | Hit Productions' own purposes - no external client (meetings, Digicon, conventions, maintenance, internal events) |
 | **Personal** | Not Hit Productions work - an employee's own session (e.g. an arranger's personal music project) |
 
@@ -29,7 +29,7 @@ no longer shows it.
 
 | Department / role | Default type | Also possible | Engineer | Client | Usual rooms |
 |---|---|---|---|---|---|
-| Audio Post (Post Engineer) | Advertising | Internal (Digicon, meetings) | self, unless they name one | usually yes | studios |
+| Audio Post (Post Engineer) | Advertising | Internal (Digicon, meetings), Entertainment (films, non-advertising post-production) | self, unless they name one | usually yes | studios |
 | Music - Arranger | Advertising | Personal, Internal | ask: "Who's engineering?" (a music engineer); arranger = self | usually yes - **no client: ask "Client work or your own project?"** (arrangers book their own sessions without saying so) | studios |
 | Music - Music Engineer | Advertising | Entertainment (localization, artist recording) | self; ask for the arranger | usually yes | studios |
 | Localization | Entertainment - **always, including people also in Audio Post: the session (a Localization session type / project code) decides** | - | self (Loc Engineer) | project code | studios / booths |
