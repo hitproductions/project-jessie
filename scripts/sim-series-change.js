@@ -145,10 +145,11 @@ console.log('v201 - the yes to the next card, and the series summary engineer (l
   ok(pc(M, 'Booked.') === "That's already booked - nothing else was changed.", 'a plain "Booked." then yes -> still "already booked"');
   const ser = '*QASER / HL*\n*Dates (2):*\n- Tuesday, 2 November 2027\n- Tuesday, 9 November 2027\n*Time:* 10:00 AM – 12:00 PM\n*Room:* Studio 8\n*Session Type:* VO Recording\n*Client:* None\n*Engineer:* Howard\n*Booked by:* Howard Luistro\n\nBook it? Reply yes or no.';
   const out = gp(M, {}, [], ser);
-  ok(/\*Engineer:\* Howard Luistro\n/.test(out), 'series summary "Engineer: Howard" -> "Howard Luistro" (one person in Bookers)', out.split('\n').filter(l => /Engineer/.test(l)));
+  const V205 = /v205: also a plain/.test(code(M, 'Guard Probe'));   // v205: this card is cut - no Engineer line at all
+  ok(V205 ? !/Engineer/.test(out) : /\*Engineer:\* Howard Luistro\n/.test(out), 'series summary "Engineer: Howard" -> "Howard Luistro" (one person in Bookers)', out.split('\n').filter(l => /Engineer/.test(l)));
   ok(/\*Engineer:\* Howard\n/.test(gp(O200, {}, [], ser)), '  (v200: "Howard")');
-  ok(/\*Engineer:\* Drey\b|\*Engineer:\* Daryl Reyes/.test(gp(M, {}, [], ser.replace('*Engineer:* Howard', '*Engineer:* Drey'))) , 'a nickname ("Drey") -> resolved or left, never guessed');
-  ok(/\*Engineer:\* Nobody Here/.test(gp(M, {}, [], ser.replace('*Engineer:* Howard', '*Engineer:* Nobody Here'))), 'a name nobody on staff has -> left as it is'); }
+  ok(V205 || /\*Engineer:\* Drey\b|\*Engineer:\* Daryl Reyes/.test(gp(M, {}, [], ser.replace('*Engineer:* Howard', '*Engineer:* Drey'))) , 'a nickname ("Drey") -> resolved or left, never guessed');
+  ok(V205 || /\*Engineer:\* Nobody Here/.test(gp(M, {}, [], ser.replace('*Engineer:* Howard', '*Engineer:* Nobody Here'))), 'a name nobody on staff has -> left as it is'); }
 
 console.log(`\n${fail ? 'FAIL' : 'OK'} - ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
