@@ -77,7 +77,9 @@ ok(JSON.stringify(to(M, 'Book Direct?', 1)) === '["Prepared Cancel"]' && JSON.st
 const _cd = JSON.stringify(to(M, 'Cancel Direct'));
 ok(JSON.stringify(to(M, 'Cancel Direct?', 0)) === '["Cancel Direct"]' && (_cd === '["Cancel Direct Reply"]' || (_cd === '["Next Cancel?"]' && JSON.stringify(to(M, 'Next Cancel?', 1)) === '["Cancel Direct Reply"]')) && JSON.stringify(to(M, 'Cancel Direct Reply')) === '["Send Reply"]', 'direct path: Cancel Direct -> reply -> Send Reply, the AI Agent is not on it');
 const _rest = to(M, 'Cancel Direct?', 1);   // v178 puts Already Done? (bug 17) between Cancel Direct? and the agent
-ok(JSON.stringify(_rest) === '["Jessie AI Agent"]' || (JSON.stringify(_rest) === '["Already Done?"]' && JSON.stringify(to(M, 'Already Done?', 1)) === '["Jessie AI Agent"]'), 'everything else goes to the AI Agent as before');
+ok(JSON.stringify(_rest) === '["Jessie AI Agent"]' || (JSON.stringify(_rest) === '["Already Done?"]' && JSON.stringify(to(M, 'Already Done?', 1)) === '["Jessie AI Agent"]')
+   || (JSON.stringify(_rest) === '["Move Direct?"]' && JSON.stringify(to(M, 'Move Direct?', 1)) === '["Already Done?"]' && JSON.stringify(to(M, 'Already Done?', 1)) === '["Jessie AI Agent"]'),   // v202: via Move Direct?
+   'everything else goes to the AI Agent as before');
 ok(node(M, 'Cancel Direct').parameters.workflowId.value === 'bAyDw7udhmY0NL38' && node(M, 'Cancel Direct').parameters.workflowInputs.value.event_id === '', 'Cancel Direct calls Cancel Booking with the card, never a model event id');
 ok(JSON.stringify(M.connections['Prepare Cancel']) === JSON.stringify(M.connections['Cancel Booking']), 'Prepare Cancel is wired to the agent like the other tools');
 const reply = res => new Function('$input', '$', code(M, 'Cancel Direct Reply'))(wrap([{ json: res }]), n => n === 'Cancel Direct' ? wrap([{ json: res }]) : wrap([{ json: {} }]))[0].json.output;   // v187 reads Cancel Direct by name

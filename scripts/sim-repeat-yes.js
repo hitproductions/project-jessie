@@ -24,7 +24,9 @@ const c = run('yes', true, card, true);
 ok(c._cancelDirect.use === true && c._alreadyDone === '', 'a yes to a cancel card still goes to Cancel Direct');
 ok(run('yes', true, 'Booked.').x === 1, 'input passed through unchanged');
 const to = (n, b = 0) => ((((M.connections[n] || {}).main || [])[b]) || []).map(t => t.node);
-ok(JSON.stringify(to('Cancel Direct?', 1)) === '["Already Done?"]' && JSON.stringify(to('Already Done?', 0)) === '["Already Done Reply"]'
+// v202: Move Direct? sits between Cancel Direct? and Already Done? (a confirmed move card goes to Move Booking directly)
+const _afterCancel = JSON.stringify(to('Cancel Direct?', 1)) === '["Already Done?"]' || (JSON.stringify(to('Cancel Direct?', 1)) === '["Move Direct?"]' && JSON.stringify(to('Move Direct?', 1)) === '["Already Done?"]');
+ok(_afterCancel && JSON.stringify(to('Already Done?', 0)) === '["Already Done Reply"]'
    && JSON.stringify(to('Already Done Reply')) === '["Send Reply"]' && JSON.stringify(to('Already Done?', 1)) === '["Jessie AI Agent"]',
    'wiring: Cancel Direct? -> Already Done? -> reply | AI Agent');
 ok(/seriesNotice/.test(node('Jessie AI Agent').parameters.options.systemMessage), 'the prompt carries the series notice');

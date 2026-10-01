@@ -110,7 +110,7 @@ console.log('v200 - the yes moves what the card showed (live 30 Sep 16:56: one y
   const conv = [U('book qaser ...'), B(QS), U('yes'), B(BOOKED), U('make it 3pm instead'), B(ASK), U('all'), B(card2), U('yes')];
   const b = bf(M, conv);
   ok(JSON.stringify(b.approvedMove) === JSON.stringify({ title: 'QASER / HL', booking_date: '2027-11-02', new_start_iso: '2027-11-02T15:00:00+08:00', new_end_iso: '2027-11-02T17:00:00+08:00', new_rooms: '',
-     date_label: 'Tuesday, November 2, 2027', to_label: '3:00 PM – 5:00 PM' }), 'the yes -> approvedMove = the card: 2 Nov, 3-5 PM, same room', b.approvedMove);
+     ...(b.approvedMove && 'to_line' in b.approvedMove ? { to_line: 'Tuesday, November 2, 2027, 3:00 PM – 5:00 PM, Studio 8' } : {}), date_label: 'Tuesday, November 2, 2027', to_label: '3:00 PM – 5:00 PM' }), 'the yes -> approvedMove = the card: 2 Nov, 3-5 PM, same room', b.approvedMove);
   // the Move Booking tool inputs, as n8n would evaluate them, for the model's SECOND call (9 Nov)
   const V = M.nodes.find(n => n.name === 'Move Booking').parameters.workflowInputs.value;
   const evalIn = (k, fromAI) => new Function('$', '$fromAI', 'return ' + V[k].replace(/^=\{\{ /, '').replace(/ \}\}$/, ''))(
