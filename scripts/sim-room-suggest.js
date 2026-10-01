@@ -46,8 +46,9 @@ let r = cc(NEW, [], { requester_text: TXT, rooms: 'Studio 3' });
 ok(r.verdict === 'CLEAR' && r.final_rooms === PRI[0] && r.room_suggested === PRI[0], 'the model chose Studio 3 -> replaced by ' + PRI[0] + ' (first in the ranking)', r);
 let s = rs(NEW, r, { requester_text: TXT, rooms: 'Studio 3' }).summary_text;
 ok(new RegExp('\\*Room:\\* ' + PRI[0] + '\\n').test(s), 'the summary shows ' + PRI[0], s);
-ok(new RegExp("I picked " + PRI[0] + " - the first choice for VO Recording that is free then\\. OK with that room\\? If not, tell me which one you'd like\\.").test(s), 'and says it was picked, and asks if it is OK', s);
-ok(/_check [0-9a-f]{8}_\n\nReply only with "yes" to book/.test(s), 'the check code and confirmation are still last');
+const SHORT = !/_check /.test(s);   // v73+: the short card (no code; one-line note)
+ok(SHORT ? new RegExp("I picked " + PRI[0] + "\\. Tell me if you’d like another room\\.").test(s) : new RegExp("I picked " + PRI[0] + " - the first choice for VO Recording that is free then\\. OK with that room\\? If not, tell me which one you'd like\\.").test(s), 'and says it was picked, and asks if it is OK', s);
+ok(SHORT ? /Confirm to book\.$/.test(s.trim()) : /_check [0-9a-f]{8}_\n\nReply only with "yes" to book/.test(s), 'the confirmation is still last');
 r = cc(NEW, [busy('b1', PRI[0])], { requester_text: TXT, rooms: '' });
 ok(r.verdict === 'CLEAR' && r.room_suggested === PRI[1], 'no room at all, ' + PRI[0] + ' taken -> ' + PRI[1], r);
 r = cc(NEW, PRI.map((p, i) => busy('p' + i, p)), { requester_text: TXT, rooms: '' });
