@@ -53,6 +53,18 @@ ok(go(B, { ...BASE, summary: 'QATYPE / Acme / DR', client: 'Acme' }, { 'Get Clie
 r = go(B, { ...BASE, summary: 'QATYPE / Acme / DR', client: 'Acme' }, { 'Get Client': client('Acme', ['Advertising', 'Personal']) });
 const V78 = /v78 \(decided 1 Oct\)/.test(code(B, 'Check Conflicts'));   // v78: "Is this advertising work, or personal?"
 ok(r.c.reason === 'NEED_BOOKING_TYPE' && (V78 ? /"Is this advertising work, or personal\?"/ : /"Advertising or personal\?"/).test(r.c.human), 'a record with two types -> ' + (V78 ? '"Is this advertising work, or personal?"' : '"Advertising or personal?"'), r.c.human);
+if (/v79 \(decided 1 Oct\)/.test(code(B, 'Check Conflicts'))) {   // v79: a reply naming no type -> the reminder with all four
+  const relay = h => { const m = String(h || '').match(/(?:Ask exactly this|naming both)[^"]*"((?:[^"\\]|\\.)+)"/); return m ? m[1].replace(/\\"/g, '"') : null; };
+  const L = client('Leslie Tan', ['Advertising', 'Internal'], 'Advertising Producer');
+  const ask = (reply, asked) => go(B, { ...BASE, summary: 'QATYPE / Leslie Tan / DR', client: 'Leslie Tan', requester_text: reply + '\nbook qatype tomorrow 3-4pm vo recording studio 8 for leslie tan', asked_text: asked }, { 'Get Client': L }).c;
+  let c = ask('no', 'Is this advertising work, or internal?');
+  ok(c.reason === 'NEED_BOOKING_TYPE' && relay(c.human) === 'Please choose a booking type: Advertising, Entertainment, Internal or Personal.', 'live 15:40: "no" to the type question -> the reminder with all four', relay(c.human));
+  ok(relay(ask('hmm not sure', 'Please choose a booking type: Advertising, Entertainment, Internal or Personal.').human) === 'Please choose a booking type: Advertising, Entertainment, Internal or Personal.', 'still no type -> the reminder again');
+  ok(ask('personal', 'Please choose a booking type: Advertising, Entertainment, Internal or Personal.').final_booking_type === 'Personal', 'then "personal" -> Personal');
+  ok(ask('entertainment', 'Is this advertising work, or internal?').final_booking_type === 'Entertainment', 'a type not offered is still taken (Entertainment)');
+  ok(relay(ask('book it', '').human) === 'Is this advertising work, or internal?', 'first time asked -> the question, not the reminder');
+  ok(relay(ask('no', '*QATYPE / Leslie Tan / DR*\n*Date:* x\n\nBook it? Reply yes or no.').human) === 'Is this advertising work, or internal?', 'after some other message -> the question as usual');
+}
 if (V78) {
   // main's word-for-word relay (Guard Probe v203): the text that reaches Slack
   const relay = h => { const m = String(h || '').match(/(?:Ask exactly this|naming both)[^"]*"((?:[^"\\]|\\.)+)"/); return m ? m[1].replace(/\\"/g, '"') : null; };
