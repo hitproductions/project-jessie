@@ -14,7 +14,14 @@ const rec = n => run[n] ? (((run[n][0].data || {}).main || [[]])[0] || []) : nul
 const REQ0 = rec('When Executed by Another Workflow')[0].json;
 const JEM = rec('Get Client');   // Jem Lim: Client Type External (not recoded yet), Booker Type Advertising Producer
 const client = (name, types, bt) => [{ json: { id: 'recX', fields: { Name: name, 'Client Type': types, 'Booker Type': bt || '' } } }];
-const go = (w, req, over = {}) => { const R = [{ json: { ...REQ0, ...req } }];
+const go = (w, req, over = {}) => { const _r80 = { ...REQ0, ...req };
+  // v80: a session type the requester did not name is asked, and an arranger colleague is asked "on behalf or own?" -
+  // these older cases name the type (and, for an arranger colleague, "on his behalf") so they test what they were for.
+  if (/NEED_SESSION_TYPE/.test(code(w, 'Check Conflicts')) && _r80.session_type && String(_r80.requester_text || '').trim() && !req.__keep80) {
+    _r80.requester_text = String(_r80.requester_text) + '\n' + _r80.session_type;
+    if (/\(for\s+(?:Angelo|Joaquin|Brian|BP|Robbie|Peter|Arnold)\b/i.test(String(_r80.description || '')) && !/\b(own|behalf)\b/i.test(_r80.requester_text)) _r80.requester_text += '\non his behalf';
+  }
+  const R = [{ json: _r80 }];
   const O = { 'Get Client': [{ json: {} }], 'Client Aliases': [{ json: {} }], ...over };
   const $c = n => { if (n === 'When Executed by Another Workflow') return wrap(R); if (O[n]) return wrap(O[n]); const it = rec(n); if (!it) throw new Error('unexecuted ' + n); return wrap(it); };
   const c = new Function('$', '$input', '$getWorkflowStaticData', code(w, 'Check Conflicts'))($c, wrap([{ json: { items: [] } }]), () => ({}))[0].json;

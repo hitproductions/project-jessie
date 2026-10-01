@@ -17,7 +17,14 @@ const run = JSON.parse(fs.readFileSync(process.argv[2])).data.resultData.runData
 const rec = n => run[n] ? (((run[n][0].data || {}).main || [[]])[0] || []) : null;
 const REQ0 = rec('When Executed by Another Workflow')[0].json;
 const ANGELA = { json: { id: 'recwol21IzBHIhuCE', fields: { Name: 'Angela Dela Calzada', Notes: ' Goes by Anj', 'Client Type': ['External'], 'Booker Type': 'Advertising Producer' } } };
-const go = (w, req, over = {}) => { const R = [{ json: { ...REQ0, ...req } }];
+const go = (w, req, over = {}) => { const _r80 = { ...REQ0, ...req };
+  // v80: a session type the requester did not name is asked, and an arranger colleague is asked "on behalf or own?" -
+  // these older cases name the type (and, for an arranger colleague, "on his behalf") so they test what they were for.
+  if (/NEED_SESSION_TYPE/.test(code(w, 'Check Conflicts')) && _r80.session_type && String(_r80.requester_text || '').trim() && !req.__keep80) {
+    _r80.requester_text = String(_r80.requester_text) + '\n' + _r80.session_type;
+    if (/\(for\s+(?:Angelo|Joaquin|Brian|BP|Robbie|Peter|Arnold)\b/i.test(String(_r80.description || '')) && !/\b(own|behalf)\b/i.test(_r80.requester_text)) _r80.requester_text += '\non his behalf';
+  }
+  const R = [{ json: _r80 }];
   const O = { 'Get Client': [{ json: {} }], 'Client Aliases': [ANGELA], ...over };
   const $c = n => { if (n === 'When Executed by Another Workflow') return wrap(R); if (O[n]) return wrap(O[n]); const it = rec(n); if (!it) throw new Error('unexecuted ' + n); return wrap(it); };
   const c = new Function('$', '$input', '$getWorkflowStaticData', code(w, 'Check Conflicts'))($c, wrap([{ json: { items: [] } }]), () => ({}))[0].json;
@@ -47,10 +54,11 @@ ok(/^\*ORANGE \/ Angela Dela Calzada \/ DR\*/.test(r.s) && /\*Client:\* Angela D
    && /\*Booked by:\* Howard Luistro\n/.test(r.s) && !/\(for /.test(r.s) && !/not in the client list/i.test(r.s),
    'then "drey" -> ORANGE / Angela Dela Calzada / DR, her Client Type (External), Booked by with no "(for ...)", not a new client', r.s || r.c);
 
+const V80 = /NEED_SESSION_TYPE/.test(code(B, 'Check Conflicts'));   // v80: on behalf -> no engineer default, "Who’s the engineer?"
 console.log('They meant the colleague');
 for (const ans of ['angelo', 'the arranger', 'Angelo Villegas']) {
   r = go(B, { ...LIVE, requester_text: 'book orange studio 7 for anj\n' + ans, asked_text: ASK });
-  ok(V73 ? (r.c.reason === 'NEED_CLIENT') : (r.c.reason === 'NEED_ENGINEER' && /"Who is the engineer for this session\? \(Angelo is who it is booked for, a Music Arranger\)"/.test(r.c.human)),
+  ok(V80 ? (r.c.reason === 'NEED_ENGINEER' && /"Who’s the engineer\?"/.test(r.c.human)) : V73 ? (r.c.reason === 'NEED_CLIENT') : (r.c.reason === 'NEED_ENGINEER' && /"Who is the engineer for this session\? \(Angelo is who it is booked for, a Music Arranger\)"/.test(r.c.human)),
      '"' + ans + '" -> a Music Arranger is not the engineer: "Who is the engineer for this session? (Angelo is who it is booked for ...)"', r.c); }
 r = go(B, { ...LIVE, engineer: 'Drey', client: '', summary: 'ORANGE / Angelo Villegas / DR', bookingType: 'External',
   description: 'Engineer: Drey | Booked by: Howard Luistro (for Angelo Villegas) | ref: U08V3CKDGJF', requester_text: 'book orange studio 7 for anj\nangelo\ndrey', asked_text: '' });
@@ -59,7 +67,7 @@ ok(V73 ? r.c.reason === 'NEED_CLIENT' : (/^\*ORANGE \/ DR\*/.test(r.s) && /\*Cli
 
 console.log('No second Anj on record - the general case');
 r = go(B, LIVE, { 'Client Aliases': [{ json: {} }] });
-ok(V73 ? r.c.reason === 'NEED_CLIENT' : (r.c.reason === 'NEED_ENGINEER' && /Angelo is who it is booked for/.test(r.c.human)), 'the colleague in the engineer slot, never named as engineer -> taken out' + (V73 ? ' (v73: the requester, an engineer, engineers; then the client is asked)' : ' and asked'), r.c);
+ok(V80 ? (r.c.reason === 'NEED_ENGINEER' && /"Who’s the engineer\?"/.test(r.c.human)) : V73 ? r.c.reason === 'NEED_CLIENT' : (r.c.reason === 'NEED_ENGINEER' && /Angelo is who it is booked for/.test(r.c.human)), 'the colleague in the engineer slot, never named as engineer -> taken out' + (V80 ? ' (v80: and the engineer asked, not the requester)' : V73 ? ' (v73: the requester, an engineer, engineers; then the client is asked)' : ' and asked'), r.c);
 r = go(B, { ...LIVE, requester_text: 'book orange studio 7 for anj, engineer anj' }, { 'Client Aliases': [{ json: {} }] });
 ok(r.c.reason !== 'NEED_ENGINEER', '"engineer anj" typed -> stays the engineer', r.c.reason);
 r = go(B, { ...LIVE, requester_text: 'book orange studio 7 for anj with anj' }, { 'Client Aliases': [{ json: {} }] });
@@ -69,9 +77,9 @@ r = go(B, { summary: 'ORANGE / DR', client: '', engineer: 'Daryl Reyes', booking
 ok(r.c.reason !== 'NEED_ENGINEER' && r.c.reason !== 'AMBIGUOUS_PERSON', 'booked for an engineer (their own session) -> they stay the engineer', r.c.reason);
 r = go(B, { ...LIVE, engineer: 'Drey', bookingType: 'External', description: 'Engineer: Drey | Booked by: Howard Luistro (for Angelo Villegas) | ref: U08V3CKDGJF', requester_text: 'book orange studio 7 for anj, engineer drey' }, { 'Client Aliases': [{ json: {} }] });
 ok(V73 ? r.c.reason === 'NEED_CLIENT' : /\*Client:\* None/.test(r.s), 'the colleague in the client slot (not a client on record) -> ' + (V73 ? 'the client is asked' : 'Client: None'), r.s.split('\n').slice(0, 3));
-r = go(B, { ...LIVE, engineer: 'Drey', bookingType: 'External', description: 'Engineer: Drey | Booked by: Howard Luistro (for Angelo Villegas) | ref: U08V3CKDGJF', requester_text: 'book orange studio 7 for anj, engineer drey' },
+r = go(B, { ...LIVE, engineer: 'Drey', bookingType: 'External', description: 'Engineer: Drey | Booked by: Howard Luistro (for Angelo Villegas) | ref: U08V3CKDGJF', requester_text: 'book orange studio 7 for anj, engineer drey' + (V80 ? '\nhis own project' : '') },
   { 'Client Aliases': [{ json: {} }], 'Get Client': [{ json: { id: 'recX', fields: { Name: 'Angelo Villegas', 'Client Type': ['Personal'] } } }] });
-ok(/\*Client:\* Angelo Villegas/.test(r.s), '... unless they are a client on record too (the in-house arrangers, v54)', r.s.split('\n').slice(0, 3));
+ok(/\*Client:\* Angelo Villegas/.test(r.s) || (V80 && /ORANGE \/ Angelo Villegas/.test(JSON.stringify(r.o || {}) + JSON.stringify(r.c))), '... unless they are a client on record too (the in-house arrangers, v54)', r.s.split('\n').slice(0, 3));
 r = go(B, { ...LIVE, mode: '' });
 ok(r.c.reason !== 'AMBIGUOUS_PERSON' && r.c.reason !== 'NEED_ENGINEER', 'not prepare mode (the yes, a series date, a consent placement) -> untouched', r.c.reason);
 

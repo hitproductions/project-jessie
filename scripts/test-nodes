@@ -963,7 +963,8 @@ suite('Prepare Booking — render, send, read back at the yes', ()=>{
   const r=keep(render(REQ,CC));
   check('pb','renders PREPARED with the calendar title first',r.status==='PREPARED'&&/^\*ORBIT \/ Jem Lim \/ TL\*/.test(r.summary_text),r.summary_text);
   if(NEW(r)){
-    check('pb','v73: the card is the title, Date, Time and Room only',r.summary_text==='*ORBIT / Jem Lim / TL*\n*Date:* Friday, October 8, 2027\n*Time:* 2:00 PM – 4:00 PM\n*Room:* Studio 7\n\nConfirm to book.',r.summary_text);
+    const _V80=/v80 \(decided 1 Oct\): an on-behalf booking says who it is for/.test(src('Render Summary'));   // v80: + "For:" on an on-behalf booking
+    check('pb','v73: the card is the title, Date, Time and Room only'+(_V80?' (v80: + For: on an on-behalf booking)':''),r.summary_text==='*ORBIT / Jem Lim / TL*\n*Date:* Friday, October 8, 2027\n*Time:* 2:00 PM – 4:00 PM\n*Room:* Studio 7\n'+(_V80?'*For:* Japs Concepcion\n':'')+'\nConfirm to book.',r.summary_text);
     check('pb','v73: the engineer, booked by and the rest are stored, not shown',FF(r).Engineer==='Tara Lim (Post Engineer)'&&FF(r)['Booked by']==='Howard Luistro (for Japs Concepcion)'&&/^prep-[0-9a-f]{8}$/.test(r.prep_key),JSON.stringify(FF(r)));
   } else {
   check('pb','one fixed format: date, time, room, engineer, booked by',/\*Date:\* Friday, October 8, 2027\n\*Time:\* 2:00 PM – 4:00 PM\n\*Room:\* Studio 7\n\*Engineer:\* Tara Lim \(Post Engineer\)/.test(r.summary_text)&&/\*Booked by:\* Howard Luistro \(for Japs Concepcion\)/.test(r.summary_text),r.summary_text);
@@ -1028,7 +1029,9 @@ suite('Check Conflicts — department, booking type, Localization title (v52)', 
   const k=whole.indexOf('// v51 Prepare Booking (Howard'), l=whole.indexOf('// v50 (Howard, 2026-09-28): the client is a name');
   if(whole.indexOf('NEED_DEPARTMENT')<0){ console.log('  skip  v52 is not in this build'); return; }
   const m=whole.indexOf('// Get Events In Window is an HTTP Request against the Calendar API');
+  const _ST80=whole.indexOf('NEED_SESSION_TYPE')>=0;   // v80: a session type the requester did not name is asked - these cases name it
   const run=(REQ,clientRows)=>{ const $=n=>({all:()=>n==='Get Client'?(clientRows||[]).map(j=>({json:j})):[]});
+    if(_ST80&&REQ.session_type&&REQ.requester_text!==undefined) REQ=Object.assign({},REQ,{requester_text:String(REQ.requester_text)+', '+REQ.session_type});
     const r=new Function('REQ','$',whole.slice(k,m)+'\nreturn {REQ};')(REQ,$); return Array.isArray(r)?{reason:r[0].json.reason,human:r[0].json.human}:r; };
   const T=JSON.stringify({types:[{type:'VO Recording',typical:60,roles:['Post Engineer']},{type:'Celebrity Recording',roles:['Music Engineer','Post Engineer','Music Arranger']},{type:'Localization Dubbing',roles:['Loc Engineer']}]});
   const T73=whole.indexOf('__decideType')>=0;   // v73: four booking types, and client work asks for the client
