@@ -12,6 +12,8 @@ plus the next series card) -> Send Reply. No card, or not confirmed -> Already D
 71 - 1 Oct 09:26 (DASHING): "me" as the engineer. Booked For now reads "engineer me", "I'm the engineer", "I'll
 engineer", "me as engineer", "ako ang engineer", and a bare "me" / "myself" / "ako" answer to "Who is the engineer...?"
 as the requester (by their Bookers name).
+Also: the client question is shorter - "Who\u2019s the client? (or \"none\")" (was "Who is the client for this session? If
+there isn\u2019t one, just say \"no client\".").
 """
 import json, sys, copy, uuid
 
@@ -85,8 +87,12 @@ TL2_NEW = "  row.Path = inp._dup ? 'duplicate dropped' : bd ? 'book direct' : cd
 TL3_OLD = "  row.Tools = bd ? 'Book Direct -> ' + res(bd) : cd ? 'Cancel Direct -> ' + res(cd) : clip((gp && gp.toolsLog) || '', 6000);"
 TL3_NEW = "  row.Tools = bd ? 'Book Direct -> ' + res(bd) : cd ? 'Cancel Direct -> ' + res(cd) : md ? 'Move Direct -> ' + res(Array.isArray(md) ? md[0] : md) : clip((gp && gp.toolsLog) || '', 6000);"
 
+GP_Q_OLD = "          + '\\n\\nWho is the client for this session? If there isn\\u2019t one, just say \"no client\".';"
+GP_Q_NEW = "          + '\\n\\nWho\\u2019s the client? (or \"none\")';   // v202: shorter (1 Oct, plain-language chat)"
+
 def fix(w):
     w["name"] = "Project Jessie — v202 (move direct + me fix)"
+    g = node(w, "Guard Probe")["parameters"]; g["jsCode"] = sub1(g["jsCode"], GP_Q_OLD, GP_Q_NEW, "client question")
     b = node(w, "Booked For")["parameters"]
     s = sub1(b["jsCode"], BF1_OLD, BF1_NEW, "bf1")
     b["jsCode"] = sub1(s, BF2_ANCHOR, BF2_BLOCK + BF2_ANCHOR, "bf2")
