@@ -3,6 +3,7 @@
 // booking fields replaced - live QA 30 Sep 12:44 PHT: "book isr for studio 8 with rico tomorrow at 9am" -> ISR / ISR / EG.
 //   node scripts/sim-session-shorthand.js <book-session-prepare-execution.json>   (29 Sep exec 16681)
 const fs = require('fs'), path = require('path');
+const FULL = require('./lib-full-summary.js');   // v73: the stored fields as the old summary lines
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
 const B = WF(process.env.BOOK || 'book-session-v68.json'), OB = WF('imported/book-session-v67-imported.json');
@@ -43,16 +44,17 @@ const rs = (w, req) => { const R = [{ json: { ...REQ0, ...req } }];
   const $c = n => { const it = n === 'When Executed by Another Workflow' ? R : rec(n); if (!it) throw new Error('unexecuted ' + n); return wrap(it); };
   const c = new Function('$', '$input', '$getWorkflowStaticData', code(w, 'Check Conflicts'))($c, wrap([{ json: { items: [] } }]), () => ({}))[0].json;
   const $r = n => n === 'When Executed by Another Workflow' ? wrap(R) : n === 'Check Conflicts' ? wrap([{ json: c }]) : n === 'Decide Preempt' ? (() => { throw 1; })() : wrap(rec(n) || [{ json: {} }]);
-  return { c, s: new Function('$', '$input', code(w, 'Render Summary'))($r, wrap([{ json: c }]))[0].json.summary_text }; };
+  return { c, s: FULL(new Function('$', '$input', code(w, 'Render Summary'))($r, wrap([{ json: c }]))[0].json, c) }; };
 let x = rs(B, { summary: 'ORANGE / ORANGE / DR', client: 'ORANGE', requester_text: 'book orange studio 8 tomorrow 2-4pm vo, engineer drey' });
-ok(/\*Client:\* None/.test(x.s) && /^\*ORANGE \/ DR\*/.test(x.s), '"book orange ..." as ORANGE / ORANGE / DR -> "Client: None", title ORANGE / DR (Jessie then asks who the client is)', x.s.split('\n').slice(0, 3));
+ok((/\*Client:\* None/.test(x.s) && /^\*ORANGE \/ DR\*/.test(x.s)) || /^REJECTED NEED_CLIENT/.test(x.s),   // v73: asked at once
+   '"book orange ..." as ORANGE / ORANGE / DR -> "Client: None", title ORANGE / DR (Jessie then asks who the client is)', x.s.split('\n').slice(0, 3));
 ok(/\*Client:\* ORANGE/.test(rs(OB, { summary: 'ORANGE / ORANGE / DR', client: 'ORANGE', requester_text: 'book orange studio 8 tomorrow 2-4pm vo, engineer drey' }).s), '  (v67: Client: ORANGE)');
 x = rs(B, { summary: 'ORANGE / ORANGE / DR', client: 'ORANGE', requester_text: 'book orange for orange, studio 8 tomorrow 2-4pm vo' });
 ok(/\*Client:\* ORANGE/.test(x.s), '"for orange" typed -> the client stands', x.s.split('\n')[1]);
 x = rs(B, { summary: 'ORANGE / ORANGE / DR', client: 'ORANGE', requester_text: 'project orange, client orange, studio 8 tomorrow 2-4pm' });
 ok(/\*Client:\* ORANGE/.test(x.s), '"client orange" typed -> the client stands');
 x = rs(B, { summary: 'ORANGE / ORANGE / DR', client: 'ORANGE', requester_text: 'book orange for studio 8 tomorrow 2-4pm vo, engineer drey' });
-ok(/\*Client:\* None/.test(x.s), '"for studio 8" is not naming the client -> still Client: None', x.s.split('\n')[1]);
+ok(/\*Client:\* None/.test(x.s) || /^REJECTED NEED_CLIENT/.test(x.s), '"for studio 8" is not naming the client -> still Client: None (v73: asked)', x.s.split('\n')[1]);
 x = rs(B, { summary: 'ORANGE / Jem Lim / DR', client: 'Jem Lim', requester_text: 'book orange studio 8 tomorrow 2-4pm, client Jem Lim' });
 ok(/\*Client:\* Jem Lim/.test(x.s), 'a real client -> unchanged');
 

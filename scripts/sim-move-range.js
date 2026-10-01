@@ -38,11 +38,11 @@ const sum = (w, req) => { const Rq = [{ json: { ...REQ0, ...req } }];
   return new Function('$', '$input', code(w, 'Render Summary'))($r, wrap([{ json: cc }]))[0].json.summary_text; };
 const NT = 'i want to book a sched tomorrow\nproj orange, vo recording, studio 8, client Jem Lim. engineer drey';
 let s = sum(B, { requester_text: NT });
-ok(/\*Note:\* No time was given, so I proposed 2:00 PM – 4:00 PM \(Studio 8 is free then\)\. What time would you like\? Tell me, or reply yes to book this time\./.test(s), 'no time typed -> "No time was given, so I proposed ... What time would you like?"', s);
-ok(/_check [0-9a-f]{8}_\n\nReply only with "yes" to book/.test(s), 'the check code and confirmation still come last');
-ok(!/No time was given/.test(sum(OB, { requester_text: NT })), '  (v65: the time shown as if asked for)');
+ok(/\*Note:\* No time was given, so I proposed 2:00 PM – 4:00 PM \(Studio 8 is free then\)\. What time would you like\? Tell me, or reply yes to book this time\./.test(s) || /No time given, so I picked 2:00 PM – 4:00 PM\. Tell me if you\u2019d like another\./.test(s), 'no time typed -> "No time was given, so I proposed ... What time would you like?"', s);
+ok(/_check [0-9a-f]{8}_\n\nReply only with "yes" to book/.test(s) || /\n\nConfirm to book\.$/.test(s), 'the confirmation still comes last (v73: no printed check code)');
+ok(!/No time (?:was )?given/.test(sum(OB, { requester_text: NT })), '  (v65: the time shown as if asked for)');
 for (const t of ['Book Studio 8 tomorrow from 2pm to 4pm, VO, project X, client Jem Lim', 'book studio 8 tomorrow morning, vo, project x, client Jem Lim', 'book studio 8 tomorrow at 3, vo, project x, client Jem Lim', 'book studio 8 tomorrow 2-4, vo, project x, client Jem Lim', 'book studio 8 tomorrow 14:00, vo, client Jem Lim'])
-  ok(!/No time was given/.test(sum(B, { requester_text: t })), 'a time was typed ("' + t.replace(/^.*tomorrow /, '').split(',')[0] + '") -> no note');
-ok(!/No time was given/.test(sum(B, { requester_text: '' })), 'no requester text (a consent placement, an older caller) -> no note');
+  ok(!/No time (?:was )?given/.test(sum(B, { requester_text: t })), 'a time was typed ("' + t.replace(/^.*tomorrow /, '').split(',')[0] + '") -> no note');
+ok(!/No time (?:was )?given/.test(sum(B, { requester_text: '' })), 'no requester text (a consent placement, an older caller) -> no note');
 console.log(`\n${fail ? 'FAIL' : 'OK'} - ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

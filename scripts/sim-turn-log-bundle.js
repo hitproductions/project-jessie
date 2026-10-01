@@ -80,7 +80,7 @@ console.log('Book Session v67 - each date of a series gets its booking type');
     return new Function('$', '$input', '$getWorkflowStaticData', code(w, 'Check Conflicts'))($c, wrap([{ json: { items: [] } }]), () => ({}))[0].json; };
   const SERIES = { mode: '', series: true, confirmed: true, bookingType: '' };
   let c = cc(B, SERIES);
-  ok(/\| Type: External \|/.test(c.final_description || ''), 'a series date with no booking type from the model -> "Type: External" from the client record', c.final_description || c.reason);
+  ok(/\| Type: (External|Advertising) \|/.test(c.final_description || ''), 'a series date with no booking type from the model -> a "Type:" from the client record (v73: Advertising)', c.final_description || c.reason);
   ok(!/Type:/.test(cc(OB, SERIES).final_description || ''), '  (v66: no Type on series events)');
   c = cc(B, { ...SERIES, bookingType: 'Personal' });
   ok(/\| Type: Personal \|/.test(c.final_description || ''), 'a booking type that was sent is kept');

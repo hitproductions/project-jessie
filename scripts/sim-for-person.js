@@ -4,9 +4,11 @@
 // Angela Dela Calzada, a client. Check Conflicts + Render Summary run on a real prepare run's inputs (29 Sep exec 16681).
 //   node scripts/sim-for-person.js <book-session-prepare-execution.json> [<main-execution.json>]   (29 Sep exec 16681, 16685)
 const fs = require('fs'), path = require('path');
+const FULL = require('./lib-full-summary.js');   // v73: the stored fields as the old summary lines
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
 const B = WF(process.env.BOOK || 'book-session-v70.json'), OB = WF('imported/book-session-v69-imported.json');
+const V73 = /__decideType/.test(code(B, 'Check Conflicts'));   // Book Session v73: an engineer requester engineers; client work asks for the client
 const M = WF(process.env.MAIN || 'project-jessie-v196.json');
 let pass = 0, fail = 0;
 const ok = (c, msg, d) => { if (c) { pass++; console.log('  ok    ' + msg); } else { fail++; console.log('  FAIL  ' + msg + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
@@ -21,7 +23,7 @@ const go = (w, req, over = {}) => { const R = [{ json: { ...REQ0, ...req } }];
   const c = new Function('$', '$input', '$getWorkflowStaticData', code(w, 'Check Conflicts'))($c, wrap([{ json: { items: [] } }]), () => ({}))[0].json;
   if (c.verdict === 'REJECTED') return { c, s: '' };
   const $r = n => n === 'When Executed by Another Workflow' ? wrap(R) : n === 'Check Conflicts' ? wrap([{ json: c }]) : n === 'Decide Preempt' ? (() => { throw 1; })() : O[n] ? wrap(O[n]) : wrap(rec(n) || [{ json: {} }]);
-  return { c, s: new Function('$', '$input', code(w, 'Render Summary'))($r, wrap([{ json: c }]))[0].json.summary_text || '' }; };
+  return { c, s: FULL(new Function('$', '$input', code(w, 'Render Summary'))($r, wrap([{ json: c }]))[0].json, c) }; };
 const ASK = 'Just to check - by Anj, do you mean Angelo Villegas (Music Arranger) or Angela Dela Calzada (Advertising Producer, a client)?';
 const LIVE = { summary: 'ORANGE / Angelo Villegas / AV', client: 'Angelo Villegas', engineer: 'Angelo Villegas', bookingType: '', session_type: 'VO Recording', rooms: 'Studio 7',
   description: 'Engineer: Angelo Villegas | Booked by: Howard Luistro (for Angelo Villegas) | ref: U08V3CKDGJF',
@@ -37,27 +39,27 @@ ok(r.c.reason === 'AMBIGUOUS_PERSON', '"no client" is not an answer to which Anj
 console.log('They meant the producer');
 for (const ans of ['angela', 'the producer', 'Angela Dela Calzada', 'the client']) {
   r = go(B, { ...LIVE, requester_text: 'book orange studio 7 for anj\n' + ans, asked_text: ASK });
-  ok(r.c.reason === 'NEED_ENGINEER' && /The client is Angela Dela Calzada/.test(r.c.human) && /"Who is the engineer for this session\?"/.test(r.c.human),
+  ok(V73 ? (r.c.verdict === 'CLEAR' && /Howard Luistro/.test(r.s.match(/\*Engineer:\* ([^\n]+)/)[1]) && /\*Client:\* Angela Dela Calzada/.test(r.s)) : (r.c.reason === 'NEED_ENGINEER' && /The client is Angela Dela Calzada/.test(r.c.human) && /"Who is the engineer for this session\?"/.test(r.c.human)),
      '"' + ans + '" -> the client is Angela; Angelo taken out of the engineer slot, "Who is the engineer for this session?"', r.c); }
 r = go(B, { ...LIVE, engineer: 'Drey', description: 'Engineer: Drey | Booked by: Howard Luistro (for Angelo Villegas) | ref: U08V3CKDGJF',
   requester_text: 'book orange studio 7 for anj\nangela\ndrey', asked_text: 'Who is the engineer for this session?' });
-ok(/^\*ORANGE \/ Angela Dela Calzada \/ DR\*/.test(r.s) && /\*Client:\* Angela Dela Calzada/.test(r.s) && /\*Booking Type:\* External/.test(r.s)
+ok(/^\*ORANGE \/ Angela Dela Calzada \/ DR\*/.test(r.s) && /\*Client:\* Angela Dela Calzada/.test(r.s) && (V73 ? /\*Booking Type:\* Advertising/ : /\*Booking Type:\* External/).test(r.s)
    && /\*Booked by:\* Howard Luistro\n/.test(r.s) && !/\(for /.test(r.s) && !/not in the client list/i.test(r.s),
    'then "drey" -> ORANGE / Angela Dela Calzada / DR, her Client Type (External), Booked by with no "(for ...)", not a new client', r.s || r.c);
 
 console.log('They meant the colleague');
 for (const ans of ['angelo', 'the arranger', 'Angelo Villegas']) {
   r = go(B, { ...LIVE, requester_text: 'book orange studio 7 for anj\n' + ans, asked_text: ASK });
-  ok(r.c.reason === 'NEED_ENGINEER' && /"Who is the engineer for this session\? \(Angelo is who it is booked for, a Music Arranger\)"/.test(r.c.human),
+  ok(V73 ? (r.c.reason === 'NEED_CLIENT') : (r.c.reason === 'NEED_ENGINEER' && /"Who is the engineer for this session\? \(Angelo is who it is booked for, a Music Arranger\)"/.test(r.c.human)),
      '"' + ans + '" -> a Music Arranger is not the engineer: "Who is the engineer for this session? (Angelo is who it is booked for ...)"', r.c); }
 r = go(B, { ...LIVE, engineer: 'Drey', client: '', summary: 'ORANGE / Angelo Villegas / DR', bookingType: 'External',
   description: 'Engineer: Drey | Booked by: Howard Luistro (for Angelo Villegas) | ref: U08V3CKDGJF', requester_text: 'book orange studio 7 for anj\nangelo\ndrey', asked_text: '' });
-ok(/^\*ORANGE \/ DR\*/.test(r.s) && /\*Client:\* None/.test(r.s) && /\*Engineer:\* Daryl Reyes/.test(r.s) && /\(for Angelo Villegas\)/.test(r.s),
+ok(V73 ? r.c.reason === 'NEED_CLIENT' : (/^\*ORANGE \/ DR\*/.test(r.s) && /\*Client:\* None/.test(r.s) && /\*Engineer:\* Daryl Reyes/.test(r.s) && /\(for Angelo Villegas\)/.test(r.s)),
    'then "drey" -> ORANGE / DR, Client: None (Jessie asks), engineer Daryl Reyes, Booked by ... (for Angelo Villegas)', r.s || r.c);
 
 console.log('No second Anj on record - the general case');
 r = go(B, LIVE, { 'Client Aliases': [{ json: {} }] });
-ok(r.c.reason === 'NEED_ENGINEER' && /Angelo is who it is booked for/.test(r.c.human), 'the colleague in the engineer slot, never named as engineer -> taken out and asked', r.c);
+ok(V73 ? r.c.reason === 'NEED_CLIENT' : (r.c.reason === 'NEED_ENGINEER' && /Angelo is who it is booked for/.test(r.c.human)), 'the colleague in the engineer slot, never named as engineer -> taken out' + (V73 ? ' (v73: the requester, an engineer, engineers; then the client is asked)' : ' and asked'), r.c);
 r = go(B, { ...LIVE, requester_text: 'book orange studio 7 for anj, engineer anj' }, { 'Client Aliases': [{ json: {} }] });
 ok(r.c.reason !== 'NEED_ENGINEER', '"engineer anj" typed -> stays the engineer', r.c.reason);
 r = go(B, { ...LIVE, requester_text: 'book orange studio 7 for anj with anj' }, { 'Client Aliases': [{ json: {} }] });
@@ -66,7 +68,7 @@ r = go(B, { summary: 'ORANGE / DR', client: '', engineer: 'Daryl Reyes', booking
   description: 'Engineer: Daryl Reyes | Booked by: Howard Luistro (for Daryl Reyes) | ref: U08V3CKDGJF', requester_text: 'book orange studio 7 for drey, no client', asked_text: '' });
 ok(r.c.reason !== 'NEED_ENGINEER' && r.c.reason !== 'AMBIGUOUS_PERSON', 'booked for an engineer (their own session) -> they stay the engineer', r.c.reason);
 r = go(B, { ...LIVE, engineer: 'Drey', bookingType: 'External', description: 'Engineer: Drey | Booked by: Howard Luistro (for Angelo Villegas) | ref: U08V3CKDGJF', requester_text: 'book orange studio 7 for anj, engineer drey' }, { 'Client Aliases': [{ json: {} }] });
-ok(/\*Client:\* None/.test(r.s), 'the colleague in the client slot (not a client on record) -> Client: None', r.s.split('\n').slice(0, 3));
+ok(V73 ? r.c.reason === 'NEED_CLIENT' : /\*Client:\* None/.test(r.s), 'the colleague in the client slot (not a client on record) -> ' + (V73 ? 'the client is asked' : 'Client: None'), r.s.split('\n').slice(0, 3));
 r = go(B, { ...LIVE, engineer: 'Drey', bookingType: 'External', description: 'Engineer: Drey | Booked by: Howard Luistro (for Angelo Villegas) | ref: U08V3CKDGJF', requester_text: 'book orange studio 7 for anj, engineer drey' },
   { 'Client Aliases': [{ json: {} }], 'Get Client': [{ json: { id: 'recX', fields: { Name: 'Angelo Villegas', 'Client Type': ['Personal'] } } }] });
 ok(/\*Client:\* Angelo Villegas/.test(r.s), '... unless they are a client on record too (the in-house arrangers, v54)', r.s.split('\n').slice(0, 3));

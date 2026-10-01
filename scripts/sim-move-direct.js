@@ -61,7 +61,7 @@ ok(r.engineer === 'Howard Luistro' && r.engineerResolved && r.engineerIsMe, 'the
 ok(bf(O, [...ask, U('me')]).engineer !== 'Howard Luistro', '  (v201: not read)');
 for (const t of ["book studio 8 tomorrow 3-6pm, vo recording, i'm the engineer", 'book studio 8 tomorrow 3-6pm, engineer me', "studio 8 tomorrow 3pm, I'll engineer", 'studio 8 bukas 3pm, ako ang engineer'])
   ok(bf(M, [U(t)]).engineer === 'Howard Luistro', '"' + t.split(', ').pop() + '" -> the requester');
-ok(bf(M, [U('book studio 8 tomorrow 3-6pm for me')]).engineer !== 'Howard Luistro', '"for me" alone is who it is for, not who engineers');
+ok(!bf(M, [U('book studio 8 tomorrow 3-6pm for me')]).engineerIsMe, '"for me" alone is who it is for, not "I engineer" (an engineer requester may still be put in by default - v203)');
 ok(bf(M, [...ask, U('drey')]).engineer === 'Daryl Reyes', 'a name to the engineer question -> that person, as before');
 
 console.log(`\n${fail ? 'FAIL' : 'OK'} - ${pass} passed, ${fail} failed`);

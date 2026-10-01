@@ -3,6 +3,7 @@
 // Live QA 30 Sep 13:29 PHT (Turn Log exec 18529): the QAORANGE2 summary had no Department line.
 //   node scripts/sim-summary-department.js <book-session-prepare-execution.json>   (29 Sep exec 16681)
 const fs = require('fs'), path = require('path');
+const FULL = require('./lib-full-summary.js');   // v73: the stored fields as the old summary lines
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
 const B = WF(process.env.BOOK || 'book-session-v69.json'), OB = WF('imported/book-session-v68-imported.json');
@@ -16,7 +17,7 @@ const rs = (w, req) => { const R = [{ json: { ...REQ0, ...req } }];
   const $c = n => { const it = n === 'When Executed by Another Workflow' ? R : rec(n); if (!it) throw new Error('unexecuted ' + n); return wrap(it); };
   const c = new Function('$', '$input', '$getWorkflowStaticData', code(w, 'Check Conflicts'))($c, wrap([{ json: { items: [] } }]), () => ({}))[0].json;
   const $r = n => n === 'When Executed by Another Workflow' ? wrap(R) : n === 'Check Conflicts' ? wrap([{ json: c }]) : n === 'Decide Preempt' ? (() => { throw 1; })() : wrap(rec(n) || [{ json: {} }]);
-  return { c, s: new Function('$', '$input', code(w, 'Render Summary'))($r, wrap([{ json: c }]))[0].json.summary_text || '' }; };
+  return { c, s: FULL(new Function('$', '$input', code(w, 'Render Summary'))($r, wrap([{ json: c }]))[0].json, c) }; };
 const Q = { summary: 'QAORANGE2 / DR', client: '', session_type: 'VO Recording', bookingType: 'External',
   requester_text: 'book qaorange2 studio 8 tomorrow 2pm to 4pm, vo recording, engineer drey\nno client\nexternal booking. move to 6pm' };
 

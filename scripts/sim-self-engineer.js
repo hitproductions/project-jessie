@@ -3,6 +3,7 @@
 // requester engineers, and the summary says so. Decided 30 Sep 14:16 PHT (QAANJ). Real prepare inputs: 29 Sep exec 16681.
 //   node scripts/sim-self-engineer.js <book-session-prepare-execution.json>
 const fs = require('fs'), path = require('path');
+const FULL = require('./lib-full-summary.js');   // v73: the stored fields as the old summary lines
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
 const B = WF(process.env.BOOK || 'book-session-v72.json'), OB = WF('imported/book-session-v70-imported.json'), O71 = WF('imported/book-session-v71-imported.json');
@@ -18,7 +19,7 @@ const go = (w, req, over = {}) => { const R = [{ json: { ...REQ0, ...req } }];
   const c = new Function('$', '$input', '$getWorkflowStaticData', code(w, 'Check Conflicts'))($c, wrap([{ json: { items: [] } }]), () => ({}))[0].json;
   if (c.verdict === 'REJECTED') return { c, s: '' };
   const $r = n => n === 'When Executed by Another Workflow' ? wrap(R) : n === 'Check Conflicts' ? wrap([{ json: c }]) : n === 'Decide Preempt' ? (() => { throw 1; })() : O[n] ? wrap(O[n]) : wrap(rec(n) || [{ json: {} }]);
-  return { c, s: new Function('$', '$input', code(w, 'Render Summary'))($r, wrap([{ json: c }]))[0].json.summary_text || '' }; };
+  return { c, s: FULL(new Function('$', '$input', code(w, 'Render Summary'))($r, wrap([{ json: c }]))[0].json, c) }; };
 const NOTE = "No engineer was named, so you're down as the engineer. If someone else is engineering, tell me who.";
 const BASE = { summary: 'QASELF / HL', client: '', engineer: '', bookingType: 'External', session_type: 'VO Recording', rooms: 'Studio 7', mode: 'prepare',
   description: 'Booked by: Howard Luistro | ref: U08V3CKDGJF', requester_text: 'book qaself studio 7 tomorrow 2pm to 4pm, vo recording, no client, external', asked_text: '' };
