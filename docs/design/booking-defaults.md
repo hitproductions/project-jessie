@@ -34,7 +34,8 @@ no longer shows it.
 | Music - Music Engineer | Advertising | Entertainment (localization, artist recording) | self; ask for the arranger | usually yes | studios |
 | Localization | Entertainment - **always, including people also in Audio Post: the session (a Localization session type / project code) decides** | - | self (Loc Engineer) | project code | studios / booths |
 | Sales & Accounts | Advertising | Internal | ask (they book for Post / Music) | usually yes | studios, conference rooms, M booths for clients |
-| Marketing, Business Development | Internal | - | none | no | conference rooms (Dilan: Studio E) |
+| Marketing | Internal | - | none | no | conference rooms (Dilan: Studio E) |
+| Business Development | Internal | - | none | no | conference rooms |
 | Video Post | Internal | Advertising? | none | no | conference rooms, Studio E |
 | People & Culture | Internal | - | none | no | conference rooms, Lobby |
 | IT | Internal | Entertainment | none | no | Lobby (events), studios (maintenance) |
