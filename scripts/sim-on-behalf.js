@@ -78,6 +78,25 @@ for (const [st, txt, want] of [['Post Mixing', 'book studio 3 tomorrow 2-4pm for
   ok(want ? c.reason !== 'NEED_SESSION_TYPE' : c.reason === 'NEED_SESSION_TYPE', JSON.stringify(txt) + ' as ' + st + ' -> ' + (want ? 'named' : 'asked'), [c.reason, c.human]);
 }
 
+if (/v81 \(live 1 Oct 17:03\)/.test(code(B, 'Check Conflicts'))) {
+  console.log('v81 - partial words, typos, choices (live 17:03: "mixing" asked again)');
+  const S = (st, txt, asked = '', desc) => go(B, { ...BASE, session_type: st, requester_text: txt, asked_text: asked, __keep80: true, ...(desc ? { description: desc } : {}) }, {}).c;
+  const Q = c => relay(c.human);
+  let c = S('Post Mixing', 'mixing\nbook studio 8 tonight for project CATS 3-6pm, no client', 'What kind of session is this?');
+  ok(c.reason === 'NEED_SESSION_TYPE' && /^Which one - /.test(Q(c) || '') && /Post Mixing/.test(Q(c)) && /Music Mixing/.test(Q(c)) && /Localization Mixing/.test(Q(c)), 'live 17:03: "mixing" -> "Which one - ...?" (the mixing types)', Q(c));
+  c = S('Post Mixing', 'post\nmixing\nbook studio 8 tonight for project CATS 3-6pm, no client', 'Which one - Post Mixing, Music Mixing, Localization Mixing or Localization Atmos Mixing?');
+  ok(c.reason !== 'NEED_SESSION_TYPE' && c.reason !== 'SESSION_TYPE_IS', 'then "post" -> Post Mixing (with "mixing" already said)', [c.reason, Q(c)]);
+  c = S('Music Mixing', 'post mixing\nbook studio 8 tonight for project CATS 3-6pm, no client', 'Which one - Post Mixing, Music Mixing, Localization Mixing or Localization Atmos Mixing?');
+  ok(c.reason === 'SESSION_TYPE_IS' && c.session_type === 'Post Mixing', 'the model passed Music Mixing after "post mixing" -> told Post Mixing', [c.reason, c.session_type]);
+  for (const [st, txt] of [['Celebrity Recording', 'celeb recording'], ['Celebrity Recording', 'celebirty recording'], ['Post Mixing', 'post mixng'], ['Localization Dubbing', 'dubing'], ['Localization Dubbing', 'loc dubbing'], ['Music Vocal Recording', 'vocal recordng']])
+    ok(S(st, 'book studio 8 tomorrow 2-4pm ' + txt + ', no client').reason !== 'NEED_SESSION_TYPE', JSON.stringify(txt) + ' -> ' + st);
+  c = S('VO Recording', 'book studio 8 tomorrow 2-4pm, no client', 'What kind of session is this?');
+  ok(Q(c) === 'What kind of session is this? (e.g. VO Recording, Post Mixing, Post Processing)', 'asked again with nothing matched -> examples from the department (Audio Post)', Q(c));
+  c = S('VO Recording', 'book studio 8 tomorrow 2-4pm, no client');
+  ok(Q(c) === 'What kind of session is this?', 'first ask: short');
+  ok(S('Meeting', "book studio 8 tomorrow 2-4pm, let's meet the client, vo recording").reason === 'SESSION_TYPE_IS' && true, '"meet" is not taken over a full "vo recording"');
+  ok(S('VO Recording', 'book studio 8 tomorrow 2-4pm even if late, vo').reason !== 'NEED_SESSION_TYPE', '"even" is not "event"');
+}
 console.log('Live 16:40 - "for anj\'s project": which Anj?');
 const ANGELA = [{ json: { id: 'recA', fields: { Name: 'Angela Dela Calzada', Notes: 'Goes by Anj', 'Booker Type': 'Advertising Producer', 'Client Type': ['Advertising'] } } }];
 r = go(B, { ...BASE, summary: 'DASHING / HL', client: '', engineer: 'Howard Luistro', session_type: 'Localization Editing', rooms: 'Studio 3', description: 'Engineer: Howard Luistro | Booked by: ' + ME + ' (for Angelo Villegas) | ref: ' + REF, requester_text: "book studio 3 for anj's project DASHING 4-6pm later" }, { 'Client Aliases': ANGELA });
