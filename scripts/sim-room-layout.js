@@ -5,7 +5,7 @@
 const fs = require('fs'), path = require('path');
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
-const RA = WF(process.env.RA || 'room-availability-v14.json'), M = WF(process.env.MAIN || 'project-jessie-v211.json');
+const RA = WF(process.env.RA || 'room-availability-v15.json'), M = WF(process.env.MAIN || 'project-jessie-v211.json');
 let pass = 0, fail = 0;
 const ok = (c, msg, d) => { if (c) { pass++; console.log('  ok    ' + msg); } else { fail++; console.log('  FAIL  ' + msg + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 500))); } };
 const wrap = it => ({ first: () => it[0], all: () => it, last: () => it[it.length - 1] });
@@ -16,26 +16,28 @@ const ra = (req, evs = []) => new Function('$', '$input', code(RA, 'Compute Avai
 const DAY = { start_iso: '2027-10-02T14:00:00+08:00', end_iso: '2027-10-02T16:00:00+08:00' };   // a set time
 const WHOLE = { start_iso: '2027-10-02T00:00:00+08:00', end_iso: '2027-10-02T23:59:00+08:00' };   // a day, no time
 
-const V14 = /v14 \(decided 2 Oct\)/.test(code(RA, 'Compute Availability'));
+const V14 = /v14 \(decided 2 Oct\)/.test(code(RA, 'Compute Availability')), V15 = /v15: 🗓️ headline|__head\(/.test(code(RA, 'Compute Availability'));
+const H = (day, time) => V15 ? '\uD83D\uDDD3\uFE0F October ' + day + (time ? ', ' + time : '') + '\n\n' : '';
+const NL = V15 ? '\n\n' : '\n';
 console.log('One window');
 let r = ra({ ...DAY, scope: 'studios' });
-ok(r.reply_text === (V14 ? 'Saturday, October 2, 2:00 PM – 4:00 PM:\n' : '') + 'Free studios:\nStudios 1, 2, 3, 7, 8, C, and F.\nVocal booth A.\nM2, M3, M5.', 'studios scope -> studios / booth / M booths on their own lines', r.reply_text);
+ok(r.reply_text === (V15 ? H('2 (Saturday)', '2:00 PM – 4:00 PM') : V14 ? 'Saturday, October 2, 2:00 PM – 4:00 PM:\n' : '') + 'Free studios:' + NL + 'Studios 1, 2, 3, 7, 8, C, and F.\nVocal booth A.\nM2, M3, M5.', 'studios scope -> studios / booth / M booths on their own lines', r.reply_text);
 r = ra(DAY);
-ok(/^(?:Saturday, October 2, 2:00 PM – 4:00 PM:\n)?Free rooms:\nStudios 1, 2, 3, 7, 8, C, and F\.\nVocal booth A\.\nM2, M3, M5\.\nKatha, Likha\.$/.test(r.reply_text || ''), 'all rooms -> + conference rooms on a line', r.reply_text);
+ok(/Free rooms:\n\n?Studios 1, 2, 3, 7, 8, C, and F\.\nVocal booth A\.\nM2, M3, M5\.\nKatha, Likha\.$/.test(r.reply_text || ''), 'all rooms -> + conference rooms on a line', r.reply_text);
 r = ra({ ...DAY, scope: 'studios' }, [{ id: 'e', summary: 'X', start: { dateTime: '2027-10-02T14:00:00+08:00' }, end: { dateTime: '2027-10-02T15:00:00+08:00' }, attendees: [{ email: 'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com' }] }]);
 ok(/Studios 1, 2, 3, 8, C, and F\./.test(r.reply_text || ''), 'a set time: a booked studio is left out (Studio 7)', r.reply_text);
 console.log('A range - day by day');
 r = ra({ start_iso: '2027-10-02T14:00:00+08:00', end_iso: '2027-10-03T16:00:00+08:00', scope: 'studios' });
-ok(r.multi_day && /:\n\n.+:\nStudios 1, 2, 3, 7, 8, C, and F\.\nVocal booth A\.\nM2, M3, M5\.\n\n.+:\nStudios /.test(r.reply_text || ''), 'each day its own block, a blank line between days', r.reply_text);
+ok(r.multi_day && (V15 ? /🗓️ October 2 \(Saturday\)\n\nStudios 1, 2, 3, 7, 8, C, and F\.\nVocal booth A\.\nM2, M3, M5\.\n\n🗓️ October 3 \(Sunday\)\n\nStudios / : /:\n\n.+:\nStudios 1, 2, 3, 7, 8, C, and F\.\nVocal booth A\.\nM2, M3, M5\.\n\n.+:\nStudios /).test(r.reply_text || ''), 'each day its own block, a blank line between days', r.reply_text);
 console.log('A day without a time - "Free all day", then the rooms booked part of the day');
 const S7 = 'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com', M3 = 'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com';
 const EVS = [{ id: 'a', summary: 'SPORT / AEG', start: { dateTime: '2027-10-02T12:00:00+08:00' }, end: { dateTime: '2027-10-02T13:00:00+08:00' }, attendees: [{ email: S7 }] },
   { id: 'b', summary: 'LATE / EG', start: { dateTime: '2027-10-02T15:00:00+08:00' }, end: { dateTime: '2027-10-02T17:30:00+08:00' }, attendees: [{ email: S7 }] },
   { id: 'c', summary: 'M3 - Rico', start: { date: '2027-10-02' }, end: { date: '2027-10-03' }, attendees: [{ email: M3 }] }];
 r = ra({ ...WHOLE, scope: 'studios' }, EVS);
-ok(r.reply_text === (V14 ? 'Saturday, October 2:\n' : '') + 'Free all day:\nStudios 1, 2, 3, 8, C, and F.\nVocal booth A.\nM2, M5.\n\nStudio 7 (free except for 12:00 PM – 1:00 PM, 3:00 PM – 5:30 PM).', 'grouped all-day list, Studio 7 with its booked hours, M3 (booked all day) left out', r.reply_text);
+ok(r.reply_text === (V15 ? H('2 (Saturday)') : V14 ? 'Saturday, October 2:\n' : '') + 'Free all day:' + NL + 'Studios 1, 2, 3, 8, C, and F.\nVocal booth A.\nM2, M5.\n\nStudio 7 (free except for 12:00 PM – 1:00 PM, 3:00 PM – 5:30 PM).', 'grouped all-day list, Studio 7 with its booked hours, M3 (booked all day) left out', r.reply_text);
 r = ra({ start_iso: '2027-10-02T00:00:00+08:00', end_iso: '2027-10-03T23:59:00+08:00', scope: 'studios' }, EVS);
-ok(/^Free studios, day by day:\n\n.+October 2:\nFree all day:\nStudios 1, 2, 3, 8, C, and F\.\nVocal booth A\.\nM2, M5\.\n\nStudio 7 \(free except for 12:00 PM – 1:00 PM, 3:00 PM – 5:30 PM\)\.\n\n.+October 3:\nFree all day:\n/.test(r.reply_text || ''), 'a range of whole days -> the same, day by day', r.reply_text);
+ok((V15 ? /^🗓️ October 2 \(Saturday\)\n\nFree all day:\n\nStudios 1, 2, 3, 8, C, and F\.\nVocal booth A\.\nM2, M5\.\n\nStudio 7 \(free except for 12:00 PM – 1:00 PM, 3:00 PM – 5:30 PM\)\.\n\n🗓️ October 3 \(Sunday\)\n\nFree all day:\n/ : /^Free studios, day by day:\n\n.+October 2:\nFree all day:\nStudios 1, 2, 3, 8, C, and F\.\nVocal booth A\.\nM2, M5\.\n\nStudio 7 \(free except for 12:00 PM – 1:00 PM, 3:00 PM – 5:30 PM\)\.\n\n.+October 3:\nFree all day:\n/).test(r.reply_text || ''), 'a range of whole days -> the same, day by day', r.reply_text);
 console.log('Guard Probe sends the layout when the reply is just the list');
 const run = JSON.parse(fs.readFileSync(process.argv[2])).data.resultData.runData;
 const rec = n => run[n] ? (((run[n][0].data || {}).main || [[]])[0] || []) : null;
