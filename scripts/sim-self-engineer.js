@@ -26,7 +26,7 @@ const BASE = { summary: 'QASELF / HL', client: '', engineer: '', bookingType: 'E
   description: 'Booked by: Howard Luistro | ref: U08V3CKDGJF', requester_text: 'book qaself studio 7 tomorrow 2pm to 4pm, vo recording, no client, external', asked_text: '' };
 
 let r = go(B, BASE);
-ok(/\*Engineer:\* Howard Luistro \(Post Engineer\)/.test(r.s) && /^\*QASELF \/ HL\*/.test(r.s) && (NONOTE ? /Howard Luistro/.test(r.s) : r.s.indexOf(NOTE) !== -1) && /Engineer: Howard Luistro/.test(r.c.final_description || ''),
+ok((/v84 \(decided 2 Oct\)/.test(code(B, 'Check Conflicts')) ? /\*Engineer:\* Howard Luistro\n/ : /\*Engineer:\* Howard Luistro \(Post Engineer\)/).test(r.s) && /^\*QASELF \/ HL\*/.test(r.s) && (NONOTE ? /Howard Luistro/.test(r.s) : r.s.indexOf(NOTE) !== -1) && /Engineer: Howard Luistro/.test(r.c.final_description || ''),
    'no engineer named, requester is a Post Engineer -> Engineer: Howard Luistro (Post Engineer), QASELF / HL, and the note', r.s || r.c);
 ok(!/\*Engineer:\*/.test(go(OB, BASE).s), '  (v70: no Engineer line - it was up to the model)');
 r = go(B, { ...BASE, engineer: 'Drey', description: 'Engineer: Drey | Booked by: Howard Luistro | ref: U08V3CKDGJF', summary: 'QASELF / DR' });
@@ -47,7 +47,7 @@ ok(!(r.c.final_description || '').includes('Engineer: Howard'), 'not prepare mod
 console.log('v72 - the model already put the requester in (live QA 30 Sep 15:29, QASELF)');
 const ME = { ...BASE, engineer: 'Howard Luistro', description: 'Engineer: Howard Luistro | Booked by: Howard Luistro | ref: U08V3CKDGJF' };
 r = go(B, ME);
-ok(/\*Engineer:\* Howard Luistro \(Post Engineer\)/.test(r.s) && (NONOTE ? /Howard Luistro/.test(r.s) : r.s.indexOf(NOTE) !== -1), 'the live case: Engineer: Howard Luistro from the model, nobody named -> the note', r.s || r.c);
+ok((/v84 \(decided 2 Oct\)/.test(code(B, 'Check Conflicts')) ? /\*Engineer:\* Howard Luistro\n/ : /\*Engineer:\* Howard Luistro \(Post Engineer\)/).test(r.s) && (NONOTE ? /Howard Luistro/.test(r.s) : r.s.indexOf(NOTE) !== -1), 'the live case: Engineer: Howard Luistro from the model, nobody named -> the note', r.s || r.c);
 ok(go(O71, ME).s.indexOf(NOTE) === -1, '  (v71: no note)');
 ok(go(B, { ...ME, engineer: 'Howard', description: 'Engineer: Howard | Booked by: Howard Luistro | ref: U08V3CKDGJF' }).s.indexOf(NOTE) !== -1 || NONOTE, '"Howard" (first name) from the model -> the note (v74: none)');
 for (const t of ['book qaself studio 7 tomorrow 2pm to 4pm, vo recording, engineer howard', "book qaself studio 7 tomorrow 2pm to 4pm, vo recording, i'll engineer", 'book qaself studio 7 tomorrow 2pm to 4pm, vo recording, engineer me', 'book qaself studio 7 tomorrow 2pm to 4pm, vo recording, with howie'])

@@ -24,6 +24,9 @@ const go = (w, req, over = {}) => { const _r80 = { ...REQ0, ...req };
     _r80.requester_text = String(_r80.requester_text) + '\n' + _r80.session_type;
     if (/\(for\s+(?:Angelo|Joaquin|Brian|BP|Robbie|Peter|Arnold)\b/i.test(String(_r80.description || '')) && !/\b(own|behalf)\b/i.test(_r80.requester_text)) _r80.requester_text += '\non his behalf';
   }
+  // v84: a missing time is asked - these older cases name one so they test what they were written for
+  if (/v84 \(decided 2 Oct\)/.test(code(w, 'Check Conflicts')) && String(_r80.requester_text || '').trim() && !req.__keep80
+      && !/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b\d{1,2}\s*(?:-|to)\s*\d{1,2}\b|\ball day\b/i.test(_r80.requester_text)) _r80.requester_text += '\n2-4pm';
   const R = [{ json: _r80 }];
   const O = { 'Get Client': [{ json: {} }], 'Client Aliases': [ANGELA], ...over };
   const $c = n => { if (n === 'When Executed by Another Workflow') return wrap(R); if (O[n]) return wrap(O[n]); const it = rec(n); if (!it) throw new Error('unexecuted ' + n); return wrap(it); };

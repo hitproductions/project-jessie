@@ -38,7 +38,10 @@ const sum = (w, req) => { const Rq = [{ json: { ...REQ0, ...req } }];
   return new Function('$', '$input', code(w, 'Render Summary'))($r, wrap([{ json: cc }]))[0].json.summary_text; };
 const NT = 'i want to book a sched tomorrow\nproj orange, vo recording, studio 8, client Jem Lim. engineer drey';
 let s = sum(B, { requester_text: NT });
-ok(/\*Note:\* No time was given, so I proposed 2:00 PM – 4:00 PM \(Studio 8 is free then\)\. What time would you like\? Tell me, or reply yes to book this time\./.test(s) || /No time given, so I picked 2:00 PM – 4:00 PM\. Tell me if you\u2019d like another\./.test(s), 'no time typed -> "No time was given, so I proposed ... What time would you like?"', s);
+const V84 = /v84 \(decided 2 Oct\): ask for everything missing/.test(code(B, 'Check Conflicts'));   // v84: a missing time is asked ("What time?"), not proposed
+if (V84) { const _cc = new Function('$', '$input', '$getWorkflowStaticData', code(B, 'Check Conflicts'))(n => { const it = n === 'When Executed by Another Workflow' ? [{ json: { ...REQ0, requester_text: NT } }] : brec(n); return wrap(it); }, wrap([{ json: { items: [] } }]), () => ({}))[0].json;
+  ok(_cc.reason === 'NEED_TIME' && /"What time\?"/.test(_cc.human), 'v84: no time typed -> "What time?" (not proposed)', _cc); }
+else ok(/\*Note:\* No time was given, so I proposed 2:00 PM – 4:00 PM \(Studio 8 is free then\)\. What time would you like\? Tell me, or reply yes to book this time\./.test(s) || /No time given, so I picked 2:00 PM – 4:00 PM\. Tell me if you\u2019d like another\./.test(s), 'no time typed -> "No time was given, so I proposed ... What time would you like?"', s);
 ok(/_check [0-9a-f]{8}_\n\nReply only with "yes" to book/.test(s) || /\n\nConfirm to book\.$/.test(s), 'the confirmation still comes last (v73: no printed check code)');
 ok(!/No time (?:was )?given/.test(sum(OB, { requester_text: NT })), '  (v65: the time shown as if asked for)');
 for (const t of ['Book Studio 8 tomorrow from 2pm to 4pm, VO, project X, client Jem Lim', 'book studio 8 tomorrow morning, vo, project x, client Jem Lim', 'book studio 8 tomorrow at 3, vo, project x, client Jem Lim', 'book studio 8 tomorrow 2-4, vo, project x, client Jem Lim', 'book studio 8 tomorrow 14:00, vo, client Jem Lim'])
