@@ -706,6 +706,12 @@ the task runner), for whoever has shell access to the box.
     `check-import before` rightly said DIFFERS. Download the live workflow *before* clearing the canvas. When only
     connection order differs, rebuild on the download (the sims accept either order).
 
+29. **Simulate a tool's result in the shape the agent receives, not the shape the code returns.** Book Session's Check Conflicts
+    says `verdict`; its `Return Rejection` node renames it `status` before the agent sees it. Guard Probe's word-for-word relay
+    of Book Session's questions (v203) tested `verdict`, and every sim fed it Check Conflicts' raw output - so it passed offline
+    and never fired live for two days; the model relayed the questions itself and, on 2 Oct, widened one. Build sim observations
+    from a real execution's `intermediateSteps` (fixed in main v216).
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the
