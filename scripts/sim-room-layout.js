@@ -5,7 +5,7 @@
 const fs = require('fs'), path = require('path');
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
-const RA = WF(process.env.RA || 'room-availability-v13.json'), M = WF(process.env.MAIN || 'project-jessie-v211.json');
+const RA = WF(process.env.RA || 'room-availability-v14.json'), M = WF(process.env.MAIN || 'project-jessie-v211.json');
 let pass = 0, fail = 0;
 const ok = (c, msg, d) => { if (c) { pass++; console.log('  ok    ' + msg); } else { fail++; console.log('  FAIL  ' + msg + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 500))); } };
 const wrap = it => ({ first: () => it[0], all: () => it, last: () => it[it.length - 1] });
@@ -16,11 +16,12 @@ const ra = (req, evs = []) => new Function('$', '$input', code(RA, 'Compute Avai
 const DAY = { start_iso: '2027-10-02T14:00:00+08:00', end_iso: '2027-10-02T16:00:00+08:00' };   // a set time
 const WHOLE = { start_iso: '2027-10-02T00:00:00+08:00', end_iso: '2027-10-02T23:59:00+08:00' };   // a day, no time
 
+const V14 = /v14 \(decided 2 Oct\)/.test(code(RA, 'Compute Availability'));
 console.log('One window');
 let r = ra({ ...DAY, scope: 'studios' });
-ok(r.reply_text === 'Free studios:\nStudios 1, 2, 3, 7, 8, C, and F.\nVocal booth A.\nM2, M3, M5.', 'studios scope -> studios / booth / M booths on their own lines', r.reply_text);
+ok(r.reply_text === (V14 ? 'Saturday, October 2, 2:00 PM – 4:00 PM:\n' : '') + 'Free studios:\nStudios 1, 2, 3, 7, 8, C, and F.\nVocal booth A.\nM2, M3, M5.', 'studios scope -> studios / booth / M booths on their own lines', r.reply_text);
 r = ra(DAY);
-ok(/^Free rooms:\nStudios 1, 2, 3, 7, 8, C, and F\.\nVocal booth A\.\nM2, M3, M5\.\nKatha, Likha\.$/.test(r.reply_text || ''), 'all rooms -> + conference rooms on a line', r.reply_text);
+ok(/^(?:Saturday, October 2, 2:00 PM – 4:00 PM:\n)?Free rooms:\nStudios 1, 2, 3, 7, 8, C, and F\.\nVocal booth A\.\nM2, M3, M5\.\nKatha, Likha\.$/.test(r.reply_text || ''), 'all rooms -> + conference rooms on a line', r.reply_text);
 r = ra({ ...DAY, scope: 'studios' }, [{ id: 'e', summary: 'X', start: { dateTime: '2027-10-02T14:00:00+08:00' }, end: { dateTime: '2027-10-02T15:00:00+08:00' }, attendees: [{ email: 'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com' }] }]);
 ok(/Studios 1, 2, 3, 8, C, and F\./.test(r.reply_text || ''), 'a set time: a booked studio is left out (Studio 7)', r.reply_text);
 console.log('A range - day by day');
@@ -32,7 +33,7 @@ const EVS = [{ id: 'a', summary: 'SPORT / AEG', start: { dateTime: '2027-10-02T1
   { id: 'b', summary: 'LATE / EG', start: { dateTime: '2027-10-02T15:00:00+08:00' }, end: { dateTime: '2027-10-02T17:30:00+08:00' }, attendees: [{ email: S7 }] },
   { id: 'c', summary: 'M3 - Rico', start: { date: '2027-10-02' }, end: { date: '2027-10-03' }, attendees: [{ email: M3 }] }];
 r = ra({ ...WHOLE, scope: 'studios' }, EVS);
-ok(r.reply_text === 'Free all day:\nStudios 1, 2, 3, 8, C, and F.\nVocal booth A.\nM2, M5.\n\nStudio 7 (free except for 12:00 PM – 1:00 PM, 3:00 PM – 5:30 PM).', 'grouped all-day list, Studio 7 with its booked hours, M3 (booked all day) left out', r.reply_text);
+ok(r.reply_text === (V14 ? 'Saturday, October 2:\n' : '') + 'Free all day:\nStudios 1, 2, 3, 8, C, and F.\nVocal booth A.\nM2, M5.\n\nStudio 7 (free except for 12:00 PM – 1:00 PM, 3:00 PM – 5:30 PM).', 'grouped all-day list, Studio 7 with its booked hours, M3 (booked all day) left out', r.reply_text);
 r = ra({ start_iso: '2027-10-02T00:00:00+08:00', end_iso: '2027-10-03T23:59:00+08:00', scope: 'studios' }, EVS);
 ok(/^Free studios, day by day:\n\n.+October 2:\nFree all day:\nStudios 1, 2, 3, 8, C, and F\.\nVocal booth A\.\nM2, M5\.\n\nStudio 7 \(free except for 12:00 PM – 1:00 PM, 3:00 PM – 5:30 PM\)\.\n\n.+October 3:\nFree all day:\n/.test(r.reply_text || ''), 'a range of whole days -> the same, day by day', r.reply_text);
 console.log('Guard Probe sends the layout when the reply is just the list');
