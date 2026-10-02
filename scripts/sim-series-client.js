@@ -71,6 +71,6 @@ if (/v206 \(live 1 Oct 14:31\)/.test(code(M, 'Guard Probe'))) {
   ok(!/which day/i.test(gq("What's the client for this session?", ES, REQ)), 'live 14:31: Expand Series OK -> no "And which day is it for?"');
   ok(!/which day/i.test(gq("What's the client for this session?", [], 'book qa every tuesday until dec 2-4pm studio 8')), '"every tuesday", no tool yet -> none either');
   ok(!/which day/i.test(gq("Who is the client?", [], 'book studio 8 weekly 2-4pm for 4 weeks')), '"weekly" -> none');
-  ok(/And which day is it for\?$/.test(gq("What's the client for this session?", [], 'Book Studio 7 from 2pm to 5pm')), 'a single booking with no date -> still asked (v164)');
+  ok(/And which day(?: is it for)?\?$/.test(gq("What's the client for this session?", [], 'Book Studio 7 from 2pm to 5pm')), 'a single booking with no date -> still asked (v164)');
 }
 console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

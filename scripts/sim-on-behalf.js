@@ -91,7 +91,7 @@ if (/v81 \(live 1 Oct 17:03\)/.test(code(B, 'Check Conflicts'))) {
   for (const [st, txt] of [['Celebrity Recording', 'celeb recording'], ['Celebrity Recording', 'celebirty recording'], ['Post Mixing', 'post mixng'], ['Localization Dubbing', 'dubing'], ['Localization Dubbing', 'loc dubbing'], ['Music Vocal Recording', 'vocal recordng']])
     ok(S(st, 'book studio 8 tomorrow 2-4pm ' + txt + ', no client').reason !== 'NEED_SESSION_TYPE', JSON.stringify(txt) + ' -> ' + st);
   c = S('VO Recording', 'book studio 8 tomorrow 2-4pm, no client', 'What kind of session is this?');
-  ok(Q(c) === 'What kind of session is this? (e.g. VO Recording, Post Mixing, Post Processing)', 'asked again with nothing matched -> examples from the department (Audio Post)', Q(c));
+  ok(/v85 \(decided 2 Oct\): no examples/.test(code(B, 'Check Conflicts')) ? Q(c) === 'What kind of session is this?' : Q(c) === 'What kind of session is this? (e.g. VO Recording, Post Mixing, Post Processing)', 'asked again with nothing matched -> the question again (v85: no examples)', Q(c));
   c = S('VO Recording', 'book studio 8 tomorrow 2-4pm, no client');
   ok(Q(c) === 'What kind of session is this?', 'first ask: short');
   ok(S('Meeting', "book studio 8 tomorrow 2-4pm, let's meet the client, vo recording").reason === 'SESSION_TYPE_IS' && true, '"meet" is not taken over a full "vo recording"');
