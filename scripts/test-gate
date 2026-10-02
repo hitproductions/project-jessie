@@ -194,6 +194,13 @@ const cases = [
    { dateNotice: /Thursday, 2 September 2027/ }],
   ['the day after tomorrow',     'book studio 7 the day after tomorrow', [],
    { dateNotice: /Wednesday, 1 September 2027/ }],
+  // v215 (live 2 Oct 13:20): short weekday forms
+  ['thurs',                      'what studios are free on thurs?', [],
+   { dateNotice: /Thursday, 2 September 2027/ }],
+  ['tues',                       'book studio 7 tues 2-4pm', [],
+   { dateNotice: /Tuesday, 31 August 2027/ }],
+  ['next fri',                   'book studio 7 next fri', [],
+   { dateNotice: /Friday, 10 September 2027/ }],
 ];
 
 let failed = 0;
