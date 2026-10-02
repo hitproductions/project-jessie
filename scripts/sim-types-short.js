@@ -24,6 +24,11 @@ const go = (w, req, over = {}) => { const _r80 = { ...REQ0, ...req };
   // v84: a missing time is asked - these older cases name one so they test what they were written for
   if (/v84 \(decided 2 Oct\)/.test(code(w, 'Check Conflicts')) && String(_r80.requester_text || '').trim() && !req.__keep80
       && !/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b\d{1,2}\s*(?:-|to)\s*\d{1,2}\b|\ball day\b/i.test(_r80.requester_text)) _r80.requester_text += '\n2-4pm';
+  // v86: the project is required - older cases name the title's project so they test what they were written for
+  if (/v86 \(live 2 Oct 13:02/.test(code(w, 'Check Conflicts')) && !req.__keep86 && String(_r80.requester_text || '').trim() && String(_r80.summary || '').indexOf(' / ') !== -1) {
+    const _p0 = String(_r80.summary).split(' / ')[0].trim();
+    if (_p0 && (' ' + String(_r80.requester_text).toLowerCase().replace(/[^a-z0-9]+/g, ' ') + ' ').indexOf(' ' + _p0.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() + ' ') === -1) _r80.requester_text += '\nproject ' + _p0.toLowerCase();
+  }
   const R = [{ json: _r80 }];
   const O = { 'Get Client': [{ json: {} }], 'Client Aliases': [{ json: {} }], ...over };
   const $c = n => { if (n === 'When Executed by Another Workflow') return wrap(R); if (O[n]) return wrap(O[n]); const it = rec(n); if (!it) throw new Error('unexecuted ' + n); return wrap(it); };

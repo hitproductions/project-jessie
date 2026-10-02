@@ -19,7 +19,13 @@ const rec = n => run[n] ? (((run[n][0].data || {}).main || [[]])[0] || []) : nul
 const REQ0 = rec('When Executed by Another Workflow')[0].json;
 const JEM = rec('Get Client');   // Jem Lim: Client Type External (not recoded yet), Booker Type Advertising Producer
 const client = (name, types, bt) => [{ json: { id: 'recX', fields: { Name: name, 'Client Type': types, 'Booker Type': bt || '' } } }];
-const go = (w, req, over = {}) => { const R = [{ json: { ...REQ0, ...req } }];
+const go = (w, req, over = {}) => { const _r80 = { ...REQ0, ...req };
+  // v86: the project is required - these cases name the title's project so they test what they were written for
+  if (/v86 \(live 2 Oct 13:02/.test(code(w, 'Check Conflicts')) && !req.__keep86 && String(_r80.requester_text || '').trim() && String(_r80.summary || '').indexOf(' / ') !== -1) {
+    const _p0 = String(_r80.summary).split(' / ')[0].trim();
+    if (_p0 && (' ' + String(_r80.requester_text).toLowerCase().replace(/[^a-z0-9]+/g, ' ') + ' ').indexOf(' ' + _p0.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() + ' ') === -1) _r80.requester_text += '\nproject ' + _p0.toLowerCase();
+  }
+  const R = [{ json: _r80 }];
   const O = { 'Get Client': [{ json: {} }], 'Client Aliases': [{ json: {} }], ...over };
   const $c = n => { if (n === 'When Executed by Another Workflow') return wrap(R); if (O[n]) return wrap(O[n]); const it = rec(n); if (!it) throw new Error('unexecuted ' + n); return wrap(it); };
   const c = new Function('$', '$input', '$getWorkflowStaticData', code(w, 'Check Conflicts'))($c, wrap([{ json: { items: [] } }]), () => ({}))[0].json;

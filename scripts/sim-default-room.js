@@ -55,7 +55,7 @@ r = cc(NEW, [], { requester_text: TXT, rooms: '' }, staffRows([]));
 ok(r.final_rooms === PRI[0] && !r.room_default, 'no default -> as before', r);
 r = cc(NEW, [], { requester_text: TXT, rooms: '' }, staffRows([{ name: DEF }]));
 ok(r.final_rooms === DEF, 'Airtable object form {name} read too');
-r = cc(NEW, [], { requester_text: 'Book ' + PRI[0] + ' on Thursday, November 18 from 2pm to 4pm, VO recording', rooms: PRI[0] }, staffRows([DEF]));
+r = cc(NEW, [], { requester_text: 'Book ' + PRI[0] + ' on Thursday, November 18 from 2pm to 4pm, VO recording, project QANEW', rooms: PRI[0] }, staffRows([DEF]));
 ok(r.final_rooms === PRI[0] && !r.room_default, 'a named room always wins', r);
 
 console.log('Booked for a colleague - their default');

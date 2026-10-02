@@ -63,7 +63,7 @@ r = cc(NEW, [busy('a1', 'Studio A')], { requester_text: TXT, rooms: PRI[1] + ', 
 ok(r.final_rooms === PRI[0], 'a taken booth is dropped', r.final_rooms);
 
 console.log('A room named - theirs is used, as before');
-r = cc(NEW, [], { requester_text: 'Book Studio 8 on Thursday, November 18 from 2pm to 4pm, VO recording', rooms: 'Studio 8' });
+r = cc(NEW, [], { requester_text: 'Book Studio 8 on Thursday, November 18 from 2pm to 4pm, VO recording, project QANEW', rooms: 'Studio 8' });
 ok(r.verdict === 'CLEAR' && !r.room_suggested && r.final_rooms === 'Studio 8', '"Book Studio 8" -> Studio 8, no suggestion note', r);
 ok(!/I picked/.test(rs(NEW, r).summary_text), '  and the summary has no "I picked" note');
 r = cc(NEW, [], { requester_text: 'book studio8 thursday 2-4pm vo', rooms: 'Studio 8' });

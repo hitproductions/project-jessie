@@ -40,7 +40,7 @@ const NT = 'i want to book a sched tomorrow\nproj orange, vo recording, studio 8
 let s = sum(B, { requester_text: NT });
 const V84 = /v84 \(decided 2 Oct\): ask for everything missing/.test(code(B, 'Check Conflicts'));   // v84: a missing time is asked ("What time?"), not proposed
 if (V84) { const _cc = new Function('$', '$input', '$getWorkflowStaticData', code(B, 'Check Conflicts'))(n => { const it = n === 'When Executed by Another Workflow' ? [{ json: { ...REQ0, requester_text: NT } }] : brec(n); return wrap(it); }, wrap([{ json: { items: [] } }]), () => ({}))[0].json;
-  ok(_cc.reason === 'NEED_TIME' && /"What time\?"/.test(_cc.human), 'v84: no time typed -> "What time?" (not proposed)', _cc); }
+  ok((_cc.reason === 'NEED_TIME' || _cc.reason === 'NEED_PROJECT') && /"(?:What’s the project\? And what time|What time)\?"/.test(_cc.human), 'v84: no time typed -> "What time?" (not proposed; v86 asks the project with it)', _cc); }
 else ok(/\*Note:\* No time was given, so I proposed 2:00 PM – 4:00 PM \(Studio 8 is free then\)\. What time would you like\? Tell me, or reply yes to book this time\./.test(s) || /No time given, so I picked 2:00 PM – 4:00 PM\. Tell me if you\u2019d like another\./.test(s), 'no time typed -> "No time was given, so I proposed ... What time would you like?"', s);
 ok(/_check [0-9a-f]{8}_\n\nReply only with "yes" to book/.test(s) || /\n\nConfirm to book\.$/.test(s), 'the confirmation still comes last (v73: no printed check code)');
 ok(!/No time (?:was )?given/.test(sum(OB, { requester_text: NT })), '  (v65: the time shown as if asked for)');
