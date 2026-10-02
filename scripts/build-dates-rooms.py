@@ -9,6 +9,8 @@
      Room Availability v13 writes this text (reply_text; day by day with a blank line between days for a range).
      Guard Probe sends it when this turn's latest Room Availability answered OK and the model's reply is just the list
      (no question, no booking card).
+     A day asked about without a time (8+ hours on one day): "Free all day:" grouped by category, then each room booked
+     for part of the day on its own line - "Studio 7 (free except for 12:00 PM – 1:00 PM)."
   scripts/build-dates-rooms.py <main-in> <main-out> <ra-live> <ra-out>
 """
 import json, sys
@@ -67,6 +69,36 @@ function __layout(list) {
   if (other.length) out.push(other.join(', ') + '.');
   return out;
 }
+// v13 (decided 2 Oct): a day asked about without a time - "Free all day:" grouped by category, then each room booked for
+// part of that day on its own line: "Studio 7 (free except for 12:00 PM – 1:00 PM)." A room booked the whole time is left out.
+function __wholeDay(ws, we, sOnly) {
+  const _hmx = t => new Date(t).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
+  const iv = {};
+  for (const ev of events) {
+    const s0 = Math.max(evMs(ev.start && (ev.start.dateTime || ev.start.date)), ws), e0 = Math.min(evMs(ev.end && (ev.end.dateTime || ev.end.date)), we);
+    if (!(e0 > s0)) continue;
+    const emails = (ev.attendees || []).map(a => String(a.email || '').toLowerCase());
+    const loc = String(ev.location || '').toLowerCase(), seg = String(ev.summary || '').split(' - ')[0].trim().toLowerCase();
+    for (const k of keys) { const lk = k.toLowerCase();
+      if (emails.indexOf(ROOMS[k].toLowerCase()) !== -1 || (loc && loc.indexOf(lk) !== -1) || seg === lk) (iv[k] = iv[k] || []).push([s0, e0]); }
+  }
+  const cand = [...new Set(Object.keys(active).concat(boothNames))].filter(n => !(sOnly && isCommon[n]));
+  const allDay = [], partial = [];
+  for (const n of cand) {
+    const a = (iv[n] || []).sort((x, y) => x[0] - y[0]), m = [];
+    for (const x of a) { if (m.length && x[0] <= m[m.length - 1][1]) m[m.length - 1][1] = Math.max(m[m.length - 1][1], x[1]); else m.push([x[0], x[1]]); }
+    if (!m.length) allDay.push(n);
+    else if (!(m.length === 1 && m[0][0] <= ws && m[0][1] >= we)) partial.push([n, m]);
+  }
+  const lines = [];
+  const L = __layout(allDay);
+  if (L.length) lines.push('Free all day:', ...L);
+  const _sk = x => { const t = String(x).replace(/^Studio\s+/i, ''); return /^M[1-8]$/i.test(t) ? [1, +t.slice(1)] : /^\d+$/.test(t) ? [0, +t] : [0, 100 + t.charCodeAt(0)]; };
+  partial.sort((p, q) => { const a1 = _sk(p[0]), b1 = _sk(q[0]); return a1[0] - b1[0] || a1[1] - b1[1]; });
+  if (partial.length) { if (lines.length) lines.push('');
+    for (const [n, m] of partial) lines.push(n + ' (free except for ' + m.map(x => _hmx(x[0]) + ' – ' + _hmx(x[1])).join(', ') + ').'); }
+  return lines;
+}
 """ + RA_HELPER_ANCHOR
 
 RA_SINGLE_OLD = "// Booth availability is computed here rather than left to the model to work out"
@@ -75,13 +107,20 @@ if (Array.isArray(out.free_rooms) && !askedAnswer) {
   const _lines = __layout(out.free_rooms.concat(boothNames.filter(n => free(n) && out.free_rooms.indexOf(n) === -1)));
   const _sOnly = String(REQ.scope || '').toLowerCase() === 'studios';
   out.reply_text = _lines.length ? (_sOnly ? 'Free studios:' : 'Free rooms:') + '\n' + _lines.join('\n') : (_sOnly ? 'No studio is free then.' : 'Nothing is free then.');
+  if (reqEnd - reqStart >= 8 * 3600000) {   // a day asked about without a time (8+ hours on one day)
+    const _wl = __wholeDay(reqStart, reqEnd, _sOnly);
+    out.reply_text = _wl.length ? _wl.join('\n') : (_sOnly ? 'No studio is free that day.' : 'Nothing is free that day.');
+  }
 }
 """ + RA_SINGLE_OLD
 
 RA_MULTI_OLD = "        if (st) outM.session_type = st;"
 RA_MULTI_NEW = r"""        if (!askedList.length && !(st && (priority.length || lastResort.length))) {   // v13: day by day, each day laid out
-          outM.reply_text = (_studiosOnly ? 'Free studios' : 'Free rooms') + ', ' + (_whole ? 'all day' : hours) + ':\n\n'
-            + days.map(d => d.label + ':\n' + (d.free_rooms && d.free_rooms.length ? __layout(d.free_rooms).join('\n') : 'Nothing free.')).join('\n\n');
+          const _allWhole = days.every(d => Date.parse(d.window.end) - Date.parse(d.window.start) >= 8 * 3600000);
+          outM.reply_text = (_studiosOnly ? 'Free studios' : 'Free rooms') + (_allWhole ? ', day by day' : ', ' + hours) + ':\n\n'
+            + days.map(d => { const _ws = Date.parse(d.window.start), _we = Date.parse(d.window.end);
+                if (_we - _ws >= 8 * 3600000) { const _wl = __wholeDay(_ws, _we, _studiosOnly); return d.label + ':\n' + (_wl.length ? _wl.join('\n') : 'Nothing free.'); }
+                return d.label + ':\n' + (d.free_rooms && d.free_rooms.length ? __layout(d.free_rooms).join('\n') : 'Nothing free.'); }).join('\n\n');
         }
 """ + RA_MULTI_OLD
 
