@@ -183,6 +183,17 @@ const cases = [
    { confirmed: true }],
   ['yesterday is not a yes',   'yesterday', [usr('yesterday'), bookSummary],
    { confirmed: false }],
+  // v211 (live 2 Oct, "in 2 days"): N days ahead and the day after tomorrow (time amounts are not dates)
+  ['in 2 hours is not a date',   'make it in 2 hours', [],
+   { dateNotice: /^(?!.*(?:1|2) September 2027)/ }],
+  ['in 2 days',                  'hello book studio 7 for me in 2 days', [],
+   { dateNotice: /Wednesday, 1 September 2027/ }],
+  ['in two days',                'book studio 7 in two days 3pm', [],
+   { dateNotice: /Wednesday, 1 September 2027/ }],
+  ['3 days from now',            'book studio 7 3 days from now', [],
+   { dateNotice: /Thursday, 2 September 2027/ }],
+  ['the day after tomorrow',     'book studio 7 the day after tomorrow', [],
+   { dateNotice: /Wednesday, 1 September 2027/ }],
 ];
 
 let failed = 0;
