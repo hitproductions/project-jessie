@@ -201,6 +201,24 @@ const cases = [
    { dateNotice: /Tuesday, 31 August 2027/ }],
   ['next fri',                   'book studio 7 next fri', [],
    { dateNotice: /Friday, 10 September 2027/ }],
+  // v217 (live 4 Oct 21:46, "project wheat sun." booked for Sunday): a short day name needs a cue, and none counts in a project
+  ['a project named "wheat sun"', 'project wheat sun. 3-5pm', [],
+   { dateNotice: /^(?![\s\S]*Sunday)/ }],
+  ['tomorrow, project wheat sun', 'book vo recording for me tomorrow studio f, project wheat sun', [],
+   { dateNotice: /^(?![\s\S]*Sunday)[\s\S]*Tuesday, 31 August 2027/ }],
+  ['sun with a time is Sunday',  'book studio 7 sun 3pm', [],
+   { dateNotice: /Sunday, 5 September 2027/ }],
+  ['sat at the end is Saturday', 'can we do sat?', [],
+   { dateNotice: /Saturday, 4 September 2027/ }],
+  ['a project day with a time',  'project knorr sat 3pm', [],
+   { dateNotice: /Saturday, 4 September 2027/ }],
+  ['live 21:45: tomorrow',       'book vo recording for me tomorrow studio f. client is harold', [usr('book vo recording for me tomorrow studio f. client is harold')],
+   { dateNotice: /Tuesday, 31 August 2027/ }],
+  ['live 21:46: the answer keeps "tomorrow"', 'project wheat sun. 3-5pm',
+   [usr('project wheat sun. 3-5pm'), bot('What’s the project? And what time?'), usr('book vo recording for me tomorrow studio f. client is harold')],
+   { datesUnderDiscussion: /^(?![\s\S]*2027-09-05)[\s\S]*2027-08-31/ }],
+  ['a full day name in a project', 'book studio 7 tomorrow, project blue monday', [],
+   { dateNotice: /^(?![\s\S]*Monday, 6 September)[\s\S]*Tuesday, 31 August 2027/ }],
 ];
 
 let failed = 0;
