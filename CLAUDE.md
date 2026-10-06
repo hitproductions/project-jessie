@@ -114,8 +114,9 @@ hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 P
 (hand imports; v217/v88/v16 not yet tried in Slack - a 3-message check is in the 4 Oct EOD). The full end-to-end checklist
 has not been rerun since 1 Oct. **QA round 3** sheets (jess / trish / camy v3) are in `docs/qa/round3/`. Next build:
 PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop). **Candidates, not imported:
-main v220 + Book Session v91 + Room Availability v17 (client asked first and until "none", PENDING 84; past
-bookings allowed, PENDING 85) - v218 / v219 / v89 / v90 are included and superseded.**
+main v221 + Book Session v91 + Room Availability v17 + Cancel Booking v22 + Find Booking v8 (client asked first and
+until "none", PENDING 84; past bookings allowed, PENDING 85; name search includes the last 60 days, PENDING 86) - v218-v220
+/ v89 / v90 are included and superseded.**
 The latest builds and what each fixed: [`docs/eod/EOD-2026-10-04.md`](docs/eod/EOD-2026-10-04.md).
 
 **Testing through Slack.** An end-to-end test can be run by sending the test messages in the
