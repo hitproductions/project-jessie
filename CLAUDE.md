@@ -114,7 +114,8 @@ hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 P
 (hand imports, before + after MATCH; not yet tried in Slack - client asked first and until "none" (PENDING 84), past bookings
 (85), name search over the last 60 days (86)). The full end-to-end checklist
 has not been rerun since 1 Oct. **QA round 3** sheets (jess / trish / camy v3) are in `docs/qa/round3/`. Next build:
-PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop).
+PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop). **Candidates, not imported (before QA round 3):
+Book Session v94 + main v228 (engineer asked first, past-date heads-up in the year shift; PENDING 92); QA sheets v4 in `docs/qa/round3/`.**
 The latest builds and what each fixed: [`docs/eod/EOD-2026-10-04.md`](docs/eod/EOD-2026-10-04.md).
 
 **Testing through Slack.** An end-to-end test can be run by sending the test messages in the
