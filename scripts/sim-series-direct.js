@@ -44,11 +44,14 @@ ok(P.items.every(j => j.mode === 'prepare' && j.series === false && j.expected_d
 ok(P.agg.status === 'PREPARED' && /^\*ASIM KILIG \/ John Estrada \/ HL\*\n\*Dates \(3\):\*\n- Friday, 8 October 2027\n- Friday, 15 October 2027\n- Friday, 22 October 2027\n\*Time:\* 3:00 PM – 6:00 PM\n\*Room:\* Studio 7/.test(P.agg.card_text) && /Confirm to book\.$/.test(P.agg.card_text), 'the card: title, 3 dates, time, room - written in code', P.agg.card_text || P.agg);
 ok(/^prep-s[0-9a-f]{8}$/.test(P.agg.prep_key) && JSON.parse(P.agg.prep_payload).inputs.dates === '2027-10-08,2027-10-15,2027-10-22', 'stored under a series key, with the three dates', [P.agg.prep_key, P.agg.prep_payload && JSON.parse(P.agg.prep_payload).inputs]);
 const T2 = series(PS_IN, ['2027-10-15']);
-ok(/\*Dates \(2\):\*\n- Friday, 8 October 2027\n- Friday, 22 October 2027\n/.test(T2.agg.card_text) && /Heads up: Studio 7 is taken on Friday, 15 October 2027 - that date left out\./.test(T2.agg.card_text), 'a date whose room is taken is left out and named', T2.agg.card_text);
+const ALTS = /series_alt/.test(JSON.stringify(B));   // Book Session v93 / Book Series v6: a taken date gets another room or time
+if (ALTS) ok(/\*Dates \(3\):\*\n- Friday, 8 October 2027\n- Friday, 15 October 2027 · 4:00 PM – 7:00 PM \(Studio 7 is taken 3:00 PM – 6:00 PM\)\n- Friday, 22 October 2027\n/.test(T2.agg.card_text), 'v6: a taken date (Studio 7 busy 2-4 PM, the only usual room here) -> moved to 4-7 PM, said', T2.agg.card_text);
+else ok(/\*Dates \(2\):\*\n- Friday, 8 October 2027\n- Friday, 22 October 2027\n/.test(T2.agg.card_text) && /Heads up: Studio 7 is taken on Friday, 15 October 2027 - that date left out\./.test(T2.agg.card_text), 'a date whose room is taken is left out and named', T2.agg.card_text);
 const Q = series({ ...PS_IN, session_type: '', requester_text: 'book studio 7 every friday for the next three weeks for project asim kilig 3-6pm. client john estrada' });
 ok(Q.agg.status === 'REJECTED' && /Ask exactly this/.test(Q.agg.human), 'a question (no session type) goes back as Book Session wrote it', [Q.agg.reason, Q.agg.human]);
 const ALL = series(PS_IN, ['2027-10-08', '2027-10-15', '2027-10-22']);
-ok(ALL.agg.status === 'REJECTED' && /taken on every one/.test(ALL.agg.human), 'taken on every date -> nothing prepared, says so', ALL.agg.human);
+if (ALTS) ok(ALL.agg.status === 'PREPARED' && (ALL.agg.card_text.match(/· 4:00 PM – 7:00 PM/g) || []).length === 3, 'v6: taken 2-4 PM on every date -> each moved to 4-7 PM', ALL.agg.card_text);
+else ok(ALL.agg.status === 'REJECTED' && /taken on every one/.test(ALL.agg.human), 'taken on every date -> nothing prepared, says so', ALL.agg.human);
 
 console.log('main v225 Guard Probe - the card is the reply');
 const gp = (output, steps) => new Function('$input', '$', code(M, 'Guard Probe'))(wrap([{ json: { output, intermediateSteps: steps } }]),
