@@ -114,7 +114,8 @@ hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 P
 (hand imports, before + after MATCH; not yet tried in Slack - client asked first and until "none" (PENDING 84), past bookings
 (85), name search over the last 60 days (86)). The full end-to-end checklist
 has not been rerun since 1 Oct. **QA round 3** sheets (jess / trish / camy v3) are in `docs/qa/round3/`. Next build:
-PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop).
+PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop). **Candidates, not imported:
+Book Series v4 + main v225 (deterministic series, includes v223 / v224; PENDING 88, 90).**
 The latest builds and what each fixed: [`docs/eod/EOD-2026-10-04.md`](docs/eod/EOD-2026-10-04.md).
 
 **Testing through Slack.** An end-to-end test can be run by sending the test messages in the
@@ -346,8 +347,9 @@ exactly that text. At the yes, main's `Prepared Booking` node reads Jessie's new
 code, and Book Session books **those** details whatever the model passes (`use` → the tool inputs come from `p`).
 A yes to a summary Prepare Booking did not write is refused (`NOT_PREPARED`). Guard Probe skips every rewrite of a
 prepared summary's booking lines, because any change would break the code. Before it: five date formats, the
-title in 16% of summaries, one live booking titled differently from the summary approved. Still model-written:
-recurring series and moves (after launch). Prepare mode also asks what the model used to guess: no date named
+title in 16% of summaries, one live booking titled differently from the summary approved. Still model-written: moves.
+**Series too, since main v225 / Book Series v4** (PENDING 90): `Prepare Series` writes the series card in code and stores it,
+and at the yes `Prepared Series` → `Series Direct` books exactly the card's dates through Book Series, without the model. Prepare mode also asks what the model used to guess: no date named
 (`MISSING_DATE`), department (`NEED_DEPARTMENT`), External/Personal (`NEED_BOOKING_TYPE`), the arranger
 (`NEED_ARRANGER`), a near-miss client ("Did you mean …?", `CLIENT_CHECK` / `CLIENT_AMBIGUOUS`).
 
