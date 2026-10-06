@@ -113,7 +113,8 @@ rewrites and **Prepare Booking** (code writes the summary the requester approves
 hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 PHT, series rerun 14:53–14:56 on main v207 / Book Session v75; the four booking types 15:12–15:24 on main v208 / Book Session v77 - Advertising, Entertainment from Netflix's record, Internal for a Likha meeting, Personal from "my own project", each booked, read back from the event and cancelled) through Slack on main v206 / Book Session v74 / Cancel v21 / Move v25 / Room Availability v12: book (short card, engineer defaulted), "make it 3pm instead" (Move Direct), the short cancel card and cancel, an internal-room card and "no", "is studio 7 free this week?" day by day, and a series (short card with the Expand Series dates, "none" carried on, "no") - one event at a time, calendar clean after. Before that, 2026-09-29 on main v191: book, move, move again, cancel, and a dateless cancel by name. **Live since 4 Oct 22:02 PHT: main v217 / Book Session v88 / Room Availability v16** / Cancel v21 / Move v25 / Find v7
 (hand imports; v217/v88/v16 not yet tried in Slack - a 3-message check is in the 4 Oct EOD). The full end-to-end checklist
 has not been rerun since 1 Oct. **QA round 3** sheets (jess / trish / camy v3) are in `docs/qa/round3/`. Next build:
-PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop).
+PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop). **Candidates, not imported:
+main v218 + Book Session v89 (client asked first, PENDING 84).**
 The latest builds and what each fixed: [`docs/eod/EOD-2026-10-04.md`](docs/eod/EOD-2026-10-04.md).
 
 **Testing through Slack.** An end-to-end test can be run by sending the test messages in the
@@ -712,6 +713,12 @@ the task runner), for whoever has shell access to the box.
     of Book Session's questions (v203) tested `verdict`, and every sim fed it Check Conflicts' raw output - so it passed offline
     and never fired live for two days; the model relayed the questions itself and, on 2 Oct, widened one. Build sim observations
     from a real execution's `intermediateSteps` (fixed in main v216).
+
+30. **A refusal that needs the requester's answer must carry the question, in quotes, after "Ask exactly this".** Guard Probe
+    relays that quoted question word for word (v203/v216). A refusal written only as an instruction ("Ask the requester who
+    the client is ... If there is no client, leave it empty.") gets pasted by the model, and the leak filter can only drop the
+    sentences it recognises - on 6 Oct the requester got "Nothing was booked. If there is no client, leave it empty." and
+    guessed what to type. Better still, in prepare mode fix the input and ask (v89 drops a client nobody typed).
 
 ## Not done
 
