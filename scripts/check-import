@@ -21,7 +21,11 @@ def load(p):
 
 # n8n leaves a parameter out of the saved workflow when it has its default value; a build may state it. These count
 # as equal (found 29 Sep: a Code node's mode "runOnceForAllItems" in the build, absent in the download).
-DEFAULTS = {"n8n-nodes-base.code": {"mode": "runOnceForAllItems"}}
+# 6 Oct: Execute Workflow's source "database" (Book Series' Create Each), and the Data Table node's matchType "anyCondition"
+# (main v226 Read Prepared - downloads keep "allConditions", so "anyCondition" is the default n8n leaves out).
+DEFAULTS = {"n8n-nodes-base.code": {"mode": "runOnceForAllItems"},
+            "n8n-nodes-base.executeWorkflow": {"source": "database"},
+            "n8n-nodes-base.dataTable": {"matchType": "anyCondition"}}
 def params(n):
     p = dict(n.get("parameters", {}))
     for k, v in DEFAULTS.get(n.get("type"), {}).items():
