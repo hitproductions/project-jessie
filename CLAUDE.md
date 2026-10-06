@@ -110,12 +110,11 @@ and Slack, no Airtable), runs on the same n8n instance.
 **Working, and proven live:** the main workflow and every sub-workflow are active and
 green. The confirmation gate, the ownership refusals (`NOT_YOURS`), Guard Probe's text
 rewrites and **Prepare Booking** (code writes the summary the requester approves) all
-hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 PHT, series rerun 14:53–14:56 on main v207 / Book Session v75; the four booking types 15:12–15:24 on main v208 / Book Session v77 - Advertising, Entertainment from Netflix's record, Internal for a Likha meeting, Personal from "my own project", each booked, read back from the event and cancelled) through Slack on main v206 / Book Session v74 / Cancel v21 / Move v25 / Room Availability v12: book (short card, engineer defaulted), "make it 3pm instead" (Move Direct), the short cancel card and cancel, an internal-room card and "no", "is studio 7 free this week?" day by day, and a series (short card with the Expand Series dates, "none" carried on, "no") - one event at a time, calendar clean after. Before that, 2026-09-29 on main v191: book, move, move again, cancel, and a dateless cancel by name. **Live since 6 Oct ~16:16 PHT: main v227 / Book Series v6 / Book Session v93 / Room Availability v17 / Cancel v22 / Find v8** / Move v25
+hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 PHT, series rerun 14:53–14:56 on main v207 / Book Session v75; the four booking types 15:12–15:24 on main v208 / Book Session v77 - Advertising, Entertainment from Netflix's record, Internal for a Likha meeting, Personal from "my own project", each booked, read back from the event and cancelled) through Slack on main v206 / Book Session v74 / Cancel v21 / Move v25 / Room Availability v12: book (short card, engineer defaulted), "make it 3pm instead" (Move Direct), the short cancel card and cancel, an internal-room card and "no", "is studio 7 free this week?" day by day, and a series (short card with the Expand Series dates, "none" carried on, "no") - one event at a time, calendar clean after. Before that, 2026-09-29 on main v191: book, move, move again, cancel, and a dateless cancel by name. **Live since 6 Oct ~17:00 PHT: main v228 / Book Series v6 (restore to confirm) / Book Session v94 / Room Availability v17 / Cancel v22 / Find v8** / Move v25
 (hand imports, before + after MATCH; not yet tried in Slack - client asked first and until "none" (PENDING 84), past bookings
 (85), name search over the last 60 days (86)). The full end-to-end checklist
 has not been rerun since 1 Oct. **QA round 3** sheets (jess / trish / camy v3) are in `docs/qa/round3/`. Next build:
-PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop). **Candidates, not imported (before QA round 3):
-Book Session v94 + main v228 (engineer asked first, past-date heads-up in the year shift; PENDING 92); QA sheets v4 in `docs/qa/round3/`.**
+PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop). QA sheets v4 in `docs/qa/round3/`.
 The latest builds and what each fixed: [`docs/eod/EOD-2026-10-04.md`](docs/eod/EOD-2026-10-04.md).
 
 **Testing through Slack.** An end-to-end test can be run by sending the test messages in the
@@ -734,6 +733,12 @@ the task runner), for whoever has shell access to the box.
     After such a change, search every node the model reads (prompt, tool descriptions, `$fromAI` descriptions) for the old
     tool name. And a direct action that takes longer than a reply (a series books ~25 s a date) needs an in-progress lock:
     the repeat-yes guard only works once the result is posted.
+
+32. **check-import compares nodes, not which workflow they went into.** On 6 Oct Book Session v94 was imported into the Book
+    Series workflow; the download still MATCHED the v94 build node for node. Every download carries the workflow `id` - check
+    it against the table above (Book Series `UAwFoifgkfL1xNP2`, Book Session `EUG3sGXkfsJSYIMz`, main `uVVYVB2M7kxpLleI`)
+    before calling an import good. A main file imported anywhere but main shows n8n's "Conflicting Trigger Path" on publish
+    - never answer it by deactivating the live main.
 
 ## Not done
 
