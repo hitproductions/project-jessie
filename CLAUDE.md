@@ -110,13 +110,11 @@ and Slack, no Airtable), runs on the same n8n instance.
 **Working, and proven live:** the main workflow and every sub-workflow are active and
 green. The confirmation gate, the ownership refusals (`NOT_YOURS`), Guard Probe's text
 rewrites and **Prepare Booking** (code writes the summary the requester approves) all
-hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 PHT, series rerun 14:53–14:56 on main v207 / Book Session v75; the four booking types 15:12–15:24 on main v208 / Book Session v77 - Advertising, Entertainment from Netflix's record, Internal for a Likha meeting, Personal from "my own project", each booked, read back from the event and cancelled) through Slack on main v206 / Book Session v74 / Cancel v21 / Move v25 / Room Availability v12: book (short card, engineer defaulted), "make it 3pm instead" (Move Direct), the short cancel card and cancel, an internal-room card and "no", "is studio 7 free this week?" day by day, and a series (short card with the Expand Series dates, "none" carried on, "no") - one event at a time, calendar clean after. Before that, 2026-09-29 on main v191: book, move, move again, cancel, and a dateless cancel by name. **Live since 4 Oct 22:02 PHT: main v217 / Book Session v88 / Room Availability v16** / Cancel v21 / Move v25 / Find v7
-(hand imports; v217/v88/v16 not yet tried in Slack - a 3-message check is in the 4 Oct EOD). The full end-to-end checklist
+hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 PHT, series rerun 14:53–14:56 on main v207 / Book Session v75; the four booking types 15:12–15:24 on main v208 / Book Session v77 - Advertising, Entertainment from Netflix's record, Internal for a Likha meeting, Personal from "my own project", each booked, read back from the event and cancelled) through Slack on main v206 / Book Session v74 / Cancel v21 / Move v25 / Room Availability v12: book (short card, engineer defaulted), "make it 3pm instead" (Move Direct), the short cancel card and cancel, an internal-room card and "no", "is studio 7 free this week?" day by day, and a series (short card with the Expand Series dates, "none" carried on, "no") - one event at a time, calendar clean after. Before that, 2026-09-29 on main v191: book, move, move again, cancel, and a dateless cancel by name. **Live since 6 Oct ~14:29 PHT: main v221 / Book Session v91 / Room Availability v17 / Cancel v22 / Find v8** / Move v25
+(hand imports, before + after MATCH; not yet tried in Slack - client asked first and until "none" (PENDING 84), past bookings
+(85), name search over the last 60 days (86)). The full end-to-end checklist
 has not been rerun since 1 Oct. **QA round 3** sheets (jess / trish / camy v3) are in `docs/qa/round3/`. Next build:
-PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop). **Candidates, not imported:
-main v221 + Book Session v91 + Room Availability v17 + Cancel Booking v22 + Find Booking v8 (client asked first and
-until "none", PENDING 84; past bookings allowed, PENDING 85; name search includes the last 60 days, PENDING 86) - v218-v220
-/ v89 / v90 are included and superseded.**
+PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop).
 The latest builds and what each fixed: [`docs/eod/EOD-2026-10-04.md`](docs/eod/EOD-2026-10-04.md).
 
 **Testing through Slack.** An end-to-end test can be run by sending the test messages in the
