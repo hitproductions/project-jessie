@@ -27,7 +27,8 @@ const to = (n, b = 0) => ((((M.connections[n] || {}).main || [])[b]) || []).map(
 // v202: Move Direct? sits between Cancel Direct? and Already Done? (a confirmed move card goes to Move Booking directly)
 const _afterCancel = JSON.stringify(to('Cancel Direct?', 1)) === '["Already Done?"]' || (JSON.stringify(to('Cancel Direct?', 1)) === '["Move Direct?"]' && JSON.stringify(to('Move Direct?', 1)) === '["Already Done?"]')
   // v225: Prepared Series / Series Direct? sit between Move Direct? and Already Done? (a confirmed series card is booked directly)
-  || (JSON.stringify(to('Cancel Direct?', 1)) === '["Move Direct?"]' && JSON.stringify(to('Move Direct?', 1)) === '["Prepared Series"]' && JSON.stringify(to('Prepared Series')) === '["Series Direct?"]' && JSON.stringify(to('Series Direct?', 1)) === '["Already Done?"]');
+  || (JSON.stringify(to('Cancel Direct?', 1)) === '["Move Direct?"]' && JSON.stringify(to('Move Direct?', 1)) === '["Prepared Series"]' && JSON.stringify(to('Prepared Series')) === '["Series Direct?"]' && (JSON.stringify(to('Series Direct?', 1)) === '["Already Done?"]'
+       || (JSON.stringify(to('Series Direct?', 1)) === '["Series Busy?"]' && JSON.stringify(to('Series Busy?', 1)) === '["Already Done?"]')));   // v226: Series Busy?
 ok(_afterCancel && JSON.stringify(to('Already Done?', 0)) === '["Already Done Reply"]'
    && JSON.stringify(to('Already Done Reply')) === '["Send Reply"]' && JSON.stringify(to('Already Done?', 1)) === '["Jessie AI Agent"]',
    'wiring: Cancel Direct? -> Already Done? -> reply | AI Agent');

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// Offline round trip for Book Series v4 + main v225 (deterministic series; PENDING 90): Prepare Series runs every date
+// Offline round trip for Book Series v5 + main v226 (v4 / v225 + review fixes) (deterministic series; PENDING 90): Prepare Series runs every date
 // through Book Session's real prepare code and writes the card; Guard Probe sends it as written; at the yes Prepared Key
 // + Prepared Series read the stored series back, and Series Direct books exactly the dates on the card - no model.
 //   node scripts/sim-series-direct.js <main-execution.json>   (its All Bookers output feeds Book Session)
 const fs = require('fs'), path = require('path');
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
-const M = WF(process.env.MAIN || 'project-jessie-v225.json'), S = WF(process.env.SERIES || 'book-series-v4.json'), B = WF(process.env.BOOK || 'book-session-v92.json');
+const M = WF(process.env.MAIN || 'project-jessie-v226.json'), S = WF(process.env.SERIES || 'book-series-v5.json'), B = WF(process.env.BOOK || 'book-session-v92.json');
 let pass = 0, fail = 0;
 const ok = (c, msg, d) => { if (c) { pass++; console.log('  ok    ' + msg); } else { fail++; console.log('  FAIL  ' + msg + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 700))); } };
 const wrap = it => ({ first: () => it[0], all: () => it, last: () => it[it.length - 1] });
@@ -93,9 +93,60 @@ const bad = k => [{ cache_key: P.agg.prep_key, payload: P.agg.prep_payload.repla
 ok(yesTurn(sent, bad).sd._seriesDirect.use === false, 'stored series altered -> no direct booking', yesTurn(sent, bad).sd._seriesDirect.reason);
 const single = '*ASIM KILIG / HL*\n*Date:* Friday, 8 October 2027\n*Time:* 3:00 PM – 6:00 PM\n*Room:* Studio 7\n\nBook it? Reply yes or no.';
 ok(yesTurn(single, store).sd._seriesDirect.use === false, 'a single-booking card -> not a series');
+
+
+console.log('review (v226) - a second yes while the series is being booked');
+const withLock = ageMs => key => store(key).concat([{ cache_key: 'lock-' + P.agg.prep_key, payload: '{"lock":true}', refreshed_at: new Date(Date.now() - ageMs).toISOString() }]);
+let YL = yesTurn(sent, withLock(40000));
+ok(YL.sd._seriesDirect.use === false && YL.sd._seriesDirect.busy === true, 'a yes 40 s after the first started booking -> busy, not a second booking', YL.sd._seriesDirect);
+ok(yesTurn(sent, withLock(16 * 60000)).sd._seriesDirect.use === true, 'a lock older than 15 minutes is ignored');
+ok(yesTurn(sent, withLock(40000), false).sd._seriesDirect.busy === false, 'no yes -> not busy either');
+const busyOut = new Function('$', '$input', code(M, 'Series Busy Reply'))(() => wrap([{ json: {} }]), wrap([{ json: {} }]))[0].json.output;
+ok(/^Still booking that series/.test(busyOut), 'the busy reply', busyOut);
+const sdq = M.nodes.find(n => n.name === 'Series Busy?').parameters.conditions.conditions[0].leftValue;
+ok(new Function('$', 'return (' + sdq.replace(/^=\{\{\s*/, '').replace(/\s*\}\}$/, '') + ');')(n => wrap([{ json: YL.sd }])) === 'yes', 'Series Busy? routes it to the busy reply');
+
+console.log('review (v5 / v226) - paths the first sim did not cover');
+{ // a date prepared in a different room (Book Session moved it) counts as taken for the series - the card's room is one room
+  const res2 = P.res.map((r, k) => { if (k !== 1) return r; const pp = JSON.parse(r.json.prep_payload); pp.F.Room = 'Studio 8';
+    return { json: Object.assign({}, r.json, { prep_payload: JSON.stringify(pp) }) }; });
+  const agg2 = new Function('$', '$input', code(S, 'Aggregate'))(n => n === 'Expand Dates' ? wrap(P.items.map(j => ({ json: j }))) : wrap([{ json: PS_IN }]), wrap(res2))[0].json;
+  ok(/\*Dates \(2\):\*\n- Friday, 8 October 2027\n- Friday, 22 October 2027/.test(agg2.card_text) && /Studio 7 is taken on Friday, 15 October 2027/.test(agg2.card_text) && JSON.parse(agg2.prep_payload).inputs.dates === '2027-10-08,2027-10-22',
+    'a date prepared in Studio 8 while the series is in Studio 7 -> left out and named', agg2.card_text);
+  const agg4 = new Function('$', '$input', code(WF('book-series-v4.json'), 'Aggregate'))(n => n === 'Expand Dates' ? wrap(P.items.map(j => ({ json: j }))) : wrap([{ json: PS_IN }]), wrap(res2))[0].json;
+  ok(/\*Dates \(3\):\*/.test(agg4.card_text), '  (v4: all three under "Studio 7")');
+}
+{ // a conference-room series: no engineer -> no "Engineer: " segment
+  const REF3 = JSON.stringify({ rooms: [{ id: 'rl', name: 'Likha', common: true }], types: [] });
+  const CR = series({ ...PS_IN, rooms: 'Likha', session_type: '', summary: 'LIKHA - Audio Post', client: '', engineer: '', description: 'Booked by: Howard Luistro | ref: ' + ME,
+    reference_data: REF3, requester_text: 'book likha every friday for the next three weeks 3-6pm for our team meeting' });
+  const inp = CR.agg.prep_payload ? JSON.parse(CR.agg.prep_payload).inputs : {};
+  ok(CR.agg.status === 'PREPARED' && !/Engineer:\s*(\||$)/.test(inp.description || '') && /^Booked by: Howard Luistro \| ref: /.test(inp.description || ''), 'a conference-room series: description without an empty "Engineer:"', [CR.agg.status, CR.agg.reason, inp.description, CR.agg.human]);
+}
+{ // an M booth all-day series
+  const REF4 = JSON.stringify({ rooms: [{ id: 'm3', name: 'M3', common: false }], types: [] });
+  const MB = series({ ...PS_IN, rooms: 'M3', session_type: '', summary: 'M3 - Howard', client: '', engineer: '', all_day: true, time_start: '', time_end: '', description: 'Booked by: Howard Luistro | ref: ' + ME,
+    reference_data: REF4, requester_text: 'book m3 for me every friday for the next three weeks' });
+  ok(MB.agg.status === 'PREPARED' && /\*Dates \(3\):\*/.test(MB.agg.card_text) && /\*Time:\* All day/i.test(MB.agg.card_text), 'an M booth all-day series -> a 3-date card, all day', [MB.agg.status, MB.agg.reason, MB.agg.human, MB.agg.card_text]);
+  if (MB.agg.status === 'PREPARED') {
+    const inp = JSON.parse(MB.agg.prep_payload).inputs;
+    const BKM = series({ ...inp, frequency: '', by_days: '', start_date: '', count: 0, until_date: '', mode: '', confirmed: true, reference_data: REF4, staff_data: '', authority: 'Standard', asked_text: '' });
+    ok(BKM.items.length === 3 && BKM.items.every(j => j.all_day === true && /T00:00:00\+08:00$/.test(j.start_iso)) && BKM.agg.status === 'BOOKED_SERIES', '... and its yes books 3 all-day events', BKM.items.map(j => [j._date, j.all_day, j.start_iso]));
+  }
+}
+{ // the model can only show a series through Prepare Series
+  ok(!M.connections['Expand Series'], 'Expand Series is no longer a tool of the agent');
+  const facing = M.nodes.filter(n => n.name !== 'Expand Series' && !/stickyNote/.test(n.type)).filter(n => { const p = n.parameters || {}; return /Expand Series/.test(JSON.stringify(Object.fromEntries(Object.entries(p).filter(([k]) => k !== 'jsCode')))); }).map(n => n.name);
+  ok(!facing.length, 'nothing the model reads mentions Expand Series', facing);
+}
 console.log('wiring');
 const C = M.connections;
-ok(JSON.stringify(C['Move Direct?'].main[1]) === JSON.stringify([{ node: 'Prepared Series', type: 'main', index: 0 }]) && C['Series Direct?'].main[1][0].node === 'Already Done?' && C['Series Direct'].main[0][0].node === 'Series Direct Reply' && C['Series Direct Reply'].main[0][0].node === 'Send Reply', 'Move Direct? (no) -> Prepared Series -> Series Direct? -> Series Direct -> Series Direct Reply -> Send Reply; else Already Done?');
+ok(JSON.stringify(C['Move Direct?'].main[1]) === JSON.stringify([{ node: 'Prepared Series', type: 'main', index: 0 }]) && C['Series Direct?'].main[0][0].node === 'Lock Series' && C['Lock Series'].main[0][0].node === 'Series Direct'
+  && C['Series Direct'].main[0][0].node === 'Series Direct Reply' && C['Series Direct Reply'].main[0][0].node === 'Send Reply'
+  && C['Series Direct?'].main[1][0].node === 'Series Busy?' && C['Series Busy?'].main[0][0].node === 'Series Busy Reply' && C['Series Busy Reply'].main[0][0].node === 'Send Reply' && C['Series Busy?'].main[1][0].node === 'Already Done?',
+  'Move Direct? (no) -> Prepared Series -> Series Direct? -> Lock Series -> Series Direct -> reply; else Series Busy? -> busy reply | Already Done?');
+const RP = M.nodes.find(n => n.name === 'Read Prepared').parameters, LK = M.nodes.find(n => n.name === 'Lock Series');
+ok(RP.matchType === 'anyCondition' && RP.filters.conditions.some(c => /'lock-' \+/.test(c.keyValue)) && LK.onError === 'continueRegularOutput' && /'lock-' \+/.test(LK.parameters.columns.value.cache_key), 'Read Prepared also reads the lock row; Lock Series never stops the booking');
 ok(C['Prepare Series'].ai_tool[0][0].node === 'Jessie AI Agent', 'Prepare Series is a tool of the agent');
 const SC = S.connections; ok(SC['Aggregate'].main[0][0].node === 'Series Prepared?' && SC['Series Prepared?'].main[0][0].node === 'Store Series' && SC['Store Series'].main[0][0].node === 'Series Out' && SC['Series Prepared?'].main[1][0].node === 'Series Result', 'Book Series: Aggregate -> Series Prepared? -> Store Series -> Series Out | Series Result');
 console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

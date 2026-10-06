@@ -115,7 +115,7 @@ hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 P
 (85), name search over the last 60 days (86)). The full end-to-end checklist
 has not been rerun since 1 Oct. **QA round 3** sheets (jess / trish / camy v3) are in `docs/qa/round3/`. Next build:
 PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop). **Candidates, not imported:
-Book Series v4 + main v225 (deterministic series, includes v223 / v224; PENDING 88, 90).**
+Book Series v5 + main v226 (deterministic series + review fixes, includes v223-v225; PENDING 88, 90). Import Book Series first.**
 The latest builds and what each fixed: [`docs/eod/EOD-2026-10-04.md`](docs/eod/EOD-2026-10-04.md).
 
 **Testing through Slack.** An end-to-end test can be run by sending the test messages in the
@@ -348,7 +348,7 @@ code, and Book Session books **those** details whatever the model passes (`use` 
 A yes to a summary Prepare Booking did not write is refused (`NOT_PREPARED`). Guard Probe skips every rewrite of a
 prepared summary's booking lines, because any change would break the code. Before it: five date formats, the
 title in 16% of summaries, one live booking titled differently from the summary approved. Still model-written: moves.
-**Series too, since main v225 / Book Series v4** (PENDING 90): `Prepare Series` writes the series card in code and stores it,
+**Series too, since main v226 / Book Series v5** (PENDING 90): `Prepare Series` writes the series card in code and stores it,
 and at the yes `Prepared Series` → `Series Direct` books exactly the card's dates through Book Series, without the model. Prepare mode also asks what the model used to guess: no date named
 (`MISSING_DATE`), department (`NEED_DEPARTMENT`), External/Personal (`NEED_BOOKING_TYPE`), the arranger
 (`NEED_ARRANGER`), a near-miss client ("Did you mean …?", `CLIENT_CHECK` / `CLIENT_AMBIGUOUS`).
@@ -725,6 +725,15 @@ the task runner), for whoever has shell access to the box.
     the client is ... If there is no client, leave it empty.") gets pasted by the model, and the leak filter can only drop the
     sentences it recognises - on 6 Oct the requester got "Nothing was booked. If there is no client, leave it empty." and
     guessed what to type. Better still, in prepare mode fix the input and ask (v89 drops a client nobody typed).
+
+31. **Moving a job to a new tool means rewording every tool that still claims it - or removing the old one.** main v225 added
+    Prepare Series and changed the prompt, but Expand Series' own description still said "Use this for any repeating booking
+    ... its answer says how to present the series - follow it", its answer said "Present these dates in ONE summary", and the
+    prompt and Prepare Booking's description each named the old path once more. A tool's own instruction tends to win over
+    the prompt, so the deterministic path would have been skipped. Caught in review (v226 takes Expand Series off the agent).
+    After such a change, search every node the model reads (prompt, tool descriptions, `$fromAI` descriptions) for the old
+    tool name. And a direct action that takes longer than a reply (a series books ~25 s a date) needs an in-progress lock:
+    the repeat-yes guard only works once the result is posted.
 
 ## Not done
 
