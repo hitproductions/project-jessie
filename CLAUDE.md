@@ -114,7 +114,8 @@ hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 P
 (hand imports; v217/v88/v16 not yet tried in Slack - a 3-message check is in the 4 Oct EOD). The full end-to-end checklist
 has not been rerun since 1 Oct. **QA round 3** sheets (jess / trish / camy v3) are in `docs/qa/round3/`. Next build:
 PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop). **Candidates, not imported:
-main v219 + Book Session v90 (client asked first, and until "none"; PENDING 84) - v218 / v89 are superseded.**
+main v220 + Book Session v91 + Room Availability v17 (client asked first and until "none", PENDING 84; past
+bookings allowed, PENDING 85) - v218 / v219 / v89 / v90 are included and superseded.**
 The latest builds and what each fixed: [`docs/eod/EOD-2026-10-04.md`](docs/eod/EOD-2026-10-04.md).
 
 **Testing through Slack.** An end-to-end test can be run by sending the test messages in the
@@ -368,7 +369,7 @@ that is not listed there is refused** (PENDING 53). The prompt and tool inputs a
 `Book Session` refuses before anything reaches the calendar:
 
 ```
-MISSING_DETAILS · MISSING_CLIENT · CLIENT_UNVERIFIED · ENGINEER_UNKNOWN · ENGINEER_UNVERIFIED · TITLE_INITIALS · NO_REFERENCE_DATA · PAST_DATE · NOT_CONFIRMED · DURATION_INVALID
+MISSING_DETAILS · MISSING_CLIENT · CLIENT_UNVERIFIED · ENGINEER_UNKNOWN · ENGINEER_UNVERIFIED · TITLE_INITIALS · NO_REFERENCE_DATA · NOT_CONFIRMED · DURATION_INVALID
 ROOM_UNSUITABLE · ROOM_NOT_PRIORITY · NO_ROOM · UNKNOWN_ROOM · ROOM_OCCUPIED · UNVERIFIABLE
 ```
 
@@ -443,6 +444,10 @@ plain line above the confirmation, computed from the summary's *Time:* and *Sess
 Table's reference data: *"Heads up: 9 hours is longer than VO Recording sessions usually run (1–3 hours).
 Still book it as is?"* It first drops the model's own duration remarks, so there's one line and never
 "minimum" or "maximum allowed". QA M5, 2026-09-25: the prompt-only version flagged 15 minutes and missed 9 hours.
+
+Past sessions can be booked (decided 2026-10-06, Book Session v91 / main v220 / Room Availability v17): there is no
+`PAST_DATE` refusal any more; the card says "Heads up: this date has already passed.", and a date with a year is taken as
+written, so during the QA year shift "oct 1 2026" books 2026.
 
 `Cancel Booking` refuses with:
 

@@ -94,7 +94,8 @@ ok(r.reason !== 'DATE_MISMATCH', 'a UTC timestamp that is 7 Oct in Manila matche
 r = check(Object.assign({}, base, { expected_date: '2027-10-07', start_iso: '2027-10-07', end_iso: '2027-10-08', all_day: true, rooms: 'M4' }));
 ok(r.reason !== 'DATE_MISMATCH', 'all-day date-only booking on the right day passes');
 r = check(Object.assign({}, base, { expected_date: '2027-09-30', start_iso: '2025-01-01T10:00:00+08:00', end_iso: '2025-01-01T11:00:00+08:00' }));
-ok(r.reason === 'PAST_DATE', 'a past date is still refused as PAST_DATE first');
+if (/v91 \(decided 6 Oct\)/.test(String(CHECK))) ok(r.reason === 'DATE_MISMATCH', 'v91: past dates are allowed - a past date that is not the one discussed is still DATE_MISMATCH', r.reason);
+else ok(r.reason === 'PAST_DATE', 'a past date is still refused as PAST_DATE first');
 
 console.log(fails ? '\n' + fails + ' FAILED' : '\nall passed');
 process.exit(fails ? 1 : 0);
