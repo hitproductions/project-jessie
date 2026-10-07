@@ -29,8 +29,12 @@ const _afterCancel = JSON.stringify(to('Cancel Direct?', 1)) === '["Already Done
   // v225: Prepared Series / Series Direct? sit between Move Direct? and Already Done? (a confirmed series card is booked directly)
   || (JSON.stringify(to('Cancel Direct?', 1)) === '["Move Direct?"]' && JSON.stringify(to('Move Direct?', 1)) === '["Prepared Series"]' && JSON.stringify(to('Prepared Series')) === '["Series Direct?"]' && (JSON.stringify(to('Series Direct?', 1)) === '["Already Done?"]'
        || (JSON.stringify(to('Series Direct?', 1)) === '["Series Busy?"]' && JSON.stringify(to('Series Busy?', 1)) === '["Already Done?"]')));   // v226: Series Busy?
+// v230: the early room check sits between Already Done? and the agent (both its branches end at the agent)
+const _viaEarly = JSON.stringify(to('Already Done?', 1)) === '["Early Room Plan"]' && JSON.stringify(to('Early Room Plan')) === '["Early Room Check?"]'
+  && JSON.stringify(to('Early Room Check?', 1)) === '["Jessie AI Agent"]' && JSON.stringify(to('Early Room Check?', 0)) === '["Early Room Check"]'
+  && JSON.stringify(to('Early Room Check')) === '["Early Room Result"]' && JSON.stringify(to('Early Room Result')) === '["Jessie AI Agent"]';
 ok(_afterCancel && JSON.stringify(to('Already Done?', 0)) === '["Already Done Reply"]'
-   && JSON.stringify(to('Already Done Reply')) === '["Send Reply"]' && JSON.stringify(to('Already Done?', 1)) === '["Jessie AI Agent"]',
+   && JSON.stringify(to('Already Done Reply')) === '["Send Reply"]' && (JSON.stringify(to('Already Done?', 1)) === '["Jessie AI Agent"]' || _viaEarly),
    'wiring: Cancel Direct? -> Already Done? -> reply | AI Agent');
 ok(/seriesNotice/.test(node('Jessie AI Agent').parameters.options.systemMessage), 'the prompt carries the series notice');
 console.log(`\n${fail ? 'FAIL' : 'OK'} - ${pass} passed, ${fail} failed`);
