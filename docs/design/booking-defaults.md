@@ -58,6 +58,8 @@ no longer shows it.
 1. Named by the requester ("engineer Drey", "with Drey").
 2. **"me", "myself", "I'll engineer"** -> the requester (bug: one booking ignored this - PENDING 71).
 3. No engineer named and the requester is an engineer, booking for themselves -> the requester (live since Book Session v71).
+3b. **Booked FOR a colleague who is an engineer** (Bookers role) that fits the session type -> that colleague (decided 7 Oct, Book
+   Session v95 - QA B2 "book Studio F for elijah"). A colleague who is not an engineer, or does not fit the type, is asked about.
 4. The requester is an arranger -> they are the arranger; ask "Who's engineering?"
 5. Anyone else booking a studio -> "Who's engineering?"
 6. Conference rooms, Lobby, M booths -> no engineer.
