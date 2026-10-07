@@ -5,7 +5,7 @@
 const fs = require('fs'), path = require('path');
 const WF = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'workflows', f)));
 const code = (w, n) => w.nodes.find(x => x.name === n).parameters.jsCode;
-const M = WF(process.env.MAIN || 'project-jessie-v234.json'), OM = WF('project-jessie-v229.json');
+const M = WF(process.env.MAIN || 'project-jessie-v235.json'), OM = WF('project-jessie-v229.json');
 const RA = WF(process.env.RA || 'room-availability-v18.json');
 let pass = 0, fail = 0;
 const ok = (c, msg, d) => { if (c) { pass++; console.log('  ok    ' + msg); } else { fail++; console.log('  FAIL  ' + msg + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 900))); } };
@@ -49,17 +49,17 @@ console.log('QA B4 - "book studio f on oct 14, 1-4pm plz" when Studio F is taken
 let r = turn({ text: 'book studio f on oct 14, 1-4pm plz', timeStart: '13:00', timeEnd: '16:00' });
 ok(r.plan.run && r.plan.room === 'Studio F' && r.plan.start_iso === '2027-10-14T13:00:00+08:00' && r.plan.end_iso === '2027-10-20T16:00:00+08:00',
   'checked at once: Studio F, 14-20 Oct, 1-4 PM', r.plan);
-ok(/^You already have Studio F booked on Thursday, October 14, 1:00 PM – 4:00 PM \(“SESH \/ Netflix \/ JD”\)\.\n\n/.test(r.out), 'Jess\'s own booking -> "You already have Studio F booked ..."', r.out);
-ok(/\nFree at that time: Studio 2 · Studio 7 · Studio 8 · /.test(r.out) && !/Studio 1 ·|Studio 1$|Studio F ·/.test(r.out.split('\n').find(l => /^Free at/.test(l))),
+ok(/^❌ Heads up: \*You already have Studio F booked 1:00 PM – 4:00 PM\* on Thursday, October 14 with this session: SESH \/ Netflix \/ JD\n\n/.test(r.out), 'Jess\'s own booking -> "You already have Studio F booked ..."', r.out);
+ok(/\n✅ Free at that time:\nStudio 2 · Studio 7 · Studio 8 · /.test(r.out) && !/Studio 1 ·|Studio 1$|Studio F ·/.test(r.out.split('✅ Free at that time:\n')[1].split('\n')[0]),
   'other rooms free then, same kind, Studio 1 (taken) left out', r.out);
-ok(/\nStudio F is free at that time on Saturday, October 16 · Sunday, October 17 · Monday, October 18\n\nWant one of those, or another day or time\?$/.test(r.out),
+ok(/\n✅ Studio F is free at that time on:\n• Saturday, October 16\n• Sunday, October 17\n• Monday, October 18\n\nWant one of those, or another day or time\?$/.test(r.out),
   'and the next days Studio F is free then (15 Oct is taken)', r.out);
 ok(!/What kind of session/.test(r.out), 'the model\'s questions are not sent');
 ok(/^ROOM CHECK/.test(r.res.earlyRoomNotice) && r.res.earlyRoomNotice.includes(r.out), 'the prompt is told the same reply', r.res.earlyRoomNotice);
 r = turn({ text: 'book studio f on oct 14, 1-4pm plz', user: TRISH, timeStart: '13:00', timeEnd: '16:00' });
-ok(/^Studio F is already booked on Thursday, October 14, 1:00 PM – 4:00 PM \(“SESH \/ Netflix \/ JD”\)\./.test(r.out), 'someone else\'s -> "Studio F is already booked on ..."', r.out);
+ok(/^❌ Heads up: \*Studio F is already booked 1:00 PM – 4:00 PM\* on Thursday, October 14 by this session: SESH \/ Netflix \/ JD\n/.test(r.out), 'someone else\'s -> "❌ Heads up: *Studio F is already booked ...*"', r.out);
 r = turn({ text: 'book studio f on oct 14, 3-6pm', timeStart: '15:00', timeEnd: '18:00' });
-ok(/booked on Thursday, October 14, 1:00 PM – 4:00 PM \(/.test(r.out), 'an overlap shows the booking\'s own times', r.out);
+ok(/booked 1:00 PM – 4:00 PM\* on Thursday, October 14 /.test(r.out), 'an overlap shows the booking\'s own times', r.out);
 
 console.log('free');
 r = turn({ text: 'book studio 7 on oct 14, 1-4pm', timeStart: '13:00', timeEnd: '16:00' });
@@ -84,7 +84,7 @@ ok(/^❌ Heads up: \*Studio 7 is already booked 8:00 AM – 12:00 PM and 12:15 P
 ok(!/[*❌✅•\n]/.test(r.res.earlyRoomNotice.split('Those lines')[0]), 'the prompt gets it as plain text, on one line', r.res.earlyRoomNotice);
 ok(!/free on the same day at/.test(r.out) && /\n✅ Free all day:\n/.test(r.out) && !/• 12:00 PM|• 9:45 PM/.test(r.out), 'gaps under 30 minutes are not offered (12:00-12:15, 9:45-10:00)', r.out);
 r = turn({ text: 'book studio f on oct 14', user: TRISH, cal: [{ id: 'x', summary: 'HOLD', location: 'Studio F', description: 'ref: U2', start: { date: '2027-10-14' }, end: { date: '2027-10-15' } }] });
-ok(/^Studio F is already booked on Thursday, October 14, all day \(“HOLD”\)\.\n\nFree that day: Studio 1 · Studio 2 · /.test(r.out) && /Studio F is free on Friday, October 15 · /.test(r.out),
+ok(/^❌ Heads up: \*Studio F is already booked all day\* on Thursday, October 14 by this session: HOLD\n\n✅ Free all day:\nStudio 1 · Studio 2 · /.test(r.out) && /\n✅ Studio F is free all day on:\n• Friday, October 15\n/.test(r.out),
   'booked all day -> taken, the rooms free that day, and the next days', r.out);
 r = turn({ text: 'book studio 7 on oct 14' });
 ok(r.res.earlyRoom && r.res.earlyRoom.mode === 'free' && /free on Thursday, October 14 \(8 AM – 10 PM\)/.test(r.res.earlyRoomNotice), 'free all day -> carry on', r.res.earlyRoomNotice);
@@ -92,7 +92,7 @@ ok(r.res.earlyRoom && r.res.earlyRoom.mode === 'free' && /free on Thursday, Octo
 console.log('the room from earlier in the booking');
 const H = (text, bot) => bot ? { text, bot_id: 'B1', ts: '1791899999.' + text.length } : { text, user: JESS, ts: '1791899998.' + text.length };
 r = turn({ text: '1-4pm', inMsg: '', timeStart: '13:00', timeEnd: '16:00', history: [H('What time?', true), H('book studio f on oct 14')] });
-ok(r.plan.run && r.plan.room === 'Studio F' && /^You already have Studio F/.test(r.out), 'the time given later -> Studio F checked then', [r.plan, r.out]);
+ok(r.plan.run && r.plan.room === 'Studio F' && /^❌ Heads up: \*You already have Studio F/.test(r.out), 'the time given later -> Studio F checked then', [r.plan, r.out]);
 r = turn({ text: 'oct 14 then', timeStart: '13:00', timeEnd: '16:00', history: [H('Studio F is already booked ...\n\nFree at that time: Studio 7 · Studio 8', true), H('book studio f on oct 13, 1-4pm')] });
 ok(!r.plan.run, 'Jessie has offered other rooms since -> not guessed', r.plan);
 r = turn({ text: 'studio 7 then', inMsg: '', timeStart: '13:00', timeEnd: '16:00', history: [H('You already have Studio F ...', true), H('book studio f on oct 14, 1-4pm plz')] });
@@ -108,10 +108,16 @@ r = turn({ text: 'i still need studio f', inMsg: '', timeStart: '13:00', timeEnd
 ok(!r.plan.run && r.out === r.asIs, 'told once, still wants Studio F -> the normal flow (Book Session: priority request or ROOM_OCCUPIED)', r.plan);
 r = turn({ text: 'ok how about oct 15', dates: '2027-10-15', inMsg: '2027-10-15', timeStart: '13:00', timeEnd: '16:00', user: TRISH,
   history: [H('Studio F is already booked on Thursday, October 14, 1:00 PM – 4:00 PM (“SESH / Netflix / JD”).', true), H('book studio f on oct 14, 1-4pm')] });
-ok(r.plan.run && r.plan.room === 'Studio F' && /^Studio F is already booked on Friday, October 15, 12:00 PM – 5:00 PM/.test(r.out), '"how about oct 15" after being told about Studio F -> Studio F on the 15th, checked (taken too)', r.out);
+ok(r.plan.run && r.plan.room === 'Studio F' && /^❌ Heads up: \*Studio F is already booked 12:00 PM – 5:00 PM\* on Friday, October 15 /.test(r.out), '"how about oct 15" after being told about Studio F -> Studio F on the 15th, checked (taken too)', r.out);
 r = turn({ text: 'studio f on oct 15 then', dates: '2027-10-15', timeStart: '13:00', timeEnd: '16:00', user: TRISH,
   history: [H('Studio F is already booked on Thursday, October 14, 1:00 PM – 4:00 PM (“SESH / Netflix / JD”).', true), H('book studio f on oct 14, 1-4pm')] });
-ok(r.plan.run && /^Studio F is already booked on Friday, October 15, 12:00 PM – 5:00 PM/.test(r.out), 'Studio F on another date -> checked again (taken 15 Oct too)', r.out);
+ok(r.plan.run && /^❌ Heads up: \*Studio F is already booked 12:00 PM – 5:00 PM\* on Friday, October 15 /.test(r.out), 'Studio F on another date -> checked again (taken 15 Oct too)', r.out);
+r = turn({ text: 'i still need studio f', inMsg: '', timeStart: '13:00', timeEnd: '16:00', user: TRISH,
+  history: [H('❌ Heads up: *Studio F is already booked 1:00 PM – 4:00 PM* on Thursday, October 14 by this session: SESH / Netflix / JD\n\n✅ Free at that time:\nStudio 2\n\nWant one of those, or another day or time?', true), H('book studio f on oct 14, 1-4pm')] });
+ok(!r.plan.run, 'v235: told in the ❌ layout, still wants Studio F -> the normal flow', r.plan);
+r = turn({ text: '1-4pm', inMsg: '', timeStart: '13:00', timeEnd: '16:00', user: TRISH,
+  history: [H('❌ Heads up: *Studio F is already booked 1:00 PM – 4:00 PM* on Thursday, October 14 by this session: SESH / Netflix / JD\n\n✅ Studio F is free on the same day at:\n• 8:00 AM – 1:00 PM\n\nWhat time?', true), H('book studio f on oct 14')] });
+ok(r.plan.run && /^❌ Heads up: \*Studio F is already booked/.test(r.out), 'v235: a heads-up on a question is not "told" -> the time given later is checked', [r.plan, r.out]);
 const MB = [E('M3', '2027-10-14', '09:00', '18:00', 'M3 - HOLD', 'U2')];
 r = turn({ text: 'book m3 on oct 14, 1-4pm', timeStart: '13:00', timeEnd: '16:00', user: TRISH, cal: MB });
 ok(r.plan.room === 'M3' && /^❌ Heads up: \*M3 is already booked 9:00 AM – 6:00 PM\* on Thursday, October 14 by this session: M3 - HOLD\n\n✅ Free at that time:\nM1 · M2 · M4 · M5 · M6\n\n/.test(r.out) && r.out.endsWith('\n\n' + r.asIs),
@@ -142,7 +148,7 @@ const vo = R.types.find(t => t.type === 'VO Recording'); const rank = [].concat(
 if (rank.includes('Studio F')) {
   r = turn({ text: 'book studio f on oct 14, 1-4pm, vo recording', timeStart: '13:00', timeEnd: '16:00' });
   const want = rank.filter(n => !['Studio F', 'Studio 1'].includes(n)).slice(0, 5).join(' · ');
-  ok(r.out.includes('Free at that time: ' + want + '\n'), 'VO Recording named -> its ranking: ' + want, r.out);
+  ok(r.out.includes('✅ Free at that time:\n' + want + '\n'), 'VO Recording named -> its ranking: ' + want, r.out);
 } else ok(true, '(VO Recording does not rank Studio F in this fixture - skipped)');
 
 console.log('wiring and prompt');

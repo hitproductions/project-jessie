@@ -45,7 +45,7 @@ ok(P.agg.status === 'PREPARED' && /^\*ASIM KILIG \/ John Estrada \/ HL\*\n\*Date
 ok(/^prep-s[0-9a-f]{8}$/.test(P.agg.prep_key) && JSON.parse(P.agg.prep_payload).inputs.dates === '2027-10-08,2027-10-15,2027-10-22', 'stored under a series key, with the three dates', [P.agg.prep_key, P.agg.prep_payload && JSON.parse(P.agg.prep_payload).inputs]);
 const T2 = series(PS_IN, ['2027-10-15']);
 const ALTS = /series_alt/.test(JSON.stringify(B));   // Book Session v93 / Book Series v6: a taken date gets another room or time
-if (ALTS) ok(/\*Dates \(3\):\*\n- Friday, 8 October 2027\n- Friday, 15 October 2027 · 4:00 PM – 7:00 PM \(Studio 7 is taken 3:00 PM – 6:00 PM\)\n- Friday, 22 October 2027\n/.test(T2.agg.card_text), 'v6: a taken date (Studio 7 busy 2-4 PM, the only usual room here) -> moved to 4-7 PM, said', T2.agg.card_text);
+if (ALTS) ok(/\*Dates \(3\):\*\n- Friday, 8 October 2027\n- Friday, 15 October 2027 · 4:00 PM – 7:00 PM \(Studio 7 is already booked 3:00 PM – 6:00 PM\)\n- Friday, 22 October 2027\n/.test(T2.agg.card_text), 'v6: a taken date (Studio 7 busy 2-4 PM, the only usual room here) -> moved to 4-7 PM, said', T2.agg.card_text);
 else ok(/\*Dates \(2\):\*\n- Friday, 8 October 2027\n- Friday, 22 October 2027\n/.test(T2.agg.card_text) && /Heads up: Studio 7 is taken on Friday, 15 October 2027 - that date left out\./.test(T2.agg.card_text), 'a date whose room is taken is left out and named', T2.agg.card_text);
 const Q = series({ ...PS_IN, session_type: '', requester_text: 'book studio 7 every friday for the next three weeks for project asim kilig 3-6pm. client john estrada' });
 ok(Q.agg.status === 'REJECTED' && /Ask exactly this/.test(Q.agg.human), 'a question (no session type) goes back as Book Session wrote it', [Q.agg.reason, Q.agg.human]);
@@ -114,7 +114,7 @@ console.log('review (v5 / v226) - paths the first sim did not cover');
   const res2 = P.res.map((r, k) => { if (k !== 1) return r; const pp = JSON.parse(r.json.prep_payload); pp.F.Room = 'Studio 8';
     return { json: Object.assign({}, r.json, { prep_payload: JSON.stringify(pp) }) }; });
   const agg2 = new Function('$', '$input', code(S, 'Aggregate'))(n => n === 'Expand Dates' ? wrap(P.items.map(j => ({ json: j }))) : wrap([{ json: PS_IN }]), wrap(res2))[0].json;
-  ok(/\*Dates \(2\):\*\n- Friday, 8 October 2027\n- Friday, 22 October 2027/.test(agg2.card_text) && /Studio 7 is taken on Friday, 15 October 2027/.test(agg2.card_text) && JSON.parse(agg2.prep_payload).inputs.dates === '2027-10-08,2027-10-22',
+  ok(/\*Dates \(2\):\*\n- Friday, 8 October 2027\n- Friday, 22 October 2027/.test(agg2.card_text) && /Studio 7 is already booked on Friday, 15 October 2027/.test(agg2.card_text) && JSON.parse(agg2.prep_payload).inputs.dates === '2027-10-08,2027-10-22',
     'a date prepared in Studio 8 while the series is in Studio 7 -> left out and named', agg2.card_text);
   const agg4 = new Function('$', '$input', code(WF('book-series-v4.json'), 'Aggregate'))(n => n === 'Expand Dates' ? wrap(P.items.map(j => ({ json: j }))) : wrap([{ json: PS_IN }]), wrap(res2))[0].json;
   ok(/\*Dates \(3\):\*/.test(agg4.card_text), '  (v4: all three under "Studio 7")');

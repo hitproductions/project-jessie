@@ -48,7 +48,7 @@ const CELEB = { summary: '/ / HL', client: '', engineer: 'Howard Luistro', sessi
   requester_text: 'book celeb recording 3-4pm tomorrow studio f' };
 console.log('Book Session v88 - a clash in the named room rides on the first question');
 let c = cc(B, CELEB, [SMILE]);
-ok(/^Heads up: Studio F is booked 3:00 PM – 4:00 PM \("SMILE \/ Jem Lim \/ AEG"\)\. /.test(relay(c.human) || ''), 'live 21:31: the question opens with Studio F\'s booking', [c.reason, relay(c.human)]);
+ok(/^(?:Heads up: Studio F is booked 3:00 PM – 4:00 PM \("SMILE \/ Jem Lim \/ AEG"\)\. |❌ Heads up: \*Studio F is already booked 3:00 PM – 4:00 PM\* on Tuesday, October 5 by this session: SMILE \/ Jem Lim \/ AEG\n\n\S)/.test(relay(c.human) || ''), 'live 21:31: the question opens with Studio F\'s booking', [c.reason, relay(c.human)]);
 ok(!/Heads up/.test(relay(cc(OB, CELEB, [SMILE]).human) || ''), '  (v87: nothing about the room until the card)');
 c = cc(B, CELEB, []);
 ok(c.verdict === 'REJECTED' && !/Heads up/.test(c.human), 'a free room -> the question alone', relay(c.human));

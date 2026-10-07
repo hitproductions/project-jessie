@@ -41,7 +41,7 @@ console.log('Move Direct Reply - written in code');
 const reply = (res, bfo = b) => new Function('$', '$input', node('Move Direct Reply').parameters.jsCode)(n => ({ first: () => ({ json: n === 'Booked For' ? bfo : {} }) }), wrap([{ json: res }]))[0].json.output;
 ok(reply({ status: 'MOVED' }) === 'Moved "QAONE / DR" to Tuesday, November 2, 2027, 3:00 PM – 5:00 PM, Studio 7.', 'MOVED -> one line, the card\'s new time', reply({ status: 'MOVED' }));
 ok(/on the calendar twice/.test(reply({ status: 'PARTIAL' })), 'PARTIAL -> said plainly');
-ok(/taken now, so nothing was moved/.test(reply({ status: 'REJECTED', reason: 'ROOM_OCCUPIED', human: 'Tell the requester ...' })) && !/requester/.test(reply({ status: 'REJECTED', reason: 'ROOM_OCCUPIED', human: 'Tell the requester ...' })), 'a refusal -> plain words, never the model-facing text');
+ok(/^❌ Heads up: \*That time is already booked now\*\n\nThe booking stays where it is\. Want a different time or room\?$/.test(reply({ status: 'REJECTED', reason: 'ROOM_OCCUPIED', human: 'Tell the requester ...' })) && !/requester/.test(reply({ status: 'REJECTED', reason: 'ROOM_OCCUPIED', human: 'Tell the requester ...' })), 'a refusal -> plain words, never the model-facing text');
 ok(/couldn't confirm/.test(reply({})), 'nothing back -> "couldn\'t confirm", never "Moved"');
 { const NC = '*QASER / HL*\n*Now:* Tuesday, November 9, 2027, 10:00 AM – 12:00 PM, Studio 8\n*Moving to:* Tuesday, November 9, 2027, 3:00 PM – 5:00 PM, Studio 8\n\nMove it? Reply yes or no.';
   ok(reply({ status: 'MOVED' }, { ...b, seriesNextCard: NC }).endsWith('\n\n' + NC), 'a series -> the next date\'s card follows'); }
