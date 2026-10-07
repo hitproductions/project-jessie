@@ -72,8 +72,9 @@ const RID = n => (code(RA, 'Compute Availability').match(new RegExp("'" + n + "'
 const ev = (room, a, b) => ({ id: room + a, summary: 'X', start: { dateTime: '2027-10-05T' + a + ':00+08:00' }, end: { dateTime: '2027-10-05T' + b + ':00+08:00' }, attendees: [{ email: RID(room) }] });
 console.log('Room Availability v16 - layout decided 4 Oct');
 let r = ra({ start_iso: '2027-10-05T00:00:00+08:00', end_iso: '2027-10-05T23:59:00+08:00' }, [ev('Studio 5', '12:00', '15:00'), ev('Studio 7', '10:00', '12:00')]);
-ok(r.reply_text === '🗓️ October 5 (Tuesday)\n\nFree all day:\nStudios 1, 2, 8, C, and F.\nVocal booth A.\nM2, M3.\n\nStudio 5 (except 12:00 PM – 3:00 PM).\nStudio 7 (except 10:00 AM – 12:00 PM).',
+ok(r.reply_text === '🗓️ October 5 (Tuesday)\n\nFree all day:\nStudios 1, 2, 8, C, and F.\nVocal booth A.\nM2, M3.\n\nStudio 5 (except 12:00 PM – 3:00 PM).\nStudio 7 (except 10:00 AM – 12:00 PM).'
+  || r.reply_text === '🗓️ October 5 (Tuesday)\n\n✅ Free all day:\nStudios 1, 2, 8, C, and F.\nVocal booth A.\nM2, M3.\n\n⚠️ Studio 5 (free except 12:00 PM – 3:00 PM).\n⚠️ Studio 7 (free except 10:00 AM – 12:00 PM).',   // RA v19: ✅ / ⚠️
   'a whole day: headline, "Free all day:" with no blank line, "(except ...)"', r.reply_text);
 r = ra({ start_iso: '2027-10-05T14:00:00+08:00', end_iso: '2027-10-05T17:00:00+08:00' });
-ok(/\nFree studios:\nStudios 1, 2, 5, 7, 8, C, and F\.\nVocal booth A\.\nM2, M3\.$/.test(r.reply_text || ''), 'a set time: "Free studios:" with no blank line', r.reply_text);
+ok(/\n(?:✅ )?Free studios:\nStudios 1, 2, 5, 7, 8, C, and F\.\nVocal booth A\.\nM2, M3\.$/.test(r.reply_text || ''), 'a set time: "Free studios:" with no blank line', r.reply_text);
 console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);
