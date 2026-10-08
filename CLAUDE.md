@@ -92,7 +92,7 @@ execution, or add an n8n workflow that writes run summaries to the repo; and `ev
 ## Where things stand
 
 **Launch is 22 October 2026** (moved on 2026-10-08 from 12 Oct; amended sprint 2026-09-21 had moved it from 25 Sep). Major development is to be done by Fri 9 Oct or Mon 12 Oct; the weekend is available. Jessie is
-live and in daily use. A second bot, Posty (release announcements — Google Sheets
+live but used for testing only until launch (no real bookings by staff yet, per Howard 8 Oct). A second bot, Posty (release announcements — Google Sheets
 and Slack, no Airtable), runs on the same n8n instance.
 
 **The amended sprint milestones:**
