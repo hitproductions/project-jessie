@@ -110,12 +110,7 @@ and Slack, no Airtable), runs on the same n8n instance.
 **Working, and proven live:** the main workflow and every sub-workflow are active and
 green. The confirmation gate, the ownership refusals (`NOT_YOURS`), Guard Probe's text
 rewrites and **Prepare Booking** (code writes the summary the requester approves) all
-hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 PHT, series rerun 14:53–14:56 on main v207 / Book Session v75; the four booking types 15:12–15:24 on main v208 / Book Session v77 - Advertising, Entertainment from Netflix's record, Internal for a Likha meeting, Personal from "my own project", each booked, read back from the event and cancelled) through Slack on main v206 / Book Session v74 / Cancel v21 / Move v25 / Room Availability v12: book (short card, engineer defaulted), "make it 3pm instead" (Move Direct), the short cancel card and cancel, an internal-room card and "no", "is studio 7 free this week?" day by day, and a series (short card with the Expand Series dates, "none" carried on, "no") - one event at a time, calendar clean after. Before that, 2026-09-29 on main v191: book, move, move again, cancel, and a dateless cancel by name. **Live since 8 Oct ~23:07 PHT: main v248 (leaks + room reply; v247 brevity; v246 availability read in code; v245 cancel it after Moved; v244 no self-written cards; transcript since v243; Claude Haiku 5.5 primary since v240) / Book Session v100 / Book Series v8 / Cancel v24 / Move v26 / Room Availability v21 / Book Series v7 / Book Session v97 / Room Availability v19 / Cancel v22 / Find v8** / Move v25 (main v238 withdraws any booking/cancel/move card no tool made - Haiku wrote one itself in the 8 Oct round; main v237 = v236 with Claude Haiku 4.5 as the agent's model, paid from the plan's monthly Claude API credits, and Gemini 3.5 Flash Lite as fallback; not yet tried in Slack. The Anthropic key must be **workspace-scoped**: an Organization-scoped key gets 400 "must include the anthropic-workspace-id header")
-(hand imports, before + after MATCH; not yet tried in Slack - client asked first and until "none" (PENDING 84), past bookings
-(85), name search over the last 60 days (86)). The full end-to-end checklist
-has not been rerun since 1 Oct. **QA round 3** sheets (jess / trish / camy v3) are in `docs/qa/round3/`. Next build:
-PENDING 78 + 79 (priority-request messages with blank names; "cleared with ..." loop). QA sheets v4 in `docs/qa/round3/`.
-The latest builds and what each fixed: [`docs/eod/EOD-2026-10-04.md`](docs/eod/EOD-2026-10-04.md).
+hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 PHT, series rerun 14:53–14:56 on main v207 / Book Session v75; the four booking types 15:12–15:24 on main v208 / Book Session v77 - Advertising, Entertainment from Netflix's record, Internal for a Likha meeting, Personal from "my own project", each booked, read back from the event and cancelled) through Slack on main v206 / Book Session v74 / Cancel v21 / Move v25 / Room Availability v12: book (short card, engineer defaulted), "make it 3pm instead" (Move Direct), the short cancel card and cancel, an internal-room card and "no", "is studio 7 free this week?" day by day, and a series (short card with the Expand Series dates, "none" carried on, "no") - one event at a time, calendar clean after. Before that, 2026-09-29 on main v191: book, move, move again, cancel, and a dateless cancel by name. **Live since 8 Oct ~23:24 PHT, on Claude Haiku 5.5** (Gemini 3.5 Flash Lite as the fallback): main **v248** / Book Session **v100** / Book Series **v8** / Cancel **v24** / Move **v26** / Room Availability **v21** / Find v8 / Expand Series v4. Every import: the live download MATCHES the build it replaces, the post-import download MATCHES, workflow ids checked. **Verified in Slack on 8 Oct** (Howard's DM): the 14-step smoke test in one conversation 24/25 (the miss - "cancel it" after "Moved" - fixed in v245 and rechecked 7/7), 13 QA round 3 scenarios 13/13, and each later fix (availability, brevity, room questions) rechecked on its own; the calendar clean after every round. What every test found and how it was fixed, with a comparison to the last Gemini build: [`docs/qa/haiku-swap-tests-2026-10-08.md`](docs/qa/haiku-swap-tests-2026-10-08.md); the day: [`docs/eod/EOD-2026-10-08.md`](docs/eod/EOD-2026-10-08.md). **Next:** PENDING 100 (booking lists written in code, List Events off the agent), then 101 (the Gemini fallback since memory was removed; Console admin). QA round 3 sheets are in `docs/qa/round3/`.
 
 **Testing through Slack.** An end-to-end test can be run by sending the test messages in the
 tester's DM with Jessie through the Slack connector (with the tester's go-ahead for the exact
@@ -238,7 +233,8 @@ knowledge accumulates.
 ## The stack
 
 ```
-Slack DM → n8n → agent (Claude Haiku 4.5 since v237, Gemini 3.5 Flash Lite as fallback; default temperatures) → Airtable + Google Calendar → Slack
+Slack DM → n8n → agent (Claude Haiku 5.5 since v240, Gemini 3.5 Flash Lite as fallback; no conversation memory since v243 -
+        a code-written transcript instead) → Airtable + Google Calendar → Slack
 ```
 
 Titles below are the stable part; in n8n each also carries its current build, e.g. `Jessie — Book Session — v55 (v54 fixed)`. Main was `Project Jessie v2` until 2026-09-28; the "v2" was dropped
@@ -293,6 +289,8 @@ only script that writes to n8n.
 | `./scripts/eval-run` · `--only A,B` · `--repeat n` · `--main <file>` | the hallucination eval: plays `docs/eval/scenarios.json` through the **eval twin** (a guarded test copy of main, real Gemini + live sub-workflows, no Slack, never a yes) and scores every reply against tool output and Airtable. `--main` tests a candidate prompt before import. Raw results in git-ignored `eval/`. Report: `docs/eval/eval-report-2026-09-27.md` |
 | `./scripts/eval-twin build [file]` · `guard <twin> <src>` | builds / re-checks the eval twin (`KRZmVfKIwCiLREjz`, inactive except during a run) |
 | `./scripts/test-dates` | the padded-timestamp protections (gotcha 18), offline, on the newest file of each workflow: clean query, fail closed on a failed read, studios scope |
+| `node scripts/sim-transcript.js [main]` | the transcript the agent gets instead of memory (main v243): every recent message, cards as summaries, nothing before a reset or today, at most 20 lines |
+| `node scripts/sim-availability-reads.js [ra]` | Room Availability's answers (v20/v21): a room asked about always with its booked times and free gaps, never "taken all day" for a part-day booking; the not-usual-room question |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
 | `./scripts/audit-model-text` · `<file>...` | every text the model reads (prompt, tool descriptions, `$fromAI`, every string a Code node returns or puts in the prompt) checked for instructions that contradict how Jessie works - above all "end with the line Confirm to ..." / "present the summary": cards come only from tools, and main v238 withdraws one the model wrote. Run on every build (since 2026-10-08) |
 | `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
@@ -309,6 +307,9 @@ That is not a design preference, it is what testing showed: every rule stated in
 failed at least once — the conflict check, waiting for confirmation, the room ranking,
 checking availability before summarising, even the rule against `**`. Every rule moved into
 n8n has held on every run since.
+
+Since 8 Oct (Claude Haiku) the same goes for what Jessie *says*: every fact the requester reads - a card, a result, what is
+free and when, a refusal's question - is written by code, never paraphrased by the model (see *Claude Haiku* below).
 
 A third place now does real work: **`Guard Probe`**, which rewrites the reply on the way out.
 Use it for anything that must be true of the *text* rather than the action. It already
@@ -339,6 +340,27 @@ says on every turn which happened. On 2026-08-30 she answered an approved bookin
 `Book Session` at all — copied from an almost identical exchange two turns earlier. Nothing
 was created and the requester was told it had been. Every other guard stops a wrong booking
 being *made*; only this one stops one being *claimed*.
+
+## Claude Haiku (since 8 Oct) - what is different
+
+The agent runs on **Claude Haiku 5.5** (`claude-haiku-5-5`), paid from the Team plan's monthly Claude API credits, with
+Gemini 3.5 Flash Lite as the n8n fallback model. Full record: `docs/qa/haiku-swap-tests-2026-10-08.md`, PENDING 99.
+
+- **Settings.** The `Claude Haiku` node: max tokens 8000, 2 tries 1 s apart; temperature, top P, top K and n8n's "Enable
+  Thinking" stay **unset** - Haiku 5.5 rejects each of them with a 400 (n8n's thinking toggle sends `budget_tokens`), and a
+  rejected request silently falls back to Gemini. Effort and prompt caching are not reachable from the node.
+- **The key** (credential `Anthropic account`) must be made **inside a workspace** (gotcha 33). Console: Organization
+  settings -> Billing shows the credit balance; no payment method is on file, so nothing is charged past the credits.
+- **Haiku copies its own earlier replies.** With n8n's memory (text only, no tool calls) it copied cards, then any note put in
+  their place. Since v243 there is **no conversation memory**: `Get Transcript` -> `Build Transcript` give the agent a
+  third-person transcript of the Slack history (after the last reset, today, at most 20 lines), and Guard Probe withdraws a
+  card no tool made (v238), a done-claim no tool backs (v239), and a reply in the transcript's or a note's format (v243).
+- **Haiku follows tool text literally.** Old refusal texts that said "end with the line Confirm to ..." were obeyed and
+  withdrawn (gotcha 34). `./scripts/audit-model-text` checks every text the model reads, on every build.
+- **What the requester reads is written by code wherever it states a fact** - cards, results, availability (RA v20/v21),
+  "no" replies (v247), room questions (Book Session v99/v100), Book Session's questions word for word (v203). The model
+  writes the rest; Guard Probe trims filler, recaps, closers and internal reasoning (v247/v248) and the prompt carries a
+  length rule. Booking lists are the one place left (PENDING 100).
 
 ## Prepare Booking — code writes the summary the requester approves (main v166, LIVE 2026-09-28)
 
@@ -547,6 +569,9 @@ Three switches flip for launch — do them together:
    only: **Howard, Tel, Genzo**. Before/after launch, **decide: keep for devs or pull.** Enforced in
    `Check Ownership` / `Resolve Booking` via `isHaistDev`. (Tara, the strategic lead rather than a
    dev, is set up QA-style: on the notification ALLOW list with her real Standard authority.)
+5. **The model (since 8 Oct).** Check the Gemini fallback once since memory was removed (PENDING 101), raise the Console
+   spend limit from $50 toward the monthly credit, and delete the two Organization-scoped Anthropic keys. See
+   `docs/launch-checklist.md` section 4.
 
 Notification routing during dev (not a launch flip, but related): `Build Recipients` in Cancel/Move
 has `DEV_REDIRECT` (reroute to Howard) and `ALLOW` (ids that get their own real DM). Since QA round 2
@@ -755,6 +780,17 @@ the task runner), for whoever has shell access to the box.
     said the same. Gemini mostly called the tool again anyway; Claude followed the text, and main v238 withdrew every such card -
     three Slack rounds in a row looked like the model inventing cards. Found them all at once with `scripts/audit-model-text`
     (now run on every build). When a job moves into code, search every text the model reads for the old instruction (gotcha 31).
+
+35. **"Taken in that window" read as "taken all day"** (8 Oct 21:44). Room Availability answered a room asked about with
+    only "Studio 7 is taken in that window by X" - no times - and for a day the window is the whole day, so Haiku said "taken
+    all day, not free at any time" for a 1-3 PM booking. Its code-written layout existed but was used only when no room was
+    named, and Guard Probe sent it only when the model's reply had no "?". Any tool answer the requester will hear about must
+    carry the facts (times, titles, free gaps), and the reply should be written in code from them (RA v20, main v246).
+
+36. **Claude copies the shape of its own earlier replies** (8 Oct). n8n's memory keeps only text, so a card the tool wrote
+    looked like a reply Haiku wrote itself, and it wrote the next one from memory; replacing cards with notes in memory only
+    taught it to write notes. A smaller model weighs what its history shows over the prompt's rules. Memory is gone since
+    main v243 (a code-written transcript instead) - do not put it back without a test round on the card flows.
 
 ## Not done
 

@@ -1,6 +1,6 @@
 # Launch checklist — QA/dev switches to flip for go-live
 
-Launch: **12 October 2026** (amended 2026-09-21; dev freeze 23 Sep). This is the authoritative list of every QA/dev scaffold that must be
+Launch: **22 October 2026** (moved 2026-10-08 from 12 Oct; amended 2026-09-21; dev freeze 23 Sep). This is the authoritative list of every QA/dev scaffold that must be
 turned off (or decided) before Jessie serves real bookings. Verified against the **live** workflows
 on 2026-09-21 by grepping each for the markers below — nothing else carries them (Book Session,
 Find, Room Availability, Expand Series, Book Series, Prune are clean).
@@ -52,6 +52,15 @@ Not a code flip — a decision:
   the `isHaistDev` clause in `Check Ownership` (Cancel) and `Resolve Booking` (Move).
 
 Enforced via `isHaistDev` in Cancel/Move. See `docs/design/booking-authority.md`.
+
+## 4. The model (Claude Haiku 5.5 since 8 Oct) - check before go-live
+
+| What | Where | Launch |
+|---|---|---|
+| The Gemini fallback, once since memory was removed (main v243) | a test copy of main with a wrong model id on `Claude Haiku` | a short Slack round answered by Gemini (PENDING 101) |
+| Console monthly spend limit | platform.claude.com -> Organization settings -> Billing / Limits | raise from $50 toward the monthly credit ($340) |
+| Old Anthropic keys | platform.claude.com -> API keys | delete the two Organization-scoped keys; keep the workspace key behind `Anthropic account` |
+| The `Claude Haiku` node | main | max tokens 8000, 2 tries; temperature / top P / top K / Enable Thinking unset |
 
 ## Already handled (no action)
 
