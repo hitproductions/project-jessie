@@ -19,6 +19,16 @@ ok(/already moved/.test(run('yes', true, 'Moved "QATEST / Jem Lim / TL" to Frida
 ok(run('book studio 7 tomorrow at 2pm', false, 'Booked.')._alreadyDone === '', 'a new request after "Booked." is not caught');
 ok(run('yes', true, 'Which room would you like?')._alreadyDone === '', 'a yes to a question is not caught');
 ok(run('yes', true, 'Nothing was booked. What would you like changed?')._alreadyDone === '', '"Nothing was booked" is not a completed result');
+// v245 (8 Oct 20:23): "cancel it" / "book it" are in the YES list; they repeat only the action they name
+if (/v245 \(8 Oct 20:23\)/.test(node('Prepared Cancel').parameters.jsCode)) {
+  const MOVED = 'Moved "QATEST / Jem Lim / HL" to Tuesday, December 14, 2027, 2:00 PM – 3:00 PM, Studio 7.';
+  ok(run('cancel it', true, MOVED)._alreadyDone === '', 'v245: "cancel it" after "Moved ..." goes on as a cancel (live 20:23)');
+  ok(run('cancel it', true, 'Booked.')._alreadyDone === '', 'v245: "cancel it" after "Booked." goes on as a cancel');
+  ok(/already cancelled/.test(run('cancel it', true, 'Cancelled "QATEST / Jem Lim / HL".')._alreadyDone), 'v245: "cancel it" after "Cancelled ..." is still a repeat');
+  ok(/already booked/.test(run('book it', true, 'Booked.')._alreadyDone), 'v245: "book it" after "Booked." is still a repeat');
+  ok(run('book it', true, 'Cancelled "QATEST / Jem Lim / HL".')._alreadyDone === '', 'v245: "book it" after "Cancelled ..." goes on');
+  ok(/already moved/.test(run('ok', true, MOVED)._alreadyDone), 'v245: a bare "ok" after "Moved ..." is still a repeat');
+}
 const card = '*QATEST / Jem Lim / TL*\n*Date:* Thursday, October 7, 2027\n*Time:* 2:00 PM – 3:00 PM\n*Room:* Studio 7\n*Booked by:* Tara Lim\n_check 1234abcd_\n\nCancel it? Reply yes or no.';
 const c = run('yes', true, card, true);
 ok(c._cancelDirect.use === true && c._alreadyDone === '', 'a yes to a cancel card still goes to Cancel Direct');
