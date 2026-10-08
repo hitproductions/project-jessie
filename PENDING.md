@@ -112,6 +112,17 @@ known constraint, not a task.
 
 ### 98. Prompt hygiene - v236 review (8 Oct)
 
+**Update 8 Oct ~17:15 (Tara + Claude): main v241 built, NOT imported** (`scripts/build-v241.py`, on the v240 download). It
+fixes points 2, 3 and two tidy-ups below, plus two failures from Tara's harder Slack test on Haiku (group 1, 16:57-17:03):
+"no wait, keep 7" after a Studio 8 card -> "The summary above still stands" (no Studio 7 card; the next yes was safely
+refused and a correct card shown), and "actually make it 2 hours" after "Booked." -> "Reply yes to book it", then "I
+haven't booked anything yet" with the booking on the calendar (Booked For worked out move times only from a clock time).
+**Correction to point 1:** Rescheduling step 4 ("On yes, call Move Booking") is not dead - it is the fallback when Move
+Direct cannot read the card (a move the model wrote without *Now:* / *Moving to:*). Left as is. Still open: Department
+duplication, the *Showing bookings* example, the year shift (33). Scenarios B-E of the harder test (Taglish, two requests
+in one message, reset) not yet run.
+
+
 Found by reading the live v236 prompt (30,099 characters, line numbers as in the `systemMessage`) and the 16 tool
 descriptions. Size is under control: 29,621 characters at v181, so 55 builds added only ~500, with fixes going into
 code. The six v181 fixes are all present. Howard is trying a Claude Haiku model to see whether results change; the

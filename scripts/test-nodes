@@ -747,6 +747,25 @@ suite('Booked For — deterministic on-behalf detection', ()=>{
       check('v184','"also book ..." after Booked. is a new booking, not a change',!r2.changeJustBooked);
       if(/how about/.test(code)){ r2=run(U(9,'how about 3pm'),H('how about 3pm'));
         check('v186','"how about 3pm" after Booked. is a change too',r2.changeJustBooked&&r2.moveStart==='15:00'&&r2.moveEnd==='17:00',r2.moveStart+'-'+r2.moveEnd); }
+      if(/v241 length/.test(code)){   // v241 (8 Oct, Haiku): a new length with no clock time keeps the start
+        r2=run(U(9,'actually make it 2 hours'),H('actually make it 2 hours'));
+        check('v241','"actually make it 2 hours" after Booked. (2-4 PM) stays 2-4 PM',r2.changeJustBooked&&r2.moveStart==='14:00'&&r2.moveEnd==='16:00',r2.moveStart+'-'+r2.moveEnd);
+        r2=run(U(9,'make it 3 hours'),H('make it 3 hours'));
+        check('v241','"make it 3 hours" -> 2-5 PM, start kept',r2.changeJustBooked&&r2.moveStart==='14:00'&&r2.moveEnd==='17:00',r2.moveStart+'-'+r2.moveEnd);
+        check('v241','...and the notice names the new time',/new time 2:00 PM to 5:00 PM on 2027-11-16/.test(r2.notice),r2.notice);
+        r2=run(U(9,'can we make it an hour longer'),H('can we make it an hour longer'));
+        check('v241','"an hour longer" adds to the end (2-5 PM)',r2.changeJustBooked&&r2.moveStart==='14:00'&&r2.moveEnd==='17:00',r2.moveStart+'-'+r2.moveEnd);
+        r2=run(U(9,'actually make it 1.5 hours'),H('actually make it 1.5 hours'));
+        check('v241','"1.5 hours" -> 2:00-3:30 PM',r2.changeJustBooked&&r2.moveStart==='14:00'&&r2.moveEnd==='15:30',r2.moveStart+'-'+r2.moveEnd);
+        r2=run(U(9,'make it 90 mins instead'),H('make it 90 mins instead'));
+        check('v241','"90 mins" -> 2:00-3:30 PM',r2.changeJustBooked&&r2.moveStart==='14:00'&&r2.moveEnd==='15:30',r2.moveStart+'-'+r2.moveEnd);
+        r2=run(U(9,'actually make it 3pm instead'),H('actually make it 3pm instead'));
+        check('v241','a clock time still wins over the length rule (3-5 PM, as before)',r2.moveStart==='15:00'&&r2.moveEnd==='17:00',r2.moveStart+'-'+r2.moveEnd);
+        r2=run(U(9,'actually move it to studio 7'),H('actually move it to studio 7'));
+        check('v241','a room-only change still leaves the times to the model',r2.changeJustBooked&&!r2.moveStart);
+        r2=run(U(9,'make it 20 hours'),H('make it 20 hours'));
+        check('v241','an impossible length (past midnight) gives no times',r2.changeJustBooked&&!r2.moveStart);
+      }
       r2=run(U(9,'thanks!'),H('thanks!'));
       check('v184','"thanks!" after Booked. changes nothing',!r2.changeJustBooked&&!/CHANGING THE BOOKING/.test(r2.notice));
       r2=run(U(9,'actually move it to studio 7'),H('actually move it to studio 7'));
