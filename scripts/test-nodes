@@ -125,6 +125,9 @@ suite('Guard Probe — what reaches Slack', ()=>{
     {first:()=>({json: ctx.steps===undefined?{output:o}:{output:o,intermediateSteps:ctx.steps} })},
     mk(ctx))[0].json);
   const run=o=>runCtx(o,{}).output;
+  // v238 (card guard): a booking card no tool made is withdrawn whenever intermediateSteps is on the input. The older checks
+  // below feed model-written booking cards with steps; on a v238+ build they expect the withdrawal instead.
+  const V238=/v238 \(card guard\)/.test(s), WD=x=>/couldn't check that against the calendar just now, so nothing was booked/.test(x.output);
   const t=[
     ['collapses ** to *','**Bold** text',x=>x==='*Bold* text'],
     ['fixes a wrong weekday','*Date:* September 9, 2027 (Wed)',x=>x.includes('(Thu)')],
@@ -210,6 +213,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v183','v183 \\(QA bug 3\\)'],
     ['v185','v185: a move of the booking just made'],
     ['v188','v188 \\(live QA 29 Sep\\): "not on the staff list"'],
+    ['v238','v238 \\(card guard\\)'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -235,13 +239,30 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v183','a card from Cancel Booking is sent as it is (bug A)','Here is the booking, shall I cancel it?',{steps:[{action:{tool:'Cancel_Booking'},observation:JSON.stringify([{status:'PREPARED',card_text:"*CARDTEST / X / TL*\n*Date:* Thursday, November 4, 2027\n*Time:* 2:00 PM – 3:00 PM\n*Room:* Studio 7\n*Booked by:* Tara Lim\n_check abcd1234_\n\nReply only with \"yes\" to cancel, or \"no\" to keep it.\nConfirm to cancel."}])}]},
       x=>/^\*CARDTEST \/ X \/ TL\*/.test(x.output)&&/_check abcd1234_/.test(x.output)&&!/shall I/.test(x.output)],
     ['v183','a series summary gets its dates from Expand Series, weekdays right (bug 19)','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n- December 14 (Mon)\nTime: 2:00 PM – 5:00 PM\nRoom: Studio 7\n\nConfirm to book.',{steps:[{action:{tool:'Expand_Series'},observation:'[{"status":"OK","count":2,"occurrences":[{"start_iso":"2027-12-07T14:00:00+08:00","end_iso":"2027-12-07T17:00:00+08:00","all_day":false},{"start_iso":"2027-12-14T14:00:00+08:00","end_iso":"2027-12-14T17:00:00+08:00","all_day":false}]}]'}]},
-      x=>/- Tuesday, 7 December 2027\n- Tuesday, 14 December 2027/.test(x.output)&&!/\(Mon\)/.test(x.output)&&/\*Dates \(2\):\*/.test(x.output)],
+      x=>V238?WD(x):(/- Tuesday, 7 December 2027\n- Tuesday, 14 December 2027/.test(x.output)&&!/\(Mon\)/.test(x.output)&&/\*Dates \(2\):\*/.test(x.output))],
     ['v183','...and says who booked it (bug 14)','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n- December 14 (Mon)\nTime: 2:00 PM – 5:00 PM\n\nConfirm to book.',{steps:[{action:{tool:'Expand_Series'},observation:'[{"status":"OK","count":2,"occurrences":[{"start_iso":"2027-12-07T14:00:00+08:00","end_iso":"2027-12-07T17:00:00+08:00","all_day":false},{"start_iso":"2027-12-14T14:00:00+08:00","end_iso":"2027-12-14T17:00:00+08:00","all_day":false}]}]'}]},
       x=>/v204 \(PENDING 69\)/.test(s) ? !/Booked by/.test(x.output) : (/\*Booked by:\* Tara Lim\n/.test(x.output)&&x.output.indexOf("Booked by")<x.output.indexOf("Confirm to book"))],   // v204: the short card names the booker only for someone else
     ['v183','an inline "Dates: Dec 7, 14" line is replaced too','*SERIES / X / TL*\nDates: Dec 7, 14\nTime: 2:00 PM – 5:00 PM\n\nConfirm to book.',{steps:[{action:{tool:'Expand_Series'},observation:'[{"status":"OK","count":2,"occurrences":[{"start_iso":"2027-12-07T14:00:00+08:00","end_iso":"2027-12-07T17:00:00+08:00","all_day":false},{"start_iso":"2027-12-14T14:00:00+08:00","end_iso":"2027-12-14T17:00:00+08:00","all_day":false}]}]'}]},
-      x=>/- Tuesday, 7 December 2027/.test(x.output)&&!/Dec 7, 14/.test(x.output)],
+      x=>V238?WD(x):(/- Tuesday, 7 December 2027/.test(x.output)&&!/Dec 7, 14/.test(x.output))],
     ['v183','no Expand Series this turn: the summary is left alone','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n\nConfirm to book.',{steps:[]},
-      x=>/- December 7/.test(x.output)],
+      x=>V238?WD(x):(/- December 7/.test(x.output))],
+    // v238 (card guard, Slack round on Haiku 8 Oct): a card no tool made is withdrawn; a tool's or the code's card is not
+    ['v238','a cancel card the model wrote, no tool called, is withdrawn (live 14:43)','*QATEST / Jem Lim / HL*\n*Date:* Tuesday, December 14, 2027\n*Time:* 10:00 AM – 11:00 AM\n*Room:* Studio 7\n\nConfirm to cancel. (yes/no)',{steps:[]},
+      x=>x.output==="Sorry, I couldn't check that against the calendar just now, so nothing was cancelled. Could you send that again?"&&/^WITHDRAWN: a cancel card/.test(x.cardProbe)&&/^\[WITHDRAWN/.test(x.toolsLog)],
+    ['v238','the same card from Prepare Cancel goes out','Here it is.',{steps:[{action:{tool:'Prepare_Cancel'},observation:JSON.stringify([{status:'PREPARED',card_text:'*QATEST / Jem Lim / HL*\n*Date:* Tuesday, December 14, 2027\n*Time:* 2:00 PM – 3:00 PM\n*Room:* Studio 7\n\nConfirm to cancel.'}])}]},
+      x=>/2:00 PM – 3:00 PM/.test(x.output)&&/Confirm to cancel\.$/.test(x.output)&&x.cardProbe==='card from a tool'],
+    ['v238','a move card the model wrote is withdrawn','*QATEST / Jem Lim / HL*\n*Now:* Tuesday, December 14, 2027, 10:00 AM – 11:00 AM, Studio 7\n*Moving to:* Tuesday, December 14, 2027, 2:00 PM – 3:00 PM, Studio 7\n\nMove it? Reply yes or no.',{steps:[]},
+      x=>/so nothing was moved\. Could you send that again\?$/.test(x.output)],
+    ['v238',"Move Booking's own card goes out",'ok',{steps:[{action:{tool:'Move_Booking'},observation:JSON.stringify([{status:'REJECTED',reason:'NOT_CONFIRMED',card_text:'*QATEST / Jem Lim / HL*\n*Now:* Tuesday, December 14, 2027, 10:00 AM – 11:00 AM, Studio 7\n*Moving to:* Tuesday, December 14, 2027, 2:00 PM – 3:00 PM, Studio 7\n\nConfirm to move.'}])}]},
+      x=>/\*Moving to:\*/.test(x.output)&&/Confirm to move\.$/.test(x.output)],
+    ['v238',"Prepare Booking's summary goes out",'Booking it now.',{steps:[{action:{tool:'Prepare_Booking'},observation:JSON.stringify([{status:'PREPARED',summary_text:'*QATEST / Jem Lim / HL*\n*Date:* Tuesday, December 14, 2027\n*Time:* 10:00 AM – 11:00 AM\n*Room:* Studio 7\n\nBook it? Reply yes or no.'}])}]},
+      x=>/^\*QATEST/.test(x.output)&&/Confirm to book\.$/.test(x.output)],
+    ['v238','a booking card the model wrote is withdrawn','*QATEST / Jem Lim / HL*\n*Date:* Tuesday, December 14, 2027\n*Time:* 10:00 AM – 11:00 AM\n*Room:* Studio 7\n\nBook it? Reply yes or no.',{steps:[]},
+      x=>/so nothing was booked\. Could you send that again\?$/.test(x.output)],
+    ['v238','an ordinary reply is untouched','Studio 7 is free on Tuesday, December 14, 2027 from 2:00 PM to 6:00 PM.',{steps:[]},
+      x=>/Studio 7 is free/.test(x.output)&&x.cardProbe==='no card'],
+    ['v238','no intermediateSteps on the input: nothing is judged','*QATEST / Jem Lim / HL*\n*Date:* Tuesday, December 14, 2027\n*Time:* 10:00 AM – 11:00 AM\n*Room:* Studio 7\n\nConfirm to cancel. (yes/no)',{},
+      x=>/QATEST/.test(x.output)&&/no intermediateSteps/.test(x.cardProbe)],
     // v182 (live QA 29 Sep): no date question on a greeting; "12:00 AM to 12:00 AM" is "all day"
     ['v182','a greeting gets no date question','Hi Howard! What do you need?',{requesterText:'what can i book for a meeting?'},
       x=>x.output==='Hi Howard! What do you need?'],
@@ -344,7 +365,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['lookup titles','a booking summary is untouched',
       '*PRUNEOK / Bea Jose / TL*\n*Room:* Studio 4\n\nConfirm to book. (yes/no)',
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK"}]'}]},
-      x=>/Confirm to book/.test(x.output)&&/PRUNEOK/.test(x.output)],
+      x=>V238?WD(x):(/Confirm to book/.test(x.output)&&/PRUNEOK/.test(x.output))],
     ['lookup titles','no steps means no judgement',
       '*PRUNEOK / Bea Jose / TL*',{},x=>/PRUNEOK/.test(x.output)],
     // An offer this turn's own availability check contradicts. It must not
@@ -358,11 +379,11 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['offer vs check','a failed check followed by a good retry is not a contradiction',SUM,
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"BAD_WINDOW"}]'},
               {action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"FREE_BUT_LAST_RESORT"}}]'}]},
-      x=>/Confirm to book/.test(x.output)&&!/Hold on|make sure/.test(x.output)],
+      x=>V238?WD(x):(/Confirm to book/.test(x.output)&&!/Hold on|make sure/.test(x.output))],
     ['offer vs check','a busy answer superseded by a free re-check stands',SUM,
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"BUSY"}}]'},
               {action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"FREE"}}]'}]},
-      x=>/Confirm to book/.test(x.output)&&!/Hold on/.test(x.output)],
+      x=>V238?WD(x):(/Confirm to book/.test(x.output)&&!/Hold on/.test(x.output))],
     ['offer vs check','a free answer overturned by a busy re-check is refused',SUM,
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"FREE"}}]'},
               {action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"BUSY"}}]'}]},
@@ -375,13 +396,13 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>/not one of the usual rooms/.test(x.output)&&/as an exception/.test(x.output)&&!/Confirm to book/.test(x.output)],
     ['offer vs check','a free room is offered normally',SUM,
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 8","status":"FREE"}}]'}]},
-      x=>/Confirm to book/.test(x.output)&&!/Hold on/.test(x.output)],
+      x=>V238?WD(x):(/Confirm to book/.test(x.output)&&!/Hold on/.test(x.output))],
     ['offer vs check','a different room being busy is irrelevant',SUM,
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK","asked":{"room":"Studio 7","status":"BUSY"}}]'}]},
-      x=>/Confirm to book/.test(x.output)],
+      x=>V238?WD(x):(/Confirm to book/.test(x.output))],
     ['offer vs check','no check this turn is not a contradiction',SUM,
       {steps:[{action:{tool:'Clients'},observation:'[{"ok":1}]'}]},
-      x=>/Confirm to book/.test(x.output)&&!/Hold on/.test(x.output)],
+      x=>V238?WD(x):(/Confirm to book/.test(x.output)&&!/Hold on/.test(x.output))],
     // QA M5 2026-09-25: an unusual length is flagged before the yes, both ways, never as a "minimum".
     ['usual length','9 hours of VO is flagged before the yes (QA M5)',
       '*BUZZ / Jem Lim / TL*\n*Date:* October 1, 2027 (Fri)\n*Time:* 9:00 AM – 6:00 PM\n*Room:* Studio F\n*Session Type:* VO Recording\n\nConfirm to book. (yes/no)',
