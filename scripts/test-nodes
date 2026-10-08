@@ -1321,6 +1321,19 @@ suite('Check Ownership — who may cancel what', ()=>{
   ];
   for(const [label,req,ok] of cases){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};}
     check('co',label,ok(r),r.verdict+' '+(r.reason||'')); }
+  // v24 (8 Oct, Haiku): preparing a card, ONE near match is the booking (the card shows its full title); several -> one
+  // question, never "end with Confirm to cancel". The confirmed path above stays exact.
+  if(/v24 \(8 Oct, Haiku\)/.test(s)){
+    const P={...base,confirmed:false,mode:'prepare'};
+    const c24=[
+      ['v24: "ALPHA" alone gets the ALPHA / X / TL card',{...P,title:'ALPHA'},r=>r.verdict==='PREPARED'&&/ALPHA \/ X \/ TL/.test(r.card_text)],
+      ['v24: a mistyped title gets the real card',{...P,title:'ALPHZ / X / TL'},r=>r.verdict==='PREPARED'&&/^\*ALPHA \/ X \/ TL\*/.test(r.card_text)],
+      ['v24: two near matches -> one question, no confirm line',{...P,title:'DUP / Q / TX'},r=>r.reason==='AMBIGUOUS_TITLE'&&/Ask exactly this, in one message: "Which booking do you mean\?/.test(r.human)&&/DUP \/ Q \/ TL/.test(r.human)&&!/Confirm to cancel/.test(r.human)],
+      ["v24: a near match on someone else's booking is still refused",{...P,title:'THEIRZ / Y / KSC'},r=>r.reason==='NOT_YOURS'],
+      ['v24: the yes path stays exact',{...base,title:'ALPHA'},r=>r.verdict!=='CLEAR'],
+    ];
+    for(const [label,req,ok] of c24){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};} check('co',label,ok(r),r.verdict+' '+(r.reason||'')+' '+String(r.human||r.card_text||'').slice(0,80)); }
+  }
   const amb=run({...base,title:'DUP / Q / TL'});
   check('co','ambiguous list carries times',/\d(:\d\d)?\s?[AP]M/i.test(amb.human||''),(amb.human||'').slice(0,60));
 });
@@ -1388,6 +1401,15 @@ suite('Resolve Booking — which booking is being moved', ()=>{
   ];
   for(const [label,req,ok] of cases){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};}
     check('rb',label,ok(r),r.verdict+' '+(r.reason||'')); }
+  // v26 (8 Oct, Haiku): before the yes, ONE near match is the booking and its card shows the full title
+  if(/v26 \(8 Oct, Haiku\)/.test(s)){
+    const c26=[
+      ['v26: "REASON1" alone gets the REASON1 / Bea Jose / TL card',{...base,confirmed:false,title:'REASON1'},r=>r.reason==='NOT_CONFIRMED'&&/REASON1 \/ Bea Jose \/ TL/.test(r.card_text||'')],
+      ['v26: the QA corruption gets the real card before the yes',{...base,confirmed:false,title:'REazon1 / Bea Jose / TL'},r=>r.reason==='NOT_CONFIRMED'&&/REASON1 \/ Bea Jose \/ TL/.test(r.card_text||'')&&!/Confirm to move\. \(yes\/no\)"\)/.test(r.human||'')],
+      ["v26: a near match on someone else's booking is still refused",{...base,confirmed:false,title:'THEIRZ / Y / KSC'},r=>r.verdict!=='CLEAR'&&!r.card_text],
+    ];
+    for(const [label,req,ok] of c26){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};} check('rb',label,ok(r),r.verdict+' '+(r.reason||'')+' '+String(r.human||r.card_text||'').slice(0,80)); }
+  }
 });
 
 // ── Move authority (Phase 1) ────────────────────────────────────────────────
