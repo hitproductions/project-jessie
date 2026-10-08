@@ -110,7 +110,7 @@ and Slack, no Airtable), runs on the same n8n instance.
 **Working, and proven live:** the main workflow and every sub-workflow are active and
 green. The confirmation gate, the ownership refusals (`NOT_YOURS`), Guard Probe's text
 rewrites and **Prepare Booking** (code writes the summary the requester approves) all
-hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 PHT, series rerun 14:53–14:56 on main v207 / Book Session v75; the four booking types 15:12–15:24 on main v208 / Book Session v77 - Advertising, Entertainment from Netflix's record, Internal for a Likha meeting, Personal from "my own project", each booked, read back from the event and cancelled) through Slack on main v206 / Book Session v74 / Cancel v21 / Move v25 / Room Availability v12: book (short card, engineer defaulted), "make it 3pm instead" (Move Direct), the short cancel card and cancel, an internal-room card and "no", "is studio 7 free this week?" day by day, and a series (short card with the Expand Series dates, "none" carried on, "no") - one event at a time, calendar clean after. Before that, 2026-09-29 on main v191: book, move, move again, cancel, and a dateless cancel by name. **Live since 8 Oct ~11:08 PHT: main v236 (default Gemini temperature) / Book Series v7 / Book Session v97 / Room Availability v19 / Cancel v22 / Find v8** / Move v25 (main v236 = v235 with Gemini's temperature removed, after Google's 7 Oct deprecation notice; not yet tried in Slack)
+hold in real conversations. Last verified end to end 2026-10-01 (14:14–14:37 PHT, series rerun 14:53–14:56 on main v207 / Book Session v75; the four booking types 15:12–15:24 on main v208 / Book Session v77 - Advertising, Entertainment from Netflix's record, Internal for a Likha meeting, Personal from "my own project", each booked, read back from the event and cancelled) through Slack on main v206 / Book Session v74 / Cancel v21 / Move v25 / Room Availability v12: book (short card, engineer defaulted), "make it 3pm instead" (Move Direct), the short cancel card and cancel, an internal-room card and "no", "is studio 7 free this week?" day by day, and a series (short card with the Expand Series dates, "none" carried on, "no") - one event at a time, calendar clean after. Before that, 2026-09-29 on main v191: book, move, move again, cancel, and a dateless cancel by name. **Live since 8 Oct ~14:35 PHT: main v237 (Haiku primary) / Book Series v7 / Book Session v97 / Room Availability v19 / Cancel v22 / Find v8** / Move v25 (main v237 = v236 with Claude Haiku 4.5 as the agent's model, paid from the plan's monthly Claude API credits, and Gemini 3.5 Flash Lite as fallback; not yet tried in Slack. The Anthropic key must be **workspace-scoped**: an Organization-scoped key gets 400 "must include the anthropic-workspace-id header")
 (hand imports, before + after MATCH; not yet tried in Slack - client asked first and until "none" (PENDING 84), past bookings
 (85), name search over the last 60 days (86)). The full end-to-end checklist
 has not been rerun since 1 Oct. **QA round 3** sheets (jess / trish / camy v3) are in `docs/qa/round3/`. Next build:
@@ -236,7 +236,7 @@ knowledge accumulates.
 ## The stack
 
 ```
-Slack DM → n8n → agent (Gemini 3.5 Flash Lite, default temperature since v236) → Airtable + Google Calendar → Slack
+Slack DM → n8n → agent (Claude Haiku 4.5 since v237, Gemini 3.5 Flash Lite as fallback; default temperatures) → Airtable + Google Calendar → Slack
 ```
 
 Titles below are the stable part; in n8n each also carries its current build, e.g. `Jessie — Book Session — v55 (v54 fixed)`. Main was `Project Jessie v2` until 2026-09-28; the "v2" was dropped
@@ -739,6 +739,12 @@ the task runner), for whoever has shell access to the box.
     it against the table above (Book Series `UAwFoifgkfL1xNP2`, Book Session `EUG3sGXkfsJSYIMz`, main `uVVYVB2M7kxpLleI`)
     before calling an import good. A main file imported anywhere but main shows n8n's "Conflicting Trigger Path" on publish
     - never answer it by deactivating the live main.
+
+33. **An Organization-scoped Anthropic API key fails in n8n with 400 "Bad request".** In our Console org such a key must send an
+    `anthropic-workspace-id` header, which n8n's Anthropic credential does not (the credential test and the model list both fail;
+    the real message only shows in the model list dropdown or a direct curl). Make the key inside a workspace (Organization
+    settings → Workspaces → Jessie → create key; its Scope must name the workspace), or turn on the credential's Add Custom
+    Header with the `wrkspc_…` id. Cost an hour on 8 Oct, two fresh keys first.
 
 ## Not done
 

@@ -20,7 +20,7 @@ def main(w, cred_id=None, cred_name=None):
     if not node(w, "Jessie AI Agent")["parameters"].get("needsFallback"): raise SystemExit("agent has no fallback slot")
 
     haiku = {
-        "parameters": {"model": {"__rl": True, "mode": "id", "value": "claude-haiku-4-5"},
+        "parameters": {"model": {"__rl": True, "mode": "list", "value": "claude-haiku-4-5"},
                        "options": {}},
         "id": "5b0f3c1e-9a7d-4e2b-8c61-3d2f7a9e4b10",
         "name": "Claude Haiku",
