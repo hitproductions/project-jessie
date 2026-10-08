@@ -113,6 +113,8 @@ known constraint, not a task.
 
 ### 99. Claude answers from the conversation instead of calling the tool (8 Oct)
 
+Summary of every test, fix and the comparison with Gemini: [`docs/qa/haiku-swap-tests-2026-10-08.md`](docs/qa/haiku-swap-tests-2026-10-08.md).
+
 Found in the Slack rounds on Claude after main v237 (Haiku primary). Results, Howard's DM:
 
 | Build / model | Step | Result |
