@@ -236,7 +236,7 @@ knowledge accumulates.
 ## The stack
 
 ```
-Slack DM → n8n → agent (Gemini 3.5 Flash Lite, temp 0.2) → Airtable + Google Calendar → Slack
+Slack DM → n8n → agent (Gemini 3.5 Flash Lite, default temperature since v236) → Airtable + Google Calendar → Slack
 ```
 
 Titles below are the stable part; in n8n each also carries its current build, e.g. `Jessie — Book Session — v55 (v54 fixed)`. Main was `Project Jessie v2` until 2026-09-28; the "v2" was dropped
