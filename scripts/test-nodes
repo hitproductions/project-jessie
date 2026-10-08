@@ -219,6 +219,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v243','v243 \\(transcript\\)'],
     ['v244','v244: a markdown heading'],
     ['v246','v246 \\(8 Oct 21:44\\)'],
+    ['v247','v247 \\(brevity, 8 Oct\\)'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -251,6 +252,23 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>V238?WD(x):(/- Tuesday, 7 December 2027/.test(x.output)&&!/Dec 7, 14/.test(x.output))],
     ['v183','no Expand Series this turn: the summary is left alone','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n\nConfirm to book.',{steps:[]},
       x=>V238?WD(x):(/- December 7/.test(x.output))],
+    // v247 (brevity): filler, recaps and closers dropped; a details question in one fixed shape
+    ['v247','B1 (live 20:45): the details question in one fixed shape','Got it, Studio 8 it is. Session details needed: what kind of session is this, and who\'s the client? Also, what\'s the project title?',{steps:[]},
+      x=>x.output==='What\'s the session type, project and client? (or "none" for no client)'],
+    ['v247','N1 (live 20:48): the recap goes, the question is fixed','I need a few details before I can prepare this booking: what kind of session is it, who\'s the client, what\'s the project title, and how long does it run? You asked for 2:00 to 3:00 PM earlier, so I\'ll assume a 1-hour session unless you say otherwise.',{steps:[]},
+      x=>x.output==='What\'s the length, session type, project and client? (or "none" for no client)'],
+    ['v247','a conference room question with options is left alone','I need a few details for the conference room booking: which conference room (Likha, Katha or Salin), which department(s) are using it, and the meeting title if you have one?',{steps:[]},
+      x=>/Likha, Katha or Salin/.test(x.output)],
+    ['v247','a filler opener is dropped','Sure! Studio 7 can do Dolby Atmos mixing.',{steps:[]},
+      x=>x.output==='Studio 7 can do Dolby Atmos mixing.'],
+    ['v247','a "let me know" closer is dropped','Studio 7 can do Dolby Atmos mixing. Let me know if you want to book it.',{steps:[]},
+      x=>x.output==='Studio 7 can do Dolby Atmos mixing.'],
+    ['v247','one detail asked is left as it is','What\'s the project title?',{steps:[]},
+      x=>x.output==='What\'s the project title?'],
+    ['v247','a question carrying times is left alone','Studio 7 is free from 3:00 PM. What\'s the session type and client?',{steps:[]},
+      x=>/3:00 PM/.test(x.output)],
+    ['v247','a card is never touched','*QATEST / Jem Lim / HL*\n*Date:* Saturday, October 9, 2027\n*Time:* 4:00 PM – 5:00 PM\n*Room:* Studio 7\n\nBook it? Reply yes or no.',{steps:[{action:{tool:'Prepare_Booking'},observation:JSON.stringify([{status:'PREPARED',summary_text:'*QATEST / Jem Lim / HL*\n*Date:* Saturday, October 9, 2027\n*Time:* 4:00 PM – 5:00 PM\n*Room:* Studio 7\n\nBook it? Reply yes or no.'}])}]},
+      x=>/^\*QATEST/.test(x.output)],
     // v246 (8 Oct 21:44): Room Availability's reply is the answer; the model's closing question only if it says nothing about rooms/times
     ['v246','"taken all day" is replaced by the code reply (live 21:44)','Studio 7 is taken all day tomorrow by "CATTAIL / Sasa Abella / HL", so it\'s not free at any time.',{steps:[{action:{tool:'Room_Availability'},observation:JSON.stringify([{status:'OK',asked:{room:'Studio 7',status:'BUSY'},reply_text:'🗓️ October 9 (Saturday)\n\n⚠️ Studio 7 is booked 1:00 PM – 3:00 PM (CATTAIL / Sasa Abella / HL) - free the rest of the day.\n\n✅ Free all day:\nStudios 1, 2, 3, 8, C, and F.'}])}]},
       x=>x.output==='🗓️ October 9 (Saturday)\n\n⚠️ Studio 7 is booked 1:00 PM – 3:00 PM (CATTAIL / Sasa Abella / HL) - free the rest of the day.\n\n✅ Free all day:\nStudios 1, 2, 3, 8, C, and F.'],
@@ -331,7 +349,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v182','a greeting gets no date question','Hi Howard! What do you need?',{requesterText:'what can i book for a meeting?'},
       x=>x.output==='Hi Howard! What do you need?'],
     ['v182','a question about the booking still gets it','What session type is this, and who is the client?',{requesterText:'book studio 7 at 2pm'},
-      x=>/And which day(?: is it for| and time)?\?/.test(x.output)],   // v212: "And which day?" / "... and time?"
+      x=>/v247 \(brevity, 8 Oct\)/.test(s) ? /^What's the date, session type, project and client\? \(or "none" for no client\)$/.test(x.output) : /And which day(?: is it for| and time)?\?/.test(x.output)],   // v212: "And which day?" / "... and time?"; v247: one fixed question
     ['v182','"from 12:00 AM to 12:00 AM" becomes "all day"','Salin is taken by "SALIN - MUSIC DEPT" tomorrow from 12:00 AM to 12:00 AM.',{},
       x=>/Salin is taken by "SALIN - MUSIC DEPT" tomorrow all day\./.test(x.output)],
     ['v182','a real 12:00 AM start is left alone','Studio 7 is taken from 12:00 AM to 3:00 AM.',{},
@@ -493,7 +511,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v164','a promise ("I will ask them") is not a claim','Studio F is held. If you want it I will ask them to move.',
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK"}]'}]},x=>/I will ask them to move/.test(x.output)],
     ['v164','no date named: the booking question also asks the day (QA E1)','What session type is this, who is the client, and who is engineering?',
-      {requesterText:'Book Studio 7 from 2pm to 5pm'},x=>/And which day(?: is it for)?\?$/.test(x.output)],
+      {requesterText:'Book Studio 7 from 2pm to 5pm'},x=>/v247 \(brevity, 8 Oct\)/.test(s) ? /^What's the date, session type, project, client and engineer\? \(or "none" for no client\)$/.test(x.output) : /And which day(?: is it for)?\?$/.test(x.output)],
     ['v164','a question that already asks the day is left alone','Which day, and who is engineering?',{requesterText:'Book Studio 7 from 2pm to 5pm'},x=>!/And which day/.test(x.output)],
     ['v164','not added when the date is known',"What session type is this?",{requesterText:'Book Studio 7 tomorrow 2pm to 5pm',dates:'2027-09-29'},x=>!/And which day/.test(x.output)],
     ['v162','"a last-resort or alternative room" is reworded','Studio 8 is normally a last-resort or alternative room for VO Recording.',{},x=>!/last.resort/i.test(x.output)],

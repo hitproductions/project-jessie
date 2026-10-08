@@ -29,6 +29,19 @@ if (/v245 \(8 Oct 20:23\)/.test(node('Prepared Cancel').parameters.jsCode)) {
   ok(run('book it', true, 'Cancelled "QATEST / Jem Lim / HL".')._alreadyDone === '', 'v245: "book it" after "Cancelled ..." goes on');
   ok(/already moved/.test(run('ok', true, MOVED)._alreadyDone), 'v245: a bare "ok" after "Moved ..." is still a repeat');
 }
+// v247 (brevity): a "no" to a card is answered in code
+if (/v247 \(brevity\)/.test(node('Prepared Cancel').parameters.jsCode)) {
+  const runNo = (said, lastBot) => new Function('$', '$input', node('Prepared Cancel').parameters.jsCode)(
+    n => n === 'Gate Context' ? wrap([{ json: { confirmedCancel: false, gate: { said, saidYes: false, saidNo: true } } }])
+       : n === 'Get Recent Messages' ? wrap([{ json: { user: 'U1', text: said, ts: String(Date.now() / 1000) } }, { json: { bot_id: 'B1', text: lastBot, ts: String(Date.now() / 1000 - 30) } }])
+       : wrap([{ json: {} }]), wrap([{ json: { x: 1 } }]))[0].json;
+  const BOOK = '*QATEST2 / Jem Lim / HL*\n*Date:* Wednesday, December 15, 2027\n*Time:* 10:00 AM – 11:00 AM\n*Room:* Studio 7\n\nBook it? Reply yes or no.';
+  ok(runNo('no', BOOK)._alreadyDone === 'No problem - nothing was booked. What would you like to change?', 'v247: "no" to a booking card -> fixed reply (live 20:27 was two long sentences)');
+  ok(runNo('hindi', BOOK.replace('*Date:*', '*Dates (4):*'))._alreadyDone === 'No problem - nothing was booked. What would you like to change?', 'v247: "hindi" to a series card -> the same');
+  ok(runNo('no', BOOK.replace('Book it?', 'Cancel it?'))._alreadyDone === 'Okay - it stays booked.', 'v247: "no" to a cancel card -> it stays booked');
+  ok(runNo('no', '*Q*\n*Now:* x\n*Moving to:* y\n\nMove it? Reply yes or no.')._alreadyDone === 'Okay - it stays where it is.', 'v247: "no" to a move card -> it stays where it is');
+  ok(runNo('no', 'Booked.')._alreadyDone === '', 'v247: "no" after a result (no card waiting) goes to the model');
+}
 const card = '*QATEST / Jem Lim / TL*\n*Date:* Thursday, October 7, 2027\n*Time:* 2:00 PM – 3:00 PM\n*Room:* Studio 7\n*Booked by:* Tara Lim\n_check 1234abcd_\n\nCancel it? Reply yes or no.';
 const c = run('yes', true, card, true);
 ok(c._cancelDirect.use === true && c._alreadyDone === '', 'a yes to a cancel card still goes to Cancel Direct');
