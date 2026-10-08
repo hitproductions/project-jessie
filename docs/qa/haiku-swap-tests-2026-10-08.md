@@ -87,3 +87,20 @@ conversation memory was replaced by a code-written transcript.
 - `scripts/sim-transcript.js`: the transcript builder against made-up Slack histories (23 checks).
 - `scripts/test-nodes`: 50+ new checks (card guard, claim forms, memory notes, transcript format, near titles, headings).
 - `scripts/sim-repeat-yes.js`: 6 new cases for "cancel it" / "book it".
+
+## Later on 8 Oct (21:44-23:26)
+
+| Time | Build | What was tested | Result |
+|---|---|---|---|
+| 21:44 | v245 | "what time is studio 7 free tom" | **Wrong read**: "taken all day" for a 1-3 PM booking (Room Availability gave no times for a room asked about) |
+| 22:02-22:09 | RA v20 + v246, Book v99 + v247 | Same question two ways, a set time, details, "no" to booking and cancel cards | Fixed: "booked 1:00 PM - 3:00 PM (...) - free the rest of the day" + "Free all day" (code); code replies to "no". New: a reasoning leak and an engineer ask; the Studio 3 reply still model-worded |
+| 23:08-23:10 | RA v21 + v248 | Details, Studio 3 | Leak and engineer ask fixed; Studio 3 traced to Book Session's ROOM_UNSUITABLE |
+| 23:25 | Book v100 | Studio 3 for VO, "still studio 3", "no" | Fixed: one fixed question, word for word; card with the note; code "no" reply |
+
+| # | Issue | Fix | Status |
+|---|---|---|---|
+| 20 | Availability for a named room said "taken all day" for a part-day booking | RA v20 + main v246: times and free gaps for every room asked about, reply written in code | Fixed |
+| 21 | Long model-written replies (the "no" reply, details questions, filler, recaps) | main v247 + Book v99: code "no" replies, brevity pass, length rule | Fixed (details questions that offer a choice are still model-worded) |
+| 22 | Internal reasoning in a reply; an engineer asked for an engineer | main v248 | Fixed |
+| 23 | "Not a usual room" replies worded by the model | Book v99 (last-resort rooms), RA v21 (availability), Book v100 (rooms in neither list) | Fixed |
+| 24 | Booking lists ("what do I have booked", a set-time check answered from Find Booking / List Events) still written by the model | Phase 2: booking lists in code, List Events off the agent | Open (next) |
