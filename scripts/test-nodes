@@ -218,6 +218,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v242','v242 \\(memory notes'],
     ['v243','v243 \\(transcript\\)'],
     ['v244','v244: a markdown heading'],
+    ['v246','v246 \\(8 Oct 21:44\\)'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -250,6 +251,15 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>V238?WD(x):(/- Tuesday, 7 December 2027/.test(x.output)&&!/Dec 7, 14/.test(x.output))],
     ['v183','no Expand Series this turn: the summary is left alone','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n\nConfirm to book.',{steps:[]},
       x=>V238?WD(x):(/- December 7/.test(x.output))],
+    // v246 (8 Oct 21:44): Room Availability's reply is the answer; the model's closing question only if it says nothing about rooms/times
+    ['v246','"taken all day" is replaced by the code reply (live 21:44)','Studio 7 is taken all day tomorrow by "CATTAIL / Sasa Abella / HL", so it\'s not free at any time.',{steps:[{action:{tool:'Room_Availability'},observation:JSON.stringify([{status:'OK',asked:{room:'Studio 7',status:'BUSY'},reply_text:'🗓️ October 9 (Saturday)\n\n⚠️ Studio 7 is booked 1:00 PM – 3:00 PM (CATTAIL / Sasa Abella / HL) - free the rest of the day.\n\n✅ Free all day:\nStudios 1, 2, 3, 8, C, and F.'}])}]},
+      x=>x.output==='🗓️ October 9 (Saturday)\n\n⚠️ Studio 7 is booked 1:00 PM – 3:00 PM (CATTAIL / Sasa Abella / HL) - free the rest of the day.\n\n✅ Free all day:\nStudios 1, 2, 3, 8, C, and F.'],
+    ['v246','a harmless closing question is kept','Studio 7 is taken.\n\nWant one of those?',{steps:[{action:{tool:'Room_Availability'},observation:JSON.stringify([{status:'OK',asked:{room:'Studio 7',status:'BUSY'},reply_text:'🗓️ October 9 (Saturday)\n\n⚠️ Studio 7 is booked 1:00 PM – 3:00 PM (CATTAIL / Sasa Abella / HL) - free the rest of the day.\n\n✅ Free all day:\nStudios 1, 2, 3, 8, C, and F.'}])}]},
+      x=>x.output==='🗓️ October 9 (Saturday)\n\n⚠️ Studio 7 is booked 1:00 PM – 3:00 PM (CATTAIL / Sasa Abella / HL) - free the rest of the day.\n\n✅ Free all day:\nStudios 1, 2, 3, 8, C, and F.\n\nWant one of those?'],
+    ['v246','a closing question that states times is dropped','Studio 7 is taken.\n\nWould 4pm in Studio 7 work?',{steps:[{action:{tool:'Room_Availability'},observation:JSON.stringify([{status:'OK',asked:{room:'Studio 7',status:'BUSY'},reply_text:'🗓️ October 9 (Saturday)\n\n⚠️ Studio 7 is booked 1:00 PM – 3:00 PM (CATTAIL / Sasa Abella / HL) - free the rest of the day.\n\n✅ Free all day:\nStudios 1, 2, 3, 8, C, and F.'}])}]},
+      x=>x.output==='🗓️ October 9 (Saturday)\n\n⚠️ Studio 7 is booked 1:00 PM – 3:00 PM (CATTAIL / Sasa Abella / HL) - free the rest of the day.\n\n✅ Free all day:\nStudios 1, 2, 3, 8, C, and F.'],
+    ['v246','a booking card is never replaced','*QATEST / Jem Lim / HL*\n*Date:* Saturday, October 9, 2027\n*Time:* 4:00 PM – 5:00 PM\n*Room:* Studio 7\n\nBook it? Reply yes or no.',{steps:[{action:{tool:'Room_Availability'},observation:JSON.stringify([{status:'OK',asked:{room:'Studio 7',status:'BUSY'},reply_text:'🗓️ October 9 (Saturday)\n\n⚠️ Studio 7 is booked 1:00 PM – 3:00 PM (CATTAIL / Sasa Abella / HL) - free the rest of the day.\n\n✅ Free all day:\nStudios 1, 2, 3, 8, C, and F.'}])},{action:{tool:'Prepare_Booking'},observation:JSON.stringify([{status:'PREPARED',summary_text:'*QATEST / Jem Lim / HL*\n*Date:* Saturday, October 9, 2027\n*Time:* 4:00 PM – 5:00 PM\n*Room:* Studio 7\n\nBook it? Reply yes or no.'}])}]},
+      x=>/^\*QATEST/.test(x.output)&&!/CATTAIL/.test(x.output)],
     // v244: a markdown heading is bold in Slack (Claude copies the prompt's # headings)
     ['v244','"## Availability" becomes *Availability*','## Availability\nStudio 7 is free all day.',{steps:[]},
       x=>x.output==='*Availability*\nStudio 7 is free all day.'],
