@@ -19,6 +19,7 @@ ones move to the bottom instead of being renumbered.
 |---|---|---|
 | 68 | **Move Direct: a yes to a move card moves once, in code, not through the model.** 30 Sep 17:18 (QASER, main v201): at the yes to the 9 Nov card the model called Move Booking twice in parallel - two replacements (one with the room declined), then "could not remove the original" (it was already removed by the first call). Bookings (Book Direct) and cancels (Cancel Direct) already skip the model at the yes; moves never did, so every series fix today worked around it | **LIVE 1 Oct ~11:04: main v202 (move direct + me fix)** - 11:07: the yes went to Move Booking once, directly (AMBIGUOUS_TITLE because of leftover test events - item 72). **Build first, before the 1 Oct Slack end-to-end run:** a Move Direct branch beside Cancel Direct - Booked For's approvedMove (v200) -> Move Booking once -> a code reply ('Moved ...' + the next series card). Cleanup: the extra 9 Nov 2027 QASER (Studio 8 declined, no location) |
 | 97 | **Gemini temperature setting removed** (Google AI Studio notice, 7 Oct): upcoming Gemini models will reject `temperature`, `top_p`, `top_k` (400 INVALID_ARGUMENT) and `thinking_budget` (use `thinking_level`). Jessie set only temperature 0.2, on both model nodes; decided 8 Oct to remove it from both, so a model upgrade can never fail on it. The Fallback (3.8 Flash) already ignored it; the primary (3.5 Flash Lite) now runs at Google's default (1.0) and replies may vary more than at 0.2. The notice also says the project sent `thinking_budget` - nothing in Jessie sets it, so another app on the same API key does | **LIVE 8 Oct ~11:08 PHT: main v236 (hand import, before + after MATCH, id uVVYVB2M7kxpLleI, both model nodes `options: {}`).** Offline: test-nodes 534 ok, test-gate 69/69, check-fromai ok. **Slack round done 8 Oct 13:34-13:45 PHT (Tara's DM, by Claude): 14/14 passed** - book + yes, repeated yes, move + yes, cancel + yes, the same request twice (identical card), conditional yes, no, 4-date series + yes, cancel one series date, availability; calendar clean after. Median reply 12 s (Slack-measured; 9 s on 29 Sep). Two findings in 98. Key owner: check in AI Studio which app sends thinking_budget |
+| 99 | **Claude answers from the conversation instead of calling the tool** (8 Oct Slack rounds on main v237-v240): with a card already in the conversation, Haiku 4.5 and Haiku 5.5 copied the card or claimed the action with no tool called - 6 of ~19 model turns on 4.5, 3 of 6 cancels on 5.5; Gemini 0 of 14 on the same steps. Likely cause: n8n's Conversation Memory keeps only the text, so earlier cards look like replies the model wrote itself; a reset answered within seconds can load the old memory (gotcha 26) | **In build (Howard + Claude): main v242 on top of Tara's v241 - do not import v241 on its own, and do not start another v242.** Guards already LIVE: v238 withdraws a card no tool made, v239 checks done-claims anywhere in the reply. v242: memory keeps a short note in place of each card, cancel card no longer repeated by the model (Cancel Booking v23), Anthropic's "rules hold for the whole conversation" line, reset recovered from Slack history, Claude Haiku max tokens 8000 / 2 tries. Then a full Slack round with a cancel stress test; any withdrawn card -> launch on Gemini (slots swapped) |
 | 98 | **Prompt hygiene (v236 review, 8 Oct)**: stale move steps tell the model to call Move Booking on a yes (Move Direct does it); "Look up before booking" contradicts "nothing needs looking up first" (extra tool calls); a broken `Avoid:` line; smaller leftovers. Also two Slack findings: availability omits the booking's time; two date formats on series cards | Howard - prompt edits in main. **Do after the Haiku trial** (Howard is trying a Claude Haiku model to compare results): re-check each point on whichever model stays |
 | 33 | Launch switches: year shift, **three** `DEV_REDIRECT`s, drop `TEST_COORD` (the tag is live on Howard). **HAIST Dev stays** for now as an emergency backup (decided 28 Sep) | Howard, on 12 Oct |
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
@@ -109,6 +110,35 @@ known constraint, not a task.
 ---
 
 ## 🔴 Urgent: details
+
+### 99. Claude answers from the conversation instead of calling the tool (8 Oct)
+
+Found in the Slack rounds on Claude after main v237 (Haiku primary). Results, Howard's DM:
+
+| Build / model | Step | Result |
+|---|---|---|
+| v237 Haiku 4.5 | book, yes, repeated yes, move, yes | correct |
+| v237 Haiku 4.5 | availability ("is studio 7 free on december 14 2027?") | the booking's time now given; "taken that day" and a confused "did you mean to confirm?" |
+| v237 Haiku 4.5 | cancel after a move (14:43) | a cancel card the model wrote itself, pre-move time, no tool (intermediateSteps empty) -> v238 |
+| v238 Haiku 4.5 | the same cancel again (15:01) | "... has been cancelled." - no tool, booking still there; the claim check only read the start of the reply -> v239 |
+| v239 Haiku 4.5 | after reset: cancel, yes | correct |
+| v239 Haiku 4.5 | the same booking request twice | copied card withdrawn twice (the withdrawal notice did not help) |
+| v239 Haiku 4.5 | conditional yes, no, 4-date series + yes | correct (series 36 s) |
+| v239 Haiku 4.5 | cancel one series date; again 8 s after a reset | withdrawn both times |
+| v240 Haiku 5.5 | cancel 7 Dec (fresh), 14 Dec, 21 Dec | 7: correct; 14: withdrawn, correct on retry; 21: withdrawn twice |
+
+Every failure had a card earlier in the conversation. n8n's Conversation Memory keeps only the requester's text and Jessie's
+text - no tool calls - so to the model the history shows Jessie answering "cancel X" with a card herself, and Prepare Cancel's
+own instruction ("Send the requester this card as your whole reply") puts the card in memory word for word. A reset sent and
+answered within ~8 s did not help (15:22): static data (the epoch) is saved only when the turn finishes (gotcha 26).
+
+Haiku 5.5 settings (checked against Anthropic's docs, 8 Oct): leave temperature / top_p / top_k unset (any non-default value is
+a 400); leave n8n's Enable Thinking off (it sends `budget_tokens`, which Haiku 5.5 rejects with a 400 at any amount); effort and
+prompt caching are not reachable from the n8n node. Cost at ~$0.10 / MTok input is about $5-7 per 1,000 turns.
+
+Also from these rounds: three date formats (series card "Tuesday, 7 December 2027", series result "December 7, 2027 (Tue)",
+single cards "Tuesday, December 14, 2027"); an extra "Also free: ..." line under an availability answer (14:36, conflicting
+with the list above it); "no" to a card answered "What needs to change?" (fine, terser than before).
 
 ### 98. Prompt hygiene - v236 review (8 Oct)
 
