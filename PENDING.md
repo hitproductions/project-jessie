@@ -7,7 +7,7 @@ known behaviour gaps, and pre-launch work. Each item says how it was found and w
 **Item numbers are permanent**; other docs cite "PENDING 15". New items get the next number, and resolved
 ones move to the bottom instead of being renumbered.
 
-**Launch: 12 October 2026. Back-end polish ends 5 October.** Triage last updated 2026-10-06 (live: main v235, Book Series v7, Book Session v97, Room Availability v19, Cancel v22, Find v8, Move v25 - imported 6 Oct ~14:29 PHT, not yet tried in Slack; open from the 4 Oct run: 78-83; see `docs/eod/EOD-2026-10-04.md`). **Consent rebuild candidates (main v176, Book v57, Open v11, Finalize v10, Sweep v2, and a Move candidate in git at `060afd9`) predate today's builds: rebuild on live, never import as they are.**
+**Launch: 22 October 2026 (moved from 12 Oct on 8 Oct; major dev done by 9-12 Oct).** Triage last updated 2026-10-06 (live: main v235, Book Series v7, Book Session v97, Room Availability v19, Cancel v22, Find v8, Move v25 - imported 6 Oct ~14:29 PHT, not yet tried in Slack; open from the 4 Oct run: 78-83; see `docs/eod/EOD-2026-10-04.md`). **Consent rebuild candidates (main v176, Book v57, Open v11, Finalize v10, Sweep v2, and a Move candidate in git at `060afd9`) predate today's builds: rebuild on live, never import as they are.**
 
 ---
 
