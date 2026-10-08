@@ -215,6 +215,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v188','v188 \\(live QA 29 Sep\\): "not on the staff list"'],
     ['v238','v238 \\(card guard\\)'],
     ['v239','v239 \\(claim forms\\)'],
+    ['v242','v242 \\(memory notes'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -247,6 +248,25 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>V238?WD(x):(/- Tuesday, 7 December 2027/.test(x.output)&&!/Dec 7, 14/.test(x.output))],
     ['v183','no Expand Series this turn: the summary is left alone','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n\nConfirm to book.',{steps:[]},
       x=>V238?WD(x):(/- December 7/.test(x.output))],
+    // v242 (memory notes, PENDING 99): what a turn leaves in the conversation memory in place of its raw reply
+    ['v242','a cancel card from Prepare Cancel leaves a note, not the card','Here it is.',{steps:[{action:{tool:'Prepare_Cancel'},observation:JSON.stringify([{status:'PREPARED',card_text:'*QATEST / Jem Lim / HL*\n*Date:* Tuesday, December 14, 2027\n*Time:* 2:00 PM – 3:00 PM\n*Room:* Studio 7\n\nConfirm to cancel.'}])}]},
+      x=>/^\*QATEST/.test(x.output)&&x.memoryNote==='[Cancel card shown, made by its tool: QATEST / Jem Lim / HL | Date: Tuesday, December 14, 2027 | Time: 2:00 PM – 3:00 PM | Room: Studio 7. Waiting for their yes or no. A new, repeated or changed request needs the tool again.]'],
+    ['v242','a booking card from Prepare Booking: a Book note','ok',{steps:[{action:{tool:'Prepare_Booking'},observation:JSON.stringify([{status:'PREPARED',summary_text:'*QATEST2 / Jem Lim / HL*\n*Date:* Wednesday, December 15, 2027\n*Time:* 10:00 AM – 11:00 AM\n*Room:* Studio 7\n\nBook it? Reply yes or no.'}])}]},
+      x=>/^\[Book card shown, made by its tool: QATEST2 \/ Jem Lim \/ HL \| Date:/.test(x.memoryNote)],
+    ['v242','a series card from Prepare Series: a Series note','ok',{steps:[{action:{tool:'Prepare_Series'},observation:JSON.stringify([{status:'PREPARED',card_text:'*QS / Jem Lim / HL*\n*Dates (2):*\n- Tuesday, 7 December 2027\n- Tuesday, 14 December 2027\n*Time:* 1:00 PM – 2:00 PM\n\nBook it? Reply yes or no.'}])}]},
+      x=>/^\[Series card shown, made by its tool: QS \/ Jem Lim \/ HL \| Dates \(2\): \| - Tuesday, 7 December 2027/.test(x.memoryNote)],
+    ['v242','a card the model wrote is withdrawn and noted as nothing done','*QATEST / Jem Lim / HL*\n*Date:* Tuesday, December 14, 2027\n*Time:* 2:00 PM – 3:00 PM\n*Room:* Studio 7\n\nConfirm to cancel.',{steps:[]},
+      x=>/nothing was cancelled/.test(x.output)&&/^\[Nothing was done: a card no tool made was withdrawn/.test(x.memoryNote)],
+    ['v242','a bracketed note the model copied is withdrawn','[Cancel card shown, made by its tool: QATEST / Jem Lim / HL | Date: Tuesday, December 14, 2027. Waiting for their yes or no.]',{steps:[]},
+      x=>/so nothing was changed\. Could you send that again\?$/.test(x.output)&&/memory note/.test(x.cardProbe)&&/^\[Nothing was done/.test(x.memoryNote)],
+    ['v242','a copied "Nothing was done" note is withdrawn too','[Nothing was done: a card no tool made was withdrawn.]',{steps:[]},
+      x=>/so nothing was changed/.test(x.output)],
+    ['v242','a false "has been cancelled" leaves a nothing-done note','QATEST / Jem Lim / HL has been cancelled.',{steps:[]},
+      x=>/Nothing was cancelled/.test(x.output)&&x.memoryNote==='[Nothing was done: a "cancelled" claim had no tool behind it and was withdrawn.]'],
+    ['v242','an ordinary reply leaves memory alone','Studio 7 is free all day on Tuesday, December 14, 2027.',{steps:[]},
+      x=>x.memoryNote===''],
+    ['v242','no intermediateSteps: nothing judged, memory left alone','*QATEST / Jem Lim / HL*\n*Date:* Tuesday, December 14, 2027\n*Time:* 2:00 PM – 3:00 PM\n*Room:* Studio 7\n\nConfirm to cancel.',{},
+      x=>/QATEST/.test(x.output)&&x.memoryNote===''],
     // v239 (claim forms, live 8 Oct 15:01 on Haiku): a done-claim anywhere in the reply is checked, not only at its start
     ['v239','"<title> has been cancelled" with no cancel is replaced (live 15:01)','QATEST / Jem Lim / HL on Tuesday, December 14, 2027 has been cancelled.',{steps:[]},
       x=>/Nothing was cancelled/.test(x.output)&&/cancelled: NOT FOUND/.test(x.claimProbe)],
