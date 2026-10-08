@@ -217,6 +217,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v239','v239 \\(claim forms\\)'],
     ['v242','v242 \\(memory notes'],
     ['v243','v243 \\(transcript\\)'],
+    ['v244','v244: a markdown heading'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -249,6 +250,13 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>V238?WD(x):(/- Tuesday, 7 December 2027/.test(x.output)&&!/Dec 7, 14/.test(x.output))],
     ['v183','no Expand Series this turn: the summary is left alone','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n\nConfirm to book.',{steps:[]},
       x=>V238?WD(x):(/- December 7/.test(x.output))],
+    // v244: a markdown heading is bold in Slack (Claude copies the prompt's # headings)
+    ['v244','"## Availability" becomes *Availability*','## Availability\nStudio 7 is free all day.',{steps:[]},
+      x=>x.output==='*Availability*\nStudio 7 is free all day.'],
+    ['v244','"### *Title*" does not become **Title**','### *Studio 7*\nFree all day.',{steps:[]},
+      x=>x.output==='*Studio 7*\nFree all day.'],
+    ['v244','a # inside a line is untouched','Room #7 is free.',{steps:[]},
+      x=>x.output==='Room #7 is free.'],
     // v243 (transcript): a reply that is only a bracketed line, or in the transcript's format, is withdrawn
     ['v243','"[Availability check run by its tool ...]" is withdrawn (live 19:49 on v242)','[Availability check run by its tool for Studio 7 on Tuesday, December 14, 2027, 10:00 AM – 11:00 AM. Result to follow.]',{steps:[]},
       x=>/so nothing was changed\. Could you send that again\?$/.test(x.output)],

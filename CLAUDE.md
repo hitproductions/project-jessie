@@ -207,6 +207,8 @@ knowledge accumulates.
   file down to `name/nodes/connections/settings`. `./scripts/n8n-write` prunes to that shape
   itself at PUT time, and the browser-UI fallback expects the full n8n export — so the repo
   files stay full-shape either way.
+- **Run `./scripts/audit-model-text` on every build** (gotcha 34): a tool answer or prompt line telling the model to write a
+  card or a confirmation line is a dead end since main v238.
 - **Run `./scripts/check-fromai` on every build.** An unescaped apostrophe in a `$fromAI`
   description takes the whole agent down, and it fails at runtime, not on save.
 - **Run `./scripts/test-nodes` before shipping anything.** It runs every Code node that
@@ -292,6 +294,7 @@ only script that writes to n8n.
 | `./scripts/eval-twin build [file]` · `guard <twin> <src>` | builds / re-checks the eval twin (`KRZmVfKIwCiLREjz`, inactive except during a run) |
 | `./scripts/test-dates` | the padded-timestamp protections (gotcha 18), offline, on the newest file of each workflow: clean query, fail closed on a failed read, studios scope |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
+| `./scripts/audit-model-text` · `<file>...` | every text the model reads (prompt, tool descriptions, `$fromAI`, every string a Code node returns or puts in the prompt) checked for instructions that contradict how Jessie works - above all "end with the line Confirm to ..." / "present the summary": cards come only from tools, and main v238 withdraws one the model wrote. Run on every build (since 2026-10-08) |
 | `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
 | `./scripts/verify-ids` | all twelve Jessie workflow ids (incl. the three consent workflows) resolve to **active** workflows with the right names, and the Jessie bot id still points at the live app |
 | `./scripts/backup-live` | snapshot every live workflow into `workflows/live/`; run by hand after imports |
@@ -745,6 +748,13 @@ the task runner), for whoever has shell access to the box.
     the real message only shows in the model list dropdown or a direct curl). Make the key inside a workspace (Organization
     settings → Workspaces → Jessie → create key; its Scope must name the workspace), or turn on the credential's Add Custom
     Header with the `wrkspc_…` id. Cost an hour on 8 Oct, two fresh keys first.
+
+34. **Old tool text told the model to write the card itself, and Claude obeyed** (8 Oct, PENDING 99). Cards moved into code
+    (main v163-v226), but refusal texts from before that still said "Show the requester the booking ... (end with "Confirm to
+    cancel. (yes/no)")", "Present the full list of dates, end with the line "Confirm to book."", and the prompt's Rescheduling step
+    said the same. Gemini mostly called the tool again anyway; Claude followed the text, and main v238 withdrew every such card -
+    three Slack rounds in a row looked like the model inventing cards. Found them all at once with `scripts/audit-model-text`
+    (now run on every build). When a job moves into code, search every text the model reads for the old instruction (gotcha 31).
 
 ## Not done
 

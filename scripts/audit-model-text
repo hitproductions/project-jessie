@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+"""audit-model-text - every text the model reads, checked for instructions that contradict how Jessie works now.
+Added 8 Oct 2026 (PENDING 99): on Claude, three builds in a row failed on old text telling the model to write a
+confirmation itself ("end with "Confirm to cancel. (yes/no)"", "Present the full list of dates, end with the line
+"Confirm to book."", the prompt's "end that message with the line `Confirm to move. (yes/no)`"). Cards come only from
+tools since main v163-v226, and main v238 withdraws a card no tool made - so every such line is now a dead end.
+
+Reads the agent's system message and prompt, every tool description, every $fromAI description, and every `human:` /
+`bad(...)` text a sub-workflow returns to the model. Files only; never contacts n8n.
+
+  ./scripts/audit-model-text                     the newest file of each workflow in workflows/
+  ./scripts/audit-model-text <file.json> ...     those files (any of main and the sub-workflows)
+Exit 0 = clean, 1 = findings, 2 = usage.
+"""
+import json, re, sys, glob, os
+
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Workflows whose answers reach the model. Expand Series is not on the agent since main v226 and Book Series / Prepare
+# Series do not call it, so nothing it says is read by the model.
+PREFIXES = ["project-jessie", "book-session", "cancel-booking", "move-booking", "find-booking", "room-availability",
+            "book-series"]
+
+# (rule, pattern). A sentence with a negation ("never", "do not", "don't") is not an instruction to do it.
+RULES = [
+    ("writes its own confirmation line", re.compile(r"\bend\b[^.\n]{0,40}\bwith\b[^.\n]{0,20}(?:the line\s*)?[`\"\\']*\s*Confirm to (?:book|cancel|move)", re.I)),
+    ("a yes to 'a message ending with the line ...' (implies the model writes it)", re.compile(r"ending with the line|ended with the line", re.I)),
+    ("presents a summary / list of dates itself", re.compile(r"\bPresent (?:the|a|this|your) (?:full list|summary|dates|series)", re.I)),
+    ("shows the booking and the change itself", re.compile(r"\bShow the (?:booking|summary|requester the booking)\b", re.I)),
+    ("writes a summary / card itself", re.compile(r"\b(?:write|compose) (?:a|the|your own|its own) (?:summary|card|confirmation)\b", re.I)),
+]
+NEG = re.compile(r"\b(?:never|do not|don't|not write|no need to)\b", re.I)
+
+def newest(prefix):
+    fs = [f for f in glob.glob(os.path.join(HERE, "workflows", prefix + "-v*.json")) if re.search(r"-v\d+\.json$", f)]
+    return max(fs, key=lambda f: int(re.search(r"-v(\d+)\.json$", f).group(1))) if fs else None
+
+def texts(path):
+    w = json.load(open(path))
+    conn = w.get("connections", {})
+    agent_tools = {src for src, c in conn.items() for t in c.get("ai_tool", []) for e in (t or []) if e.get("node")}
+    has_agent = any(n.get("type", "").endswith(".agent") for n in w.get("nodes", []))
+    out = []
+    for n in w.get("nodes", []):
+        p = n.get("parameters", {})
+        name, typ = n.get("name", "?"), n.get("type", "")
+        if typ.endswith(".agent"):
+            out.append((name, "system message", (p.get("options") or {}).get("systemMessage", "")))
+            out.append((name, "prompt", p.get("text", "")))
+        # a tool the agent cannot call is never read by the model (Expand Series since main v226)
+        on_agent = (name in agent_tools) or not has_agent
+        if on_agent and isinstance(p.get("description"), str) and "tool" in typ.lower():
+            out.append((name, "tool description", p["description"]))
+        if on_agent and isinstance(p.get("toolDescription"), str):
+            out.append((name, "tool description", p["toolDescription"]))
+        if on_agent:
+            for m in re.finditer(r"\$fromAI\(([^)]{0,800})\)", json.dumps(p)):
+                out.append((name, "$fromAI", m.group(1)))
+        # every string literal in a Code node: tool answers (human / bad), and the notices main's code puts in the prompt.
+        # A message built from several joined strings ("... Closest:\n' + list + '\nShow the requester ...") is read whole.
+        js = p.get("jsCode", "") or ""
+        js = re.sub(r"(^|\s)//[^\n]*", " ", js)          # comments are not read by the model
+        for m in re.finditer(r"'((?:\\.|[^'\\\n])*)'|\"((?:\\.|[^\"\\\n])*)\"|`((?:\\.|[^`\\])*)`", js):
+            lit = next(g for g in m.groups() if g is not None)
+            if len(lit) >= 25: out.append((name, "code string", lit.replace("\\n", "\n").replace('\\"', '"')))
+    return w.get("name", os.path.basename(path)), out
+
+def sentences(t):
+    return [x for x in re.split(r"(?<=[.!?])\s+|\n+", t) if x.strip()]
+
+def main(argv):
+    files = argv or [f for f in (newest(p) for p in PREFIXES) if f]
+    if not files: print(__doc__.strip()); return 2
+    findings = 0
+    for f in files:
+        title, ts = texts(f)
+        hits = []
+        for node, kind, t in ts:
+            for sent in sentences(t):
+                if NEG.search(sent): continue
+                for rule, pat in RULES:
+                    if pat.search(sent):
+                        hits.append((node, kind, rule, re.sub(r"\s+", " ", sent).strip()[:220]))
+        print(f"{os.path.basename(f)}  ({title}): {len(ts)} texts, " + ("clean" if not hits else f"{len(hits)} finding(s)"))
+        for node, kind, rule, sent in hits:
+            print(f"  FIND  [{node} / {kind}] {rule}\n        \"{sent}\"")
+        findings += len(hits)
+    print(f"\n{findings} finding(s) in {len(files)} file(s)")
+    return 1 if findings else 0
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
