@@ -214,6 +214,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v185','v185: a move of the booking just made'],
     ['v188','v188 \\(live QA 29 Sep\\): "not on the staff list"'],
     ['v238','v238 \\(card guard\\)'],
+    ['v239','v239 \\(claim forms\\)'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -246,6 +247,19 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>V238?WD(x):(/- Tuesday, 7 December 2027/.test(x.output)&&!/Dec 7, 14/.test(x.output))],
     ['v183','no Expand Series this turn: the summary is left alone','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n\nConfirm to book.',{steps:[]},
       x=>V238?WD(x):(/- December 7/.test(x.output))],
+    // v239 (claim forms, live 8 Oct 15:01 on Haiku): a done-claim anywhere in the reply is checked, not only at its start
+    ['v239','"<title> has been cancelled" with no cancel is replaced (live 15:01)','QATEST / Jem Lim / HL on Tuesday, December 14, 2027 has been cancelled.',{steps:[]},
+      x=>/Nothing was cancelled/.test(x.output)&&/cancelled: NOT FOUND/.test(x.claimProbe)],
+    ['v239','...and stands when Cancel Booking cancelled it','QATEST / Jem Lim / HL on Tuesday, December 14, 2027 has been cancelled.',{steps:[{action:{tool:'Cancel_Booking'},observation:JSON.stringify([{status:'CANCELLED',event_id:'e1',title:'QATEST / Jem Lim / HL'}])}]},
+      x=>/has been cancelled\.$/.test(x.output)&&/cancelled: confirmed/.test(x.claimProbe)],
+    ['v239',"\"I've moved it\" with no move is replaced","Done - I've moved it to 2:00 PM – 3:00 PM.",{steps:[]},
+      x=>/Nothing was moved/.test(x.output)],
+    ['v239','"has been booked" with no booking is still replaced','Your session has been booked.',{steps:[]},
+      x=>/Nothing was booked/.test(x.output)],
+    ['v239','a negation is not a claim','That booking has not been cancelled - want me to cancel it?',{steps:[]},
+      x=>/has not been cancelled/.test(x.output)&&x.claimProbe==='no claim'],
+    ['v239','"Nothing was cancelled" is not a claim','Nothing was cancelled - that booking is not yours.',{steps:[]},
+      x=>/^Nothing was cancelled/.test(x.output)&&x.claimProbe==='no claim'],
     // v238 (card guard, Slack round on Haiku 8 Oct): a card no tool made is withdrawn; a tool's or the code's card is not
     ['v238','a cancel card the model wrote, no tool called, is withdrawn (live 14:43)','*QATEST / Jem Lim / HL*\n*Date:* Tuesday, December 14, 2027\n*Time:* 10:00 AM – 11:00 AM\n*Room:* Studio 7\n\nConfirm to cancel. (yes/no)',{steps:[]},
       x=>x.output==="Sorry, I couldn't check that against the calendar just now, so nothing was cancelled. Could you send that again?"&&/^WITHDRAWN: a cancel card/.test(x.cardProbe)&&/^\[WITHDRAWN/.test(x.toolsLog)],
