@@ -18,7 +18,8 @@ ones move to the bottom instead of being renumbered.
 | # | What | Blocked on / owner |
 |---|---|---|
 | 68 | **Move Direct: a yes to a move card moves once, in code, not through the model.** 30 Sep 17:18 (QASER, main v201): at the yes to the 9 Nov card the model called Move Booking twice in parallel - two replacements (one with the room declined), then "could not remove the original" (it was already removed by the first call). Bookings (Book Direct) and cancels (Cancel Direct) already skip the model at the yes; moves never did, so every series fix today worked around it | **LIVE 1 Oct ~11:04: main v202 (move direct + me fix)** - 11:07: the yes went to Move Booking once, directly (AMBIGUOUS_TITLE because of leftover test events - item 72). **Build first, before the 1 Oct Slack end-to-end run:** a Move Direct branch beside Cancel Direct - Booked For's approvedMove (v200) -> Move Booking once -> a code reply ('Moved ...' + the next series card). Cleanup: the extra 9 Nov 2027 QASER (Studio 8 declined, no location) |
-| 97 | **Gemini temperature setting removed** (Google AI Studio notice, 7 Oct): upcoming Gemini models will reject `temperature`, `top_p`, `top_k` (400 INVALID_ARGUMENT) and `thinking_budget` (use `thinking_level`). Jessie set only temperature 0.2, on both model nodes; decided 8 Oct to remove it from both, so a model upgrade can never fail on it. The Fallback (3.8 Flash) already ignored it; the primary (3.5 Flash Lite) now runs at Google's default (1.0) and replies may vary more than at 0.2. The notice also says the project sent `thinking_budget` - nothing in Jessie sets it, so another app on the same API key does | **LIVE 8 Oct ~11:08 PHT: main v236 (hand import, before + after MATCH, id uVVYVB2M7kxpLleI, both model nodes `options: {}`).** Offline: test-nodes 534 ok, test-gate 69/69, check-fromai ok. Still to do: a round of normal bookings, a move and a cancel in Slack before 12 Oct. Key owner: check in AI Studio which app sends thinking_budget |
+| 97 | **Gemini temperature setting removed** (Google AI Studio notice, 7 Oct): upcoming Gemini models will reject `temperature`, `top_p`, `top_k` (400 INVALID_ARGUMENT) and `thinking_budget` (use `thinking_level`). Jessie set only temperature 0.2, on both model nodes; decided 8 Oct to remove it from both, so a model upgrade can never fail on it. The Fallback (3.8 Flash) already ignored it; the primary (3.5 Flash Lite) now runs at Google's default (1.0) and replies may vary more than at 0.2. The notice also says the project sent `thinking_budget` - nothing in Jessie sets it, so another app on the same API key does | **LIVE 8 Oct ~11:08 PHT: main v236 (hand import, before + after MATCH, id uVVYVB2M7kxpLleI, both model nodes `options: {}`).** Offline: test-nodes 534 ok, test-gate 69/69, check-fromai ok. **Slack round done 8 Oct 13:34-13:45 PHT (Tara's DM, by Claude): 14/14 passed** - book + yes, repeated yes, move + yes, cancel + yes, the same request twice (identical card), conditional yes, no, 4-date series + yes, cancel one series date, availability; calendar clean after. Median reply 12 s (Slack-measured; 9 s on 29 Sep). Two findings in 98. Key owner: check in AI Studio which app sends thinking_budget |
+| 98 | **Prompt hygiene (v236 review, 8 Oct)**: stale move steps tell the model to call Move Booking on a yes (Move Direct does it); "Look up before booking" contradicts "nothing needs looking up first" (extra tool calls); a broken `Avoid:` line; smaller leftovers. Also two Slack findings: availability omits the booking's time; two date formats on series cards | Howard - prompt edits in main. **Do after the Haiku trial** (Howard is trying a Claude Haiku model to compare results): re-check each point on whichever model stays |
 | 33 | Launch switches: year shift, **three** `DEV_REDIRECT`s, drop `TEST_COORD` (the tag is live on Howard). **HAIST Dev stays** for now as an emergency backup (decided 28 Sep) | Howard, on 12 Oct |
 | 15 | No external uptime monitor: an outage is noticed only when someone complains | Owner accounts (UptimeRobot) |
 | 21 | Cloudflare answering Slack with 403 (the confirmed outage mechanism); 29 Sep: single deliveries also failing and arriving 61 s late on Slack's retry (OUTAGES, 15:41 and 16:16) | **Fix applied 1 Oct (~11:00 PHT):** a Cloudflare exemption (skip) rule for Jessie's and Posty's webhooks; both answered again at once. To do: copy the rule into OUTAGES, watch 09:25-09:35 PHT for a few days (30 Sep and 1 Oct both went silent at that minute), then mark resolved **11:18 the same day: two deliveries still arrived 66-97 s late (Slack's retry) - check Security -> Events for 03:18 UTC.** |
@@ -108,6 +109,47 @@ known constraint, not a task.
 ---
 
 ## 🔴 Urgent: details
+
+### 98. Prompt hygiene - v236 review (8 Oct)
+
+Found by reading the live v236 prompt (30,099 characters, line numbers as in the `systemMessage`) and the 16 tool
+descriptions. Size is under control: 29,621 characters at v181, so 55 builds added only ~500, with fixes going into
+code. The six v181 fixes are all present. Howard is trying a Claude Haiku model to see whether results change; the
+prompt was written against Gemini, so re-check these on whichever model stays.
+
+**Fix before launch**
+
+1. **Stale move steps (lines 221-222).** "end that message with the line `Confirm to move. (yes/no)`" and "4. On yes,
+   call Move Booking". Since Move Direct (68, main v202) a yes to a move card is carried out in code. The model only
+   sees the yes when Move Direct declines - and this text then tells it to move anyway: the same shape as v180's
+   cancel notice (fixed in v181) and the cause of the 30 Sep double move. Rewrite like *Cancelling* step 4: the yes is
+   carried out automatically; never call Move Booking for it; if a yes reaches you, show the card again.
+2. **"Look up before booking" vs "nothing needs looking up first".** Line 63: Prepare Booking checks the engineer,
+   client and a named room itself, "Nothing needs looking up first". Line 100 (*Rooms & Studios*): call it "once the
+   requester names a room", under a section headed "Look up before booking". The contradiction invites extra
+   Airtable calls on every booking (speed). Rename the section ("What Prepare Booking checks") and keep lookups for
+   explicit questions and ambiguity only.
+3. **Broken line in *Tone* (line 310):** a stray `Avoid:```` (an unclosed code fence) before the real "Avoid:"
+   example - edit debris the model reads on every message.
+
+**Tidy-ups**
+
+- *Department* (lines 110-116) still has the model map roles to departments and "use it and say which"; Prepare
+  Booking does this in code, so the two can disagree. Keep only "pass it when the requester says it; when Prepare
+  Booking asks, ask".
+- Line 160 hardcodes rooms ("Studio 1-6, with Studio 7 as a last resort") - against the read-Airtable rule; goes
+  stale when Tel changes the ranking.
+- Line 155 "Never offer a room in neither list - Book Session refuses it": not true with `room_override`.
+- *Showing bookings* example (line 255) uses the `Dates:` layout for M-booth holds; on 29 Sep single all-day holds
+  came out as "Dates: September 30 (Wed)" with the weekday wrong (30 Sep 2027 is a Thursday).
+- Line 1 still has the QA year shift `plus({ years: 1 })` - goes to zero with Gate Context's `YEAR_SHIFT` (33).
+
+**From the 8 Oct Slack round (97)**
+
+- **Availability omits the time.** "is studio 7 free on december 14 2027?" -> "Studio 7 is taken on Tuesday,
+  December 14, 2027 by "QATEST / Jem Lim / TL"." The booking was 10-11 AM; the rest of the day was free.
+- **Two date formats.** The series card lists "Tuesday, 7 December 2027"; single cards and the series result use
+  "Thursday, November 4, 2027".
 
 **32. Thread-broadcast errors: harmless duplicates, not lost replies. RESOLVED — v156 LIVE 2026-09-26.** *Corrected
 2026-09-26 — the first write-up of this, which came from Tara's side, was wrong about the impact.*
