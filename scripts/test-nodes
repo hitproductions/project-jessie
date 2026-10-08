@@ -220,6 +220,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v244','v244: a markdown heading'],
     ['v246','v246 \\(8 Oct 21:44\\)'],
     ['v247','v247 \\(brevity, 8 Oct\\)'],
+    ['v248','v248 \\(8 Oct 22:05\\)'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -252,6 +253,17 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>V238?WD(x):(/- Tuesday, 7 December 2027/.test(x.output)&&!/Dec 7, 14/.test(x.output))],
     ['v183','no Expand Series this turn: the summary is left alone','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n\nConfirm to book.',{steps:[]},
       x=>V238?WD(x):(/- December 7/.test(x.output))],
+    // v248 (8 Oct 22:05): internal reasoning and a needless engineer ask never reach the requester
+    ['v248','the live 22:05 reply: the leak and the engineer ask both go','VO Recording is a Post session, and QATEST8 has no Localization record, which is expected for Post work. I still need the engineer\'s name to prepare the booking.',{steps:[],bf:{engineerResolved:true,engineer:'Howard Luistro',client:'Jem Lim'}},
+      x=>x.output==='Anything else before I show you the booking?'],
+    ['v248','a leak before a real question: only the leak goes','QATEST8 has no Localization record, which is expected for Post work. Who\'s the client?',{steps:[]},
+      x=>x.output==='Who\'s the client?'],
+    ['v248','the engineer ask stays when the engineer is not known','I still need the engineer\'s name to prepare the booking.',{steps:[],bf:{engineerResolved:false}},
+      x=>/engineer/.test(x.output)],
+    ['v248','a table name in a sentence goes','I checked the Bookers table. Studio 7 is free then.',{steps:[]},
+      x=>x.output==='Studio 7 is free then.'],
+    ['v248','"VO Recording" alone is not a leak','VO Recording sessions usually run 1-3 hours.',{steps:[]},
+      x=>x.output==='VO Recording sessions usually run 1-3 hours.'],
     // v247 (brevity): filler, recaps and closers dropped; a details question in one fixed shape
     ['v247','B1 (live 20:45): the details question in one fixed shape','Got it, Studio 8 it is. Session details needed: what kind of session is this, and who\'s the client? Also, what\'s the project title?',{steps:[]},
       x=>x.output==='What\'s the session type, project and client? (or "none" for no client)'],

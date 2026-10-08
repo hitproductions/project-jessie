@@ -54,6 +54,14 @@ console.log('No room asked about');
 r = ra(DAY, [CATTAIL]);
 ok(/⚠️ Studio 7: booked 1:00 PM – 3:00 PM, free the rest of the day\./.test(r.reply_text || '') && !/free except/.test(r.reply_text || ''), 'part-booked rooms say when, and that the rest is free', r.reply_text);
 
+console.log('Not a usual room for the session type (RA v21)');
+if (/v21 \(8 Oct 22:06\)/.test(code)) {
+  const AT2 = { start_iso: '2027-10-14T14:00:00+08:00', end_iso: '2027-10-14T15:00:00+08:00' };
+  r = ra({ ...AT2, room: 'Studio 3', session_type: 'VO Recording' }, []);
+  ok(r.asked.status === 'NOT_RUN_HERE' && r.reply_text === "Studio 3 isn't a usual VO Recording room - Studio 7, Studio 8 and Studio F are free then. One of those, or still Studio 3?", 'a room not in the ranking (live 22:06) -> one short question, in code', r.reply_text);
+  r = ra({ ...AT2, room: 'Studio C', session_type: 'VO Recording' }, []);
+  ok(r.asked.status === 'FREE_BUT_LAST_RESORT' && /^Studio C isn't a usual VO Recording room - Studio 7, Studio 8 and Studio F are free then\. One of those, or still Studio C\?$/.test(r.reply_text || ''), 'a last-resort room -> the same question', r.reply_text);
+}
 console.log('Left to the model (unchanged)');
 r = ra({ ...DAY, room: 'Studio 99' }, []);
 ok(r.asked.status === 'UNKNOWN_ROOM' && !r.reply_text, 'an unknown room: no code reply', r);
