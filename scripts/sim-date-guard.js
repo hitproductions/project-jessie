@@ -23,9 +23,10 @@ const gate = (text, history) => {
 };
 console.log('Gate Context - what date does the conversation hold?');
 const t1 = gate('Book Studio F for Japs next Thursday from 1pm to 4pm', []);
-ok(t1.datesUnderDiscussion === '2027-09-30', 'turn 1 "next Thursday" -> ' + t1.datesUnderDiscussion);
+const V255 = /__nextOf/.test(GATE), NT = V255 ? '2027-10-07' : '2027-09-30';   // v255: from Friday on, "next Thursday" is the one after the coming one
+ok(t1.datesUnderDiscussion === NT, 'turn 1 "next Thursday" -> ' + t1.datesUnderDiscussion);
 const t2 = gate('Daryl', []);
-ok(t2.datesUnderDiscussion === '2027-09-30', 'turn "Daryl" (no date) carries -> ' + t2.datesUnderDiscussion);
+ok(t2.datesUnderDiscussion === NT, 'turn "Daryl" (no date) carries -> ' + t2.datesUnderDiscussion);
 const t3 = gate('actually make it Friday Oct 1', []);
 ok(t3.datesUnderDiscussion.split(',')[0] === '2027-10-01', '"Friday Oct 1": the written date wins -> ' + t3.datesUnderDiscussion);
 const t3b = gate('yes', []);

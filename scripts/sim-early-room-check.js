@@ -75,7 +75,7 @@ console.log('a date and no time yet');
 r = turn({ text: 'book studio f on oct 14' });
 ok(r.plan.run && r.plan.start_iso === '2027-10-14T08:00:00+08:00' && r.plan.end_iso === '2027-10-20T22:00:00+08:00', 'checked 8 AM - 10 PM', r.plan);
 ok(/^❌ Heads up: \*You already have Studio F booked 1:00 PM – 4:00 PM\* on Thursday, October 14 with this session: SESH \/ Netflix \/ JD\n\n✅ Studio F is free on the same day at:\n• 8:00 AM – 1:00 PM\n• 4:00 PM – 10:00 PM\n\n✅ Free all day:\nStudio 2 · Studio 7 · Studio 8 · /.test(r.out)
-  && r.out.endsWith('\n\n' + r.asIs) && /^What kind of session/.test(r.asIs) && !/Free all day:\n[^\n]*Studio 1\b/.test(r.out),
+  && (/v255 \(PENDING 109/.test(code(M, 'Guard Probe')) ? r.out.endsWith('\n\nWhat time works?') : r.out.endsWith('\n\n' + r.asIs) && /^What kind of session/.test(r.asIs)) && !/Free all day:\n[^\n]*Studio 1\b/.test(r.out),   // v255: no time yet -> "What time works?" under the heads-up (v252)
   'booked for part of the day -> the heads-up, when the room is still free, the rooms free all day (Studio 1 is not), then the questions', r.out);
 // v231 (live 7 Oct 17:17): "book studio 7 tomorrow for me" - Studio 7 taken 3-5 PM by someone else
 r = turn({ text: 'book studio 7 tomorrow for me', dates: '2027-10-08', inMsg: '2027-10-08', user: 'U08V3CKDGJF', cal: [E('Studio 7', '2027-10-08', '15:00', '17:00', 'WHEAT SUN / Jem Lim / AEG', 'U2')] });

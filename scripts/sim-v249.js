@@ -70,7 +70,7 @@ show('23:38 on v249', r.out);
 ok(r.bf.timeStart === '11:00' && r.bf.timeEnd === '13:00' && r.bf.timeForced === true, '"11-1" is 11 AM - 1 PM, and it is the time', [r.bf.timeStart, r.bf.timeEnd, r.bf.timeForced]);
 ok(r.plan.run && r.plan.room === 'Studio 7' && r.plan.hours === '11:00-13:00', 'no studio named: the heads-up\'s Studio 7, checked again at the new time', r.plan);
 ok(r.res && r.res.earlyRoom && r.res.earlyRoom.mode === 'free', '11 AM - 1 PM is free (back-to-back with the 1 PM booking)', r.res && r.res.earlyRoom);
-ok(r.out === '✅ Studio 7 is free · Saturday, October 9 · 11:00 AM – 1:00 PM\nWhat\'s the session type, project and client? (or "none" for no client)',
+ok(r.out === (/v255 \(PENDING 109/.test(code(M, 'Guard Probe')) ? '🗓️ Studio 7 · Saturday, October 9 · 11:00 AM – 1:00 PM\n\n' : '✅ Studio 7 is free · Saturday, October 9 · 11:00 AM – 1:00 PM\n') + 'What\'s the session type, project and client? (or "none" for no client)',
   'the booking said back (free, checked by code this turn), then the details question - no availability layout', r.out);
 const o2 = turn(OM, ORA, h2, { reply: 'Studio 7 is free then. What\'s the session type, project and client?',
   steps: [{ action: { tool: 'Room_Availability' }, observation: JSON.stringify([raRun(ORA, { start_iso: '2027-10-09T12:00:00+08:00', end_iso: '2027-10-09T13:00:00+08:00', room: 'Studio 7', reference_data: REF }, CAL)]) }] });
@@ -81,7 +81,7 @@ if (/v251 \(live 9 Oct 11:49\)/.test(code(M, 'Early Room Plan'))) {
   const codes = heads.replace(/❌/g, ':x:').replace(/✅/g, ':white_check_mark:');
   r = turn(M, RA, [U(12, 'book 11-1 instead'), J(11, codes), U(10, 'book tomorrow 12-2pm studio 7')], { reply: 'Studio 7 is free then. What\'s the session type, project, client and engineer?' });
   ok(r.plan.run && r.plan.room === 'Studio 7' && r.plan.knownRoom === 'Studio 7', 'Studio 7 kept, checked again at 11-1', r.plan);
-  ok(r.out === '✅ Studio 7 is free · Saturday, October 9 · 11:00 AM – 1:00 PM\nWhat\'s the session type, project and client? (or "none" for no client)', 'the restated line with the room, no engineer asked (the requester is one)', r.out);
+  ok(r.out === (/v255 \(PENDING 109/.test(code(M, 'Guard Probe')) ? '🗓️ Studio 7 · Saturday, October 9 · 11:00 AM – 1:00 PM\n\n' : '✅ Studio 7 is free · Saturday, October 9 · 11:00 AM – 1:00 PM\n') + 'What\'s the session type, project and client? (or "none" for no client)', 'the restated line with the room, no engineer asked (the requester is one)', r.out);
   r = turn(M, RA, [U(12, 'studio 7 12-2pm please'), J(11, codes), U(10, 'book tomorrow 12-2pm studio 7')]);
   ok(!r.plan.run && r.plan.why === 'already told this booking', 'the same time again: "already told" now works on Slack\'s text too', r.plan);
 }
@@ -191,6 +191,17 @@ if (/v254 \(live 9 Oct 12:26\)/.test(code(M, 'Early Room Result'))) {
     start: { dateTime: '2027-10-12T00:00:00+08:00' }, end: { dateTime: '2027-10-13T00:00:00+08:00' } }];
   r = turn(M, RA, [U(10, 'book m6 on tuesday')], { dates: '2027-10-12', inMsg: '2027-10-12', cal: HOLD });
   ok(r.out.startsWith('❌ Heads up: *M6 is already booked all day* on Tuesday, October 12'), '"booked all day", not "12:00 AM – 12:00 AM"', r.out);
+}
+console.log('Book Session v104 (PENDING 110 / 111, M booth nickname)');
+if (/v104 \(PENDING 110/.test(code(B, 'Check Conflicts'))) {
+  c = cc(B, [], { summary: 'QATEST1 / Jem Lim / HL', session_type: 'Post Mixing', requester_text: 'book studio 6 tomorrow 2-4pm. mixing, project QATEST1, client jem lim', start_iso: '2027-10-10T14:00:00+08:00', end_iso: '2027-10-10T16:00:00+08:00', expected_date: '2027-10-10', rooms: 'Studio 6' });
+  ok(/^(?:SESSION_TYPE_CHECK|NEED_SESSION_TYPE)$/.test(c.reason) && /Ask exactly this, in one message: "Which (?:kind of mixing|one) - [^"]*Post Mixing[^"]*\?/.test(c.human), '"mixing" alone: asked which kind, from the session types (live 15:09)', [c.reason, c.human]);
+  c = cc(B, [], { summary: 'QATEST1 / Jem Lim / HL', session_type: 'Post Mixing', requester_text: 'book studio 6 tomorrow 2-4pm. post mixing, project QATEST1, client jem lim', start_iso: '2027-10-10T14:00:00+08:00', end_iso: '2027-10-10T16:00:00+08:00', expected_date: '2027-10-10', rooms: 'Studio 6' });
+  ok(!/^(?:SESSION_TYPE_CHECK|NEED_SESSION_TYPE)$/.test(c.reason), '"post mixing" typed: not asked', c.reason);
+  c = cc(B, [], { summary: 'PROJECT BLUE BIRD / Jem Lim / HL', requester_text: 'book studio 7 tomorrow 3-5pm, vo recording, project blue bird, client is jem lim, engineer howard' });
+  ok(/^BLUE BIRD \/ Jem Lim \/ HL$/.test(c.final_summary || ''), '"PROJECT BLUE BIRD" -> "BLUE BIRD" (live 15:28)', [c.reason, c.final_summary]);
+  c = cc(B, [], { rooms: 'M4', summary: 'M4 - Howie', session_type: '', engineer: '', client: '', all_day: true, start_iso: '2027-10-12', end_iso: '2027-10-13', expected_date: '2027-10-12', description: 'Booked by: Howard Luistro | ref: ' + ME });
+  ok(/^M4 - (Howard|Howie)$/.test(c.final_summary || ''), 'M booth nickname -> first name when it is one staff member ("M4 - Howie", live 12:57)', c.final_summary);
 }
 console.log('wiring');
 const chk = M.nodes.find(x => x.name === 'Early Room Check').parameters.workflowInputs;

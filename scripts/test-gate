@@ -52,7 +52,7 @@ const cases = [
   ['this vs next',           'book studio 3 this Thursday 10am', [],
    { dateNotice: /Thursday, 2 September 2027/ }],
   ['bare weekday',           'book studio 3 Thursday 10am', [],
-   { dateNotice: /the next one/ }],
+   { dateNotice: /the (?:next|coming) one/ }],   // v255: "(the coming one)"
   ['tomorrow',               'book the M booth tomorrow', [],
    { dateNotice: /Tuesday, 31 August 2027/ }],
   // A start time and no end. The model invented a 3-hour session from "at 2pm"
