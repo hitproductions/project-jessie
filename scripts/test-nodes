@@ -234,6 +234,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v254','v254 \\(live 9 Oct 12:2'],
     ['v255','v255 \\(PENDING 109'],
     ['v256','v256 \\(live 9 Oct 16:56\\)'],
+    ['v257','v257 \\(live 9 Oct 17:08'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -302,6 +303,10 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>x.output==='Which kind of mixing - Post Mixing, Music Mixing or Localization Mixing?'],
     ['v256','an engineer question goes when the engineer is known','What\'s the project? And is the engineer Howard Luistro?',{steps:[],bf:{engineerResolved:true,engineer:'Howard Luistro',project:''}},
       x=>!/engineer/.test(x.output)&&/project/.test(x.output)],
+    ['v257','17:08: any wording of the kind question is code\'s','I need the session type confirmed first: the request says "mixing", so is this Music Mixing, Post Mixing, or a Localization mix?',{steps:[]},
+      x=>x.output==='Which kind of mixing - Post Mixing, Music Mixing or Localization Mixing?'],
+    ['v257','a statement naming two types before another question is left alone','Studio C is usual for Post Mixing and Music Mixing. Want it?',{steps:[]},
+      x=>/Studio C is usual/.test(x.output)],
     // v250 (live 9 Oct 11:39-11:41 on v249)
     ['v250','11:39: a statement after the question goes, the booking is said back, the project asked',"I need the session details before I can prepare this: what kind of session is it, and who's the client? The engineer is Howard Luistro, so I'll use that.",
       {steps:[],dates:'2027-10-10',plan:{knownRoom:'Studio 7',room:'Studio 7'},early:{mode:'free'},bf:{timeStart:'11:00',timeEnd:'13:00',engineerResolved:true}},
