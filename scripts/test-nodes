@@ -115,7 +115,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     if(name==='Gate Context') return {first:()=>({json:{datesUnderDiscussion:ctx.dates||'',datesInMessage:ctx.inMsg||'',dateNotice:ctx.dateNotice||'',pastDateNotice:'',declineNotice:ctx.decline||'',
                                                         startOnlyNotice:ctx.startOnly?'THEY GAVE A START TIME AND NO END TIME.':''}})};
     if(name==='Room Table')   return {first:()=>({json:{roomTable:ctx.roomTable===undefined?ROOMS:ctx.roomTable,
-                                                        referenceData:JSON.stringify({types:[{type:'VO Recording',min:60,max:180},{type:'Music Vocal Recording',min:60,max:120},{type:'Localization Editing',min:240,max:null}]})}})};
+                                                        referenceData:JSON.stringify({types:[{type:'VO Recording',min:60,max:180},{type:'Music Vocal Recording',min:60,max:120},{type:'Localization Editing',min:240,max:null},{type:'Post Mixing'},{type:'Music Mixing'},{type:'Localization Mixing'}]})}})};   // v256: mixing types
     if(name==='Booked For')   return {first:()=>({json:{bookedFor:ctx.bookedFor||'',requesterText:ctx.requesterText||'',botText:ctx.botText||'',...(ctx.bf||{})}})};
     if(name==='Slack Trigger') return {first:()=>({json:{text:ctx.trig||'',user:'U1'}})};   // v249
     if(name==='Early Room Plan') return {first:()=>({json:{earlyPlan:ctx.plan||{}}})};   // v249
@@ -233,6 +233,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v253','v253 \\(live 9 Oct 12:17\\)'],
     ['v254','v254 \\(live 9 Oct 12:2'],
     ['v255','v255 \\(PENDING 109'],
+    ['v256','v256 \\(live 9 Oct 16:56\\)'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -296,6 +297,11 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>x.output==='What time works?'],
     ['v255','a "did you mean" before a question is kept','Jem Limm isn\'t on file. Did you mean Jem Lim? And what\'s the project?',{steps:[]},
       x=>/Did you mean Jem Lim/.test(x.output)],
+    ['v256','16:56: the kind of mixing is code\'s question, the note and the engineer ask go','Mixing could be Post Mixing or Music Mixing, and the client matches Jem Lim exactly. Which kind of mixing is this, Post or Music? And is the engineer Howard Luistro?',
+      {steps:[],bf:{engineerResolved:true,engineer:'Howard Luistro'},roomTable:undefined},
+      x=>x.output==='Which kind of mixing - Post Mixing, Music Mixing or Localization Mixing?'],
+    ['v256','an engineer question goes when the engineer is known','What\'s the project? And is the engineer Howard Luistro?',{steps:[],bf:{engineerResolved:true,engineer:'Howard Luistro',project:''}},
+      x=>!/engineer/.test(x.output)&&/project/.test(x.output)],
     // v250 (live 9 Oct 11:39-11:41 on v249)
     ['v250','11:39: a statement after the question goes, the booking is said back, the project asked',"I need the session details before I can prepare this: what kind of session is it, and who's the client? The engineer is Howard Luistro, so I'll use that.",
       {steps:[],dates:'2027-10-10',plan:{knownRoom:'Studio 7',room:'Studio 7'},early:{mode:'free'},bf:{timeStart:'11:00',timeEnd:'13:00',engineerResolved:true}},

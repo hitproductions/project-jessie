@@ -203,6 +203,10 @@ if (/v104 \(PENDING 110/.test(code(B, 'Check Conflicts'))) {
   c = cc(B, [], { rooms: 'M4', summary: 'M4 - Howie', session_type: '', engineer: '', client: '', all_day: true, start_iso: '2027-10-12', end_iso: '2027-10-13', expected_date: '2027-10-12', description: 'Booked by: Howard Luistro | ref: ' + ME });
   ok(/^M4 - (Howard|Howie)$/.test(c.final_summary || ''), 'M booth nickname -> first name when it is one staff member ("M4 - Howie", live 12:57)', c.final_summary);
 }
+if (/v105 \(live 9 Oct 16:57\)/.test(code(B, 'Check Conflicts'))) {
+  c = cc(B, [], { summary: 'QATEST1 / Jem Lim / HL', session_type: 'Post Mixing', requester_text: 'post\nmixing, project QATEST1, client jem lim\nbook studio 6 tomorrow 2-4pm', start_iso: '2027-10-10T14:00:00+08:00', end_iso: '2027-10-10T16:00:00+08:00', expected_date: '2027-10-10', rooms: 'Studio 6' });
+  ok(!/^(?:SESSION_TYPE_CHECK)$/.test(c.reason), '"post" after "mixing": Post Mixing, not asked again (live 16:57)', [c.reason, c.human]);
+}
 console.log('wiring');
 const chk = M.nodes.find(x => x.name === 'Early Room Check').parameters.workflowInputs;
 ok(chk.schema.some(x => x.id === 'hours') && chk.value.hours === "={{ $json.earlyPlan.hours || '' }}", 'Early Room Check passes hours');
