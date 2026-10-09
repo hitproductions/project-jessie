@@ -76,6 +76,15 @@ const o2 = turn(OM, ORA, h2, { reply: 'Studio 7 is free then. What\'s the sessio
   steps: [{ action: { tool: 'Room_Availability' }, observation: JSON.stringify([raRun(ORA, { start_iso: '2027-10-09T12:00:00+08:00', end_iso: '2027-10-09T13:00:00+08:00', room: 'Studio 7', reference_data: REF }, CAL)]) }] });
 ok(/✅ Studio 7 is free 12:00 PM – 1:00 PM\./.test(o2.out) && !o2.bf.timeStart.startsWith('11'), '  (v248: the 23:38 reply - 12-1 PM, as availability)', [o2.bf.timeStart, o2.out]);
 
+console.log('v251 - the history as Slack returns it (":x:" codes, live 9 Oct 11:49)');
+if (/v251 \(live 9 Oct 11:49\)/.test(code(M, 'Early Room Plan'))) {
+  const codes = heads.replace(/❌/g, ':x:').replace(/✅/g, ':white_check_mark:');
+  r = turn(M, RA, [U(12, 'book 11-1 instead'), J(11, codes), U(10, 'book tomorrow 12-2pm studio 7')], { reply: 'Studio 7 is free then. What\'s the session type, project, client and engineer?' });
+  ok(r.plan.run && r.plan.room === 'Studio 7' && r.plan.knownRoom === 'Studio 7', 'Studio 7 kept, checked again at 11-1', r.plan);
+  ok(r.out === '✅ Studio 7 is free · Saturday, October 9 · 11:00 AM – 1:00 PM\nWhat\'s the session type, project and client? (or "none" for no client)', 'the restated line with the room, no engineer asked (the requester is one)', r.out);
+  r = turn(M, RA, [U(12, 'studio 7 12-2pm please'), J(11, codes), U(10, 'book tomorrow 12-2pm studio 7')]);
+  ok(!r.plan.run && r.plan.why === 'already told this booking', 'the same time again: "already told" now works on Slack\'s text too', r.plan);
+}
 console.log('103 - the same taken time again goes on to the normal flow (a priority request can still be made)');
 r = turn(M, RA, [U(12, 'studio 7 12-2pm please'), J(11, heads), U(10, 'book tomorrow 12-2pm studio 7')]);
 ok(!r.plan.run && r.plan.why === 'already told this booking', 'told once: not checked again', r.plan);

@@ -226,6 +226,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v248','v248 \\(8 Oct 22:05\\)'],
     ['v249','v249 \\(PENDING 10[2-6]'],
     ['v250','v250 \\(live 9 Oct 11:'],
+    ['v251','v251 \\(live 9 Oct 11:49\\)'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -258,6 +259,10 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>V238?WD(x):(/- Tuesday, 7 December 2027/.test(x.output)&&!/Dec 7, 14/.test(x.output))],
     ['v183','no Expand Series this turn: the summary is left alone','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n\nConfirm to book.',{steps:[]},
       x=>V238?WD(x):(/- December 7/.test(x.output))],
+    ['v251','11:49: an engineer Booked For knows is not asked','What\'s the session type, project, client and engineer?',{steps:[],bf:{engineerResolved:true,engineer:'Howard Luistro'}},
+      x=>x.output==='What\'s the session type, project and client? (or "none" for no client)'],
+    ['v251','an unknown engineer is still asked','What\'s the session type, project, client and engineer?',{steps:[]},
+      x=>x.output==='What\'s the session type, project, client and engineer? (or "none" for no client)'],
     // v250 (live 9 Oct 11:39-11:41 on v249)
     ['v250','11:39: a statement after the question goes, the booking is said back, the project asked',"I need the session details before I can prepare this: what kind of session is it, and who's the client? The engineer is Howard Luistro, so I'll use that.",
       {steps:[],dates:'2027-10-10',plan:{knownRoom:'Studio 7',room:'Studio 7'},early:{mode:'free'},bf:{timeStart:'11:00',timeEnd:'13:00',engineerResolved:true}},
