@@ -207,6 +207,36 @@ if (/v105 \(live 9 Oct 16:57\)/.test(code(B, 'Check Conflicts'))) {
   c = cc(B, [], { summary: 'QATEST1 / Jem Lim / HL', session_type: 'Post Mixing', requester_text: 'post\nmixing, project QATEST1, client jem lim\nbook studio 6 tomorrow 2-4pm', start_iso: '2027-10-10T14:00:00+08:00', end_iso: '2027-10-10T16:00:00+08:00', expected_date: '2027-10-10', rooms: 'Studio 6' });
   ok(!/^(?:SESSION_TYPE_CHECK)$/.test(c.reason), '"post" after "mixing": Post Mixing, not asked again (live 16:57)', [c.reason, c.human]);
 }
+console.log('main v258 - booking questions written in code, over a long exchange');
+if (/v258 \(decided 9 Oct\)/.test(code(M, 'Guard Probe'))) {
+  const T = (hist, reply, extra = {}) => turn(M, RA, hist, { reply, dates: '2027-10-09', cal: [], ...extra });
+  const Q1 = 'I need a few details for Studio 6 tomorrow (Sunday, October 10): what kind of session is this, who\'s the client, what\'s the project title, what time should it run, and is there a specific engineer or should I leave that for now?';
+  let h = [U(20, 'book studio 6 tomorrow')];
+  r = T(h, Q1, { inMsg: '2027-10-09' });
+  ok(r.out === 'What time works?', '17:15 live reply -> "What time works?" (date known, no time)', r.out);
+  h = [U(22, '2-4pm'), J(21, 'What time works?')].concat(h);
+  r = T(h, 'What kind of session is this, and who\'s the client?');
+  ok(r.out === '🗓️ Studio 6 · Saturday, October 9 · 2:00 PM – 4:00 PM\n\nWhat\'s the session type, project and client? (or "none" for no client)', 'time given -> the 🗓️ line and what is still missing', r.out);
+  h = [U(24, 'vo recording, project QATEST2'), J(23, r.out)].concat(h);
+  r = T(h, 'Got it. Who is the client for this one, and do you want me to keep Howard as engineer?');
+  ok(r.out === '🗓️ Studio 6 · Saturday, October 9 · 2:00 PM – 4:00 PM\n\nWho’s the client? (or "none")', 'only the client left -> one short question, no engineer ask', r.out);
+  h = [U(26, 'actually make it 3-5pm'), J(25, r.out)].concat(h);
+  r = T(h, 'Sure - 3 to 5 PM. Who is the client?');
+  ok(r.out === '🗓️ Studio 6 · Saturday, October 9 · 3:00 PM – 5:00 PM\n\nWho’s the client? (or "none")', 'a change mid-way: the new time said back', r.out);
+  h = [U(28, 'no client'), J(27, r.out)].concat(h);
+  r = T(h, 'Anything else, like the engineer?');
+  ok(r.out === 'Anything else, like the engineer?' || !/client/.test(r.out), '"no client": the client is never asked again', r.out);
+  r = T([U(30, 'book studio 7 tomorrow 1-4pm, mixing, project blue bird, client is jem')], 'I need the session type confirmed first: the request says "mixing", so is this Music Mixing, Post Mixing, or a Localization mix?', { inMsg: '2027-10-09' });
+  ok(/\n\nWhich kind of mixing - .+\?$/.test(r.out) && /^🗓️ Studio 7 · Saturday, October 9 · 1:00 PM – 4:00 PM/.test(r.out), 'a generic "mixing" -> the kind question from the session types', r.out);
+  r = T([U(32, 'book studio 7 tomorrow 1-4pm, post mixing, project blue bird, client is jem')], 'Is the engineer you?', { inMsg: '2027-10-09' });
+  ok(r.out === 'Is the engineer you?', 'nothing missing by code\'s count -> the model\'s question stands', r.out);
+  r = T([U(34, 'book salin tomorrow 2-3pm for a meeting')], 'What\'s the meeting title, and which department is it for?', { inMsg: '2027-10-09' });
+  ok(/meeting title/.test(r.out), 'a conference room: untouched', r.out);
+  r = T([U(36, 'book studio 7 every monday 2-4pm for 4 weeks')], 'What\'s the session type, project and client?', { inMsg: '', dates: '' });
+  ok(!/^🗓️|What (?:time|date)/.test(r.out), 'a series: untouched', r.out);
+  r = T([U(38, 'what studios are free tomorrow?')], 'Which session type is it for?', { inMsg: '2027-10-09' });
+  ok(r.out === 'Which session type is it for?' || !/🗓️/.test(r.out), 'an availability question: no booking question', r.out);
+}
 console.log('wiring');
 const chk = M.nodes.find(x => x.name === 'Early Room Check').parameters.workflowInputs;
 ok(chk.schema.some(x => x.id === 'hours') && chk.value.hours === "={{ $json.earlyPlan.hours || '' }}", 'Early Room Check passes hours');
