@@ -230,6 +230,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v251','v251 \\(live 9 Oct 11:49\\)'],
     ['v252','v252 \\(decided 9 Oct\\)'],
     ['v253','v253 \\(live 9 Oct 12:17\\)'],
+    ['v254','v254 \\(live 9 Oct 12:2'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -275,6 +276,13 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v253','12:17: "(if any)" no longer stops the rewrite','I need the session type, project title, and client (if any)?',
       {steps:[],dates:'2027-10-10',inMsg:'2027-10-10',plan:{knownRoom:'Studio 7'},bf:{timeStart:'11:00',timeEnd:'13:00'}},
       x=>x.output==='Studio 7 · Sunday, October 10 · 11:00 AM – 1:00 PM\nWhat\'s the session type, project and client? (or "none" for no client)'],
+    ['v254','12:25: the model\'s restated time goes, code says the booking back','Got the new time: 11:00 AM – 1:00 PM on Monday, October 11 in Studio 8. What\'s the session type, project title, and client?',
+      {steps:[],dates:'2027-10-11',inMsg:'',plan:{knownRoom:'Studio 8'},bf:{timeStart:'11:00',timeEnd:'13:00'}},
+      x=>x.output==='Studio 8 · Monday, October 11 · 11:00 AM – 1:00 PM\nWhat\'s the session type, project and client? (or "none" for no client)'],
+    ['v254','a sentence with another time stays','Studio 8 is booked at 2 PM. What\'s the session type and project?',{steps:[],bf:{timeStart:'11:00',timeEnd:'13:00'}},
+      x=>/booked at 2 PM/.test(x.output)],
+    ['v254','12:26: the M booth reasoning goes','M4 is free that day (checked), and M Booths are booked straight away once I have the owner. The owner name is still missing, so I need to ask for it.\n\nWho is the booking owner for M4 on Tuesday, October 12?',{steps:[]},
+      x=>!/straight away|still missing|need to ask/.test(x.output)],
     // v250 (live 9 Oct 11:39-11:41 on v249)
     ['v250','11:39: a statement after the question goes, the booking is said back, the project asked',"I need the session details before I can prepare this: what kind of session is it, and who's the client? The engineer is Howard Luistro, so I'll use that.",
       {steps:[],dates:'2027-10-10',plan:{knownRoom:'Studio 7',room:'Studio 7'},early:{mode:'free'},bf:{timeStart:'11:00',timeEnd:'13:00',engineerResolved:true}},

@@ -185,6 +185,13 @@ if (/v103 \(PENDING 83/.test(code(B, 'Check Conflicts'))) {
   if (/v25 \(live 9 Oct 12:19\)/.test(C0)) { const cxTime = new Function(C0.slice(C0.indexOf('const cxTime'), C0.indexOf('const cxN')) + '; return cxTime;')();
     ok(cxTime({ start: { dateTime: '2027-10-10T00:00:00+08:00' }, end: { dateTime: '2027-10-11T00:00:00+08:00' } }) === 'All day', 'a 12:00 AM - 12:00 AM hold reads "All day", as its card (live 12:19)');
     ok(cxTime({ start: { dateTime: '2027-10-10T13:00:00+08:00' }, end: { dateTime: '2027-10-10T15:00:00+08:00' } }) === '1:00 PM – 3:00 PM', 'a timed booking is unchanged'); } }
+console.log('main v254 - an all-day hold stored with times (live 9 Oct 12:26)');
+if (/v254 \(live 9 Oct 12:26\)/.test(code(M, 'Early Room Result'))) {
+  const HOLD = [{ id: 'h', summary: 'M6 - Marketing', location: 'M6', description: 'ref: U9', transparency: 'transparent',
+    start: { dateTime: '2027-10-12T00:00:00+08:00' }, end: { dateTime: '2027-10-13T00:00:00+08:00' } }];
+  r = turn(M, RA, [U(10, 'book m6 on tuesday')], { dates: '2027-10-12', inMsg: '2027-10-12', cal: HOLD });
+  ok(r.out.startsWith('❌ Heads up: *M6 is already booked all day* on Tuesday, October 12'), '"booked all day", not "12:00 AM – 12:00 AM"', r.out);
+}
 console.log('wiring');
 const chk = M.nodes.find(x => x.name === 'Early Room Check').parameters.workflowInputs;
 ok(chk.schema.some(x => x.id === 'hours') && chk.value.hours === "={{ $json.earlyPlan.hours || '' }}", 'Early Room Check passes hours');
