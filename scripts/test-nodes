@@ -119,6 +119,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     if(name==='Booked For')   return {first:()=>({json:{bookedFor:ctx.bookedFor||'',requesterText:ctx.requesterText||'',botText:ctx.botText||'',...(ctx.bf||{})}})};
     if(name==='Slack Trigger') return {first:()=>({json:{text:ctx.trig||'',user:'U1'}})};   // v249
     if(name==='Early Room Plan') return {first:()=>({json:{earlyPlan:ctx.plan||{}}})};   // v249
+    if(name==='Early Room Result') { if(!ctx.early) throw new Error('not executed'); return {first:()=>({json:{earlyRoom:ctx.early}})}; }   // v250
     if(ctx.executed && Object.prototype.hasOwnProperty.call(ctx.executed,name))
       return {isExecuted:ctx.executed[name],first:()=>({json:{}})};
     return {first:()=>({json:{}})};
@@ -224,6 +225,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v247','v247 \\(brevity, 8 Oct\\)'],
     ['v248','v248 \\(8 Oct 22:05\\)'],
     ['v249','v249 \\(PENDING 10[2-6]'],
+    ['v250','v250 \\(live 9 Oct 11:'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -256,6 +258,19 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>V238?WD(x):(/- Tuesday, 7 December 2027/.test(x.output)&&!/Dec 7, 14/.test(x.output))],
     ['v183','no Expand Series this turn: the summary is left alone','*SERIES / X / TL*\nDates:\n- December 7 (Mon)\n\nConfirm to book.',{steps:[]},
       x=>V238?WD(x):(/- December 7/.test(x.output))],
+    // v250 (live 9 Oct 11:39-11:41 on v249)
+    ['v250','11:39: a statement after the question goes, the booking is said back, the project asked',"I need the session details before I can prepare this: what kind of session is it, and who's the client? The engineer is Howard Luistro, so I'll use that.",
+      {steps:[],dates:'2027-10-10',plan:{knownRoom:'Studio 7',room:'Studio 7'},early:{mode:'free'},bf:{timeStart:'11:00',timeEnd:'13:00',engineerResolved:true}},
+      x=>x.output==='Studio 7 · Sunday, October 10 · 11:00 AM – 1:00 PM\nWhat\'s the session type, project and client? (or "none" for no client)'],
+    ['v250','a project already known is not asked',"What kind of session is it, and who's the client?",{steps:[],bf:{project:'QATEST10'}},
+      x=>x.output==='What\'s the session type and client? (or "none" for no client)'],
+    ['v250','a statement that is not about the engineer stays (no rewrite)',"What kind of session is it, and who's the client? Studio 7 is usual for that.",{steps:[]},
+      x=>x.output==="What kind of session is it, and who's the client? Studio 7 is usual for that."],
+    ['v250','11:41: under the heads-up, the model\'s restatement goes and the question is the fixed one',"The room check says Studio F is already booked 3:00 PM – 6:00 PM tomorrow for PROJECT TWO / Jem Lim / HL, and free 8:00 AM – 3:00 PM and 6:00 PM – 10:00 PM. What session type is this, what's the project title, who's the client, and what time do you need (and for how long)?",
+      {steps:[],dates:'2027-10-10',plan:{knownRoom:'Studio F',room:'Studio F'},early:{mode:'prepend',text:'❌ Heads up: *You already have Studio F booked 3:00 PM – 6:00 PM* on Sunday, October 10 with this session: PROJECT TWO / Jem Lim / HL\n\n✅ Studio F is free on the same day at:\n• 8:00 AM – 3:00 PM\n• 6:00 PM – 10:00 PM'}},
+      x=>x.output==='❌ Heads up: *You already have Studio F booked 3:00 PM – 6:00 PM* on Sunday, October 10 with this session: PROJECT TWO / Jem Lim / HL\n\n✅ Studio F is free on the same day at:\n• 8:00 AM – 3:00 PM\n• 6:00 PM – 10:00 PM\n\nStudio F · Sunday, October 10\nWhat\'s the time, session type, project and client? (or "none" for no client)'],
+    ['v250','the heads-up when the model only restated it',"Studio F is already booked 3:00 PM – 6:00 PM tomorrow.",
+      {steps:[],plan:{room:'Studio F'},early:{mode:'prepend',text:'❌ Heads up: *X*'}},x=>x.output==='❌ Heads up: *X*'],
     // v249 (PENDING 103/105): Room Availability's layout only for an availability question; the details question restates
     // what is known and never asks time and length together
     ['v249','"book 11-1 instead" (live 23:38): the model\'s question is kept, not the availability layout','Studio 7 is free then. What\'s the session type, project and client?',

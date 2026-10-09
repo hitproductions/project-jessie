@@ -156,6 +156,17 @@ ok(c.reason === 'ROOM_OCCUPIED', 'a studio title is never touched by it', c.reas
 const sm = M.nodes.find(x => x.type.endsWith('.agent')).parameters.options.systemMessage;
 ok(/A meeting of Management alone has no department segment/.test(sm) && /Management → Mgmt \(only with another department\)/.test(sm), 'the prompt says so');
 
+console.log('Book Session v102 - a person in a conference-room title (live 9 Oct 11:41)');
+if (/v102 \(live 9 Oct 11:41\)/.test(code(B, 'Check Conflicts'))) {
+  c = cc(B, [], { ...CONF, summary: 'SALIN - Sir Vic', description: desc('') });
+  ok(c.final_summary === 'SALIN - Vic Icasas', '"SALIN - Sir Vic" -> "SALIN - Vic Icasas"', c.final_summary);
+  c = cc(B, [], { ...CONF, summary: "SALIN - Ma'am Jen", description: desc('') });
+  ok(/^SALIN - (?!Ma)/.test(c.final_summary), 'an honorific is dropped even when the name is not one staff member', c.final_summary);
+  c = cc(B, [], { ...CONF, summary: 'SALIN - Budget Review', description: desc('') });
+  ok(c.final_summary === 'SALIN - Budget Review', 'a meeting title is left alone', c.final_summary);
+  c = cc(B, [], { ...CONF, summary: 'SALIN - Sir Vic - Mgmt x BD', description: desc('') });
+  ok(c.final_summary === 'SALIN - Vic Icasas - Mgmt x BD', 'with departments: only the person changes', c.final_summary);
+}
 console.log('wiring');
 const chk = M.nodes.find(x => x.name === 'Early Room Check').parameters.workflowInputs;
 ok(chk.schema.some(x => x.id === 'hours') && chk.value.hours === "={{ $json.earlyPlan.hours || '' }}", 'Early Room Check passes hours');
