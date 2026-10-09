@@ -229,6 +229,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v250','v250 \\(live 9 Oct 11:'],
     ['v251','v251 \\(live 9 Oct 11:49\\)'],
     ['v252','v252 \\(decided 9 Oct\\)'],
+    ['v253','v253 \\(live 9 Oct 12:17\\)'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -271,6 +272,9 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v252','once the time is known: the booking said back with the rest','What\'s the session type, project and client?',
       {steps:[],dates:'2027-10-10',inMsg:'2027-10-10',plan:{knownRoom:'Studio F'},bf:{timeStart:'14:00',timeEnd:'16:00'}},
       x=>x.output==='Studio F · Sunday, October 10 · 2:00 PM – 4:00 PM\nWhat\'s the session type, project and client? (or "none" for no client)'],
+    ['v253','12:17: "(if any)" no longer stops the rewrite','I need the session type, project title, and client (if any)?',
+      {steps:[],dates:'2027-10-10',inMsg:'2027-10-10',plan:{knownRoom:'Studio 7'},bf:{timeStart:'11:00',timeEnd:'13:00'}},
+      x=>x.output==='Studio 7 · Sunday, October 10 · 11:00 AM – 1:00 PM\nWhat\'s the session type, project and client? (or "none" for no client)'],
     // v250 (live 9 Oct 11:39-11:41 on v249)
     ['v250','11:39: a statement after the question goes, the booking is said back, the project asked',"I need the session details before I can prepare this: what kind of session is it, and who's the client? The engineer is Howard Luistro, so I'll use that.",
       {steps:[],dates:'2027-10-10',plan:{knownRoom:'Studio 7',room:'Studio 7'},early:{mode:'free'},bf:{timeStart:'11:00',timeEnd:'13:00',engineerResolved:true}},
