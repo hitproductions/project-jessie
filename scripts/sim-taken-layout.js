@@ -37,7 +37,9 @@ let o = rr(B, c);
 ok(Array.isArray(o.free_alternatives) && o.own_booking === false && o.conflicts.length === 1, 'Return Rejection now passes free_alternatives and own_booking', o);
 ok(!('free_alternatives' in rr(OB, c)) || rr(OB, c).free_alternatives == null, '  (v96: the agent never saw the alternatives)');
 let t = gp(M, MODEL, 'Prepare_Booking', o); show('taken (someone else\'s)', t);
-ok(t === '❌ Heads up: *Studio 7 is already booked 3:00 PM – 5:00 PM* on Friday, October 8 by this session: WHEAT SUN / Jem Lim / AEG\n\n✅ Free at that time:\n'
+const V101 = Array.isArray(o.same_day_slots);
+ok(t === '❌ Heads up: *Studio 7 is already booked 3:00 PM – 5:00 PM* on Friday, October 8 by this session: WHEAT SUN / Jem Lim / AEG\n\n'
+  + (V101 ? '✅ Studio 7 is free on the same day at:\n• 1:00 PM – 3:00 PM\n• 5:00 PM – 7:00 PM\n\n' : '') + '✅ Free at that time:\n'
   + o.free_alternatives.join(' · ') + '\n\nWant one of those, or another day or time?', 'the reply is the ❌ / ✅ layout', t);
 ok(gp(OM, MODEL, 'Prepare_Booking', o) !== t, '  (v234: the model\'s own wording)');
 c = cc(B, [E('Studio 7', '2027-10-08', '15:00', '17:00', 'ORANGE / Jem Lim / HL', ME)]); o = rr(B, c);
@@ -51,7 +53,10 @@ const allDay = { id: 'x', summary: 'HOLD', location: 'Studio 7', description: 'r
 o = rr(B, cc(B, [allDay])); t = gp(M, MODEL, 'Prepare_Booking', o);
 ok(/^❌ Heads up: \*Studio 7 is already booked all day\* on Friday, October 8 by this session: HOLD\n/.test(t), 'an all-day hold -> "all day", the right date', t);
 o = Object.assign(rr(B, cc(B, CAL)), { free_alternatives: [] }); t = gp(M, MODEL, 'Prepare_Booking', o);
-ok(/\n\nNothing like it is free then\. What other day or time works\?$/.test(t), 'nothing else free -> asks for another day or time', t);
+ok(V101 ? /\n\n✅ Studio 7 is free on the same day at:\n• 1:00 PM – 3:00 PM\n• 5:00 PM – 7:00 PM\n\nWant one of those, or another day or time\?$/.test(t)
+    : /\n\nNothing like it is free then\. What other day or time works\?$/.test(t), V101 ? 'no other room free -> the same-day times still offered (v101)' : 'nothing else free -> asks for another day or time', t);
+t = gp(M, MODEL, 'Prepare_Booking', Object.assign({}, o, { same_day_slots: [] }));
+ok(/\n\nNothing like it is free then\. What other day or time works\?$/.test(t), 'nothing at all free -> asks for another day or time', t);
 ok(gp(M, MODEL, 'Prepare_Booking', { status: 'REJECTED', reason: 'MISSING_DETAILS', human: 'x' }) === gp(OM, MODEL, 'Prepare_Booking', { status: 'REJECTED', reason: 'MISSING_DETAILS', human: 'x' }), 'any other refusal -> as before');
 
 console.log('Move Booking ROOM_OCCUPIED');

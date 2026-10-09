@@ -35,7 +35,7 @@ const turn = ({ text, user = JESS, timeStart = '', timeEnd = '', dates = '2027-1
   let res = plan, ra = null;
   if (plan.earlyPlan.run) {
     const P = plan.earlyPlan;
-    ra = raRun({ start_iso: P.start_iso, end_iso: P.end_iso, session_type: '', room: P.room, reference_data: REF, scope: 'all' }, cal);
+    ra = raRun({ start_iso: P.start_iso, end_iso: P.end_iso, session_type: '', room: P.room, reference_data: REF, scope: 'all', hours: P.hours || '' }, cal);   // v249: hours
     res = new Function('$', '$input', code(M, 'Early Room Result'))($, wrap([{ json: ra }]))[0].json;
     O['Early Room Result'] = [{ json: res }];
   }
@@ -47,13 +47,16 @@ const turn = ({ text, user = JESS, timeStart = '', timeEnd = '', dates = '2027-1
 
 console.log('QA B4 - "book studio f on oct 14, 1-4pm plz" when Studio F is taken then');
 let r = turn({ text: 'book studio f on oct 14, 1-4pm plz', timeStart: '13:00', timeEnd: '16:00' });
-ok(r.plan.run && r.plan.room === 'Studio F' && r.plan.start_iso === '2027-10-14T13:00:00+08:00' && r.plan.end_iso === '2027-10-20T16:00:00+08:00',
+const V249 = /v249 \(PENDING 102\)/.test(code(M, 'Early Room Plan'));
+ok(r.plan.run && r.plan.room === 'Studio F' && (V249 ? r.plan.start_iso === '2027-10-14T08:00:00+08:00' && r.plan.end_iso === '2027-10-20T22:00:00+08:00' && r.plan.hours === '13:00-16:00'
+    : r.plan.start_iso === '2027-10-14T13:00:00+08:00' && r.plan.end_iso === '2027-10-20T16:00:00+08:00'),
   'checked at once: Studio F, 14-20 Oct, 1-4 PM', r.plan);
 ok(/^❌ Heads up: \*You already have Studio F booked 1:00 PM – 4:00 PM\* on Thursday, October 14 with this session: SESH \/ Netflix \/ JD\n\n/.test(r.out), 'Jess\'s own booking -> "You already have Studio F booked ..."', r.out);
 ok(/\n✅ Free at that time:\nStudio 2 · Studio 7 · Studio 8 · /.test(r.out) && !/Studio 1 ·|Studio 1$|Studio F ·/.test(r.out.split('✅ Free at that time:\n')[1].split('\n')[0]),
   'other rooms free then, same kind, Studio 1 (taken) left out', r.out);
-ok(/\n✅ Studio F is free at that time on:\n• Saturday, October 16\n• Sunday, October 17\n• Monday, October 18\n\nWant one of those, or another day or time\?$/.test(r.out),
-  'and the next days Studio F is free then (15 Oct is taken)', r.out);
+ok(V249 ? /\n\n✅ Studio F is free on the same day at:\n• 10:00 AM – 1:00 PM\n• 4:00 PM – 7:00 PM\n\n✅ Free at that time:\n/.test(r.out) && /\n✅ Studio F is free at that time on:\n• Saturday, October 16\n\nWant one of those, or another day or time\?$/.test(r.out)
+    : /\n✅ Studio F is free at that time on:\n• Saturday, October 16\n• Sunday, October 17\n• Monday, October 18\n\nWant one of those, or another day or time\?$/.test(r.out),
+  V249 ? 'v249: the same day first (a tie: the earlier), then other rooms, then ONE other day (15 Oct is taken)' : 'and the next days Studio F is free then (15 Oct is taken)', r.out);
 ok(!/What kind of session/.test(r.out), 'the model\'s questions are not sent');
 ok(/^ROOM CHECK/.test(r.res.earlyRoomNotice) && r.res.earlyRoomNotice.includes(r.out), 'the prompt is told the same reply', r.res.earlyRoomNotice);
 r = turn({ text: 'book studio f on oct 14, 1-4pm plz', user: TRISH, timeStart: '13:00', timeEnd: '16:00' });

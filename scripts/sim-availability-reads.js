@@ -48,7 +48,7 @@ ok(/✅ Usual rooms for VO Recording free then:\nStudios 8 and F\./.test(r.reply
 
 console.log('Several days, Studio 7 asked about');
 r = ra({ start_iso: '2027-10-09T00:00:00+08:00', end_iso: '2027-10-10T23:59:00+08:00', room: 'Studio 7' }, [CATTAIL]);
-ok(r.multi_day && /🗓️ October 9 \(Saturday\)\n⚠️ Studio 7 is booked 1:00 PM – 3:00 PM \(CATTAIL \/ Sasa Abella \/ HL\) - free the rest of the day\.\n\n🗓️ October 10 \(Sunday\)\n✅ Studio 7 is free all day\./.test(r.reply_text || ''), 'day by day, each with times', r.reply_text);
+ok(r.multi_day && /🗓️ October 9 \(Saturday\)\n⚠️ Studio 7 is booked 1:00 PM – 3:00 PM \(CATTAIL \/ Sasa Abella \/ HL\) - free the rest of the day\.\n\n\n?🗓️ October 10 \(Sunday\)\n✅ Studio 7 is free all day\./.test(r.reply_text || ''), 'day by day, each with times (v22: a blank line more between days)', r.reply_text);
 
 console.log('No room asked about');
 r = ra(DAY, [CATTAIL]);
