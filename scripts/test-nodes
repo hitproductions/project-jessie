@@ -130,6 +130,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
   const run=o=>runCtx(o,{}).output;
   // v238 (card guard): a booking card no tool made is withdrawn whenever intermediateSteps is on the input. The older checks
   // below feed model-written booking cards with steps; on a v238+ build they expect the withdrawal instead.
+  const V252=/v252 \(decided 9 Oct\)/.test(s);   // date and time asked first
   const V238=/v238 \(card guard\)/.test(s), WD=x=>/couldn't check that against the calendar just now, so nothing was booked/.test(x.output);
   const t=[
     ['collapses ** to *','**Bold** text',x=>x==='*Bold* text'],
@@ -227,6 +228,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v249','v249 \\(PENDING 10[2-6]'],
     ['v250','v250 \\(live 9 Oct 11:'],
     ['v251','v251 \\(live 9 Oct 11:49\\)'],
+    ['v252','v252 \\(decided 9 Oct\\)'],
   ];
   const t2=[
     // v185: the move confirmation shows the times that will be used
@@ -263,6 +265,12 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>x.output==='What\'s the session type, project and client? (or "none" for no client)'],
     ['v251','an unknown engineer is still asked','What\'s the session type, project, client and engineer?',{steps:[]},
       x=>x.output==='What\'s the session type, project, client and engineer? (or "none" for no client)'],
+    ['v252','free with no time yet: said with the date, then the time asked','Studio 7 is free then. What\'s the time, session type and project?',
+      {steps:[],dates:'2027-10-10',inMsg:'2027-10-10',plan:{knownRoom:'Studio 7',room:'Studio 7'},early:{mode:'free'}},
+      x=>!V252||x.output==='✅ Studio 7 is free on Sunday, October 10\nWhat time works?'],
+    ['v252','once the time is known: the booking said back with the rest','What\'s the session type, project and client?',
+      {steps:[],dates:'2027-10-10',inMsg:'2027-10-10',plan:{knownRoom:'Studio F'},bf:{timeStart:'14:00',timeEnd:'16:00'}},
+      x=>x.output==='Studio F · Sunday, October 10 · 2:00 PM – 4:00 PM\nWhat\'s the session type, project and client? (or "none" for no client)'],
     // v250 (live 9 Oct 11:39-11:41 on v249)
     ['v250','11:39: a statement after the question goes, the booking is said back, the project asked',"I need the session details before I can prepare this: what kind of session is it, and who's the client? The engineer is Howard Luistro, so I'll use that.",
       {steps:[],dates:'2027-10-10',plan:{knownRoom:'Studio 7',room:'Studio 7'},early:{mode:'free'},bf:{timeStart:'11:00',timeEnd:'13:00',engineerResolved:true}},
@@ -273,7 +281,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
       x=>x.output==="What kind of session is it, and who's the client? Studio 7 is usual for that."],
     ['v250','11:41: under the heads-up, the model\'s restatement goes and the question is the fixed one',"The room check says Studio F is already booked 3:00 PM – 6:00 PM tomorrow for PROJECT TWO / Jem Lim / HL, and free 8:00 AM – 3:00 PM and 6:00 PM – 10:00 PM. What session type is this, what's the project title, who's the client, and what time do you need (and for how long)?",
       {steps:[],dates:'2027-10-10',plan:{knownRoom:'Studio F',room:'Studio F'},early:{mode:'prepend',text:'❌ Heads up: *You already have Studio F booked 3:00 PM – 6:00 PM* on Sunday, October 10 with this session: PROJECT TWO / Jem Lim / HL\n\n✅ Studio F is free on the same day at:\n• 8:00 AM – 3:00 PM\n• 6:00 PM – 10:00 PM'}},
-      x=>x.output==='❌ Heads up: *You already have Studio F booked 3:00 PM – 6:00 PM* on Sunday, October 10 with this session: PROJECT TWO / Jem Lim / HL\n\n✅ Studio F is free on the same day at:\n• 8:00 AM – 3:00 PM\n• 6:00 PM – 10:00 PM\n\nStudio F · Sunday, October 10\nWhat\'s the time, session type, project and client? (or "none" for no client)'],
+      x=>x.output==='❌ Heads up: *You already have Studio F booked 3:00 PM – 6:00 PM* on Sunday, October 10 with this session: PROJECT TWO / Jem Lim / HL\n\n✅ Studio F is free on the same day at:\n• 8:00 AM – 3:00 PM\n• 6:00 PM – 10:00 PM\n\n'+(V252?'What time works?':'Studio F · Sunday, October 10\nWhat\'s the time, session type, project and client? (or "none" for no client)')],
     ['v250','the heads-up when the model only restated it',"Studio F is already booked 3:00 PM – 6:00 PM tomorrow.",
       {steps:[],plan:{room:'Studio F'},early:{mode:'prepend',text:'❌ Heads up: *X*'}},x=>x.output==='❌ Heads up: *X*'],
     // v249 (PENDING 103/105): Room Availability's layout only for an availability question; the details question restates
@@ -291,23 +299,23 @@ suite('Guard Probe — what reaches Slack', ()=>{
       {trig:'book 11-1 instead',steps:[{action:{tool:'Room_Availability'},observation:JSON.stringify([{status:'OK',asked:{room:'Studio 7',status:'FREE'},reply_text:'✅ Studio 7 is free 11:00 AM – 1:00 PM.'}])}]},
       x=>/^✅ Studio 7 is free 11:00 AM – 1:00 PM\./.test(x.output)],
     ['v249','105 (live 9 Oct 00:01): never time and length together','What time, how long, what session type, project and client?',{steps:[]},
-      x=>x.output==='What\'s the time, session type, project and client? (or "none" for no client)'],
+      x=>x.output===(V252?'What time works?':'What\'s the time, session type, project and client? (or "none" for no client)')],
     ['v249','103: the booking is said back first, and what is known is not asked again','What date and time? And what\'s the session type, project and client?',
       {steps:[],dates:'2027-10-09',inMsg:'2027-10-09',plan:{knownRoom:'Studio 7'},bf:{timeStart:'11:00',timeEnd:'13:00'}},
       x=>x.output==='Studio 7 · Saturday, October 9 · 11:00 AM – 1:00 PM\nWhat\'s the session type, project and client? (or "none" for no client)'],
     ['v249','the model asks for the date and it was only carried from earlier: still asked, not said back','What date and time? And what\'s the session type, project and client?',
       {steps:[],dates:'2027-10-09',plan:{knownRoom:'Studio 7'},bf:{timeStart:'11:00',timeEnd:'13:00'}},
-      x=>x.output==='Studio 7 · 11:00 AM – 1:00 PM\nWhat\'s the date, session type, project and client? (or "none" for no client)'],
+      x=>x.output===(V252?'What date works?':'Studio 7 · 11:00 AM – 1:00 PM\nWhat\'s the date, session type, project and client? (or "none" for no client)')],
     ['v249','the model does not ask for the date: the carried date is said back','What\'s the session type and project?',{steps:[],dates:'2027-10-09',plan:{knownRoom:'Studio 7'}},
-      x=>x.output==='Studio 7 · Saturday, October 9\nWhat\'s the session type and project?'],
+      x=>x.output===(V252?'What\'s the session type and project?':'Studio 7 · Saturday, October 9\nWhat\'s the session type and project?')],   // v252: said back only once the time is known
     ['v249','only the room known: said back, the rest asked','What\'s the date, time, session type and project?',{steps:[],plan:{knownRoom:'Studio F'}},
-      x=>x.output==='Studio F\nWhat\'s the date, time, session type and project?'],
+      x=>x.output===(V252?'What date and time work?':'Studio F\nWhat\'s the date, time, session type and project?')],
     ['v249','a known time also answers "how long"','How long, what session type and which project?',{steps:[],bf:{timeStart:'14:00',timeEnd:'16:00'}},
       x=>x.output==='2:00 PM – 4:00 PM\nWhat\'s the session type and project?'],
     ['v249','everything asked is known: the model\'s words stand','What date and time?',{steps:[],dates:'2027-10-09',inMsg:'2027-10-09',bf:{timeStart:'11:00',timeEnd:'13:00'}},
       x=>x.output==='What date and time?'],
     ['v249','two dates under discussion: no date said back','What\'s the session type and project?',{steps:[],dates:'2027-10-09,2027-10-10',plan:{knownRoom:'Studio 7'}},
-      x=>x.output==='Studio 7\nWhat\'s the session type and project?'],
+      x=>x.output===(V252?'What\'s the session type and project?':'Studio 7\nWhat\'s the session type and project?')],
     ['v249','102: Book Session\'s nearest same-day times come first','Studio 7 is taken.',{steps:[{action:{tool:'Prepare_Booking'},observation:JSON.stringify([{status:'REJECTED',reason:'ROOM_OCCUPIED',own_booking:false,
         conflicts:[{room:'Studio 7',summary:'CATTAIL / Sasa Abella / HL',start:'2027-10-09T13:00:00+08:00',end:'2027-10-09T15:00:00+08:00'}],free_alternatives:['Studio 8','Studio F'],
         same_day_slots:[{start:'2027-10-09T11:00:00+08:00',end:'2027-10-09T13:00:00+08:00'},{start:'2027-10-09T15:00:00+08:00',end:'2027-10-09T17:00:00+08:00'}]}])}]},
@@ -424,7 +432,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v182','a greeting gets no date question','Hi Howard! What do you need?',{requesterText:'what can i book for a meeting?'},
       x=>x.output==='Hi Howard! What do you need?'],
     ['v182','a question about the booking still gets it','What session type is this, and who is the client?',{requesterText:'book studio 7 at 2pm'},
-      x=>/v247 \(brevity, 8 Oct\)/.test(s) ? /^What's the date, session type, project and client\? \(or "none" for no client\)$/.test(x.output) : /And which day(?: is it for| and time)?\?/.test(x.output)],   // v212: "And which day?" / "... and time?"; v247: one fixed question
+      x=>V252 ? x.output==='What date works?' : /v247 \(brevity, 8 Oct\)/.test(s) ? /^What's the date, session type, project and client\? \(or "none" for no client\)$/.test(x.output) : /And which day(?: is it for| and time)?\?/.test(x.output)],   // v212: "And which day?" / "... and time?"; v247: one fixed question
     ['v182','"from 12:00 AM to 12:00 AM" becomes "all day"','Salin is taken by "SALIN - MUSIC DEPT" tomorrow from 12:00 AM to 12:00 AM.',{},
       x=>/Salin is taken by "SALIN - MUSIC DEPT" tomorrow all day\./.test(x.output)],
     ['v182','a real 12:00 AM start is left alone','Studio 7 is taken from 12:00 AM to 3:00 AM.',{},
@@ -586,7 +594,7 @@ suite('Guard Probe — what reaches Slack', ()=>{
     ['v164','a promise ("I will ask them") is not a claim','Studio F is held. If you want it I will ask them to move.',
       {steps:[{action:{tool:'Room_Availability'},observation:'[{"status":"OK"}]'}]},x=>/I will ask them to move/.test(x.output)],
     ['v164','no date named: the booking question also asks the day (QA E1)','What session type is this, who is the client, and who is engineering?',
-      {requesterText:'Book Studio 7 from 2pm to 5pm'},x=>/v247 \(brevity, 8 Oct\)/.test(s) ? /^What's the date, session type, project, client and engineer\? \(or "none" for no client\)$/.test(x.output) : /And which day(?: is it for)?\?$/.test(x.output)],
+      {requesterText:'Book Studio 7 from 2pm to 5pm'},x=>V252 ? x.output==='What date works?' : /v247 \(brevity, 8 Oct\)/.test(s) ? /^What's the date, session type, project, client and engineer\? \(or "none" for no client\)$/.test(x.output) : /And which day(?: is it for)?\?$/.test(x.output)],
     ['v164','a question that already asks the day is left alone','Which day, and who is engineering?',{requesterText:'Book Studio 7 from 2pm to 5pm'},x=>!/And which day/.test(x.output)],
     ['v164','not added when the date is known',"What session type is this?",{requesterText:'Book Studio 7 tomorrow 2pm to 5pm',dates:'2027-09-29'},x=>!/And which day/.test(x.output)],
     ['v162','"a last-resort or alternative room" is reworded','Studio 8 is normally a last-resort or alternative room for VO Recording.',{},x=>!/last.resort/i.test(x.output)],
