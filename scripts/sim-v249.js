@@ -237,6 +237,19 @@ if (/v258 \(decided 9 Oct\)/.test(code(M, 'Guard Probe'))) {
   r = T([U(38, 'what studios are free tomorrow?')], 'Which session type is it for?', { inMsg: '2027-10-09' });
   ok(r.out === 'Which session type is it for?' || !/🗓️/.test(r.out), 'an availability question: no booking question', r.out);
 }
+console.log('main v259 - "still studio 6" kept for the rest of the booking (live 12 Oct 10:58)');
+if (/v259 \(live 12 Oct 10:58\)/.test(code(M, 'Booked For'))) {
+  const RQ = "Studio 6 isn't a usual VO Recording room - Studio F and Studio C are free then. One of those, or still Studio 6?";
+  let h = [U(48, 'no client'), J(47, '🗓️ Studio 6 · Wednesday, October 13 · 3:00 PM – 5:00 PM\n\nWho’s the client? (or "none")'), U(46, 'still studio 6'), J(45, RQ),
+    U(44, 'actually make it 3-5pm'), J(43, 'x'), U(42, 'vo recording, project QATEST2'), J(41, 'x'), U(40, '2-4pm'), J(39, 'What time works?'), U(38, 'book studio 6 tomorrow')];
+  r = turn(M, RA, h, { reply: 'Who is the client?', dates: '2027-10-13', cal: [] });
+  ok(r.bf.roomOverride === 'Studio 6', 'two turns after "still studio 6": still Studio 6', r.bf.roomOverride);
+  h = [U(46, 'studio f then'), J(45, RQ), U(44, 'actually make it 3-5pm'), J(43, 'x'), U(38, 'book studio 6 tomorrow')];
+  r = turn(M, RA, h, { reply: 'ok', dates: '2027-10-13', cal: [] });
+  ok(!r.bf.roomOverride, '"studio f then": no override', r.bf.roomOverride);
+  const pv = M.nodes.find(x => x.name === 'Prepare Booking').parameters.workflowInputs.value.room_override;
+  ok(/=== true \|\| !!String\(\(\(\$\('Booked For'\)\.first\(\) \|\| \{\}\)\.json \|\| \{\}\)\.roomOverride/.test(pv), 'Prepare Booking passes it whatever the model says');
+}
 console.log('wiring');
 const chk = M.nodes.find(x => x.name === 'Early Room Check').parameters.workflowInputs;
 ok(chk.schema.some(x => x.id === 'hours') && chk.value.hours === "={{ $json.earlyPlan.hours || '' }}", 'Early Room Check passes hours');
