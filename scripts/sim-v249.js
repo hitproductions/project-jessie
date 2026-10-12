@@ -250,6 +250,12 @@ if (/v259 \(live 12 Oct 10:58\)/.test(code(M, 'Booked For'))) {
   const pv = M.nodes.find(x => x.name === 'Prepare Booking').parameters.workflowInputs.value.room_override;
   ok(/=== true \|\| !!String\(\(\(\$\('Booked For'\)\.first\(\) \|\| \{\}\)\.json \|\| \{\}\)\.roomOverride/.test(pv), 'Prepare Booking passes it whatever the model says');
 }
+if (/v106 \(12 Oct/.test(code(B, 'Check Conflicts'))) {
+  c = cc(B, [], { rooms: 'M4', summary: 'M4 - Howard', session_type: '', engineer: 'Howard Luistro', client: '', all_day: true, start_iso: '2027-10-12', end_iso: '2027-10-13', expected_date: '2027-10-12', description: 'Booked by: Howard Luistro | ref: ' + ME });
+  ok(!/Engineer:/.test(c.final_description || '') && /Booked by: Howard Luistro/.test(c.final_description || ''), 'an M booth hold: no Engineer line (Book Session v106)', c.final_description);
+  c = cc(B, CAL, {});
+  ok(/Engineer: Howard Luistro/.test(c.final_description || ''), 'a studio booking keeps its Engineer line', c.final_description);
+}
 console.log('wiring');
 const chk = M.nodes.find(x => x.name === 'Early Room Check').parameters.workflowInputs;
 ok(chk.schema.some(x => x.id === 'hours') && chk.value.hours === "={{ $json.earlyPlan.hours || '' }}", 'Early Room Check passes hours');
