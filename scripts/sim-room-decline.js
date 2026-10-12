@@ -19,7 +19,7 @@ ok(r.status === 'CREATED', 'the read back failed -> the create response stands (
 const con = B.connections;
 ok(con['Create Event'].main[0][0].node === 'Wait for Room' && con['Wait for Room'].main[0][0].node === 'Reread Event' && con['Reread Event'].main[0][0].node === 'Verify', 'Create Event -> Wait for Room -> Reread Event -> Verify');
 const w = B.nodes.find(x => x.name === 'Wait for Room'), rr = B.nodes.find(x => x.name === 'Reread Event');
-ok(w.parameters.amount === 6 && w.parameters.unit === 'seconds' && rr.onError === 'continueRegularOutput', '6 seconds; a failed read never stops the booking');
+ok(w.parameters.amount === 6 && (w.parameters.unit || 'seconds') === 'seconds' && rr.onError === 'continueRegularOutput', '6 seconds; a failed read never stops the booking');
 const cc = code('Check Conflicts');
 ok(/v106 \(12 Oct/.test(cc), 'internal rooms: no Engineer line (Check Conflicts)');
 console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

@@ -41,7 +41,7 @@ def book(w):
     cc = node(w, "Check Conflicts")["parameters"]; cc["jsCode"] = once(cc["jsCode"], CC_OLD, CC_NEW, "engineer line")
     v = node(w, "Verify")["parameters"]; c = once(v["jsCode"], V_OLD, V_NEW, "verify ev"); v["jsCode"] = once(c, D_OLD, D_NEW, "declined text")
     ce = node(w, "Create Event"); x, y = ce["position"]
-    wait = {"parameters": {"amount": 6, "unit": "seconds"}, "id": str(uuid.uuid4()), "name": "Wait for Room", "type": "n8n-nodes-base.wait", "typeVersion": 1.1,
+    wait = {"parameters": {"amount": 6}, "id": str(uuid.uuid4()), "name": "Wait for Room", "type": "n8n-nodes-base.wait", "typeVersion": 1.1,
             "position": [x + 80, y + 160], "webhookId": str(uuid.uuid4())}
     gev = node(w, "Get Events In Window")
     reread = {"parameters": {"url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent(String($('Create Event').first().json.id || '')) }}",

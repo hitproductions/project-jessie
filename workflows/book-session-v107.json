@@ -965,8 +965,7 @@
     },
     {
       "parameters": {
-        "amount": 6,
-        "unit": "seconds"
+        "amount": 6
       },
       "id": "ae5be8b1-32a5-440b-93fe-da189eabb8f0",
       "name": "Wait for Room",
