@@ -1570,7 +1570,7 @@ suite('Resolve Booking — which booking is being moved', ()=>{
     ['an invisible character resolves',{...base,title:'REAS️ON1 / Bea Jose / TL'},r=>r.verdict==='CLEAR'],
     ['a corrupted title on someone else\'s booking changes nothing',{...base,title:'THEIRZ / Y / KSC'},r=>r.verdict!=='CLEAR'],
     ['an unknown title still refuses',{...base,title:'ZEBRA / Q / MM'},r=>r.reason==='NOT_ON_CALENDAR'],
-    ['not confirmed',{...base,confirmed:false,title:'REASON1 / Bea Jose / TL'},r=>r.reason==='NOT_CONFIRMED'],
+    ['not confirmed',{...base,confirmed:false,title:'REASON1 / Bea Jose / TL'},r=>r.reason==='NOT_CONFIRMED'||(/v29 \(live 12 Oct 13:27\)/.test(s)&&r.verdict==='CLEAR'&&/REASON1 \/ Bea Jose \/ TL/.test(r.preview_card||''))],   // v29: the card after the window check
     ['a corrupted new time refuses',{...base,title:'REASON1 / Bea Jose / TL',new_end_iso:'not a date'},
       r=>r.reason==='MISSING_TIMES'],
     ['an invisible character in the time survives',
@@ -1582,8 +1582,8 @@ suite('Resolve Booking — which booking is being moved', ()=>{
   // v26 (8 Oct, Haiku): before the yes, ONE near match is the booking and its card shows the full title
   if(/v26 \(8 Oct, Haiku\)/.test(s)){
     const c26=[
-      ['v26: "REASON1" alone gets the REASON1 / Bea Jose / TL card',{...base,confirmed:false,title:'REASON1'},r=>r.reason==='NOT_CONFIRMED'&&/REASON1 \/ Bea Jose \/ TL/.test(r.card_text||'')],
-      ['v26: the QA corruption gets the real card before the yes',{...base,confirmed:false,title:'REazon1 / Bea Jose / TL'},r=>r.reason==='NOT_CONFIRMED'&&/REASON1 \/ Bea Jose \/ TL/.test(r.card_text||'')&&!/Confirm to move\. \(yes\/no\)"\)/.test(r.human||'')],
+      ['v26: "REASON1" alone gets the REASON1 / Bea Jose / TL card',{...base,confirmed:false,title:'REASON1'},r=>(r.reason==='NOT_CONFIRMED'&&/REASON1 \/ Bea Jose \/ TL/.test(r.card_text||''))||(r.verdict==='CLEAR'&&/REASON1 \/ Bea Jose \/ TL/.test(r.preview_card||''))],
+      ['v26: the QA corruption gets the real card before the yes',{...base,confirmed:false,title:'REazon1 / Bea Jose / TL'},r=>((r.reason==='NOT_CONFIRMED'&&/REASON1 \/ Bea Jose \/ TL/.test(r.card_text||''))||(r.verdict==='CLEAR'&&/REASON1 \/ Bea Jose \/ TL/.test(r.preview_card||'')))&&!/Confirm to move\. \(yes\/no\)"\)/.test(r.human||'')],
       ["v26: a near match on someone else's booking is still refused",{...base,confirmed:false,title:'THEIRZ / Y / KSC'},r=>r.verdict!=='CLEAR'&&!r.card_text],
     ];
     for(const [label,req,ok] of c26){ let r; try{r=run(req);}catch(e){r={reason:'THREW '+e.message};} check('rb',label,ok(r),r.verdict+' '+(r.reason||'')+' '+String(r.human||r.card_text||'').slice(0,80)); }

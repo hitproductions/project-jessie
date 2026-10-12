@@ -26,4 +26,19 @@ const obs = { status: 'REJECTED', reason: 'ROOM_OCCUPIED', same_day_slots: [{ st
 const out = new Function('$input', '$', code(M, 'Guard Probe'))(wrap([{ json: { output: 'That time is taken.', intermediateSteps: [{ action: { tool: 'Move_Booking', toolInput: {} }, observation: JSON.stringify([obs]) }] } }]),
   n => { if (n === 'Early Room Result') throw new Error('x'); return wrap(rec(n) || [{ json: {} }]); })[0].json.output;
 ok(out === '❌ Heads up: *That time is already booked* by this session: CATTAIL / HL\n\n✅ Free the same day at:\n• 11:00 AM – 1:00 PM\n• 3:00 PM – 5:00 PM\n\nThe booking stays where it is. Want one of those, or another time or room?', 'the heads-up lists them', out);
+console.log('Move Booking v29 - the new time checked before the card (live 12 Oct 13:27)');
+if (/v29 \(live 12 Oct 13:27\)/.test(code(MV, 'Resolve Booking'))) {
+  const ME = 'U08V3CKDGJF', mine = { id: 'orig', summary: 'QATEST3 / HL', status: 'confirmed', start: { dateTime: '2027-10-13T10:00:00+08:00' }, end: { dateTime: '2027-10-13T12:00:00+08:00' },
+    attendees: [{ email: S7, resource: true }], location: 'KDC Plaza-Top Level-Studio 7 (7)', description: 'Booked by: Howard Luistro | ref: ' + ME };
+  const req = { title: 'QATEST3 / HL', booking_date: '2027-10-13', new_start_iso: '2027-10-13T15:00:00+08:00', new_end_iso: '2027-10-13T17:00:00+08:00', requester: ME, confirmed: false, authority: '', department: 'Audio Post', event_id: '' };
+  const R1 = new Function('$', '$input', code(MV, 'Resolve Booking'))(n => wrap([{ json: req }]), wrap([{ json: { items: [mine] } }]))[0].json;
+  ok(R1.verdict === 'CLEAR' && /\*Moving to:\* Wednesday, October 13, 2027, 3:00 PM – 5:00 PM/.test(R1.preview_card || ''), 'before the yes: no card yet - it goes on to the window check', [R1.verdict, R1.reason]);
+  const cnw2 = items => new Function('$', '$input', code(MV, 'Check New Window'))(n => wrap([{ json: R1 }]), wrap([{ json: { items } }]))[0].json;
+  let r2 = cnw2([mine, E('w', '2027-10-13T15:00:00+08:00', '2027-10-13T18:00:00+08:00', 'WTR / Jem Lim / AEG')]);
+  ok(r2.reason === 'ROOM_OCCUPIED' && Array.isArray(r2.same_day_slots) && r2.same_day_slots.length, 'taken 3-6 PM (live 13:27): the heads-up with free times, no card', [r2.reason, r2.same_day_slots]);
+  r2 = cnw2([mine]);
+  ok(r2.reason === 'NOT_CONFIRMED' && /Moving to/.test(r2.card_text || '') && r2.verdict !== 'CLEAR', 'free: the move card - and never CLEAR, so nothing is moved before the yes', [r2.verdict, r2.reason]);
+  const R2 = new Function('$', '$input', code(MV, 'Resolve Booking'))(n => wrap([{ json: { ...req, confirmed: true } }]), wrap([{ json: { items: [mine] } }]))[0].json;
+  ok(R2.verdict === 'CLEAR' && !R2.preview_card, 'at the yes: CLEAR with no preview card (the move goes ahead when free)', [R2.verdict, R2.preview_card]);
+}
 console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);
