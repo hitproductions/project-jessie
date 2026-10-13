@@ -166,7 +166,8 @@ writes every answer that states a fact, and each answer carries buttons to act o
 | Not understood | "I didn't catch that" + the menu | Change |
 | A question picking up an earlier request's details (wide test D1 / D2 / F2) | Questions read only themselves and the previous question | Lose (the bug) |
 
-Open: a question about a whole day ("what's free Friday?") - answer with the day board, or with the per-room list?
+Decided (13 Oct): a whole day ("what's free Friday?") is answered with the day board; part of a day ("tomorrow afternoon",
+"2-4 PM Friday") with the per-room list.
 
 ## 5. Cancel and move
 
