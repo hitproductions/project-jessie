@@ -110,6 +110,34 @@ Decided (13 Oct):
 - **PENDING 44: a declined booking is deleted.** When a room turns a booking down, Jessie deletes her own event and says
   so; the calendar never keeps a booking the room refused. The DM result offers the free rooms and a one-tap rebook.
 
+## 2c. Recurring bookings (series)
+
+(Proposed 13 Oct, not yet agreed.) Today: the model reads the pattern and calls Prepare Series; Expand Series computes the
+dates in code (daily or weekly on chosen weekdays, a count or an end date, never open-ended, within a year); Book Series
+books up to 16 dates server-side and reports booked / skipped / failed; before the yes a date can be skipped or given
+another room or time; a taken date gets alternatives; one series card, one yes.
+
+- **Step 1:** a small *Repeats* checkbox (like the booth one); ticking it adds **How often** (Weekly / Daily), **On**
+  (weekday checkboxes, the first date's weekday ticked), **Ends** (after a number of dates, 2-16, or on a date).
+- **Step 2:** the 🗓️ line says the pattern ("Every Tuesday · 10:00 AM – 12:00 PM · 4 dates"); the room list says how many
+  dates each room is free on ("free on all 4 dates" / "3 of 4"); a **Dates** list shows every date with ✓ or ⚠️, each with
+  a ⋯ menu (Skip this date / Use another room / Change the time); a taken date offers its alternative as one tap. The
+  button says how many dates it books ("Book 4 dates").
+- **Result:** as in 2b (booked N of M, a skipped date with a one-tap fix, Cancel the whole series).
+
+| Feature now | After the pivot | |
+|---|---|---|
+| Pattern read from words ("every tuesday for 3 weeks") | Repeat fields; a typed pattern pre-fills them | Change |
+| Dates computed in code (Expand Series), never open-ended, within a year, up to 16 | Same | Keep |
+| Series card + one yes (Prepare Series, v226) | Step 2 with the Dates list; Book N dates | Change |
+| Per-date skip / room / time before the yes (Book Series v6) | ⋯ on each date | Keep |
+| Taken date: alternatives or left out (v7) | Same, as a one-tap swap per date | Keep + Gain |
+| Booked / skipped / failed report | Same, on the result | Keep |
+| Each date cancelled on its own | Cancel this date or the whole series (needs a series id, section 5) | Gain |
+| In-progress lock while a series books (~25 s a date) | Same; the form shows "Booking 4 dates…" | Keep |
+
+Open: moving a whole series (today each date moves on its own).
+
 ## 3. Booking details
 
 Step 2 is built for the requester (Bookers department → **Booking Defaults** row) and the session type, so only fields
