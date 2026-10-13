@@ -148,6 +148,26 @@ that apply are shown.
 | "What do I have booked" — list written by the AI (PENDING 100) | **My bookings** — list built by code | Change |
 | Availability answers borrowing an earlier request's window (wide test D1 / D2) | Questions do not inherit booking details | Lose (the bug) |
 
+### Typed questions (proposed 13 Oct, not yet agreed)
+
+The AI's job on a typed message is to **route it and pull out the parameters** (date or range, room, session type); code
+writes every answer that states a fact, and each answer carries buttons to act on it. Follow-ups use the short window.
+
+| Question now (tool behind it) | After the pivot | |
+|---|---|---|
+| "Is Studio 7 free Friday?" (Room Availability, code layout) | Same code answer; **Book Studio 7 on Friday** (form pre-filled) · **All studios on Friday** (the day board) | Keep + Gain |
+| "What's free tomorrow afternoon?" (Room Availability) | One line per free room with a **Book** button (room, date, time pre-filled); studios only unless rooms are asked | Keep + Gain |
+| "What do I have / what's in Studio 4 Thursday?" (Find Booking / List Events, model-written list - 100) | My bookings, or that room's line from the day board, built by code | Change (fixes 100) |
+| Room facts: formats (5.1 / Atmos), vocals in-room (code lists from Airtable, v229) | Same | Keep |
+| Other room / equipment questions (model reads Rooms and Studios) | Same, model-written from Airtable (low stakes); ends with Studios / Book | Keep |
+| People and clients ("who is drey?", Bookers / Clients) | Same, from Airtable | Keep |
+| Session type facts ("how long does VO usually run?", Session Types) | Same | Keep |
+| Off-topic ("what's the weather?") | One line + the menu | Change |
+| Not understood | "I didn't catch that" + the menu | Change |
+| A question picking up an earlier request's details (wide test D1 / D2 / F2) | Questions read only themselves and the previous question | Lose (the bug) |
+
+Open: a question about a whole day ("what's free Friday?") - answer with the day board, or with the per-room list?
+
 ## 5. Cancel and move
 
 (Proposed 13 Oct, not yet agreed.) Cancel Booking and Move Booking already accept an `event_id`, so a button can hand
