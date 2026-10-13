@@ -53,6 +53,31 @@ rooms that are not free then), then the details. **Book** = the confirmation.
 **Any free room** is no longer a separate path: the room list in step 2 is always "free rooms that fit". A room named in
 the first message is pre-selected if free; if not, the note says when it is free and the recommendation is selected.
 
+## 2a. Paired rooms (booths and holding rooms)
+
+(Proposed 13 Oct, not yet agreed.) Today: a booking can hold several rooms (`rooms` = "Studio 1, Studio A") on one event;
+a booth is allowed when it is paired with a ranked studio and refused on its own; Celebrity Recording gets "Want a holding
+room? (Likha, Katha or Salin)" from its Room Requirements; Airtable has each control room's **Paired with** (Studio 1 → A,
+Studio 2 → B, Studios 3-7 → A, B or D "can change using Dante", Studio D → 6, Studio E → 7) and **Records Vocals In-Room**
+(7, 8, C, D, F).
+
+- **A session that needs a booth** (Room Requirements say so: Localization Dubbing): the room list offers **pairs** -
+  "Studio 1 + Studio A", "Studio 2 + Studio B" - built from Paired with, only where both rooms are free. One pick, no
+  second question.
+- **Holding rooms** (Room Requirements mention conference rooms: Celebrity Recording): a **Holding rooms** checklist of the
+  conference rooms free then; one or more, or none.
+- Both go on the one booking, as today; Move and Cancel take every room with them.
+
+| Feature now | After the pivot | |
+|---|---|---|
+| Several rooms on one booking; booth only with a studio | Same | Keep |
+| Booth chosen by the model / requester's words | Pairs offered from Airtable's Paired with | Change |
+| "Want a holding room?" note, answered in chat | Holding rooms checklist on the form | Change |
+| Which rooms record vocals in-room (Airtable checkbox, v229) | Same data; a typed question answers it | Keep |
+
+Open: should a booth be offered (optional) for other recording sessions in rooms that don't record vocals in-room, or only
+when the session type requires one?
+
 ## 2b. After Book — results
 
 (Proposed 13 Oct, not yet agreed.) Slack wants an answer to a form within 3 seconds and a booking takes longer (calendar,
@@ -206,8 +231,8 @@ A button pressed during a Cloudflare outage fails with Slack's own error ("didn'
 silently, as a chat reply is now; the attest button and the Sheet edit remain as fallbacks.
 
 Decided (13 Oct): the engineer may answer a priority request too (first answer wins); the engineer is told of every new
-booking; reminders as in the table. Open: when the weekly message goes out (proposed Monday 9:00 AM), and whether standing
-M booth holds are included ("Still need M4 every Tuesday this week?").
+booking; reminders as in the table. The weekly message goes out **Monday 9:00 AM** and includes standing M booth holds ("Still need M4 on
+Tuesday?" - freeing one releases that week's slot).
 
 ## Open questions
 
