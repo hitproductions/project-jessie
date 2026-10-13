@@ -64,7 +64,7 @@ at the top and everything entered kept. The result also goes to the DM as the la
 |---|---|---|
 | "Booked." reply | ✅ Booked: title, room · date · time, session type · engineer · booking type; Move · Cancel · ⋯ (Book another, Book again another day, My bookings, Studios) | Keep + Gain |
 | "Booked" said ~6 s later, after the room's read-back (Book Session v106) | Booked at once with "⏳ Waiting for Studio 7 to accept…", updated in place to "✓ accepted" | Change (faster) |
-| Room declined → "❌ Studio 7 turned this booking down … Nothing is booked." (44) | Same, plus free rooms then and one-tap Book instead / Pick another room or time | Keep + Gain |
+| Room declined → "❌ Studio 7 turned this booking down … Nothing is booked." (44); Jessie's event stayed on the calendar | Same message; Jessie's event is deleted; free rooms then and one-tap Book instead / Pick another room or time | Keep + Change + Gain |
 | Long-session / past-date heads-up on the card and the reply | On step 2 before Book, and on the result | Keep |
 | Room taken between the check and the yes (`ROOM_OCCUPIED`) | Shown on the form, other free rooms listed, entries kept | Change |
 | Client near miss, unknown engineer, Last Resort room (refusals with a question) | Shown on the form next to the field | Change |
@@ -73,10 +73,11 @@ at the top and everything entered kept. The result also goes to the DM as the la
 | New client logged for review | Same, one line on the result | Keep |
 | Honest failure when nothing was booked (Guard Probe claim check) | ⚠️ Nothing was booked; Try again / Edit the booking | Keep |
 
-Open:
-- The form after Book: stay open and turn into the result (proposed), or close at once with the result only in the DM?
-- PENDING 44: when a room turns a booking down, should Jessie delete her own event? With a one-tap rebook it is simpler
-  to delete it and say so.
+Decided (13 Oct):
+- **The form stays open after Book** and turns into "Booking..." then the result (or the problem, entries kept); Done
+  closes it. The DM gets the result as the record.
+- **PENDING 44: a declined booking is deleted.** When a room turns a booking down, Jessie deletes her own event and says
+  so; the calendar never keeps a booking the room refused. The DM result offers the free rooms and a one-tap rebook.
 
 ## 3. Booking details
 
