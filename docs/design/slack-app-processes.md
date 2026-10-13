@@ -53,6 +53,31 @@ rooms that are not free then), then the details. **Book** = the confirmation.
 **Any free room** is no longer a separate path: the room list in step 2 is always "free rooms that fit". A room named in
 the first message is pre-selected if free; if not, the note says when it is free and the recommendation is selected.
 
+## 2b. After Book — results
+
+(Proposed 13 Oct, not yet agreed.) Slack wants an answer to a form within 3 seconds and a booking takes longer (calendar,
+Airtable, the room's read-back). So: quick checks (a required field, end before start) answer on the form at once; on
+Book the form turns into "Booking Studio 7…", then into **Booked** or, for a problem, back into the form with the problem
+at the top and everything entered kept. The result also goes to the DM as the lasting record, with its buttons.
+
+| Outcome now (chat) | After the pivot (DM message) | |
+|---|---|---|
+| "Booked." reply | ✅ Booked: title, room · date · time, session type · engineer · booking type; Move · Cancel · ⋯ (Book another, Book again another day, My bookings, Studios) | Keep + Gain |
+| "Booked" said ~6 s later, after the room's read-back (Book Session v106) | Booked at once with "⏳ Waiting for Studio 7 to accept…", updated in place to "✓ accepted" | Change (faster) |
+| Room declined → "❌ Studio 7 turned this booking down … Nothing is booked." (44) | Same, plus free rooms then and one-tap Book instead / Pick another room or time | Keep + Gain |
+| Long-session / past-date heads-up on the card and the reply | On step 2 before Book, and on the result | Keep |
+| Room taken between the check and the yes (`ROOM_OCCUPIED`) | Shown on the form, other free rooms listed, entries kept | Change |
+| Client near miss, unknown engineer, Last Resort room (refusals with a question) | Shown on the form next to the field | Change |
+| Consent request opened (priority / held M booth) — a chat reply | ⏳ Requested, with the deadline; **Withdraw request** | Keep + Gain |
+| Series: booked / skipped (room taken or declined) / failed, with "want these at a different time?" | Same report; one-tap fix for a skipped date; Cancel the whole series | Keep + Gain |
+| New client logged for review | Same, one line on the result | Keep |
+| Honest failure when nothing was booked (Guard Probe claim check) | ⚠️ Nothing was booked; Try again / Edit the booking | Keep |
+
+Open:
+- The form after Book: stay open and turn into the result (proposed), or close at once with the result only in the DM?
+- PENDING 44: when a room turns a booking down, should Jessie delete her own event? With a one-tap rebook it is simpler
+  to delete it and say so.
+
 ## 3. Booking details
 
 Step 2 is built for the requester (Bookers department → **Booking Defaults** row) and the session type, so only fields
