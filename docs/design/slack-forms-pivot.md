@@ -1,7 +1,26 @@
 # Slack forms pivot — review (13 October 2026)
 
-Status: proposal for review. Decided so far: move toward structured input after the first natural-language message. Evidence: `docs/qa/wide-test-2026-10-13.md` (12 of 20 scenarios failed,
-6 from context carrying over between requests, 4 from free-text extraction).
+Status: proposal for review. Decided so far: move toward structured input after the first natural-language message.
+
+## Why: the evidence
+
+**The wide test (13 Oct, main v261 on Claude Haiku 5.5)** - 20 scenarios, ~45 messages in varied phrasing (Taglish, typos,
+shorthand, vague requests, durations, two requests at once, mind changes, off-script). **8 passed, 12 failed or partial.**
+Full log: `docs/qa/wide-test-2026-10-13.md`.
+
+| Failure class | Count | Examples | Would a form fix it? |
+|---|---|---|---|
+| Details carrying over from one request to the next | 6 | An earlier "vo rec" made a later "post mix" ask "VO Recording or Post Mixing?" - and the answer looped. A vague "I need a room tomorrow afternoon" got a card with the project and time of a request just declined. "What's free tomorrow afternoon?" was answered for 10-11 AM, a window left over from before. "thanks! what's the weather?" got a "Studio 7 is already booked" warning | Yes for bookings - each form submission stands alone. Availability questions need the same isolation |
+| Free text not read | 4 | "bukas" (tomorrow), "stdio 7" (became Studio F), "9am for 2 hours", two bookings in one message (one dropped) | Yes - pickers and selects, nothing parsed |
+| The model's wording around code | 3 | Bookkeeping in replies ("The session type is VO Recording (typical duration 60 minutes), and it's Audio Post"), statement-shaped asks that bypass the code-written question, details asked before the time | Yes - every prompt and error is code's |
+
+**What held** - everything code decides once the details are right: cards, the yes/no gate, taken rooms and alternatives,
+refusing to double-book, cancel and move from a loose reference, internal rooms, a recurring series.
+
+**The pattern across the last weeks** - fixes that moved a job from the model into code have held (cards, availability
+answers, date rules, booking questions); fixes that patched the model's wording went in circles (v247-v257, about ten builds,
+one phrasing at a time). The carry-over between requests is not one bug: each earlier fix drew the boundary between requests
+for one case, and the next phrasing crossed it. A form draws that boundary by design.
 
 ## Recommended shape (hybrid)
 
