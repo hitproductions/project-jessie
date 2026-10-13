@@ -2,6 +2,11 @@
 
 Status: proposal for review. Decided so far: move toward structured input after the first natural-language message.
 
+**For presenting:** `docs/design/slack-app-before-after.html` - the before / after per function, what goes / shrinks / stays,
+Slack screen mockups, the review notes answered (client search past Slack's 100-option limit, engineer defaults to the
+requester, "Book a schedule", a button menu in the DM, an "Available times" list like Slack's Google Calendar app) and four
+open questions. Signature check for later: n8n's Crypto node (HMAC-SHA256) with the Webhook's Raw Body on, no IT change.
+
 ## Why: the evidence
 
 **The wide test (13 Oct, main v261 on Claude Haiku 5.5)** - 20 scenarios, ~45 messages in varied phrasing (Taglish, typos,
