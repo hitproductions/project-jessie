@@ -1,6 +1,8 @@
 # Slack forms pivot — review (13 October 2026)
 
-Status: proposal for review. Decided so far: move toward structured input after the first natural-language message.
+Status: **decided 13 Oct** - Jessie becomes a Slack app (Block Kit). This file is the case for it; the design as it is
+settled, feature by feature, is in `docs/design/slack-app-processes.md` (which supersedes the "Recommended shape" below
+where they differ, e.g. a DM menu instead of the Home tab).
 
 **For presenting:** `docs/design/slack-app-before-after.html` - the before / after per function, what goes / shrinks / stays,
 Slack screen mockups, the review notes answered (client search past Slack's 100-option limit, engineer defaults to the
