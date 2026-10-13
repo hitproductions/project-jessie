@@ -118,7 +118,7 @@ books up to 16 dates server-side and reports booked / skipped / failed; before t
 another room or time; a taken date gets alternatives; one series card, one yes.
 
 - **Step 1:** a small *Repeats* checkbox (like the booth one); ticking it adds **How often** (Weekly / Daily), **On**
-  (weekday checkboxes, the first date's weekday ticked), **Ends** (after a number of dates, 2-16, or on a date).
+  (weekday checkboxes, the first date's weekday ticked), **Ends** (after a number of occurrences, 2-16, or on a date).
 - **Step 2:** the 🗓️ line says the pattern ("Every Tuesday · 10:00 AM – 12:00 PM · 4 dates"); the room list says how many
   dates each room is free on ("free on all 4 dates" / "3 of 4"); a **Dates** list shows every date with ✓ or ⚠️, each with
   a ⋯ menu (Skip this date / Use another room / Change the time); a taken date offers its alternative as one tap. The
@@ -135,8 +135,13 @@ another room or time; a taken date gets alternatives; one series card, one yes.
 | Booked / skipped / failed report | Same, on the result | Keep |
 | Each date cancelled on its own | Cancel this date or the whole series (needs a series id, section 5) | Gain |
 | In-progress lock while a series books (~25 s a date) | Same; the form shows "Booking 4 dates…" | Keep |
+| Each date moved on its own | Move this date, or the whole series from a chosen date | Gain |
 
-Open: moving a whole series (today each date moves on its own).
+**Move a whole series** (decided 13 Oct): on a booking that is part of a series, Move offers *Move this date* or *Move the
+whole series*. The series form is pre-filled with the pattern (weekdays, start, end, room) and a *From* date (this
+occurrence and the ones after it); the Dates list shows each new date with ✓ / ⚠️ and its ⋯ menu, as when booking; the
+button says how many it moves. Each date is moved the safe way (new one created before the old one is removed), and the
+result reports moved / skipped / failed. Needs the series id (section 5).
 
 ## 3. Booking details
 
