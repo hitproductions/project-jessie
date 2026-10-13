@@ -124,12 +124,20 @@ button and **Pick another time**.
 | Notices to the booker and engineer (DEV_REDIRECT during QA) | Same | Keep |
 | — | Old messages updated when a booking changes (no stale "Booked." with live buttons) | Gain |
 | — | A click on an old message re-reads the calendar ("already cancelled") | Gain |
+| Each date of a series cancelled on its own | Cancel this date, or the whole series (future dates) | Gain |
+| "What do I have booked" covers bookings made and engineered | My bookings: made + tagged, 7 days by default, all upcoming on request | Keep + Gain |
+| — | Department bookings view for coordinators (nice-to-have) | Gain |
 
-Open:
-- My bookings scope: booked by you only, or also sessions you engineer (listed without buttons)? How far ahead (7 days,
-  14, all upcoming with "Show more")? A message holds about 15 bookings.
-- Coordinators: how do they reach someone else's booking — typed only, or a "Department bookings" view?
-- Series: cancel one date, or the whole series? (Today each date is cancelled on its own.)
+Decided (13 Oct):
+- **My bookings** lists bookings you made and bookings you are tagged on (engineer, arranger; later, people tagged on a
+  meeting). Tagged ones show without buttons unless you may change them. Default view: the next 7 days; **See all
+  upcoming** opens a scrollable form with everything ahead (more pages if it runs long), so the DM stays short.
+- **Coordinators:** typed requests work now; a **Department bookings** view (same list, the whole department) is a
+  nice-to-have, shown only to people with booking authority.
+- **Cancel series:** added. A booking that is part of a series offers *Cancel this date* or *Cancel the whole series*
+  (future dates only). Needs a series marker on each event: Book Series books each date as its own event and links them
+  by nothing today, so it would write a shared series id into each event. Series booked before that can only be matched
+  by title, room, weekday and time.
 
 ## 6. Approvals and notices
 
@@ -138,4 +146,3 @@ Open:
 ## Open questions
 
 - Insisting on a Last Resort room or a room outside the ranking: how, in the form?
-- Cancel / move: My bookings scope, coordinators, series (section 5).
