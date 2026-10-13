@@ -41,7 +41,7 @@ rooms that are not free then), then the details. **Book** = the confirmation.
 | "Next Thursday" rule (from Friday on, the one after) | Kept for reading the first message | Keep |
 | Room suggested from the Airtable ranking (Session Types Priority / Last Resort) | Same ranking drives the room list | Keep |
 | Room taken → nearest free times, other studios, another day (v249+) | Mostly prevented (only free rooms listed); otherwise the same suggestions as one-tap choices | Keep + Gain |
-| Last Resort room refused once, booked if the requester insists (`ROOM_NOT_PRIORITY` / override) | Last Resort rooms listed when no usual room is free; **Show all suitable rooms** under the list adds every free room that can do it (Priority + Last Resort), marked "not a usual room", booked without a second refusal | Change |
+| Last Resort room refused once, booked if the requester insists (`ROOM_NOT_PRIORITY` / override) | Last Resort rooms listed when no usual room is free; **Show all suitable rooms** (in the ⋯ menu on the 🗓️ line) adds every free room that can do it (Priority + Last Resort), marked "not a usual room", booked without a second refusal | Change |
 | Room checked as soon as named (early heads-up) | Built into step 2 | Change |
 | "Which kind of mixing?" from Airtable | "What's it for?" list in step 1 | Change |
 | Unusual length / past date heads-up | Shown on step 2 before Book | Keep |
@@ -80,7 +80,9 @@ Decided (13 Oct): no booth by default unless the session type is set up that way
 be connected to a vocal booth in special cases, so studio sessions get an unticked **Pair with a vocal booth** checkbox
 under the room list; ticking it adds **Which booth?** - the vocal booths (Airtable Vocal Booth: A, B, D) free then, the
 studio's Paired with booths first - and a note when the pairing is not the usual one (the engineer patches it).
-Not shown for internal rooms.
+Not shown for internal rooms. **Where it lives:** both rare options - *Show all suitable rooms* and *Pair with a vocal
+booth* - sit in a small ⋯ menu at the end of the 🗓️ line (decided 13 Oct), so they take no space; picking one redraws
+the form with the full room list or the Which booth? dropdown.
 
 ## 2b. After Book — results
 
