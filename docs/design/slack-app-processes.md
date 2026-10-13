@@ -122,7 +122,7 @@ another room or time; a taken date gets alternatives; one series card, one yes.
 - **Step 2:** the 🗓️ line says the pattern ("Every Tuesday · 10:00 AM – 12:00 PM · 4 dates"); the room list says how many
   dates each room is free on ("free on all 4 dates" / "3 of 4"); a **Dates** list shows every date with ✓ or ⚠️, each with
   a ⋯ menu (Skip this date / Use another room / Change the time); a taken date offers its alternative as one tap. The
-  button says how many dates it books ("Book 4 dates").
+  button says how many dates it books ("Book 4 dates" - *dates* on the button, decided).
 - **Result:** as in 2b (booked N of M, a skipped date with a one-tap fix, Cancel the whole series).
 
 | Feature now | After the pivot | |
@@ -293,6 +293,52 @@ silently, as a chat reply is now; the attest button and the Sheet edit remain as
 Decided (13 Oct): the engineer may answer a priority request too (first answer wins); the engineer is told of every new
 booking; reminders as in the table. The weekly message goes out **Monday 9:00 AM** and includes standing M booth holds ("Still need M4 on
 Tuesday?" - freeing one releases that week's slot).
+
+## 7. Behind the scenes
+
+(Proposed 13 Oct, not yet agreed.)
+
+**Logging.** Today: the Turn Log (main, one row per turn), the Log tab (Book Session, Cancel, Move: one row per booking
+change), New Clients (for review), Consent Requests (the consent engine's state). All stay. Added: an **Interactions** row
+for each button click and form submission (who, which action, which booking, the result, how long it took) - the record of
+what people did, now that reading executions is not possible from here.
+
+**The QA year shift.** Today `YEAR_SHIFT` in Gate Context and `plus({ years: 1 })` in the prompt move "today" a year ahead
+so tests land on 2027 dates. A date picker shows the real calendar, so the form path does **not** shift: during QA the
+pickers open on today + 1 year and testers pick 2027 dates; a typed first message is still read through Gate Context (so
+its pre-fill is already 2027). At launch: the pickers open on today, and the existing shift goes to zero as before.
+
+**Launch switches.** `DEV_REDIRECT` (Cancel, Move, Open Consent Request) now has more senders: the engineer notice,
+reminders, the weekly message, approval buttons. Every message to someone other than the person acting goes through **one**
+recipient filter with the one `DEV_REDIRECT`, so the launch flip is one place, not five. `TEST_COORD` and HAIST Dev as before.
+
+**Outages and Slack's rules.**
+- New URLs: the **Interactivity** request URL (every click and submission) and the **options** URL (the project-code search)
+  must be added to the **Cloudflare exemption rule** (PENDING 21), and the uptime monitor (15) should probe them.
+- Slack does not retry a click the way it retries a message event: during an edge outage the person sees Slack's "didn't
+  respond" error at once. Visible, not silent - nothing is half-done, they can try again.
+- **3 seconds:** every click and submission is acknowledged at once ("Booking…", a redrawn form); the slow work runs after
+  and updates the message or form.
+- The signature check: the Webhook's Raw Body + n8n's Crypto node (HMAC-SHA256), so no server change.
+- Scheduled work (reminders, the weekly message, the consent sweep, the pruner) runs during an edge outage (outbound works).
+- A form carries its own state between steps (`private_metadata`), so the static-data race (gotcha 26) does not apply.
+
+**Testing.**
+- The Slack connector can send messages but cannot click buttons or submit forms: form flows need people in Slack.
+- Offline, as now: the handler's Code nodes are fed recorded Slack payloads (clicks, submissions) in sims, the way
+  test-nodes feeds Gate Context and Guard Probe today; layouts are checked in the Block Kit Builder.
+- QA rounds become: testers follow a script in Slack; Claude reads the Interactions and Log rows afterwards.
+
+**Slack app settings (owner).** Interactivity on, with its request URL; an options load URL; scopes as now (`chat:write`,
+`im:write`, `users:read`); no slash command or Home tab (decided).
+
+| Now | After the pivot | |
+|---|---|---|
+| Turn Log, Log, New Clients, Consent Requests sheets | Same, plus Interactions | Keep + Gain |
+| Year shift in Gate Context + prompt | Same for typed messages; pickers open a year ahead during QA | Change |
+| `DEV_REDIRECT` in three workflows | One recipient filter for every sender | Change |
+| Silent loss when Cloudflare blocks a message event | A click shows Slack's error; messages as before | Change |
+| Slack-connector test rounds by Claude | Typed paths as before; form paths by people, checked from the logs | Change |
 
 ## Open questions
 
