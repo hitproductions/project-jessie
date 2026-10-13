@@ -1,0 +1,141 @@
+# Slack app pivot — process map (working notes)
+
+Working notes, not for presenting. Every feature of the current chat build (main v261 / Book Session v108 / Cancel v26 /
+Move v29 / Room Availability v22, Claude Haiku 5.5) mapped to how the Slack-app version does it, so nothing is lost on the
+way. The before / after presentation is made from this file once the processes are settled.
+
+Status: brainstorm. Nothing is built. Block Kit samples live outside the repo until a design is settled.
+
+Legend for the last column: **Keep** (same behavior, same backend) · **Gain** (new) · **Lose** (goes away, and why that
+is fine) · **Change** (same goal, different way).
+
+## Decided so far
+
+- **Front door: a DM menu**, no Home tab. Three buttons: **Book a room** · **My bookings** · **Studios** (the day board).
+  The menu shows on a greeting or anything not understood, at the end of each result (as a ⋯ menu), and on "menu".
+  No "next booking" line for now.
+- **AI keeps two jobs:** reading the first natural-language message (to pre-fill a form or find a booking) and answering
+  questions. Everything that books or changes goes through a form or a button.
+- **Typed changes stay:** "cancel my friday booking" / "make it 3pm" — the AI finds the booking, then shows it with
+  buttons. No typed "yes".
+- **Follow-up questions:** a short window (the previous question only, a few minutes, nothing carried from bookings).
+
+## 1. Starting a request
+
+| Feature now | After the pivot | |
+|---|---|---|
+| Type anything; the AI works out what you want | Same, plus the menu buttons | Keep |
+| "reset" clears the thread's context | Not needed for bookings (each form stands alone); questions use the short window | Lose |
+| Transcript of the last 20 lines given to the AI | Only for the first message and questions | Change |
+
+## 2. Booking a room
+
+**Form order:** step 1 = date, start, end, **What's it for?** (session types + Meeting / Event / Booth time), Repeats.
+Step 2 = the 🗓️ line, **Room** (radio list: free rooms that fit, ranked, top one marked Recommended; a note names usual
+rooms that are not free then), then the details. **Book** = the confirmation.
+
+| Feature now | After the pivot | |
+|---|---|---|
+| Details collected one question at a time (code-written questions, v258) | One form, pre-filled from the first message | Change |
+| Date and time read from words ("next thursday", "2-5"); gaps: "bukas", "for 2 hours" | Date and time pickers; the first message only pre-fills them | Change |
+| "Next Thursday" rule (from Friday on, the one after) | Kept for reading the first message | Keep |
+| Room suggested from the Airtable ranking (Session Types Priority / Last Resort) | Same ranking drives the room list | Keep |
+| Room taken → nearest free times, other studios, another day (v249+) | Mostly prevented (only free rooms listed); otherwise the same suggestions as one-tap choices | Keep + Gain |
+| Last Resort room refused once, booked if the requester insists (`ROOM_NOT_PRIORITY` / override) | Last Resort rooms listed only when no usual room is free; open: how to insist on one | Change (open) |
+| Room checked as soon as named (early heads-up) | Built into step 2 | Change |
+| "Which kind of mixing?" from Airtable | "What's it for?" list in step 1 | Change |
+| Unusual length / past date heads-up | Shown on step 2 before Book | Keep |
+| Confirmation card + check code + typed "yes" (Prepare Booking) | Book button | Lose |
+| The room's answer read back after booking (44) | Same | Keep |
+| No double booking, room suitability, ownership, consent / priority | Same Book Session guards | Keep |
+| Free times offered within a fixed window | Free times offered 8 AM – 11 PM; bookings at any hour shown | Change |
+
+**Any free room** is no longer a separate path: the room list in step 2 is always "free rooms that fit". A room named in
+the first message is pre-selected if free; if not, the note says when it is free and the recommendation is selected.
+
+## 3. Booking details
+
+Step 2 is built for the requester (Bookers department → **Booking Defaults** row) and the session type, so only fields
+that apply are shown.
+
+| Field | Shown when | Default / source |
+|---|---|---|
+| Project | studio sessions | typed; title uses it in ALL CAPS (post and music) |
+| Project code | Localization sessions | searched from **Localization Projects**; client and title come from it; written as in the table |
+| Client | studio sessions except Localization | **typed** (option A): on Book, exact match → that record; near miss → "Did you mean …?" on the field; not found → booked as typed + New Clients sheet |
+| Engineer | studio sessions | Slack people picker; you if your department's rule is "self"; required if "ask" (arrangers, Marketing) |
+| Arranger | music sessions | you, if you are an arranger |
+| What kind of booking? Client work / Internal / Personal | departments with more than one option | department default; code decides Advertising vs Entertainment (department + client's Client Type; Localization always Entertainment) |
+| Department | only for people in more than one | — |
+| Booking for someone else | behind a checkbox | empty = you |
+| Meeting title | Meeting, Event | typed |
+| Notes | always, optional | — |
+| Repeats (days of week, number of weeks) | step 1 | — |
+
+| Feature now | After the pivot | |
+|---|---|---|
+| Title written by the AI, then repaired by code (initials, project / client put back, "(new client)" stripped, M booth first name) | Title assembled by code from the fields: `PROJECT / Client / initials`, `ROOM - title` for meetings, `<code> / initials` for Localization | Change (the repairs become formatting) |
+| Nickname → staff (Booked For, Bookers "Goes by") | Same reader pre-fills the people picker (all 58 Bookers have a Slack User ID) | Keep |
+| Client / staff nickname clash asked ("Anj", 82) | The picker stays empty for an unresolved or shared nickname | Change |
+| "for X" → booked for / client (Booked For, forClient) | Pre-fills the checkbox field or the client field | Keep |
+| Near-miss client "Did you mean …?" | Same, on the form field | Keep |
+| New client → New Clients sheet | Same | Keep |
+| NEED_DEPARTMENT / NEED_BOOKING_TYPE / NEED_ARRANGER questions | Form fields shown only when needed | Change |
+
+## 4. Finding out
+
+| Feature now | After the pivot | |
+|---|---|---|
+| "What's free …" typed, answered in code (Room Availability) | Same, typed; answers carry Book buttons | Keep + Gain |
+| — | **Studios** day board: each room's free and taken times (no titles), date picker, filter, previous / next day, one Book button per room, refreshed in place. 🟢 nothing booked in 24 h · 🟡 partly free · 🔴 no free time 8 AM – 11 PM | Gain |
+| "What do I have booked" — list written by the AI (PENDING 100) | **My bookings** — list built by code | Change |
+| Availability answers borrowing an earlier request's window (wide test D1 / D2) | Questions do not inherit booking details | Lose (the bug) |
+
+## 5. Cancel and move
+
+(Proposed 13 Oct, not yet agreed.) Cancel Booking and Move Booking already accept an `event_id`, so a button can hand
+them the exact booking; finding it by title is only needed for the typed path.
+
+**Ways in:** My bookings (each booking with Move / Cancel) · the "Booked." result · a typed request ("cancel my friday
+booking", "make it 3pm"), where the AI finds the booking and shows it with buttons · notices.
+
+**Cancel:** Cancel button → Slack's confirm pop-up ("Cancel this booking?" with the title, room, date, time; *Cancel
+booking* / *Keep it*) → Cancel Booking with the event id → the message updates in place to "Cancelled".
+
+**Move:** Move button → a small form pre-filled with the booking's date, start, end and room (room: "Keep Studio 7" or
+another free room that fits) → **Move** = the confirmation. The new time is checked first; if taken, the form says so on
+the field with the nearest free times. A typed "make it 3pm" shows the booking with a one-tap **Move to 3:00–5:00 PM**
+button and **Pick another time**.
+
+| Feature now | After the pivot | |
+|---|---|---|
+| Find by title, exact or close; by description; without a date (Find Booking, Cancel v20+) | Buttons carry the exact booking; the typed path still finds by description | Keep (typed) + Change |
+| Two bookings with the same title on a day → "which one?" by time (72) | Each booking has its own buttons; typed path lists each match with its own buttons | Lose (the question) |
+| Two cancels in one message → one card (55 / 60) | Typed path lists every match with its own buttons | Gain (fixes the gap) |
+| Cancel card + typed "yes" | Slack confirm pop-up | Change |
+| Move card ("Now: … → New: …") + typed "yes" | Move form; Move button = confirmation | Change |
+| "make it 3pm" (Move Direct) | One-tap move suggestion | Keep + Change |
+| New time checked before the card; taken → free times, no card (v29) | Same check, shown on the form field | Keep |
+| Replacement created before the original is deleted; `PARTIAL` if the delete fails | Same | Keep |
+| Room change in a move (`new_rooms`) | Room choice in the Move form | Keep |
+| Duration kept unless changed | End time pre-filled to keep the duration | Keep |
+| Only your own bookings (`NOT_YOURS`); coordinators within their department; HAIST Dev any | Same checks on every click; buttons shown only where allowed | Keep |
+| Moving into a priority slot opens a consent request | Same | Keep |
+| Notices to the booker and engineer (DEV_REDIRECT during QA) | Same | Keep |
+| — | Old messages updated when a booking changes (no stale "Booked." with live buttons) | Gain |
+| — | A click on an old message re-reads the calendar ("already cancelled") | Gain |
+
+Open:
+- My bookings scope: booked by you only, or also sessions you engineer (listed without buttons)? How far ahead (7 days,
+  14, all upcoming with "Show more")? A message holds about 15 bookings.
+- Coordinators: how do they reach someone else's booking — typed only, or a "Department bookings" view?
+- Series: cancel one date, or the whole series? (Today each date is cancelled on its own.)
+
+## 6. Approvals and notices
+
+(Not yet discussed: consent Approve / Decline buttons, cancel / move notices, room-declined notice, reminders.)
+
+## Open questions
+
+- Insisting on a Last Resort room or a room outside the ranking: how, in the form?
+- Cancel / move: My bookings scope, coordinators, series (section 5).
