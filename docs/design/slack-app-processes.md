@@ -72,11 +72,15 @@ Studio 2 → B, Studios 3-7 → A, B or D "can change using Dante", Studio D →
 |---|---|---|
 | Several rooms on one booking; booth only with a studio | Same | Keep |
 | Booth chosen by the model / requester's words | Pairs offered from Airtable's Paired with | Change |
+| A booth with any studio when asked (special cases) | Pair with a vocal booth checkbox, off by default | Change |
 | "Want a holding room?" note, answered in chat | Holding rooms checklist on the form | Change |
 | Which rooms record vocals in-room (Airtable checkbox, v229) | Same data; a typed question answers it | Keep |
 
-Open: should a booth be offered (optional) for other recording sessions in rooms that don't record vocals in-room, or only
-when the session type requires one?
+Decided (13 Oct): no booth by default unless the session type is set up that way (Room Requirements). Any studio can still
+be connected to a vocal booth in special cases, so studio sessions get an unticked **Pair with a vocal booth** checkbox
+under the room list; ticking it adds **Which booth?** - the vocal booths (Airtable Vocal Booth: A, B, D) free then, the
+studio's Paired with booths first - and a note when the pairing is not the usual one (the engineer patches it).
+Not shown for internal rooms.
 
 ## 2b. After Book — results
 
