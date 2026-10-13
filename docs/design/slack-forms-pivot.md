@@ -1,7 +1,6 @@
 # Slack forms pivot — review (13 October 2026)
 
-Status: proposal for review. Decided so far: move toward structured input after the first natural-language message; no launch
-date pressure ("what's important is that it works"). Evidence: `docs/qa/wide-test-2026-10-13.md` (12 of 20 scenarios failed,
+Status: proposal for review. Decided so far: move toward structured input after the first natural-language message. Evidence: `docs/qa/wide-test-2026-10-13.md` (12 of 20 scenarios failed,
 6 from context carrying over between requests, 4 from free-text extraction).
 
 ## Recommended shape (hybrid)
