@@ -4,7 +4,7 @@ Working notes, not for presenting. Every feature of the current chat build (main
 Move v29 / Room Availability v22, Claude Haiku 5.5) mapped to how the Slack-app version does it, so nothing is lost on the
 way. The before / after presentation is made from this file once the processes are settled.
 
-Status: brainstorm. Nothing is built. Block Kit samples live outside the repo until a design is settled.
+Status: **design agreed 13 Oct** (every section). Nothing is built. Block Kit samples live outside the repo until a design is settled.
 
 Legend for the last column: **Keep** (same behavior, same backend) · **Gain** (new) · **Lose** (goes away, and why that
 is fine) · **Change** (same goal, different way).
@@ -55,7 +55,7 @@ the first message is pre-selected if free; if not, the note says when it is free
 
 ## 2a. Paired rooms (booths and holding rooms)
 
-(Proposed 13 Oct, not yet agreed.) Today: a booking can hold several rooms (`rooms` = "Studio 1, Studio A") on one event;
+(Agreed 13 Oct.) Today: a booking can hold several rooms (`rooms` = "Studio 1, Studio A") on one event;
 a booth is allowed when it is paired with a ranked studio and refused on its own; Celebrity Recording gets "Want a holding
 room? (Likha, Katha or Salin)" from its Room Requirements; Airtable has each control room's **Paired with** (Studio 1 → A,
 Studio 2 → B, Studios 3-7 → A, B or D "can change using Dante", Studio D → 6, Studio E → 7) and **Records Vocals In-Room**
@@ -86,7 +86,7 @@ the form with the full room list or the Which booth? dropdown.
 
 ## 2b. After Book — results
 
-(Proposed 13 Oct, not yet agreed.) Slack wants an answer to a form within 3 seconds and a booking takes longer (calendar,
+(Agreed 13 Oct.) Slack wants an answer to a form within 3 seconds and a booking takes longer (calendar,
 Airtable, the room's read-back). So: quick checks (a required field, end before start) answer on the form at once; on
 Book the form turns into "Booking Studio 7…", then into **Booked** or, for a problem, back into the form with the problem
 at the top and everything entered kept. The result also goes to the DM as the lasting record, with its buttons.
@@ -112,7 +112,7 @@ Decided (13 Oct):
 
 ## 2c. Recurring bookings (series)
 
-(Proposed 13 Oct, not yet agreed.) Today: the model reads the pattern and calls Prepare Series; Expand Series computes the
+(Agreed 13 Oct.) Today: the model reads the pattern and calls Prepare Series; Expand Series computes the
 dates in code (daily or weekly on chosen weekdays, a count or an end date, never open-ended, within a year); Book Series
 books up to 16 dates server-side and reports booked / skipped / failed; before the yes a date can be skipped or given
 another room or time; a taken date gets alternatives; one series card, one yes.
@@ -181,7 +181,7 @@ that apply are shown.
 | "What do I have booked" — list written by the AI (PENDING 100) | **My bookings** — list built by code | Change |
 | Availability answers borrowing an earlier request's window (wide test D1 / D2) | Questions do not inherit booking details | Lose (the bug) |
 
-### Typed questions (proposed 13 Oct, not yet agreed)
+### Typed questions (agreed 13 Oct)
 
 The AI's job on a typed message is to **route it and pull out the parameters** (date or range, room, session type); code
 writes every answer that states a fact, and each answer carries buttons to act on it. Follow-ups use the short window.
@@ -204,7 +204,7 @@ Decided (13 Oct): a whole day ("what's free Friday?") is answered with the day b
 
 ## 5. Cancel and move
 
-(Proposed 13 Oct, not yet agreed.) Cancel Booking and Move Booking already accept an `event_id`, so a button can hand
+(Agreed 13 Oct.) Cancel Booking and Move Booking already accept an `event_id`, so a button can hand
 them the exact booking; finding it by title is only needed for the typed path.
 
 **Ways in:** My bookings (each booking with Move / Cancel) · the "Booked." result · a typed request ("cancel my friday
@@ -252,7 +252,7 @@ Decided (13 Oct):
 
 ## 6. Approvals and notices
 
-(Proposed 13 Oct, not yet agreed.) The consent engine stays as built (one Google Sheet row per request, Consent Sweep
+(Agreed 13 Oct.) The consent engine stays as built (one Google Sheet row per request, Consent Sweep
 every ~10 min, compare-and-set finalize, the Sheet edit as break-glass). Buttons replace typed replies on both sides, and
 every message updates in place when the request resolves.
 
@@ -296,7 +296,7 @@ Tuesday?" - freeing one releases that week's slot).
 
 ## 7. Behind the scenes
 
-(Proposed 13 Oct, not yet agreed.)
+(Agreed 13 Oct.)
 
 **Logging.** Today: the Turn Log (main, one row per turn), the Log tab (Book Session, Cancel, Move: one row per booking
 change), New Clients (for review), Consent Requests (the consent engine's state). All stay. Added: an **Interactions** row
