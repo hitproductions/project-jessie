@@ -196,19 +196,18 @@ for the requester (as today), and the message says so up front.
 | The same request can open twice (27) | The requester's pending request is shown; a second one is refused | Change (fixes 27) |
 | M booth: timeout books for the requester | Same, stated in the message | Keep |
 | Deadlines and timeouts (37, never run live) | Same; needs its live test either way | Keep |
-| The booking's engineer also asked (80, open) | Open: engineer may also answer, first answer wins? | Open |
+| A priority request goes to the booker only (80; decided 4 Oct: the engineer too, first answer wins - not built) | Booker and engineer both get the buttons; the first answer decides, the other's message updates to say who answered | Change (fixes 80) |
 | — | Withdraw request | Gain |
 | Cancel / move notices to booker and engineer (DEV_REDIRECT in QA) | Same, with a My bookings button | Keep + Gain |
-| — | Engineer told of a new booking, with Got it | Gain |
-| — | Day-before reminder: Still on / Move / Free up the room | Gain (optional) |
+| — | Engineer told of every new booking, with Got it (decided) | Gain |
+| — | Reminders (decided): **studio sessions** the day before (Still on / Move / Free up the room); **M booths and conference rooms** in one weekly message listing the week's bookings, each with Keep / Free up | Gain |
 
 A button pressed during a Cloudflare outage fails with Slack's own error ("didn't respond") instead of being lost
 silently, as a chat reply is now; the attest button and the Sheet edit remain as fallbacks.
 
-Open:
-- PENDING 80: may the incumbent booking's engineer answer too (first answer wins), or only be told?
-- Engineer notice on every new booking: wanted, or too many messages?
-- The day-before reminder: in scope? For every booking, or only studio sessions?
+Decided (13 Oct): the engineer may answer a priority request too (first answer wins); the engineer is told of every new
+booking; reminders as in the table. Open: when the weekly message goes out (proposed Monday 9:00 AM), and whether standing
+M booth holds are included ("Still need M4 every Tuesday this week?").
 
 ## Open questions
 
