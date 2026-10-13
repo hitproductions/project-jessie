@@ -41,7 +41,7 @@ rooms that are not free then), then the details. **Book** = the confirmation.
 | "Next Thursday" rule (from Friday on, the one after) | Kept for reading the first message | Keep |
 | Room suggested from the Airtable ranking (Session Types Priority / Last Resort) | Same ranking drives the room list | Keep |
 | Room taken → nearest free times, other studios, another day (v249+) | Mostly prevented (only free rooms listed); otherwise the same suggestions as one-tap choices | Keep + Gain |
-| Last Resort room refused once, booked if the requester insists (`ROOM_NOT_PRIORITY` / override) | Last Resort rooms listed only when no usual room is free; open: how to insist on one | Change (open) |
+| Last Resort room refused once, booked if the requester insists (`ROOM_NOT_PRIORITY` / override) | Last Resort rooms listed when no usual room is free; **Show all suitable rooms** under the list adds every free room that can do it (Priority + Last Resort), marked "not a usual room", booked without a second refusal | Change |
 | Room checked as soon as named (early heads-up) | Built into step 2 | Change |
 | "Which kind of mixing?" from Airtable | "What's it for?" list in step 1 | Change |
 | Unusual length / past date heads-up | Shown on step 2 before Book | Keep |
@@ -167,8 +167,49 @@ Decided (13 Oct):
 
 ## 6. Approvals and notices
 
-(Not yet discussed: consent Approve / Decline buttons, cancel / move notices, room-declined notice, reminders.)
+(Proposed 13 Oct, not yet agreed.) The consent engine stays as built (one Google Sheet row per request, Consent Sweep
+every ~10 min, compare-and-set finalize, the Sheet edit as break-glass). Buttons replace typed replies on both sides, and
+every message updates in place when the request resolves.
+
+**Priority request, holder:** a DM with their booking, who asks and why it takes priority, the free times they could move
+to, and the deadline. **Agree and move my booking** opens the Move form pre-filled with the first free option; once moved,
+Finalize places the requester. **Decline** (with a confirm pop-up) keeps the booking. No answer by the deadline: the booking
+stays, the request expires.
+
+**Priority request, requester:** ⏳ Requested, with the deadline. **I've already cleared it with them** (the requester-attest
+path, with a confirm pop-up) · **Withdraw request** · **Pick another room or time**. It updates to Booked, or to Declined /
+No answer with the free alternatives and a one-tap rebook.
+
+**Shared booth (M booth with a standing hold), holder:** **Let them use it** / **Keep it**; no answer by the deadline books it
+for the requester (as today), and the message says so up front.
+
+**Notices:** a coordinator's cancel or move → booker and engineer, with My bookings; a new booking → the engineer, with
+**Got it**; a declined room → the requester (section 2b).
+
+| Feature now | After the pivot | |
+|---|---|---|
+| One Sheet row per request, sweep, idempotent finalize, Sheet break-glass | Same | Keep |
+| Holder replies "yes" / "no" in chat, read by main's reply router | Agree and move / Decline buttons | Change |
+| Requester types "cleared with <name>" (attest) — loops (79) | A button with a confirm pop-up | Change (fixes 79) |
+| Blank names in the request messages (78) | Messages written in code from the row | Change (fixes 78) |
+| Incumbent consents, then moves in a separate step | Agree opens the Move form with free times | Change |
+| The same request can open twice (27) | The requester's pending request is shown; a second one is refused | Change (fixes 27) |
+| M booth: timeout books for the requester | Same, stated in the message | Keep |
+| Deadlines and timeouts (37, never run live) | Same; needs its live test either way | Keep |
+| The booking's engineer also asked (80, open) | Open: engineer may also answer, first answer wins? | Open |
+| — | Withdraw request | Gain |
+| Cancel / move notices to booker and engineer (DEV_REDIRECT in QA) | Same, with a My bookings button | Keep + Gain |
+| — | Engineer told of a new booking, with Got it | Gain |
+| — | Day-before reminder: Still on / Move / Free up the room | Gain (optional) |
+
+A button pressed during a Cloudflare outage fails with Slack's own error ("didn't respond") instead of being lost
+silently, as a chat reply is now; the attest button and the Sheet edit remain as fallbacks.
+
+Open:
+- PENDING 80: may the incumbent booking's engineer answer too (first answer wins), or only be told?
+- Engineer notice on every new booking: wanted, or too many messages?
+- The day-before reminder: in scope? For every booking, or only studio sessions?
 
 ## Open questions
 
-- Insisting on a Last Resort room or a room outside the ranking: how, in the form?
+- Rooms outside both ranking lists (today bookable after a refusal and "go ahead"): offer them under Show all, or not at all?
