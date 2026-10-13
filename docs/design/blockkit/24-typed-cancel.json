@@ -1,0 +1,129 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "You have two bookings on Friday, Oct 15:"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*QAW9 / HL*\nFri, Oct 15 · 10:00–11:00 AM · Studio 8"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "VO Recording"
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Move"
+          },
+          "action_id": "move",
+          "value": "EV4"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Cancel"
+          },
+          "action_id": "cancel",
+          "value": "EV4",
+          "style": "danger",
+          "confirm": {
+            "title": {
+              "type": "plain_text",
+              "text": "Cancel this booking?"
+            },
+            "text": {
+              "type": "mrkdwn",
+              "text": "*QAW9 / HL*\nFri, Oct 15 · 10:00–11:00 AM · Studio 8"
+            },
+            "confirm": {
+              "type": "plain_text",
+              "text": "Cancel booking"
+            },
+            "deny": {
+              "type": "plain_text",
+              "text": "Keep it"
+            },
+            "style": "danger"
+          }
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*QAW9 / HL*\nFri, Oct 15 · 4:00–5:00 PM · Studio 8"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "VO Recording"
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Move"
+          },
+          "action_id": "move",
+          "value": "EV5"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Cancel"
+          },
+          "action_id": "cancel",
+          "value": "EV5",
+          "style": "danger",
+          "confirm": {
+            "title": {
+              "type": "plain_text",
+              "text": "Cancel this booking?"
+            },
+            "text": {
+              "type": "mrkdwn",
+              "text": "*QAW9 / HL*\nFri, Oct 15 · 4:00–5:00 PM · Studio 8"
+            },
+            "confirm": {
+              "type": "plain_text",
+              "text": "Cancel booking"
+            },
+            "deny": {
+              "type": "plain_text",
+              "text": "Keep it"
+            },
+            "style": "danger"
+          }
+        }
+      ]
+    }
+  ]
+}

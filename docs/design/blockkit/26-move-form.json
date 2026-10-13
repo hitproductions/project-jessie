@@ -1,0 +1,131 @@
+{
+  "type": "modal",
+  "callback_id": "view",
+  "title": {
+    "type": "plain_text",
+    "text": "Move booking"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Cancel"
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*QAW1 / Acme Foods / HL*\nNow: Thu, Oct 14 · 2:00–4:00 PM · Studio 8"
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "input",
+      "block_id": "date",
+      "label": {
+        "type": "plain_text",
+        "text": "New date"
+      },
+      "element": {
+        "type": "datepicker",
+        "action_id": "date_pick",
+        "initial_date": "2027-10-15"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "start",
+      "label": {
+        "type": "plain_text",
+        "text": "Start"
+      },
+      "element": {
+        "type": "timepicker",
+        "action_id": "start_pick",
+        "initial_time": "14:00",
+        "timezone": "Asia/Manila"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "end",
+      "label": {
+        "type": "plain_text",
+        "text": "End"
+      },
+      "element": {
+        "type": "timepicker",
+        "action_id": "end_pick",
+        "initial_time": "16:00",
+        "timezone": "Asia/Manila"
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "Set to keep the same length (2 hours)."
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "room",
+      "label": {
+        "type": "plain_text",
+        "text": "Room"
+      },
+      "element": {
+        "type": "static_select",
+        "action_id": "room_pick",
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "Keep Studio 8"
+          },
+          "value": "keep"
+        },
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Keep Studio 8"
+            },
+            "value": "keep"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio 7"
+            },
+            "value": "Studio 7"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio F"
+            },
+            "value": "Studio F"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio C"
+            },
+            "value": "Studio C"
+          }
+        ]
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "The new time is checked first. The booking stays where it is until the new one is in place."
+        }
+      ]
+    }
+  ],
+  "submit": {
+    "type": "plain_text",
+    "text": "Move"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*QAW1 / Acme Foods / HL* · Thu, Oct 14 · 2:00–4:00 PM · Studio 8"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Move to 3:00–5:00 PM"
+          },
+          "action_id": "move_quick",
+          "value": "EV1|15:00-17:00",
+          "style": "primary"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Pick another time"
+          },
+          "action_id": "move",
+          "value": "EV1"
+        }
+      ]
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Studio 8 is free 3:00–5:00 PM on Thursday."
+        }
+      ]
+    }
+  ]
+}

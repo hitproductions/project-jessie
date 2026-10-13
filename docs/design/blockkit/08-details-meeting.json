@@ -1,0 +1,114 @@
+{
+  "type": "modal",
+  "callback_id": "view",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Back"
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Thursday, Oct 14 · 3:00–4:00 PM · Meeting*"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "room",
+      "label": {
+        "type": "plain_text",
+        "text": "Room"
+      },
+      "element": {
+        "type": "radio_buttons",
+        "action_id": "room_radio",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Likha"
+            },
+            "value": "Likha",
+            "description": {
+              "type": "plain_text",
+              "text": "Recommended"
+            }
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Salin"
+            },
+            "value": "Salin"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Katha"
+            },
+            "value": "Katha"
+          }
+        ],
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "Likha"
+          },
+          "value": "Likha",
+          "description": {
+            "type": "plain_text",
+            "text": "Recommended"
+          }
+        }
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "input",
+      "block_id": "title",
+      "label": {
+        "type": "plain_text",
+        "text": "Meeting title"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "title_in",
+        "initial_value": "Q4 planning"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "notes",
+      "label": {
+        "type": "plain_text",
+        "text": "Notes"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "notes_in",
+        "multiline": true
+      },
+      "optional": true
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Calendar title: *LIKHA - Q4 planning* · no engineer, no client"
+        }
+      ]
+    }
+  ],
+  "submit": {
+    "type": "plain_text",
+    "text": "Book"
+  }
+}

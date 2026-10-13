@@ -1,0 +1,44 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🎙️ *Someone would like your booth*\n*M4* · Thu, Oct 14 · 3:00–4:00 PM — held for you"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Requested by Leo Santos. If you don't answer by 2:00 PM, they get it for that hour."
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Let them use it"
+          },
+          "action_id": "mbooth_yes",
+          "value": "x",
+          "style": "primary"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Keep it"
+          },
+          "action_id": "mbooth_no",
+          "value": "x"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "⏳ *Requested.* Studio F on Thu, Oct 14, 2:00–4:00 PM is held by *QAW3 / LS*. Jessie asked the booker and the engineer."
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "You'll hear back here by 6:00 PM today. Nothing is booked until then."
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "I've already cleared it with them"
+          },
+          "action_id": "attest",
+          "value": "x"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Withdraw request"
+          },
+          "action_id": "withdraw",
+          "value": "x",
+          "style": "danger"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Pick another room or time"
+          },
+          "action_id": "reopen",
+          "value": "x"
+        }
+      ]
+    }
+  ]
+}

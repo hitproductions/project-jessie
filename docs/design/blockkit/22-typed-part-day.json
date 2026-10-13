@@ -1,0 +1,68 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Free tomorrow, Thu Oct 14, 12:00 – 6:00 PM*"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Studio 8* · free the whole afternoon"
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Book"
+        },
+        "action_id": "book_prefill",
+        "value": "Studio 8"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Studio 6* · free 3:00 – 6:00 PM"
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Book"
+        },
+        "action_id": "book_prefill",
+        "value": "Studio 6"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Studio C* · free 12:00 – 2:00 PM"
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Book"
+        },
+        "action_id": "book_prefill",
+        "value": "Studio C"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Studios only. Afternoon = 12:00 – 6:00 PM. Ask about rooms or booths to include those."
+        }
+      ]
+    }
+  ]
+}

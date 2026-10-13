@@ -1,0 +1,44 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "❌ *Studio 8 turned this booking down.* Nothing is booked, and it was taken off the calendar.\n~QAW1 / Acme Foods / HL · Thu, Oct 14 · 2:00–4:00 PM~"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Studio F and Studio C are free then."
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Book Studio F instead"
+          },
+          "action_id": "rebook_room",
+          "value": "x",
+          "style": "primary"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Pick another room or time"
+          },
+          "action_id": "reopen",
+          "value": "x"
+        }
+      ]
+    }
+  ]
+}

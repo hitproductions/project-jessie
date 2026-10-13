@@ -1,0 +1,267 @@
+{
+  "type": "modal",
+  "callback_id": "view",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Back"
+  },
+  "blocks": [
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "*Step 2 of 2* · room and details"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Every Tuesday · 10:00 AM – 12:00 PM · 4 dates · VO Recording*"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "room",
+      "label": {
+        "type": "plain_text",
+        "text": "Room"
+      },
+      "element": {
+        "type": "radio_buttons",
+        "action_id": "room_radio",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio 7"
+            },
+            "value": "Studio 7",
+            "description": {
+              "type": "plain_text",
+              "text": "Usual · free on 3 of 4 dates"
+            }
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio 8"
+            },
+            "value": "Studio 8",
+            "description": {
+              "type": "plain_text",
+              "text": "Usual · free on all 4 dates"
+            }
+          }
+        ],
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "Studio 7"
+          },
+          "value": "Studio 7",
+          "description": {
+            "type": "plain_text",
+            "text": "Usual · free on 3 of 4 dates"
+          }
+        }
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Dates*"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Tue, Oct 19"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "skip"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "⚠️ ~Tue, Oct 26~ — Studio 7 is taken. *Studio 8 is free then*, or skip it."
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "skip"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Use Studio 8 on Oct 26"
+          },
+          "action_id": "date_swap",
+          "value": "2027-10-26|Studio 8",
+          "style": "primary"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Tue, Nov 2"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "skip"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Tue, Nov 9"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "skip"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Use ⋯ on a date to skip it, change its room or its time."
+        }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "input",
+      "block_id": "project",
+      "label": {
+        "type": "plain_text",
+        "text": "Project"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "project_in",
+        "initial_value": "QAW5"
+      }
+    }
+  ],
+  "submit": {
+    "type": "plain_text",
+    "text": "Book 3 dates"
+  }
+}

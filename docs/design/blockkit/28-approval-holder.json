@@ -1,0 +1,78 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🔁 *Priority request for your booking*\n*QAW3 / LS* · Studio F · Thu, Oct 14 · 2:00–4:00 PM"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Requested by Mara Cruz for a Celebrity Recording, which takes priority over VO Recording in Studio F."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "If you agree, move your session first. Free for you that day:\n• Studio 7 · 2:00–4:00 PM (same time)\n• Studio F · 4:00–6:00 PM (same room, later)"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Sent to you and the booking's engineer; the first answer decides. Answer by 6:00 PM today, or your booking stays."
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Agree and move my booking"
+          },
+          "action_id": "consent_move",
+          "value": "x",
+          "style": "primary"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Decline"
+          },
+          "action_id": "consent_no",
+          "value": "x",
+          "confirm": {
+            "title": {
+              "type": "plain_text",
+              "text": "Decline the request?"
+            },
+            "text": {
+              "type": "mrkdwn",
+              "text": "Your booking stays where it is."
+            },
+            "confirm": {
+              "type": "plain_text",
+              "text": "Decline"
+            },
+            "deny": {
+              "type": "plain_text",
+              "text": "Go back"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

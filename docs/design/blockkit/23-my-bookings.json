@@ -1,0 +1,175 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Your bookings · next 7 days*"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*QAW1 / Acme Foods / HL*\nThu, Oct 14 · 2:00–4:00 PM · Studio 8"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "VO Recording · Engineer: you"
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Move"
+          },
+          "action_id": "move",
+          "value": "EV1"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Cancel"
+          },
+          "action_id": "cancel",
+          "value": "EV1",
+          "style": "danger",
+          "confirm": {
+            "title": {
+              "type": "plain_text",
+              "text": "Cancel this booking?"
+            },
+            "text": {
+              "type": "mrkdwn",
+              "text": "*QAW1 / Acme Foods / HL*\nThu, Oct 14 · 2:00–4:00 PM · Studio 8"
+            },
+            "confirm": {
+              "type": "plain_text",
+              "text": "Cancel booking"
+            },
+            "deny": {
+              "type": "plain_text",
+              "text": "Keep it"
+            },
+            "style": "danger"
+          }
+        }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*QAW7 / HL*\nMon, Oct 18 · 1:00–3:00 PM · Studio 8"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Music Mixing · Engineer: you"
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Move"
+          },
+          "action_id": "move",
+          "value": "EV2"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Cancel"
+          },
+          "action_id": "cancel",
+          "value": "EV2",
+          "style": "danger",
+          "confirm": {
+            "title": {
+              "type": "plain_text",
+              "text": "Cancel this booking?"
+            },
+            "text": {
+              "type": "mrkdwn",
+              "text": "*QAW7 / HL*\nMon, Oct 18 · 1:00–3:00 PM · Studio 8"
+            },
+            "confirm": {
+              "type": "plain_text",
+              "text": "Cancel booking"
+            },
+            "deny": {
+              "type": "plain_text",
+              "text": "Keep it"
+            },
+            "style": "danger"
+          }
+        }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*You're tagged on*"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*BLUE BIRD / LS*\nFri, Oct 15 · 10:00 AM – 12:00 PM · Studio F"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "You're the engineer · booked by Leo Santos"
+        }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "See all upcoming"
+          },
+          "action_id": "all_upcoming",
+          "value": "x"
+        }
+      ]
+    }
+  ]
+}

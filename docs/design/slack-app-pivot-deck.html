@@ -1,0 +1,576 @@
+<title>Jessie Slack App Pivot</title>
+<meta name="description" content="Jessie, the studio booking assistant: moving from a chatbot to a Slack app. Before and after, function by function.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&family=Lato:wght@400;700;900&display=swap">
+<style>
+/* Layout: a 16:9 deck (1280x720 stage, scaled to the window); each before/after slide is two lanes - Now (chat, amber)
+   and After (Slack app, teal) - with Slack screens rendered from their Block Kit JSON. Below 760px the slides stack. */
+:root {
+  color-scheme: light;
+  --bg: #e9edeb;
+  --stage: #fbfcfb;
+  --ink: #18201e;
+  --muted: #5a6763;
+  --line: #d8dfdc;
+  --accent: #0d6b60;
+  --accent-soft: #e1f0ec;
+  --now: #93611a;
+  --now-soft: #f6eddd;
+  --title-bg: #12221f;
+  --title-ink: #eef4f1;
+  --s-bg: #ffffff;
+  --s-ink: #1d1c1d;
+  --s-muted: #616061;
+  --s-line: #dddddd;
+  --s-green: #007a5a;
+  --s-red: #e01e5a;
+  --s-blue: #1264a3;
+  --f-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --f-slack: "Lato", "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); }
+.viewport { position: fixed; inset: 0; display: grid; place-items: center; overflow: hidden; }
+.stage { width: 1280px; height: 720px; position: relative; transform-origin: center center; }
+.slide { position: absolute; inset: 0; background: var(--stage); border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,.12);
+  padding: 34px 44px 26px; display: none; flex-direction: column; gap: 14px; overflow: hidden; }
+.slide.on { display: flex; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; letter-spacing: -0.015em; text-wrap: balance; }
+h2 { font-size: 30px; line-height: 1.1; }
+h3 { font-size: 18px; }
+p { margin: 0; }
+.kicker { font-family: var(--f-mono); font-size: 12px; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
+.head { display: grid; gap: 6px; }
+.sub { color: var(--muted); font-size: 16px; max-width: 980px; line-height: 1.45; }
+.pageno { position: absolute; right: 44px; bottom: 14px; font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.src { position: absolute; left: 44px; bottom: 14px; font-size: 11px; color: var(--muted); }
+
+/* title + section slides */
+.slide.title { background: var(--title-bg); color: var(--title-ink); justify-content: center; padding: 70px 90px; gap: 22px; }
+.slide.title .kicker { color: #7fd3c4; }
+.slide.title h1 { font-size: 64px; line-height: 1.02; font-weight: 800; }
+.slide.title .sub { color: #b9cbc5; font-size: 20px; }
+.slide.title .pageno, .slide.title .src { color: #7f9993; }
+.tagrow { display: flex; gap: 10px; flex-wrap: wrap; }
+.tag { font-family: var(--f-mono); font-size: 12px; border: 1px solid #355a53; color: #cfe3dd; border-radius: 999px; padding: 5px 12px; }
+
+/* text slides */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; flex: 1; min-height: 0; align-items: start; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; flex: 1; min-height: 0; align-items: start; }
+.card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 7px; font-size: 15px; line-height: 1.4; }
+.card p { font-size: 15px; line-height: 1.45; }
+.big { font-family: var(--f-display); font-size: 54px; font-weight: 800; line-height: 1; color: var(--now); }
+.big small { font-size: 22px; color: var(--muted); font-weight: 600; }
+.fail { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: start; }
+.fail b.n { font-family: var(--f-display); font-size: 34px; color: var(--now); line-height: 1; }
+.fail p { font-size: 14.5px; }
+.fail p em { color: var(--muted); font-style: normal; }
+.flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; align-items: stretch; }
+.flow .step { background: #fff; border: 1px solid var(--line); padding: 16px; display: grid; gap: 6px; align-content: start; position: relative; }
+.flow .step:first-child { border-radius: 10px 0 0 10px; } .flow .step:last-child { border-radius: 0 10px 10px 0; }
+.flow .step + .step { border-left: 0; }
+.flow .step b { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.flow .step span { font-size: 15px; line-height: 1.35; }
+.flow.now .step { background: var(--now-soft); } .flow.after .step { background: var(--accent-soft); }
+.lanelabel { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.lanelabel.now { color: var(--now); } .lanelabel.after { color: var(--accent); }
+
+/* before / after */
+.ba { display: grid; grid-template-columns: 410px 1fr; gap: 18px; flex: 1; min-height: 0; }
+.lane { display: flex; flex-direction: column; min-height: 0; min-width: 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+.lane > .lh { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 14px; font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; }
+.lane.now > .lh { background: var(--now-soft); color: var(--now); border-bottom: 2px solid var(--now); }
+.lane.after > .lh { background: var(--accent-soft); color: var(--accent); border-bottom: 2px solid var(--accent); }
+.lane > .lh i { font-style: normal; text-transform: none; letter-spacing: 0; font-family: var(--f-body); font-size: 12px; opacity: .85; }
+.lane > .body { flex: 1; min-height: 0; overflow: auto; background: #f4f5f4; padding: 12px; }
+.lane.now > .body { background: #fff; }
+.strip { display: flex; gap: 12px; align-items: flex-start; height: 100%; }
+.shot { flex: 0 0 auto; width: 330px; display: flex; flex-direction: column; gap: 6px; max-height: 100%; }
+.shot.wide { width: 420px; }
+.shot .cap { font-size: 12px; color: var(--muted); line-height: 1.35; }
+.shot .cap b { color: var(--ink); }
+.shot > .frame { overflow: auto; min-height: 0; border-radius: 8px; }
+.note { font-size: 13px; color: var(--muted); line-height: 1.4; margin-top: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-size: 12.5px; border-radius: 6px; padding: 5px 10px; border: 1px solid var(--line); background: #fff; line-height: 1.3; }
+.chip b { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; margin-right: 6px; }
+.chip.keep b { color: var(--accent); } .chip.gain b { color: #2f6fb3; } .chip.lose b { color: var(--now); } .chip.change b { color: #6b4fa0; }
+.textlane { display: grid; gap: 10px; font-size: 14px; line-height: 1.45; }
+.textlane ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+
+/* summary table */
+table.sum { width: 100%; border-collapse: collapse; font-size: 13.5px; background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+table.sum th, table.sum td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.sum th { font-family: var(--f-mono); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); background: #f6f8f7; }
+table.sum td:first-child { font-weight: 600; white-space: nowrap; }
+
+/* ---- Slack rendering (from Block Kit JSON) ---- */
+.sk { font-family: var(--f-slack); color: var(--s-ink); font-size: 13.5px; line-height: 1.42; }
+.sk-msgs { background: var(--s-bg); border: 1px solid var(--s-line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 12px; }
+.sk-msg { display: grid; grid-template-columns: 32px 1fr; gap: 9px; }
+.sk-av { width: 32px; height: 32px; border-radius: 6px; display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 14px; }
+.sk-av.j { background: #0d6b60; } .sk-av.r { background: #8a7f6d; }
+.sk-who { font-weight: 900; font-size: 13.5px; }
+.sk-who .app { font-weight: 700; font-size: 9.5px; background: #e8e8e8; color: var(--s-muted); padding: 1px 4px; border-radius: 3px; margin-left: 4px; vertical-align: 1px; }
+.sk-who .t { font-weight: 400; color: var(--s-muted); font-size: 11px; margin-left: 5px; }
+.sk-body { display: grid; gap: 7px; min-width: 0; }
+.sk-text { white-space: normal; overflow-wrap: anywhere; }
+.sk-ctx { display: flex; flex-wrap: wrap; gap: 6px; color: var(--s-muted); font-size: 12px; }
+.sk-hr { height: 1px; background: var(--s-line); margin: 2px 0; }
+.sk-header { font-weight: 900; font-size: 16px; }
+.sk-sec { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+.sk-sec.noacc { grid-template-columns: 1fr; }
+.sk-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+.sk-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sk-btn { font-weight: 700; font-size: 12.5px; border: 1px solid #c8c8c8; background: #fff; color: var(--s-ink); border-radius: 4px; padding: 4px 10px; white-space: nowrap; }
+.sk-btn.primary { background: var(--s-green); border-color: var(--s-green); color: #fff; }
+.sk-btn.danger { background: #fff; color: var(--s-red); border-color: #c8c8c8; }
+.sk-ovf { border: 1px solid #c8c8c8; border-radius: 4px; padding: 0 8px; font-weight: 900; color: var(--s-muted); letter-spacing: 1px; line-height: 22px; }
+.sk-sel { border: 1px solid #c8c8c8; border-radius: 4px; padding: 5px 9px; display: flex; justify-content: space-between; gap: 8px; background: #fff; font-size: 13px; min-width: 0; }
+.sk-sel .ph { color: #8a8a8a; } .sk-sel .car { color: var(--s-muted); }
+.sk-in { border: 1px solid #c8c8c8; border-radius: 4px; padding: 6px 9px; background: #fff; font-size: 13px; min-height: 30px; }
+.sk-in.ml { min-height: 52px; } .sk-in .ph { color: #8a8a8a; }
+.sk-input { display: grid; gap: 4px; }
+.sk-label { font-weight: 700; font-size: 13px; } .sk-label i { font-weight: 400; color: var(--s-muted); font-style: normal; }
+.sk-hint { font-size: 11.5px; color: var(--s-muted); }
+.sk-opts { display: grid; gap: 6px; }
+.sk-opt { display: grid; grid-template-columns: 16px 1fr; gap: 7px; align-items: start; font-size: 13px; }
+.sk-opt .mk { width: 14px; height: 14px; border: 1.5px solid #9a9a9a; margin-top: 2px; background: #fff; }
+.sk-opt .mk.radio { border-radius: 50%; }
+.sk-opt .mk.on { border-color: var(--s-blue); background: radial-gradient(circle, var(--s-blue) 0 38%, #fff 42%); }
+.sk-opt .mk.box.on { background: var(--s-blue); border-color: var(--s-blue); position: relative; }
+.sk-opt .mk.box.on::after { content: "✓"; color: #fff; font-size: 10px; position: absolute; left: 2px; top: -2px; font-weight: 900; }
+.sk-opt .d { display: block; color: var(--s-muted); font-size: 11.5px; }
+.sk-opts.row { grid-template-columns: repeat(4, auto); justify-content: start; gap: 6px 12px; }
+.sk-modal { background: var(--s-bg); border: 1px solid var(--s-line); border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,.1); }
+.sk-mh { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--s-line); font-weight: 900; font-size: 15px; }
+.sk-mh .sk-av { width: 22px; height: 22px; font-size: 11px; border-radius: 4px; }
+.sk-mh .x { margin-left: auto; color: var(--s-muted); font-weight: 400; }
+.sk-mb { padding: 12px 14px; display: grid; gap: 11px; }
+.sk-mf { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--s-line); }
+.sk code { font-family: var(--f-mono); font-size: 12px; background: #f2f2f2; padding: 0 3px; border-radius: 3px; }
+
+/* nav */
+.nav { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; background: rgba(18,34,31,.88);
+  color: #e6efec; border-radius: 999px; padding: 5px 8px; font-family: var(--f-mono); font-size: 12px; z-index: 5; }
+.nav button { background: transparent; color: inherit; border: 0; font: inherit; padding: 5px 10px; border-radius: 999px; cursor: pointer; }
+.nav button:hover, .nav button:focus-visible { background: rgba(255,255,255,.14); outline: none; }
+
+@media (max-width: 760px) {
+  .viewport { position: static; display: block; overflow: visible; padding: 12px 16px 70px; }
+  .stage { width: auto; height: auto; transform: none !important; display: grid; gap: 16px; }
+  .slide { position: relative; display: flex; inset: auto; padding: 22px 18px 34px; overflow: visible; }
+  .slide.title { padding: 36px 22px; } .slide.title h1 { font-size: 38px; }
+  .ba, .grid2, .grid3 { grid-template-columns: 1fr; }
+  .flow { grid-template-columns: 1fr; } .flow .step { border-radius: 10px !important; border-left: 1px solid var(--line) !important; }
+  .lane > .body { max-height: 520px; }
+  .strip { flex-direction: column; height: auto; }
+  .shot, .shot.wide { width: 100%; }
+  .nav { display: none; }
+  table.sum { display: block; overflow-x: auto; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="viewport"><div class="stage" id="stage">
+
+<section class="slide title">
+  <span class="kicker">Jessie · studio booking assistant · pivot overview</span>
+  <h1>From chatbot<br>to Slack app</h1>
+  <p class="sub">Jessie books studios, booths and meeting rooms from Slack. This deck compares how each part works today, by chat, with how it works as a Slack app with buttons and forms - what we keep, gain, lose and change.</p>
+  <div class="tagrow"><span class="tag">October 2026</span><span class="tag">Design agreed · not yet built</span><span class="tag">Every screen is real Block Kit</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">Where Jessie is today</span><h2>A chat assistant with strict checks behind it</h2>
+  <p class="sub">People type to Jessie in a Slack DM. An AI model reads the conversation; every booking then passes through checks written in code, against Airtable and the studio calendar. Live, used for testing only - no real bookings by staff yet.</p></div>
+  <div class="grid3">
+    <div class="card"><h3>Book</h3><ul><li>Studios, M booths, conference rooms, the Lobby</li><li>Recurring series</li><li>On behalf of a colleague</li><li>Taken room → nearest free times, other studios, another day</li></ul></div>
+    <div class="card"><h3>Change and find out</h3><ul><li>Cancel and move, with ownership checks and coordinator rights</li><li>"What's free…", "what do I have…"</li><li>Room facts from Airtable (formats, vocals in-room)</li></ul></div>
+    <div class="card"><h3>Approvals and notices</h3><ul><li>Priority requests: a higher-priority session asks a booked one to move</li><li>Shared M booths with a standing hold</li><li>Notices to the booker and engineer when a booking changes</li></ul></div>
+  </div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">Why change</span><h2>The chat is where it breaks, not the checks</h2>
+  <p class="sub">A wide test on 13 Oct: 20 scenarios, ~45 messages in everyday phrasing - Taglish, typos, shorthand, vague requests, two requests at once, changes of mind.</p></div>
+  <div class="grid2" style="grid-template-columns: 300px 1fr">
+    <div class="card"><div class="big">8<small> / 20 passed</small></div><p>12 failed or were partial. What held was everything code decides once the details are right: confirmation, taken rooms, refusing to double-book, cancel and move, series.</p>
+      <p style="color:var(--muted);font-size:14px">Over the last ten builds, fixes that moved a job into code held. Fixes to the AI's wording went in circles, one phrasing at a time.</p></div>
+    <div class="card" style="gap:16px">
+      <div class="fail"><b class="n">6</b><p><b>Details carrying over between requests.</b> An earlier "vo rec" looped a later question; a declined request's project and time were put on a new one; "what's free tomorrow afternoon?" was answered for 10-11 AM. <em>Structural: the line between one request and the next is drawn by reading the thread.</em></p></div>
+      <div class="fail"><b class="n">4</b><p><b>Free text not read.</b> "bukas", "stdio 7" (became Studio F), "9am for 2 hours", two bookings in one message (one dropped). <em>Each can be patched; the space of phrasings is open-ended.</em></p></div>
+      <div class="fail"><b class="n">3</b><p><b>The AI's own wording.</b> Its working notes leaked into replies; questions phrased its own way slipped past the code-written ones. <em>Wording is the part of an AI that is hardest to pin down.</em></p></div>
+    </div>
+  </div>
+  <span class="src">Full log: docs/qa/wide-test-2026-10-13.md</span><span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">The new approach</span><h2>Type to start. Tap to book. Code writes every fact.</h2></div>
+  <div style="display:grid;gap:8px"><span class="lanelabel now">Now · chat</span>
+    <div class="flow now">
+      <div class="step"><b>1 · Ask</b><span>Type the request</span></div>
+      <div class="step"><b>2 · Back and forth</b><span>Jessie asks for what's missing, one message at a time; the AI reads every reply in context</span></div>
+      <div class="step"><b>3 · Card</b><span>A summary card; type "yes"</span></div>
+      <div class="step"><b>4 · Checks + calendar</b><span>Code checks and books</span></div>
+    </div></div>
+  <div style="display:grid;gap:8px"><span class="lanelabel after">After · Slack app</span>
+    <div class="flow after">
+      <div class="step"><b>1 · Ask</b><span>Type it, or tap <b>Book a room</b> in the menu</span></div>
+      <div class="step"><b>2 · Form</b><span>One form, pre-filled from what was typed; date and time pickers, rooms that are free, lists from Airtable</span></div>
+      <div class="step"><b>3 · Book</b><span>Pressing Book is the confirmation</span></div>
+      <div class="step"><b>4 · Checks + calendar</b><span>The same code checks and books; the result comes back with Move and Cancel</span></div>
+    </div></div>
+  <div class="grid2" style="flex:0 0 auto">
+    <div class="card"><p><b>The AI keeps two jobs:</b> understanding the first message (to pre-fill a form or find a booking) and answering questions.</p></div>
+    <div class="card"><p><b>Everything else is code and buttons:</b> booking, cancelling, moving, approving. Each form stands alone, so nothing carries over from an earlier request.</p></div>
+  </div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">Nothing is lost</span><h2>What stays exactly as it is</h2>
+  <p class="sub">The forms call the same back-end workflows the chat calls today. Every check that protects a booking runs on every form submission and every button press.</p></div>
+  <div class="grid3">
+    <div class="card"><h3>Booking checks</h3><ul><li>No double booking</li><li>The room suits the session; the usual rooms first (Airtable ranking)</li><li>Staff names and initials from Bookers</li><li>Clients checked; new ones sent for review</li><li>The room's own answer read back</li><li>Unusual length and past-date heads-ups</li></ul></div>
+    <div class="card"><h3>Changes and approvals</h3><ul><li>Only your own bookings, or your department's if you are a coordinator</li><li>A move creates the new booking before removing the old one</li><li>Priority and shared-booth approvals (one Google Sheet row per request, swept every 10 minutes)</li></ul></div>
+    <div class="card"><h3>Records and data</h3><ul><li>Calendar and Airtable remain the source of truth</li><li>The booking log, new-clients sheet and consent sheet</li><li>Notices to booker and engineer</li><li>Room facts: formats, vocals in-room, pairings</li></ul></div>
+  </div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">1 · Starting a request</span><h2>A menu in the DM; typing still works</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real reply, 13 Oct</i></div><div class="body"><div data-chat="weather"></div>
+      <p class="note">A thank-you and an off-topic question set off a warning about a booking discussed earlier. Everything in the thread is read as context.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="01-menu" data-user="hi"></div><p class="cap"><b>The menu</b> on a greeting, on "menu", and under every result (⋯).</p></div>
+      <div class="shot"><div class="frame" data-screen="03-typed-request" data-user="book studio 7 tomorrow 2-4pm, vo rec, project QAW1"></div><p class="cap"><b>A typed request</b> is read once, to fill in the form.</p></div>
+      <div class="shot"><div class="frame" data-screen="02-not-understood" data-user="thanks! what's the weather?"></div><p class="cap"><b>Anything else</b> gets the menu, not a guess.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>typing the first message</span><span class="chip gain"><b>Gain</b>three buttons: Book a room · My bookings · Studios</span><span class="chip lose"><b>Lose</b>typing "reset" between requests</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">2 · Booking a room · when, and what for</span><h2>From a back-and-forth to one form</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="loop"></div>
+      <p class="note">Five messages in, the booking still isn't ready, and the last answer repeats the question: the earlier "music mixing" was still being read.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot wide"><div class="frame" data-screen="04-book-step1"></div><p class="cap"><b>Step 1:</b> date and time first, then what it's for. Repeats is one small checkbox. The session type decides which rooms are offered next.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip change"><b>Change</b>questions one at a time → one form</span><span class="chip change"><b>Change</b>"which kind of mixing?" → a list from Airtable</span><span class="chip lose"><b>Lose</b>the card and typing "yes"</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">2 · Booking a room · the room and the details</span><h2>Only free rooms that fit, ranked; nothing to misread</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="freetext"></div><div style="height:10px"></div><div data-chat="two"></div>
+      <p class="note">"bukas" (tomorrow) wasn't read as a date; "stdio 7" became Studio F; of two bookings in one message, one was dropped without a word.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot wide"><div class="frame" data-screen="05-book-step2"></div><p class="cap"><b>Step 2:</b> free rooms that can do the session, ranked from Airtable, the top one recommended; a note names usual rooms that aren't free. The ⋯ on the date line holds the rare options. Pressing <b>Book</b> is the confirmation.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>the room ranking and every booking check</span><span class="chip change"><b>Change</b>title assembled by code from the fields</span><span class="chip gain"><b>Gain</b>taken rooms mostly never offered</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">2 · Booking a room · details by person and session</span><h2>The form asks only what applies</h2>
+  <p class="sub">Fields follow the requester's department (Airtable Booking Defaults) and the session type. Code fills in what it can: initials, department, Advertising vs Entertainment, the calendar title.</p></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="carry"></div>
+      <p class="note">A vague request after a "no" got the declined booking's project and time. A clear one got the AI's working notes and a guessed length instead of a question.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="06-details-arranger"></div><p class="cap"><b>An arranger, music session:</b> kind of booking, engineer required, arranger is you.</p></div>
+      <div class="shot"><div class="frame" data-screen="07-details-localization"></div><p class="cap"><b>Localization:</b> one project-code search; client and title come from it.</p></div>
+      <div class="shot"><div class="frame" data-screen="08-details-meeting"></div><p class="cap"><b>A meeting:</b> a title and notes, nothing else.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>nicknames read from the first message (pre-fill the people picker)</span><span class="chip keep"><b>Keep</b>"Did you mean…?" for a client typo</span><span class="chip lose"><b>Lose</b>carry-over from earlier requests</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">2 · Booking a room · after Book</span><h2>Problems on the form, results in the DM</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="book"></div>
+      <p class="note">This part works well today - the heads-up and alternatives carry over unchanged. They become one tap each.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="14-problem"></div><p class="cap"><b>A problem at Book</b> comes back on the form, with entries kept.</p></div>
+      <div class="shot"><div class="frame" data-screen="15-result-booked"></div><p class="cap"><b>The result</b> in the DM, with Move, Cancel and ⋯. The room's answer shows as a status.</p></div>
+      <div class="shot"><div class="frame" data-screen="16-result-declined"></div><p class="cap"><b>A room that declines:</b> Jessie removes her own event and offers a one-tap rebook.</p></div>
+      <div class="shot"><div class="frame" data-screen="12-booking"></div><div style="height:8px"></div><div class="frame" data-screen="13-booked"></div><p class="cap"><b>The form</b> turns into "Booking…", then "Booked".</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>taken-room alternatives</span><span class="chip change"><b>Change</b>"Booked" shown at once; the room's answer follows</span><span class="chip change"><b>Change</b>declined bookings are removed from the calendar</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">2 · Booking a room · recurring</span><h2>Series: every date visible before booking</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="series"></div>
+      <p class="note">This works today: code computes the dates (never open-ended, up to 16), and one yes books them all. The pattern is read from a sentence.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="17-series-step1"></div><p class="cap"><b>Repeats</b> adds how often, which days, and when it ends.</p></div>
+      <div class="shot wide"><div class="frame" data-screen="18-series-step2"></div><p class="cap"><b>Every date listed</b> with ✓ or ⚠️; a taken date offers a one-tap swap; each date has its own ⋯.</p></div>
+      <div class="shot"><div class="frame" data-screen="19-series-result"></div><p class="cap"><b>The result</b>, with a fix for a skipped date.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>dates computed in code; per-date skip, room or time</span><span class="chip gain"><b>Gain</b>move or cancel the whole series</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">2 · Booking a room · paired rooms</span><h2>Booths and holding rooms, from Airtable</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat</div><div class="body"><div class="textlane">
+      <p>One booking can hold several rooms ("Studio 1, Studio A"). A booth is allowed only alongside a studio.</p>
+      <ul><li>The booth comes from the requester's words or the AI's choice.</li><li>Celebrity Recording gets a note: "Want a holding room? (Likha, Katha or Salin)", answered in chat.</li><li>Airtable already records each room's <i>Paired with</i> booth and which studios record vocals in the room.</li></ul></div></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="09-paired-booth"></div><p class="cap"><b>A session that needs a booth</b> is offered pairs, both rooms free.</p></div>
+      <div class="shot"><div class="frame" data-screen="10-holding-rooms"></div><p class="cap"><b>Holding rooms</b> as a checklist of free conference rooms.</p></div>
+      <div class="shot"><div class="frame" data-screen="11-vocal-booth"></div><p class="cap"><b>Special cases:</b> ⋯ → Pair with a vocal booth, then pick one.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>several rooms on one booking</span><span class="chip change"><b>Change</b>booths offered from Airtable's pairings</span><span class="chip change"><b>Change</b>holding rooms on the form</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">3 · Finding out</span><h2>Answers written by code, each with a Book button</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="avail"></div>
+      <p class="note">Both answers used a 10-11 AM window left over from an earlier request - not the afternoon, not the whole day.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="22-typed-part-day" data-user="what's free tomorrow afternoon?"></div><p class="cap"><b>Part of a day:</b> the free rooms, each with Book.</p></div>
+      <div class="shot"><div class="frame" data-screen="21-typed-room-day" data-user="is studio 7 free friday?"></div><p class="cap"><b>One room:</b> free and taken times, Book, or the whole board.</p></div>
+      <div class="shot wide"><div class="frame" data-screen="20-day-board"></div><p class="cap"><b>Studios</b> (menu): every room's day at a glance; pick a date, filter, Book.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>typed questions, answered in code</span><span class="chip gain"><b>Gain</b>the day board</span><span class="chip lose"><b>Lose</b>questions borrowing an earlier request's details</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">3 · Finding out · my bookings</span><h2>A list built by code, with actions on each booking</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real reply, 13 Oct</i></div><div class="body"><div data-chat="mine"></div>
+      <p class="note">Correct here, but written by the AI from raw calendar events - the last place a misread could reach someone.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot wide"><div class="frame" data-screen="23-my-bookings"></div><p class="cap"><b>My bookings:</b> what you booked and what you're tagged on (engineer, arranger), the next 7 days; <b>See all upcoming</b> opens the rest. Cancel asks "are you sure?" first.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip change"><b>Change</b>AI-written list → code-written list</span><span class="chip gain"><b>Gain</b>Move and Cancel on every booking</span><span class="chip gain"><b>Gain</b>a department view for coordinators (later)</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">4 · Cancel and move</span><h2>Buttons on the exact booking; typing still finds it</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="change"></div>
+      <p class="note">This works today - finding a booking from a loose description, a card, a typed "yes". Two bookings with the same title need a "which one?" question.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="24-typed-cancel" data-user="cancel my friday booking"></div><p class="cap"><b>Typed:</b> every match, each with its own buttons.</p></div>
+      <div class="shot"><div class="frame" data-screen="25-typed-move" data-user="make it 3pm"></div><div style="height:8px"></div><div class="frame" data-screen="27-after-change"></div><p class="cap"><b>"make it 3pm"</b> becomes one tap; messages update in place after a change.</p></div>
+      <div class="shot"><div class="frame" data-screen="26-move-form"></div><p class="cap"><b>Move</b> opens a pre-filled form; the new time is checked first.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>ownership, coordinator rights, create-before-delete</span><span class="chip lose"><b>Lose</b>"which one?" and typing "yes"</span><span class="chip gain"><b>Gain</b>old messages never show a stale booking</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">5 · Approvals, notices and reminders</span><h2>Approve with a button; reminders free up unused rooms</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat</div><div class="body"><div class="textlane">
+      <p>The approval engine is built (one Google Sheet row per request, a sweep every 10 minutes, a finalize that cannot double-book). The way people answer is the weak part:</p>
+      <ul><li>The holder types "yes" or "no"; the AI's router reads it.</li><li>The requester types "cleared with &lt;name&gt;" - this has looped.</li><li>Names have come out blank in the request messages.</li><li>The same request could open twice.</li><li>Only the booker is asked, not the engineer.</li><li>No reminders; notices only when someone else changes your booking.</li></ul></div></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="28-approval-holder"></div><p class="cap"><b>The holder</b> (and the engineer): agree and move, or decline.</p></div>
+      <div class="shot"><div class="frame" data-screen="29-approval-requester"></div><div style="height:8px"></div><div class="frame" data-screen="30-shared-booth"></div><p class="cap"><b>The requester</b> can withdraw; <b>a held booth</b> is two buttons.</p></div>
+      <div class="shot"><div class="frame" data-screen="31-notices"></div><p class="cap"><b>Notices and reminders:</b> engineer notice; studio sessions the day before; booths and meeting rooms every Monday 9 AM.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>the approval engine and its deadlines</span><span class="chip change"><b>Change</b>typed yes/no → buttons (fixes the loops and blank names)</span><span class="chip gain"><b>Gain</b>engineer can answer; withdraw; reminders</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">Summary</span><h2>Keep, gain, lose, change</h2></div>
+  <table class="sum">
+    <tr><th>Area</th><th>Keep</th><th>Gain</th><th>Lose</th><th>Change</th></tr>
+    <tr><td>Starting</td><td>typing the first message</td><td>DM menu</td><td>"reset"</td><td>AI routes and pre-fills only</td></tr>
+    <tr><td>Booking</td><td>ranking, every check, heads-ups, alternatives</td><td>only free rooms offered; one-tap fixes</td><td>back-and-forth, card, "yes"</td><td>one two-step form; title by code</td></tr>
+    <tr><td>Details</td><td>nickname reading, "Did you mean…?", new clients</td><td>fields by department and session</td><td>carry-over between requests</td><td>pickers instead of parsing</td></tr>
+    <tr><td>Series</td><td>dates in code, per-date changes</td><td>move / cancel whole series</td><td>-</td><td>repeat fields; dates listed</td></tr>
+    <tr><td>Paired rooms</td><td>several rooms per booking</td><td>-</td><td>-</td><td>booths and holding rooms on the form</td></tr>
+    <tr><td>Finding out</td><td>typed questions, code answers</td><td>day board; Book on every answer</td><td>borrowed context</td><td>my bookings written by code</td></tr>
+    <tr><td>Cancel / move</td><td>ownership, create-before-delete</td><td>buttons on the exact booking; updated messages</td><td>"which one?", "yes"</td><td>confirm pop-up; move form</td></tr>
+    <tr><td>Approvals</td><td>engine, sheet, deadlines</td><td>engineer answers, withdraw, reminders</td><td>typed replies</td><td>buttons</td></tr>
+    <tr><td>Behind the scenes</td><td>logs, calendar, Airtable</td><td>a log of every click</td><td>silent failures during an outage</td><td>form flows tested by people</td></tr>
+  </table>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">Behind the scenes</span><h2>What changes for running and testing it</h2></div>
+  <div class="grid2">
+    <div class="card"><h3>Running</h3><ul>
+      <li>Slack app: Interactivity turned on (one request URL, one search URL); scopes as now.</li>
+      <li>Both new URLs added to the Cloudflare exemption rule, and to the uptime monitor.</li>
+      <li>Slack expects an answer within 3 seconds: each click is acknowledged at once ("Booking…"); the work follows.</li>
+      <li>During an outage, a click shows Slack's own error instead of being lost silently.</li>
+      <li>Reminders, the weekly message and the approval sweep run on a schedule, outage or not.</li></ul></div>
+    <div class="card"><h3>Testing and records</h3><ul>
+      <li>A new log: every button press and form submission (who, what, result, time).</li>
+      <li>Form flows are tested by people following a script, checked afterwards from the logs.</li>
+      <li>Offline checks feed recorded Slack payloads through the same code; layouts are checked in the Block Kit Builder.</li>
+      <li>Test dates stay a year ahead: date pickers open on next year during testing.</li>
+      <li>Launch notifications switch on in one place instead of several.</li></ul></div>
+  </div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">Next</span><h2>From design to build</h2>
+  <p class="sub">Not a rebuild from scratch: the back end is kept and called by the forms; the chat side gets smaller as each flow moves over. The chat keeps working until each form is tested.</p></div>
+  <div class="grid3">
+    <div class="card"><h3>1 · Set up</h3><ul><li>Slack app Interactivity</li><li>Cloudflare exemption for the new URLs</li><li>Series id on new series events</li></ul></div>
+    <div class="card"><h3>2 · Build in order</h3><ul><li>Menu and Book a room (studios)</li><li>Results, My bookings, cancel and move</li><li>Studios board and typed answers</li><li>Internal rooms, paired rooms, series</li><li>Approvals, notices, reminders</li></ul></div>
+    <div class="card"><h3>3 · Test each with people</h3><ul><li>A script per flow</li><li>Results checked from the logs</li><li>The chat path retires flow by flow</li></ul>
+      <p style="font-size:13.5px;color:var(--muted)"><b style="color:var(--ink)">Open question:</b> rooms on neither ranking list (bookable today after a warning) - offer them under "Show all suitable rooms", or not in the form?</p></div>
+  </div>
+  <span class="src">Design record: docs/design/slack-app-processes.md · screens: docs/design/blockkit/</span><span class="pageno"></span>
+</section>
+
+</div></div>
+<nav class="nav" aria-label="Slides"><button id="prev" aria-label="Previous slide">←</button><span id="count"></span><button id="next" aria-label="Next slide">→</button></nav>
+
+<script id="screens" type="application/json">{"01-menu": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "Hi! What would you like to do?"}}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Book a room"}, "action_id": "open_book", "value": "x", "style": "primary"}, {"type": "button", "text": {"type": "plain_text", "text": "My bookings"}, "action_id": "my_bookings", "value": "x"}, {"type": "button", "text": {"type": "plain_text", "text": "Studios"}, "action_id": "board", "value": "x"}]}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Or just type it, like _book studio 7 tomorrow 2-4pm_ or _is studio 8 free friday?_"}]}]}}, "02-not-understood": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "I didn't catch that. Here's what I can do:"}}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Book a room"}, "action_id": "open_book", "value": "x", "style": "primary"}, {"type": "button", "text": {"type": "plain_text", "text": "My bookings"}, "action_id": "my_bookings", "value": "x"}, {"type": "button", "text": {"type": "plain_text", "text": "Studios"}, "action_id": "board", "value": "x"}]}]}}, "03-typed-request": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "🗓️ *Studio 7 · Thursday, Oct 14 · 2:00–4:00 PM*\nVO Recording · QAW1"}}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Book a room"}, "action_id": "open_book_prefilled", "value": "x", "style": "primary"}]}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Opens the form with these filled in."}]}]}}, "04-book-step1": {"kind": "modal", "json": {"type": "modal", "callback_id": "book_step1", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Cancel"}, "blocks": [{"type": "context", "elements": [{"type": "mrkdwn", "text": "*Step 1 of 2* · when, and what for"}]}, {"type": "input", "block_id": "date", "label": {"type": "plain_text", "text": "Date"}, "element": {"type": "datepicker", "action_id": "date_pick", "initial_date": "2027-10-14"}}, {"type": "input", "block_id": "start", "label": {"type": "plain_text", "text": "Start"}, "element": {"type": "timepicker", "action_id": "start_pick", "initial_time": "14:00", "timezone": "Asia/Manila"}}, {"type": "input", "block_id": "end", "label": {"type": "plain_text", "text": "End"}, "element": {"type": "timepicker", "action_id": "end_pick", "initial_time": "16:00", "timezone": "Asia/Manila"}}, {"type": "actions", "elements": [{"type": "checkboxes", "action_id": "repeat_toggle", "options": [{"text": {"type": "mrkdwn", "text": "_Repeats_"}, "value": "repeat_toggle"}]}], "block_id": "repeat_opt"}, {"type": "input", "block_id": "purpose", "label": {"type": "plain_text", "text": "What's it for?"}, "element": {"type": "static_select", "action_id": "purpose_pick", "initial_option": {"text": {"type": "plain_text", "text": "VO Recording"}, "value": "VO Recording"}, "option_groups": [{"label": {"type": "plain_text", "text": "Sessions"}, "options": [{"text": {"type": "plain_text", "text": "VO Recording"}, "value": "VO Recording"}, {"text": {"type": "plain_text", "text": "Post Mixing"}, "value": "Post Mixing"}, {"text": {"type": "plain_text", "text": "Music Mixing"}, "value": "Music Mixing"}, {"text": {"type": "plain_text", "text": "Music Vocal Recording"}, "value": "Music Vocal Recording"}, {"text": {"type": "plain_text", "text": "Band Recording"}, "value": "Band Recording"}, {"text": {"type": "plain_text", "text": "Celebrity Recording"}, "value": "Celebrity Recording"}, {"text": {"type": "plain_text", "text": "QC"}, "value": "QC"}, {"text": {"type": "plain_text", "text": "Post Processing"}, "value": "Post Processing"}, {"text": {"type": "plain_text", "text": "Localization Dubbing"}, "value": "Localization Dubbing"}, {"text": {"type": "plain_text", "text": "Localization Editing"}, "value": "Localization Editing"}, {"text": {"type": "plain_text", "text": "Localization Mixing"}, "value": "Localization Mixing"}, {"text": {"type": "plain_text", "text": "Localization Atmos Mixing"}, "value": "Localization Atmos Mixing"}]}, {"label": {"type": "plain_text", "text": "Not a session"}, "options": [{"text": {"type": "plain_text", "text": "Meeting"}, "value": "Meeting"}, {"text": {"type": "plain_text", "text": "Event"}, "value": "Event"}, {"text": {"type": "plain_text", "text": "Booth time (M booth)"}, "value": "booth"}]}]}, "hint": {"type": "plain_text", "text": "Jessie offers the rooms that can do this, the usual ones first."}}], "submit": {"type": "plain_text", "text": "Find rooms"}}}, "05-book-step2": {"kind": "modal", "json": {"type": "modal", "callback_id": "book_step2", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Back"}, "blocks": [{"type": "context", "elements": [{"type": "mrkdwn", "text": "*Step 2 of 2* · room and details"}]}, {"type": "section", "text": {"type": "mrkdwn", "text": "🗓️ *Thursday, Oct 14 · 2:00–4:00 PM · VO Recording*"}, "accessory": {"type": "overflow", "action_id": "room_more", "options": [{"text": {"type": "plain_text", "text": "Show all suitable rooms"}, "value": "show_all"}, {"text": {"type": "plain_text", "text": "Pair with a vocal booth"}, "value": "booth"}]}}, {"type": "input", "block_id": "room", "label": {"type": "plain_text", "text": "Room"}, "element": {"type": "radio_buttons", "action_id": "room_radio", "options": [{"text": {"type": "plain_text", "text": "Studio 8"}, "value": "Studio 8", "description": {"type": "plain_text", "text": "Recommended · usual for VO Recording"}}, {"text": {"type": "plain_text", "text": "Studio F"}, "value": "Studio F", "description": {"type": "plain_text", "text": "Usual for VO Recording"}}, {"text": {"type": "plain_text", "text": "Studio C"}, "value": "Studio C", "description": {"type": "plain_text", "text": "Usual for VO Recording"}}], "initial_option": {"text": {"type": "plain_text", "text": "Studio 8"}, "value": "Studio 8", "description": {"type": "plain_text", "text": "Recommended · usual for VO Recording"}}}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Not free then: Studio 7 (free from 4:00 PM)"}]}, {"type": "divider"}, {"type": "input", "block_id": "project", "label": {"type": "plain_text", "text": "Project"}, "element": {"type": "plain_text_input", "action_id": "project_in", "initial_value": "QAW1"}}, {"type": "input", "block_id": "client", "label": {"type": "plain_text", "text": "Client"}, "element": {"type": "plain_text_input", "action_id": "client_in"}, "optional": true, "hint": {"type": "plain_text", "text": "Leave empty if there's no client. A new name is fine."}}, {"type": "input", "block_id": "engineer", "label": {"type": "plain_text", "text": "Engineer"}, "element": {"type": "users_select", "action_id": "engineer_pick", "placeholder": {"type": "plain_text", "text": "You"}}, "hint": {"type": "plain_text", "text": "Set to you. Change it if someone else is engineering."}}, {"type": "actions", "elements": [{"type": "checkboxes", "action_id": "for_toggle", "options": [{"text": {"type": "mrkdwn", "text": "_Booking for someone else_"}, "value": "for_toggle"}]}], "block_id": "for_opt"}, {"type": "input", "block_id": "notes", "label": {"type": "plain_text", "text": "Notes"}, "element": {"type": "plain_text_input", "action_id": "notes_in", "multiline": true}, "optional": true}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Calendar title: *QAW1 / <client> / HL* · Booking type: Advertising (from your department)"}]}], "submit": {"type": "plain_text", "text": "Book"}}}, "06-details-arranger": {"kind": "modal", "json": {"type": "modal", "callback_id": "view", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Back"}, "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "🗓️ *Friday, Oct 15 · 1:00–5:00 PM · Music Mixing · Studio F*"}}, {"type": "divider"}, {"type": "input", "block_id": "kind", "label": {"type": "plain_text", "text": "What kind of booking?"}, "element": {"type": "radio_buttons", "action_id": "kind_pick", "options": [{"text": {"type": "plain_text", "text": "Client work"}, "value": "client"}, {"text": {"type": "plain_text", "text": "Internal"}, "value": "internal"}, {"text": {"type": "plain_text", "text": "Personal project"}, "value": "personal"}], "initial_option": {"text": {"type": "plain_text", "text": "Client work"}, "value": "client"}}}, {"type": "input", "block_id": "project", "label": {"type": "plain_text", "text": "Project"}, "element": {"type": "plain_text_input", "action_id": "project_in", "initial_value": "SUMMER JINGLE"}}, {"type": "input", "block_id": "client", "label": {"type": "plain_text", "text": "Client"}, "element": {"type": "plain_text_input", "action_id": "client_in", "initial_value": "Acme Foods"}, "optional": true, "hint": {"type": "plain_text", "text": "For client work. Leave empty for internal or personal."}}, {"type": "input", "block_id": "engineer", "label": {"type": "plain_text", "text": "Engineer"}, "element": {"type": "users_select", "action_id": "engineer_pick", "placeholder": {"type": "plain_text", "text": "Who's engineering?"}}, "hint": {"type": "plain_text", "text": "A music engineer"}}, {"type": "input", "block_id": "arranger", "label": {"type": "plain_text", "text": "Arranger"}, "element": {"type": "users_select", "action_id": "arranger_pick", "placeholder": {"type": "plain_text", "text": "You"}}, "hint": {"type": "plain_text", "text": "Set to you"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Calendar title: *SUMMER JINGLE / Acme Foods / <engineer> x <arranger>*"}]}], "submit": {"type": "plain_text", "text": "Book"}}}, "07-details-localization": {"kind": "modal", "json": {"type": "modal", "callback_id": "view", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Back"}, "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "🗓️ *Thursday, Oct 14 · 9:00 AM – 2:00 PM · Localization Dubbing · Studio 1 + Studio A*"}}, {"type": "divider"}, {"type": "input", "block_id": "code", "label": {"type": "plain_text", "text": "Project code"}, "element": {"type": "external_select", "action_id": "code_search", "min_query_length": 1, "placeholder": {"type": "plain_text", "text": "Search project codes"}}, "hint": {"type": "plain_text", "text": "From Localization Projects. The client and the title come from it."}}, {"type": "input", "block_id": "engineer", "label": {"type": "plain_text", "text": "Engineer"}, "element": {"type": "users_select", "action_id": "engineer_pick", "placeholder": {"type": "plain_text", "text": "You"}}, "hint": {"type": "plain_text", "text": "Set to you"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Booking type: Entertainment (always, for Localization) · Calendar title: *<project code> / HL*"}]}], "submit": {"type": "plain_text", "text": "Book"}}}, "08-details-meeting": {"kind": "modal", "json": {"type": "modal", "callback_id": "view", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Back"}, "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "🗓️ *Thursday, Oct 14 · 3:00–4:00 PM · Meeting*"}}, {"type": "input", "block_id": "room", "label": {"type": "plain_text", "text": "Room"}, "element": {"type": "radio_buttons", "action_id": "room_radio", "options": [{"text": {"type": "plain_text", "text": "Likha"}, "value": "Likha", "description": {"type": "plain_text", "text": "Recommended"}}, {"text": {"type": "plain_text", "text": "Salin"}, "value": "Salin"}, {"text": {"type": "plain_text", "text": "Katha"}, "value": "Katha"}], "initial_option": {"text": {"type": "plain_text", "text": "Likha"}, "value": "Likha", "description": {"type": "plain_text", "text": "Recommended"}}}}, {"type": "divider"}, {"type": "input", "block_id": "title", "label": {"type": "plain_text", "text": "Meeting title"}, "element": {"type": "plain_text_input", "action_id": "title_in", "initial_value": "Q4 planning"}}, {"type": "input", "block_id": "notes", "label": {"type": "plain_text", "text": "Notes"}, "element": {"type": "plain_text_input", "action_id": "notes_in", "multiline": true}, "optional": true}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Calendar title: *LIKHA - Q4 planning* · no engineer, no client"}]}], "submit": {"type": "plain_text", "text": "Book"}}}, "09-paired-booth": {"kind": "modal", "json": {"type": "modal", "callback_id": "view", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Back"}, "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "🗓️ *Thursday, Oct 14 · 9:00 AM – 2:00 PM · Localization Dubbing*"}, "accessory": {"type": "overflow", "action_id": "room_more", "options": [{"text": {"type": "plain_text", "text": "Show all suitable rooms"}, "value": "show_all"}, {"text": {"type": "plain_text", "text": "Choose the booth myself"}, "value": "booth"}]}}, {"type": "input", "block_id": "room", "label": {"type": "plain_text", "text": "Room and booth"}, "element": {"type": "radio_buttons", "action_id": "room_radio", "options": [{"text": {"type": "plain_text", "text": "Studio 1 + Studio A"}, "value": "Studio 1|Studio A", "description": {"type": "plain_text", "text": "Recommended · control room and its booth"}}, {"text": {"type": "plain_text", "text": "Studio 2 + Studio B"}, "value": "Studio 2|Studio B", "description": {"type": "plain_text", "text": "Control room and its booth"}}, {"text": {"type": "plain_text", "text": "Studio 6 + Studio D"}, "value": "Studio 6|Studio D", "description": {"type": "plain_text", "text": "Control room and its booth"}}], "initial_option": {"text": {"type": "plain_text", "text": "Studio 1 + Studio A"}, "value": "Studio 1|Studio A", "description": {"type": "plain_text", "text": "Recommended · control room and its booth"}}}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Pairs come from each room's *Paired with* in Airtable. Only pairs where both rooms are free are listed."}]}], "submit": {"type": "plain_text", "text": "Next"}}}, "10-holding-rooms": {"kind": "modal", "json": {"type": "modal", "callback_id": "view", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Back"}, "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "🗓️ *Thursday, Oct 14 · 1:00–5:00 PM · Celebrity Recording*"}, "accessory": {"type": "overflow", "action_id": "room_more", "options": [{"text": {"type": "plain_text", "text": "Show all suitable rooms"}, "value": "show_all"}, {"text": {"type": "plain_text", "text": "Pair with a vocal booth"}, "value": "booth"}]}}, {"type": "input", "block_id": "room", "label": {"type": "plain_text", "text": "Room"}, "element": {"type": "radio_buttons", "action_id": "room_radio", "options": [{"text": {"type": "plain_text", "text": "Studio F"}, "value": "Studio F", "description": {"type": "plain_text", "text": "Recommended · usual for Celebrity Recording"}}, {"text": {"type": "plain_text", "text": "Studio C"}, "value": "Studio C", "description": {"type": "plain_text", "text": "Usual for Celebrity Recording"}}], "initial_option": {"text": {"type": "plain_text", "text": "Studio F"}, "value": "Studio F", "description": {"type": "plain_text", "text": "Recommended · usual for Celebrity Recording"}}}}, {"type": "input", "block_id": "holding", "label": {"type": "plain_text", "text": "Holding rooms"}, "element": {"type": "checkboxes", "action_id": "holding_pick", "options": [{"text": {"type": "plain_text", "text": "Likha"}, "value": "Likha", "description": {"type": "plain_text", "text": "Free 1:00–5:00 PM"}}, {"text": {"type": "plain_text", "text": "Katha"}, "value": "Katha", "description": {"type": "plain_text", "text": "Free 1:00–5:00 PM"}}]}, "optional": true, "hint": {"type": "plain_text", "text": "For the talent and their team. One or more, or none."}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Salin isn't free then."}]}], "submit": {"type": "plain_text", "text": "Next"}}}, "11-vocal-booth": {"kind": "modal", "json": {"type": "modal", "callback_id": "view", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Back"}, "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "🗓️ *Thursday, Oct 14 · 2:00–4:00 PM · VO Recording*"}, "accessory": {"type": "overflow", "action_id": "room_more", "options": [{"text": {"type": "plain_text", "text": "Show all suitable rooms"}, "value": "show_all"}, {"text": {"type": "plain_text", "text": "Pair with a vocal booth"}, "value": "booth"}]}}, {"type": "input", "block_id": "room", "label": {"type": "plain_text", "text": "Room"}, "element": {"type": "radio_buttons", "action_id": "room_radio", "options": [{"text": {"type": "plain_text", "text": "Studio 8"}, "value": "Studio 8", "description": {"type": "plain_text", "text": "Recommended · usual for VO Recording"}}, {"text": {"type": "plain_text", "text": "Studio F"}, "value": "Studio F", "description": {"type": "plain_text", "text": "Usual for VO Recording"}}], "initial_option": {"text": {"type": "plain_text", "text": "Studio 8"}, "value": "Studio 8", "description": {"type": "plain_text", "text": "Recommended · usual for VO Recording"}}}}, {"type": "actions", "elements": [{"type": "checkboxes", "action_id": "booth_toggle", "options": [{"text": {"type": "mrkdwn", "text": "_Pair with a vocal booth_"}, "value": "booth_toggle"}], "initial_options": [{"text": {"type": "mrkdwn", "text": "_Pair with a vocal booth_"}, "value": "booth_toggle"}]}], "block_id": "booth_opt"}, {"type": "input", "block_id": "booth", "label": {"type": "plain_text", "text": "Which booth?"}, "element": {"type": "static_select", "action_id": "booth_pick", "initial_option": {"text": {"type": "plain_text", "text": "Studio A"}, "value": "Studio A"}, "options": [{"text": {"type": "plain_text", "text": "Studio A"}, "value": "Studio A"}, {"text": {"type": "plain_text", "text": "Studio D"}, "value": "Studio D"}]}, "hint": {"type": "plain_text", "text": "Free then. Not the usual pairing for Studio 8 - the engineer patches it."}}], "submit": {"type": "plain_text", "text": "Next"}}}, "12-booking": {"kind": "modal", "json": {"type": "modal", "callback_id": "view", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Close"}, "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "⏳ *Booking Studio 8…*\nThursday, Oct 14 · 2:00–4:00 PM"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Checking the room and writing it to the calendar. This takes a few seconds."}]}]}}, "13-booked": {"kind": "modal", "json": {"type": "modal", "callback_id": "view", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Done"}, "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "✅ *Booked.*\n*QAW1 / Acme Foods / HL*\nStudio 8 · Thursday, Oct 14 · 2:00–4:00 PM"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "The details and the Move / Cancel buttons are in your DM with Jessie."}]}]}}, "14-problem": {"kind": "modal", "json": {"type": "modal", "callback_id": "view", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Back"}, "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "⚠️ *Studio 8 was just booked by someone else* for 2:00–3:00 PM. Pick another room below, or go Back to change the time."}}, {"type": "divider"}, {"type": "section", "text": {"type": "mrkdwn", "text": "🗓️ *Thursday, Oct 14 · 2:00–4:00 PM · VO Recording*"}, "accessory": {"type": "overflow", "action_id": "room_more", "options": [{"text": {"type": "plain_text", "text": "Show all suitable rooms"}, "value": "show_all"}, {"text": {"type": "plain_text", "text": "Pair with a vocal booth"}, "value": "booth"}]}}, {"type": "input", "block_id": "room", "label": {"type": "plain_text", "text": "Room"}, "element": {"type": "radio_buttons", "action_id": "room_radio", "options": [{"text": {"type": "plain_text", "text": "Studio F"}, "value": "Studio F", "description": {"type": "plain_text", "text": "Recommended · usual for VO Recording"}}, {"text": {"type": "plain_text", "text": "Studio C"}, "value": "Studio C", "description": {"type": "plain_text", "text": "Usual for VO Recording"}}], "initial_option": {"text": {"type": "plain_text", "text": "Studio F"}, "value": "Studio F", "description": {"type": "plain_text", "text": "Recommended · usual for VO Recording"}}}}, {"type": "input", "block_id": "client", "label": {"type": "plain_text", "text": "Client"}, "element": {"type": "plain_text_input", "action_id": "client_in", "initial_value": "Acme Food"}, "optional": true, "hint": {"type": "plain_text", "text": "Did you mean Acme Foods? Change it, or keep it as typed."}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Everything else you entered is kept."}]}], "submit": {"type": "plain_text", "text": "Book"}}}, "15-result-booked": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "✅ *Booked.*\n*QAW1 / Acme Foods / HL*\nStudio 8 · Thursday, Oct 14 · 2:00–4:00 PM"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "VO Recording · Engineer: you · Advertising"}]}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "✓ Studio 8 accepted"}]}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Move"}, "action_id": "move", "value": "x"}, {"type": "button", "text": {"type": "plain_text", "text": "Cancel"}, "action_id": "cancel", "value": "x", "style": "danger"}, {"type": "overflow", "action_id": "more", "options": [{"text": {"type": "plain_text", "text": "Book another"}, "value": "open_book"}, {"text": {"type": "plain_text", "text": "Book again, another day"}, "value": "again"}, {"text": {"type": "plain_text", "text": "My bookings"}, "value": "my_bookings"}, {"text": {"type": "plain_text", "text": "Studios"}, "value": "board"}]}]}]}}, "16-result-declined": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "❌ *Studio 8 turned this booking down.* Nothing is booked, and it was taken off the calendar.\n~QAW1 / Acme Foods / HL · Thu, Oct 14 · 2:00–4:00 PM~"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Studio F and Studio C are free then."}]}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Book Studio F instead"}, "action_id": "rebook_room", "value": "x", "style": "primary"}, {"type": "button", "text": {"type": "plain_text", "text": "Pick another room or time"}, "action_id": "reopen", "value": "x"}]}]}}, "17-series-step1": {"kind": "modal", "json": {"type": "modal", "callback_id": "book_step1", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Cancel"}, "blocks": [{"type": "context", "elements": [{"type": "mrkdwn", "text": "*Step 1 of 2* · when, and what for"}]}, {"type": "input", "block_id": "date", "label": {"type": "plain_text", "text": "First date"}, "element": {"type": "datepicker", "action_id": "date_pick", "initial_date": "2027-10-19"}}, {"type": "input", "block_id": "start", "label": {"type": "plain_text", "text": "Start"}, "element": {"type": "timepicker", "action_id": "start_pick", "initial_time": "10:00", "timezone": "Asia/Manila"}}, {"type": "input", "block_id": "end", "label": {"type": "plain_text", "text": "End"}, "element": {"type": "timepicker", "action_id": "end_pick", "initial_time": "12:00", "timezone": "Asia/Manila"}}, {"type": "actions", "elements": [{"type": "checkboxes", "action_id": "repeat_toggle", "options": [{"text": {"type": "mrkdwn", "text": "_Repeats_"}, "value": "repeat_toggle"}], "initial_options": [{"text": {"type": "mrkdwn", "text": "_Repeats_"}, "value": "repeat_toggle"}]}], "block_id": "repeat_opt"}, {"type": "input", "block_id": "freq", "label": {"type": "plain_text", "text": "How often"}, "element": {"type": "radio_buttons", "action_id": "freq_pick", "options": [{"text": {"type": "plain_text", "text": "Weekly"}, "value": "weekly"}, {"text": {"type": "plain_text", "text": "Daily"}, "value": "daily"}], "initial_option": {"text": {"type": "plain_text", "text": "Weekly"}, "value": "weekly"}}}, {"type": "input", "block_id": "days", "label": {"type": "plain_text", "text": "On"}, "element": {"type": "checkboxes", "action_id": "days_pick", "options": [{"text": {"type": "plain_text", "text": "Mon"}, "value": "MO"}, {"text": {"type": "plain_text", "text": "Tue"}, "value": "TU"}, {"text": {"type": "plain_text", "text": "Wed"}, "value": "WE"}, {"text": {"type": "plain_text", "text": "Thu"}, "value": "TH"}, {"text": {"type": "plain_text", "text": "Fri"}, "value": "FR"}, {"text": {"type": "plain_text", "text": "Sat"}, "value": "SA"}, {"text": {"type": "plain_text", "text": "Sun"}, "value": "SU"}], "initial_options": [{"text": {"type": "plain_text", "text": "Tue"}, "value": "TU"}]}}, {"type": "input", "block_id": "ends", "label": {"type": "plain_text", "text": "Ends"}, "element": {"type": "radio_buttons", "action_id": "ends_pick", "options": [{"text": {"type": "plain_text", "text": "After a number of occurrences"}, "value": "count"}, {"text": {"type": "plain_text", "text": "On a date"}, "value": "until"}], "initial_option": {"text": {"type": "plain_text", "text": "After a number of occurrences"}, "value": "count"}}}, {"type": "input", "block_id": "count", "label": {"type": "plain_text", "text": "Number of occurrences"}, "element": {"type": "number_input", "action_id": "count_in", "is_decimal_allowed": false, "min_value": "2", "max_value": "16", "initial_value": "4"}, "hint": {"type": "plain_text", "text": "Up to 16, within a year."}}, {"type": "input", "block_id": "purpose", "label": {"type": "plain_text", "text": "What's it for?"}, "element": {"type": "static_select", "action_id": "purpose_pick", "initial_option": {"text": {"type": "plain_text", "text": "VO Recording"}, "value": "VO Recording"}, "option_groups": [{"label": {"type": "plain_text", "text": "Sessions"}, "options": [{"text": {"type": "plain_text", "text": "VO Recording"}, "value": "VO Recording"}, {"text": {"type": "plain_text", "text": "Post Mixing"}, "value": "Post Mixing"}, {"text": {"type": "plain_text", "text": "Music Mixing"}, "value": "Music Mixing"}, {"text": {"type": "plain_text", "text": "Music Vocal Recording"}, "value": "Music Vocal Recording"}, {"text": {"type": "plain_text", "text": "Band Recording"}, "value": "Band Recording"}, {"text": {"type": "plain_text", "text": "Celebrity Recording"}, "value": "Celebrity Recording"}, {"text": {"type": "plain_text", "text": "QC"}, "value": "QC"}, {"text": {"type": "plain_text", "text": "Post Processing"}, "value": "Post Processing"}, {"text": {"type": "plain_text", "text": "Localization Dubbing"}, "value": "Localization Dubbing"}, {"text": {"type": "plain_text", "text": "Localization Editing"}, "value": "Localization Editing"}, {"text": {"type": "plain_text", "text": "Localization Mixing"}, "value": "Localization Mixing"}, {"text": {"type": "plain_text", "text": "Localization Atmos Mixing"}, "value": "Localization Atmos Mixing"}]}, {"label": {"type": "plain_text", "text": "Not a session"}, "options": [{"text": {"type": "plain_text", "text": "Meeting"}, "value": "Meeting"}, {"text": {"type": "plain_text", "text": "Event"}, "value": "Event"}, {"text": {"type": "plain_text", "text": "Booth time (M booth)"}, "value": "booth"}]}]}}], "submit": {"type": "plain_text", "text": "Find rooms"}}}, "18-series-step2": {"kind": "modal", "json": {"type": "modal", "callback_id": "view", "title": {"type": "plain_text", "text": "Book a room"}, "close": {"type": "plain_text", "text": "Back"}, "blocks": [{"type": "context", "elements": [{"type": "mrkdwn", "text": "*Step 2 of 2* · room and details"}]}, {"type": "section", "text": {"type": "mrkdwn", "text": "🗓️ *Every Tuesday · 10:00 AM – 12:00 PM · 4 dates · VO Recording*"}}, {"type": "input", "block_id": "room", "label": {"type": "plain_text", "text": "Room"}, "element": {"type": "radio_buttons", "action_id": "room_radio", "options": [{"text": {"type": "plain_text", "text": "Studio 7"}, "value": "Studio 7", "description": {"type": "plain_text", "text": "Usual · free on 3 of 4 dates"}}, {"text": {"type": "plain_text", "text": "Studio 8"}, "value": "Studio 8", "description": {"type": "plain_text", "text": "Usual · free on all 4 dates"}}], "initial_option": {"text": {"type": "plain_text", "text": "Studio 7"}, "value": "Studio 7", "description": {"type": "plain_text", "text": "Usual · free on 3 of 4 dates"}}}}, {"type": "divider"}, {"type": "section", "text": {"type": "mrkdwn", "text": "*Dates*"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "✓ Tue, Oct 19"}, "accessory": {"type": "overflow", "action_id": "date_menu", "options": [{"text": {"type": "plain_text", "text": "Skip this date"}, "value": "skip"}, {"text": {"type": "plain_text", "text": "Use another room"}, "value": "room"}, {"text": {"type": "plain_text", "text": "Change the time"}, "value": "time"}]}}, {"type": "section", "text": {"type": "mrkdwn", "text": "⚠️ ~Tue, Oct 26~ — Studio 7 is taken. *Studio 8 is free then*, or skip it."}, "accessory": {"type": "overflow", "action_id": "date_menu", "options": [{"text": {"type": "plain_text", "text": "Skip this date"}, "value": "skip"}, {"text": {"type": "plain_text", "text": "Use another room"}, "value": "room"}, {"text": {"type": "plain_text", "text": "Change the time"}, "value": "time"}]}}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Use Studio 8 on Oct 26"}, "action_id": "date_swap", "value": "2027-10-26|Studio 8", "style": "primary"}]}, {"type": "section", "text": {"type": "mrkdwn", "text": "✓ Tue, Nov 2"}, "accessory": {"type": "overflow", "action_id": "date_menu", "options": [{"text": {"type": "plain_text", "text": "Skip this date"}, "value": "skip"}, {"text": {"type": "plain_text", "text": "Use another room"}, "value": "room"}, {"text": {"type": "plain_text", "text": "Change the time"}, "value": "time"}]}}, {"type": "section", "text": {"type": "mrkdwn", "text": "✓ Tue, Nov 9"}, "accessory": {"type": "overflow", "action_id": "date_menu", "options": [{"text": {"type": "plain_text", "text": "Skip this date"}, "value": "skip"}, {"text": {"type": "plain_text", "text": "Use another room"}, "value": "room"}, {"text": {"type": "plain_text", "text": "Change the time"}, "value": "time"}]}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Use ⋯ on a date to skip it, change its room or its time."}]}, {"type": "divider"}, {"type": "input", "block_id": "project", "label": {"type": "plain_text", "text": "Project"}, "element": {"type": "plain_text_input", "action_id": "project_in", "initial_value": "QAW5"}}], "submit": {"type": "plain_text", "text": "Book 3 dates"}}}, "19-series-result": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "✅ *Booked 3 of 4 dates.* QAW5 / HL · Studio 7 · 10:00 AM – 12:00 PM\n• Tue, Oct 19\n• Tue, Nov 2\n• Tue, Nov 9"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "⚠️ *Skipped Tue, Oct 26* — Studio 7 was already taken."}}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Book Oct 26 another way"}, "action_id": "series_fix", "value": "x", "style": "primary"}, {"type": "button", "text": {"type": "plain_text", "text": "Move the whole series"}, "action_id": "move_series", "value": "x"}, {"type": "button", "text": {"type": "plain_text", "text": "Cancel the whole series"}, "action_id": "cancel_series", "value": "x", "style": "danger"}]}]}}, "20-day-board": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "*Studios · Thursday, Oct 14*"}, "accessory": {"type": "datepicker", "action_id": "board_date", "initial_date": "2027-10-14"}}, {"type": "actions", "elements": [{"type": "static_select", "action_id": "board_filter", "initial_option": {"text": {"type": "plain_text", "text": "Studios"}, "value": "studios"}, "options": [{"text": {"type": "plain_text", "text": "Studios"}, "value": "studios"}, {"text": {"type": "plain_text", "text": "Booths"}, "value": "booths"}, {"text": {"type": "plain_text", "text": "Conference rooms and Lobby"}, "value": "common"}, {"text": {"type": "plain_text", "text": "All rooms"}, "value": "all"}]}, {"type": "button", "text": {"type": "plain_text", "text": "Previous day"}, "action_id": "board_prev", "value": "x"}, {"type": "button", "text": {"type": "plain_text", "text": "Next day"}, "action_id": "board_next", "value": "x"}]}, {"type": "divider"}, {"type": "section", "text": {"type": "mrkdwn", "text": "🟢 *Studio 4*\nFree all day"}, "accessory": {"type": "button", "text": {"type": "plain_text", "text": "Book"}, "action_id": "board_book", "value": "Studio 4|2027-10-14"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "🟡 *Studio 6*\nFree 8:00 AM – 1:00 PM, 3:00 – 11:00 PM\n_Taken 6:00 – 8:00 AM, 1:00 – 3:00 PM_"}, "accessory": {"type": "button", "text": {"type": "plain_text", "text": "Book"}, "action_id": "board_book", "value": "Studio 6|2027-10-14"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "🟡 *Studio 7*\nFree 8:00 AM – 2:00 PM, 4:00 – 11:00 PM\n_Taken 2:00 – 4:00 PM_"}, "accessory": {"type": "button", "text": {"type": "plain_text", "text": "Book"}, "action_id": "board_book", "value": "Studio 7|2027-10-14"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "🟡 *Studio 8*\nFree 8:00 AM – 8:00 PM\n_Taken 8:00 – 11:00 PM_"}, "accessory": {"type": "button", "text": {"type": "plain_text", "text": "Book"}, "action_id": "board_book", "value": "Studio 8|2027-10-14"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "🔴 *Studio F*\nNo free time between 8:00 AM and 11:00 PM\n_Taken 8:00 AM – 11:00 PM_"}}, {"type": "divider"}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "🟢 nothing booked all day · 🟡 partly free · 🔴 no free time 8 AM – 11 PM · Free times shown 8 AM – 11 PM; bookings at any hour are listed"}]}]}}, "21-typed-room-day": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "🗓️ *Studio 7 · Friday, Oct 15*\nFree 8:00 AM – 1:00 PM, 3:00 – 11:00 PM\n_Taken 1:00 – 3:00 PM_"}}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Book Studio 7 on Friday"}, "action_id": "book_prefill", "value": "Studio 7|2027-10-15", "style": "primary"}, {"type": "button", "text": {"type": "plain_text", "text": "All studios on Friday"}, "action_id": "board", "value": "2027-10-15"}]}]}}, "22-typed-part-day": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "🗓️ *Free tomorrow, Thu Oct 14, 12:00 – 6:00 PM*"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "*Studio 8* · free the whole afternoon"}, "accessory": {"type": "button", "text": {"type": "plain_text", "text": "Book"}, "action_id": "book_prefill", "value": "Studio 8"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "*Studio 6* · free 3:00 – 6:00 PM"}, "accessory": {"type": "button", "text": {"type": "plain_text", "text": "Book"}, "action_id": "book_prefill", "value": "Studio 6"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "*Studio C* · free 12:00 – 2:00 PM"}, "accessory": {"type": "button", "text": {"type": "plain_text", "text": "Book"}, "action_id": "book_prefill", "value": "Studio C"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Studios only. Afternoon = 12:00 – 6:00 PM. Ask about rooms or booths to include those."}]}]}}, "23-my-bookings": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "*Your bookings · next 7 days*"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "*QAW1 / Acme Foods / HL*\nThu, Oct 14 · 2:00–4:00 PM · Studio 8"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "VO Recording · Engineer: you"}]}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Move"}, "action_id": "move", "value": "EV1"}, {"type": "button", "text": {"type": "plain_text", "text": "Cancel"}, "action_id": "cancel", "value": "EV1", "style": "danger", "confirm": {"title": {"type": "plain_text", "text": "Cancel this booking?"}, "text": {"type": "mrkdwn", "text": "*QAW1 / Acme Foods / HL*\nThu, Oct 14 · 2:00–4:00 PM · Studio 8"}, "confirm": {"type": "plain_text", "text": "Cancel booking"}, "deny": {"type": "plain_text", "text": "Keep it"}, "style": "danger"}}]}, {"type": "divider"}, {"type": "section", "text": {"type": "mrkdwn", "text": "*QAW7 / HL*\nMon, Oct 18 · 1:00–3:00 PM · Studio 8"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Music Mixing · Engineer: you"}]}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Move"}, "action_id": "move", "value": "EV2"}, {"type": "button", "text": {"type": "plain_text", "text": "Cancel"}, "action_id": "cancel", "value": "EV2", "style": "danger", "confirm": {"title": {"type": "plain_text", "text": "Cancel this booking?"}, "text": {"type": "mrkdwn", "text": "*QAW7 / HL*\nMon, Oct 18 · 1:00–3:00 PM · Studio 8"}, "confirm": {"type": "plain_text", "text": "Cancel booking"}, "deny": {"type": "plain_text", "text": "Keep it"}, "style": "danger"}}]}, {"type": "divider"}, {"type": "section", "text": {"type": "mrkdwn", "text": "*You're tagged on*"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "*BLUE BIRD / LS*\nFri, Oct 15 · 10:00 AM – 12:00 PM · Studio F"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "You're the engineer · booked by Leo Santos"}]}, {"type": "divider"}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "See all upcoming"}, "action_id": "all_upcoming", "value": "x"}]}]}}, "24-typed-cancel": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "You have two bookings on Friday, Oct 15:"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "*QAW9 / HL*\nFri, Oct 15 · 10:00–11:00 AM · Studio 8"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "VO Recording"}]}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Move"}, "action_id": "move", "value": "EV4"}, {"type": "button", "text": {"type": "plain_text", "text": "Cancel"}, "action_id": "cancel", "value": "EV4", "style": "danger", "confirm": {"title": {"type": "plain_text", "text": "Cancel this booking?"}, "text": {"type": "mrkdwn", "text": "*QAW9 / HL*\nFri, Oct 15 · 10:00–11:00 AM · Studio 8"}, "confirm": {"type": "plain_text", "text": "Cancel booking"}, "deny": {"type": "plain_text", "text": "Keep it"}, "style": "danger"}}]}, {"type": "section", "text": {"type": "mrkdwn", "text": "*QAW9 / HL*\nFri, Oct 15 · 4:00–5:00 PM · Studio 8"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "VO Recording"}]}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Move"}, "action_id": "move", "value": "EV5"}, {"type": "button", "text": {"type": "plain_text", "text": "Cancel"}, "action_id": "cancel", "value": "EV5", "style": "danger", "confirm": {"title": {"type": "plain_text", "text": "Cancel this booking?"}, "text": {"type": "mrkdwn", "text": "*QAW9 / HL*\nFri, Oct 15 · 4:00–5:00 PM · Studio 8"}, "confirm": {"type": "plain_text", "text": "Cancel booking"}, "deny": {"type": "plain_text", "text": "Keep it"}, "style": "danger"}}]}]}}, "25-typed-move": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "*QAW1 / Acme Foods / HL* · Thu, Oct 14 · 2:00–4:00 PM · Studio 8"}}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Move to 3:00–5:00 PM"}, "action_id": "move_quick", "value": "EV1|15:00-17:00", "style": "primary"}, {"type": "button", "text": {"type": "plain_text", "text": "Pick another time"}, "action_id": "move", "value": "EV1"}]}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Studio 8 is free 3:00–5:00 PM on Thursday."}]}]}}, "26-move-form": {"kind": "modal", "json": {"type": "modal", "callback_id": "view", "title": {"type": "plain_text", "text": "Move booking"}, "close": {"type": "plain_text", "text": "Cancel"}, "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "*QAW1 / Acme Foods / HL*\nNow: Thu, Oct 14 · 2:00–4:00 PM · Studio 8"}}, {"type": "divider"}, {"type": "input", "block_id": "date", "label": {"type": "plain_text", "text": "New date"}, "element": {"type": "datepicker", "action_id": "date_pick", "initial_date": "2027-10-15"}}, {"type": "input", "block_id": "start", "label": {"type": "plain_text", "text": "Start"}, "element": {"type": "timepicker", "action_id": "start_pick", "initial_time": "14:00", "timezone": "Asia/Manila"}}, {"type": "input", "block_id": "end", "label": {"type": "plain_text", "text": "End"}, "element": {"type": "timepicker", "action_id": "end_pick", "initial_time": "16:00", "timezone": "Asia/Manila"}, "hint": {"type": "plain_text", "text": "Set to keep the same length (2 hours)."}}, {"type": "input", "block_id": "room", "label": {"type": "plain_text", "text": "Room"}, "element": {"type": "static_select", "action_id": "room_pick", "initial_option": {"text": {"type": "plain_text", "text": "Keep Studio 8"}, "value": "keep"}, "options": [{"text": {"type": "plain_text", "text": "Keep Studio 8"}, "value": "keep"}, {"text": {"type": "plain_text", "text": "Studio 7"}, "value": "Studio 7"}, {"text": {"type": "plain_text", "text": "Studio F"}, "value": "Studio F"}, {"text": {"type": "plain_text", "text": "Studio C"}, "value": "Studio C"}]}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "The new time is checked first. The booking stays where it is until the new one is in place."}]}], "submit": {"type": "plain_text", "text": "Move"}}}, "27-after-change": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "~QAW9 / HL~\n~Fri, Oct 15 · 10:00–11:00 AM · Studio 8~"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "❌ Cancelled by you at 10:42 AM · Engineer notified"}]}, {"type": "divider"}, {"type": "section", "text": {"type": "mrkdwn", "text": "✅ *Moved.* QAW1 / Acme Foods / HL\nFri, Oct 15 · 2:00–4:00 PM · Studio 8"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Was Thu, Oct 14 · 2:00–4:00 PM · Engineer notified"}]}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Move"}, "action_id": "move", "value": "x"}, {"type": "button", "text": {"type": "plain_text", "text": "Cancel"}, "action_id": "cancel", "value": "x", "style": "danger"}]}]}}, "28-approval-holder": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "🔁 *Priority request for your booking*\n*QAW3 / LS* · Studio F · Thu, Oct 14 · 2:00–4:00 PM"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Requested by Mara Cruz for a Celebrity Recording, which takes priority over VO Recording in Studio F."}]}, {"type": "section", "text": {"type": "mrkdwn", "text": "If you agree, move your session first. Free for you that day:\n• Studio 7 · 2:00–4:00 PM (same time)\n• Studio F · 4:00–6:00 PM (same room, later)"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Sent to you and the booking's engineer; the first answer decides. Answer by 6:00 PM today, or your booking stays."}]}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Agree and move my booking"}, "action_id": "consent_move", "value": "x", "style": "primary"}, {"type": "button", "text": {"type": "plain_text", "text": "Decline"}, "action_id": "consent_no", "value": "x", "confirm": {"title": {"type": "plain_text", "text": "Decline the request?"}, "text": {"type": "mrkdwn", "text": "Your booking stays where it is."}, "confirm": {"type": "plain_text", "text": "Decline"}, "deny": {"type": "plain_text", "text": "Go back"}}}]}]}}, "29-approval-requester": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "⏳ *Requested.* Studio F on Thu, Oct 14, 2:00–4:00 PM is held by *QAW3 / LS*. Jessie asked the booker and the engineer."}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "You'll hear back here by 6:00 PM today. Nothing is booked until then."}]}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "I've already cleared it with them"}, "action_id": "attest", "value": "x"}, {"type": "button", "text": {"type": "plain_text", "text": "Withdraw request"}, "action_id": "withdraw", "value": "x", "style": "danger"}, {"type": "button", "text": {"type": "plain_text", "text": "Pick another room or time"}, "action_id": "reopen", "value": "x"}]}]}}, "30-shared-booth": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "🎙️ *Someone would like your booth*\n*M4* · Thu, Oct 14 · 3:00–4:00 PM — held for you"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Requested by Leo Santos. If you don't answer by 2:00 PM, they get it for that hour."}]}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Let them use it"}, "action_id": "mbooth_yes", "value": "x", "style": "primary"}, {"type": "button", "text": {"type": "plain_text", "text": "Keep it"}, "action_id": "mbooth_no", "value": "x"}]}]}}, "31-notices": {"kind": "message", "json": {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "🎧 *You're engineering* *QAW1 / Acme Foods / HL* · Studio 8 · Thu, Oct 14 · 2:00–4:00 PM"}}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Got it"}, "action_id": "ack", "value": "x"}]}, {"type": "divider"}, {"type": "section", "text": {"type": "mrkdwn", "text": "⏰ *Tomorrow:* QAW1 / Acme Foods / HL · Studio 8 · 2:00–4:00 PM. Still on?"}}, {"type": "actions", "elements": [{"type": "button", "text": {"type": "plain_text", "text": "Still on"}, "action_id": "keep", "value": "x", "style": "primary"}, {"type": "button", "text": {"type": "plain_text", "text": "Move"}, "action_id": "move", "value": "x"}, {"type": "button", "text": {"type": "plain_text", "text": "Free up the room"}, "action_id": "release", "value": "x", "style": "danger"}]}, {"type": "divider"}, {"type": "section", "text": {"type": "mrkdwn", "text": "📅 *Your booths and meeting rooms this week*"}}, {"type": "section", "text": {"type": "mrkdwn", "text": "*M4* · Tue, Oct 19 · all day _(standing hold)_"}, "accessory": {"type": "overflow", "action_id": "wk", "options": [{"text": {"type": "plain_text", "text": "Keep"}, "value": "keep"}, {"text": {"type": "plain_text", "text": "Free up this week"}, "value": "free"}]}}, {"type": "section", "text": {"type": "mrkdwn", "text": "*Likha* · Thu, Oct 21 · 3:00–4:00 PM · Q4 planning"}, "accessory": {"type": "overflow", "action_id": "wk", "options": [{"text": {"type": "plain_text", "text": "Keep"}, "value": "keep"}, {"text": {"type": "plain_text", "text": "Free up"}, "value": "free"}]}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Every Monday at 9:00 AM."}]}]}}}</script>
+<script id="before" type="application/json">{"loop": [["r", "book studio 6 next monday"], ["j", "What's the session type, project and client? (or \"none\" for no client)"], ["r", "actually make it studio 8, 1-3pm"], ["j", "I need the session type, project title and client (or \"none\") to prepare the Studio 8 booking for Monday, October 25, 1:00–3:00 PM."], ["r", "music mixing, project QAW7"], ["j", "🗓️ Studio 8 · Monday, October 25 · 1:00 PM – 3:00 PM\n\nWho’s the client? (or \"none\")"], ["r", "wait, make it post mixing. client is [client]"], ["j", "Which kind of mixing - Post Mixing, Localization Mixing, Localization Atmos Mixing or Music Mixing?"], ["r", "post mixing"], ["j", "Which kind of mixing - Post Mixing, Localization Mixing, Localization Atmos Mixing or Music Mixing?"]], "freetext": [["r", "pa-book naman ng studio 8 bukas 2-4pm, vo rec, proj QAW1, walang client"], ["j", "What date works?"], ["r", "book stdio 7 on friday 3pm-5pm voice over project qaw3 no client"], ["j", "*QAW3 / HL*\n*Date:* Friday, October 15, 2027\n*Time:* 3:00 PM – 5:00 PM\n*Room:* Studio F\n\nI picked Studio F. Tell me if you’d like another room.\n\nBook it? Reply yes or no."]], "carry": [["r", "no"], ["j", "No problem - nothing was booked. What would you like to change?"], ["r", "i need a room tomorrow afternoon for VO"], ["j", "*QAW3 / HL*\n*Date:* Thursday, October 14, 2027\n*Time:* 3:00 PM – 5:00 PM\n*Room:* Studio 4\n\nI picked Studio 4. Tell me if you’d like another room.\n\nBook it? Reply yes or no."], ["r", "book studio 8 at 10am next tues, vo, project QAW6, no client"], ["j", "The session type is VO Recording (typical duration 60 minutes), and it's Audio Post. [Requester] is the engineer. How long does the session run? I'll assume 1 hour unless you say otherwise."]], "book": [["r", "book studio 8 friday 4-5pm, vo recording, project QAW9, no client"], ["j", "❌ Heads up: *Studio 8 is already booked 3:00 PM – 5:00 PM* on Friday, October 15 by another session\n\n✅ Studio 8 is free on the same day at:\n• 5:00 PM – 6:00 PM\n• 2:00 PM – 3:00 PM\n\n✅ Free at that time:\nStudio F · Studio C · Studio 4 · Studio 5 · Studio 6\n\n✅ Studio 8 is free at that time on:\n• Saturday, October 16\n\nWant one of those, or another day or time?"], ["r", "5-6pm then"], ["j", "*QAW9 / HL*\n*Date:* Friday, October 15, 2027\n*Time:* 5:00 PM – 6:00 PM\n*Room:* Studio 8\n\nBook it? Reply yes or no."], ["r", "yes"], ["j", "Booked."]], "two": [["r", "book studio 8 friday 10-11am and studio f friday 2-3pm, both vo recording, project QAW8, no client"], ["j", "*QAW8 / HL*\n*Date:* Friday, October 15, 2027\n*Time:* 2:00 PM – 3:00 PM\n*Room:* Studio F\n\nBook it? Reply yes or no."]], "series": [["r", "book studio c every tuesday 10am-12nn for 3 weeks starting next week, vo recording, project QAW11, no client"], ["j", "*QAW11 / HL*\n*Dates (3):*\n- Tuesday, 19 October 2027\n- Tuesday, 26 October 2027\n- Tuesday, 2 November 2027\n*Time:* 10:00 AM – 12:00 PM\n*Room:* Studio C\n\nBook it? Reply yes or no."]], "avail": [["r", "what's free tomorrow afternoon?"], ["j", "🗓️ October 14 (Thursday), 10:00 AM – 11:00 AM\n\n✅ Free studios:\nStudios 1, 2, 3, 4, 5, 6, 7, 8, C, E, F, and M.\nVocal booths A, B, and D.\nM2, M3, M5, M8."], ["r", "is studio 8 free on friday?"], ["j", "🗓️ October 15 (Friday), 10:00 AM – 11:00 AM\n\n✅ Studio 8 is free 10:00 AM – 11:00 AM.\n\n✅ Usual rooms for VO Recording free then:\nStudios 7, C, and F."]], "mine": [["r", "what do i have booked this week?"], ["j", "Your bookings this week that I can find (Oct 13–17):\n\n*THUNDER CAT / [client] / HL*\n Date: October 13, 2027 (Wed)\n Time: 8:00 PM – 10:00 PM\n Room: Studio 7\n\n*YES / [client] / HL*\n Date: October 14, 2027 (Thu)\n Time: 2:00 PM – 5:00 PM\n Room: Studio 7\n\n*SOUPS / [client] / DR*\n Date: October 14, 2027 (Thu)\n Time: 1:00 PM – 4:00 PM\n Room: Studio 8 (booked by you, for [colleague]; [colleague] engineering)"]], "change": [["r", "actually can you cancel my friday booking"], ["j", "*QAW9 / HL*\n*Date:* Friday, October 15, 2027\n*Time:* 5:00 PM – 6:00 PM\n*Room:* Studio 8\n\nCancel it? Reply yes or no."], ["r", "no wait, just move it to 2-3pm same day"], ["j", "*QAW9 / HL*\n*Now:* Friday, October 15, 2027, 5:00 PM – 6:00 PM, Studio 8\n*Moving to:* Friday, October 15, 2027, 2:00 PM – 3:00 PM, Studio 8\n\nMove it? Reply yes or no."], ["r", "no"], ["j", "Okay - it stays where it is."]], "weather": [["r", "nvm, thanks! btw what's the weather like today?"], ["j", "❌ Heads up: *Studio 7 is already booked 3:00 PM – 6:00 PM* on Wednesday, October 13 by another session\n\n✅ Studio 7 is free on the same day at:\n• 2:00 PM – 3:00 PM\n\n✅ Free at that time:\nStudio 1 · Studio 2 · Studio 8 · Studio F · Studio 3\n\n✅ Studio 7 is free at that time on:\n• Sunday, October 17\n\nWant one of those, or another day or time?"]]}</script>
+<script>
+(function () {
+  const SCREENS = JSON.parse(document.getElementById('screens').textContent);
+  const BEFORE = JSON.parse(document.getElementById('before').textContent);
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function mrk(s) {
+    let h = esc(s);
+    h = h.replace(/\*([^*\n]+)\*/g, '<b>$1</b>');
+    h = h.replace(/(^|[\s(>])_([^_\n]+)_(?=$|[\s).,!?<:])/g, '$1<i>$2</i>');
+    h = h.replace(/(^|[\s(>])~([^~\n]+)~(?=$|[\s).,!?<])/g, '$1<s>$2</s>');
+    h = h.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    return h.replace(/\n/g, '<br>');
+  }
+  const txt = o => !o ? '' : (o.type === 'mrkdwn' ? mrk(o.text) : esc(o.text).replace(/\n/g, '<br>'));
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  function fdate(s) { const d = new Date(s + 'T00:00:00Z'); return DOW[d.getUTCDay()] + ', ' + MON[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear(); }
+  function ftime(s) { let [h, m] = s.split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; }
+  function sel(val, ph) { return '<div class="sk-sel">' + (val ? '<span>' + val + '</span>' : '<span class="ph">' + esc(ph || 'Select an item') + '</span>') + '<span class="car">▾</span></div>'; }
+  function opts(e, kind) {
+    const on = kind === 'radio' ? [e.initial_option && e.initial_option.value] : (e.initial_options || []).map(o => o.value);
+    const row = kind === 'box' && e.options.length > 4 && e.options.every(o => !o.description);
+    return '<div class="sk-opts' + (row ? ' row' : '') + '">' + e.options.map(o =>
+      '<div class="sk-opt"><span class="mk ' + kind + (on.indexOf(o.value) !== -1 ? ' on' : '') + '"></span><span>' + txt(o.text) +
+      (o.description ? '<span class="d">' + txt(o.description) + '</span>' : '') + '</span></div>').join('') + '</div>';
+  }
+  function el(e) {
+    switch (e.type) {
+      case 'button': return '<span class="sk-btn' + (e.style ? ' ' + e.style : '') + '">' + txt(e.text) + '</span>';
+      case 'overflow': return '<span class="sk-ovf" title="' + esc(e.options.map(o => o.text.text).join(' · ')) + '">⋯</span>';
+      case 'static_select': case 'external_select':
+        return sel(e.initial_option ? txt(e.initial_option.text) : '', e.placeholder && e.placeholder.text);
+      case 'users_select': return sel('', e.placeholder && e.placeholder.text);
+      case 'datepicker': return sel(e.initial_date ? '📅 ' + fdate(e.initial_date) : '', 'Select a date');
+      case 'timepicker': return sel(e.initial_time ? '🕑 ' + ftime(e.initial_time) : '', 'Select time');
+      case 'plain_text_input': return '<div class="sk-in' + (e.multiline ? ' ml' : '') + '">' + (e.initial_value ? esc(e.initial_value) : '<span class="ph">' + esc((e.placeholder && e.placeholder.text) || '') + '</span>') + '</div>';
+      case 'number_input': return '<div class="sk-in">' + esc(e.initial_value || '') + '</div>';
+      case 'radio_buttons': return opts(e, 'radio');
+      case 'checkboxes': return opts(e, 'box');
+      default: return '';
+    }
+  }
+  function block(b) {
+    switch (b.type) {
+      case 'section': {
+        const acc = b.accessory ? '<div>' + el(b.accessory) + '</div>' : '';
+        const f = b.fields ? '<div class="sk-fields">' + b.fields.map(x => '<div>' + txt(x) + '</div>').join('') + '</div>' : '';
+        return '<div class="sk-sec' + (acc ? '' : ' noacc') + '"><div class="sk-text">' + txt(b.text) + f + '</div>' + acc + '</div>';
+      }
+      case 'context': return '<div class="sk-ctx">' + b.elements.map(x => '<span>' + txt(x) + '</span>').join('') + '</div>';
+      case 'divider': return '<div class="sk-hr"></div>';
+      case 'header': return '<div class="sk-header">' + txt(b.text) + '</div>';
+      case 'actions': return '<div class="sk-actions">' + b.elements.map(el).join('') + '</div>';
+      case 'input': return '<div class="sk-input"><div class="sk-label">' + txt(b.label) + (b.optional ? ' <i>(optional)</i>' : '') + '</div>' + el(b.element) +
+        (b.hint ? '<div class="sk-hint">' + txt(b.hint) + '</div>' : '') + '</div>';
+      default: return '';
+    }
+  }
+  const blocks = bs => bs.map(block).join('');
+  const who = (w, name, t) => '<div class="sk-msg"><div class="sk-av ' + w + '">' + name[0] + '</div><div class="sk-body"><div class="sk-who">' + name +
+    (w === 'j' ? '<span class="app">APP</span>' : '') + '<span class="t">' + t + '</span></div>';
+  function message(m, user) {
+    let h = '<div class="sk sk-msgs">';
+    if (user) h += who('r', 'Requester', '10:02 AM') + '<div class="sk-text">' + esc(user) + '</div></div></div>';
+    return h + who('j', 'Jessie', '10:02 AM') + blocks(m.blocks) + '</div></div></div>';
+  }
+  function modal(m) {
+    return '<div class="sk sk-modal"><div class="sk-mh"><div class="sk-av j">J</div>' + txt(m.title) + '<span class="x">✕</span></div><div class="sk-mb">' + blocks(m.blocks) +
+      '</div>' + (m.close || m.submit ? '<div class="sk-mf">' + (m.close ? '<span class="sk-btn">' + txt(m.close) + '</span>' : '') +
+      (m.submit ? '<span class="sk-btn primary">' + txt(m.submit) + '</span>' : '') + '</div>' : '') + '</div>';
+  }
+  document.querySelectorAll('[data-screen]').forEach(n => {
+    const s = SCREENS[n.dataset.screen]; if (!s) return;
+    n.innerHTML = s.kind === 'modal' ? modal(s.json) : message(s.json, n.dataset.user);
+  });
+  document.querySelectorAll('[data-chat]').forEach(n => {
+    const c = BEFORE[n.dataset.chat]; if (!c) return;
+    n.innerHTML = '<div class="sk sk-msgs">' + c.map(([w, t]) => who(w, w === 'j' ? 'Jessie' : 'Requester', '') +
+      '<div class="sk-text">' + (w === 'j' ? mrk(t) : esc(t)) + '</div></div></div>').join('') + '</div>';
+  });
+
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  slides.forEach((s, i) => { const p = s.querySelector('.pageno'); if (p) p.textContent = (i + 1) + ' / ' + slides.length; });
+  let cur = 0;
+  const m = /^#s(\d+)$/.exec(location.hash || '');
+  if (m) cur = Math.min(slides.length - 1, Math.max(0, +m[1] - 1));
+  const count = document.getElementById('count');
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, k) => s.classList.toggle('on', k === cur));
+    count.textContent = (cur + 1) + ' / ' + slides.length;
+    try { history.replaceState(null, '', '#s' + (cur + 1)); } catch (e) {}
+  }
+  function fit() {
+    const st = document.getElementById('stage');
+    if (window.innerWidth <= 760) { st.style.transform = 'none'; return; }
+    const k = Math.min((window.innerWidth - 24) / 1280, (window.innerHeight - 60) / 720);
+    st.style.transform = 'scale(' + k + ')';
+  }
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  document.addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('input,textarea')) return;
+    if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    if (e.key === 'Home') show(0); if (e.key === 'End') show(slides.length - 1);
+  });
+  window.addEventListener('resize', fit);
+  show(cur); fit();
+})();
+</script>

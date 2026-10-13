@@ -1,0 +1,142 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🎧 *You're engineering* *QAW1 / Acme Foods / HL* · Studio 8 · Thu, Oct 14 · 2:00–4:00 PM"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Got it"
+          },
+          "action_id": "ack",
+          "value": "x"
+        }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "⏰ *Tomorrow:* QAW1 / Acme Foods / HL · Studio 8 · 2:00–4:00 PM. Still on?"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Still on"
+          },
+          "action_id": "keep",
+          "value": "x",
+          "style": "primary"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Move"
+          },
+          "action_id": "move",
+          "value": "x"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Free up the room"
+          },
+          "action_id": "release",
+          "value": "x",
+          "style": "danger"
+        }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "📅 *Your booths and meeting rooms this week*"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*M4* · Tue, Oct 19 · all day _(standing hold)_"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "wk",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Keep"
+            },
+            "value": "keep"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Free up this week"
+            },
+            "value": "free"
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Likha* · Thu, Oct 21 · 3:00–4:00 PM · Q4 planning"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "wk",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Keep"
+            },
+            "value": "keep"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Free up"
+            },
+            "value": "free"
+          }
+        ]
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Every Monday at 9:00 AM."
+        }
+      ]
+    }
+  ]
+}

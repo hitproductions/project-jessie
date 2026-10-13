@@ -1,0 +1,35 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Studio 7 · Friday, Oct 15*\nFree 8:00 AM – 1:00 PM, 3:00 – 11:00 PM\n_Taken 1:00 – 3:00 PM_"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Book Studio 7 on Friday"
+          },
+          "action_id": "book_prefill",
+          "value": "Studio 7|2027-10-15",
+          "style": "primary"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "All studios on Friday"
+          },
+          "action_id": "board",
+          "value": "2027-10-15"
+        }
+      ]
+    }
+  ]
+}

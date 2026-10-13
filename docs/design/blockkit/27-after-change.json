@@ -1,0 +1,63 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "~QAW9 / HL~\n~Fri, Oct 15 · 10:00–11:00 AM · Studio 8~"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "❌ Cancelled by you at 10:42 AM · Engineer notified"
+        }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✅ *Moved.* QAW1 / Acme Foods / HL\nFri, Oct 15 · 2:00–4:00 PM · Studio 8"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Was Thu, Oct 14 · 2:00–4:00 PM · Engineer notified"
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Move"
+          },
+          "action_id": "move",
+          "value": "x"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Cancel"
+          },
+          "action_id": "cancel",
+          "value": "x",
+          "style": "danger"
+        }
+      ]
+    }
+  ]
+}

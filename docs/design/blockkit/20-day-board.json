@@ -1,0 +1,166 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Studios · Thursday, Oct 14*"
+      },
+      "accessory": {
+        "type": "datepicker",
+        "action_id": "board_date",
+        "initial_date": "2027-10-14"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "static_select",
+          "action_id": "board_filter",
+          "initial_option": {
+            "text": {
+              "type": "plain_text",
+              "text": "Studios"
+            },
+            "value": "studios"
+          },
+          "options": [
+            {
+              "text": {
+                "type": "plain_text",
+                "text": "Studios"
+              },
+              "value": "studios"
+            },
+            {
+              "text": {
+                "type": "plain_text",
+                "text": "Booths"
+              },
+              "value": "booths"
+            },
+            {
+              "text": {
+                "type": "plain_text",
+                "text": "Conference rooms and Lobby"
+              },
+              "value": "common"
+            },
+            {
+              "text": {
+                "type": "plain_text",
+                "text": "All rooms"
+              },
+              "value": "all"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Previous day"
+          },
+          "action_id": "board_prev",
+          "value": "x"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Next day"
+          },
+          "action_id": "board_next",
+          "value": "x"
+        }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🟢 *Studio 4*\nFree all day"
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Book"
+        },
+        "action_id": "board_book",
+        "value": "Studio 4|2027-10-14"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🟡 *Studio 6*\nFree 8:00 AM – 1:00 PM, 3:00 – 11:00 PM\n_Taken 6:00 – 8:00 AM, 1:00 – 3:00 PM_"
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Book"
+        },
+        "action_id": "board_book",
+        "value": "Studio 6|2027-10-14"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🟡 *Studio 7*\nFree 8:00 AM – 2:00 PM, 4:00 – 11:00 PM\n_Taken 2:00 – 4:00 PM_"
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Book"
+        },
+        "action_id": "board_book",
+        "value": "Studio 7|2027-10-14"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🟡 *Studio 8*\nFree 8:00 AM – 8:00 PM\n_Taken 8:00 – 11:00 PM_"
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Book"
+        },
+        "action_id": "board_book",
+        "value": "Studio 8|2027-10-14"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🔴 *Studio F*\nNo free time between 8:00 AM and 11:00 PM\n_Taken 8:00 AM – 11:00 PM_"
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "🟢 nothing booked all day · 🟡 partly free · 🔴 no free time 8 AM – 11 PM · Free times shown 8 AM – 11 PM; bookings at any hour are listed"
+        }
+      ]
+    }
+  ]
+}

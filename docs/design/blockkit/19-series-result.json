@@ -1,0 +1,52 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✅ *Booked 3 of 4 dates.* QAW5 / HL · Studio 7 · 10:00 AM – 12:00 PM\n• Tue, Oct 19\n• Tue, Nov 2\n• Tue, Nov 9"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "⚠️ *Skipped Tue, Oct 26* — Studio 7 was already taken."
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Book Oct 26 another way"
+          },
+          "action_id": "series_fix",
+          "value": "x",
+          "style": "primary"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Move the whole series"
+          },
+          "action_id": "move_series",
+          "value": "x"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Cancel the whole series"
+          },
+          "action_id": "cancel_series",
+          "value": "x",
+          "style": "danger"
+        }
+      ]
+    }
+  ]
+}

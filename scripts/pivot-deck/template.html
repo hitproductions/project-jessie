@@ -1,0 +1,576 @@
+<title>Jessie Slack App Pivot</title>
+<meta name="description" content="Jessie, the studio booking assistant: moving from a chatbot to a Slack app. Before and after, function by function.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&family=Lato:wght@400;700;900&display=swap">
+<style>
+/* Layout: a 16:9 deck (1280x720 stage, scaled to the window); each before/after slide is two lanes - Now (chat, amber)
+   and After (Slack app, teal) - with Slack screens rendered from their Block Kit JSON. Below 760px the slides stack. */
+:root {
+  color-scheme: light;
+  --bg: #e9edeb;
+  --stage: #fbfcfb;
+  --ink: #18201e;
+  --muted: #5a6763;
+  --line: #d8dfdc;
+  --accent: #0d6b60;
+  --accent-soft: #e1f0ec;
+  --now: #93611a;
+  --now-soft: #f6eddd;
+  --title-bg: #12221f;
+  --title-ink: #eef4f1;
+  --s-bg: #ffffff;
+  --s-ink: #1d1c1d;
+  --s-muted: #616061;
+  --s-line: #dddddd;
+  --s-green: #007a5a;
+  --s-red: #e01e5a;
+  --s-blue: #1264a3;
+  --f-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --f-slack: "Lato", "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); }
+.viewport { position: fixed; inset: 0; display: grid; place-items: center; overflow: hidden; }
+.stage { width: 1280px; height: 720px; position: relative; transform-origin: center center; }
+.slide { position: absolute; inset: 0; background: var(--stage); border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,.12);
+  padding: 34px 44px 26px; display: none; flex-direction: column; gap: 14px; overflow: hidden; }
+.slide.on { display: flex; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; letter-spacing: -0.015em; text-wrap: balance; }
+h2 { font-size: 30px; line-height: 1.1; }
+h3 { font-size: 18px; }
+p { margin: 0; }
+.kicker { font-family: var(--f-mono); font-size: 12px; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
+.head { display: grid; gap: 6px; }
+.sub { color: var(--muted); font-size: 16px; max-width: 980px; line-height: 1.45; }
+.pageno { position: absolute; right: 44px; bottom: 14px; font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.src { position: absolute; left: 44px; bottom: 14px; font-size: 11px; color: var(--muted); }
+
+/* title + section slides */
+.slide.title { background: var(--title-bg); color: var(--title-ink); justify-content: center; padding: 70px 90px; gap: 22px; }
+.slide.title .kicker { color: #7fd3c4; }
+.slide.title h1 { font-size: 64px; line-height: 1.02; font-weight: 800; }
+.slide.title .sub { color: #b9cbc5; font-size: 20px; }
+.slide.title .pageno, .slide.title .src { color: #7f9993; }
+.tagrow { display: flex; gap: 10px; flex-wrap: wrap; }
+.tag { font-family: var(--f-mono); font-size: 12px; border: 1px solid #355a53; color: #cfe3dd; border-radius: 999px; padding: 5px 12px; }
+
+/* text slides */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; flex: 1; min-height: 0; align-items: start; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; flex: 1; min-height: 0; align-items: start; }
+.card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 7px; font-size: 15px; line-height: 1.4; }
+.card p { font-size: 15px; line-height: 1.45; }
+.big { font-family: var(--f-display); font-size: 54px; font-weight: 800; line-height: 1; color: var(--now); }
+.big small { font-size: 22px; color: var(--muted); font-weight: 600; }
+.fail { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: start; }
+.fail b.n { font-family: var(--f-display); font-size: 34px; color: var(--now); line-height: 1; }
+.fail p { font-size: 14.5px; }
+.fail p em { color: var(--muted); font-style: normal; }
+.flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; align-items: stretch; }
+.flow .step { background: #fff; border: 1px solid var(--line); padding: 16px; display: grid; gap: 6px; align-content: start; position: relative; }
+.flow .step:first-child { border-radius: 10px 0 0 10px; } .flow .step:last-child { border-radius: 0 10px 10px 0; }
+.flow .step + .step { border-left: 0; }
+.flow .step b { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.flow .step span { font-size: 15px; line-height: 1.35; }
+.flow.now .step { background: var(--now-soft); } .flow.after .step { background: var(--accent-soft); }
+.lanelabel { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.lanelabel.now { color: var(--now); } .lanelabel.after { color: var(--accent); }
+
+/* before / after */
+.ba { display: grid; grid-template-columns: 410px 1fr; gap: 18px; flex: 1; min-height: 0; }
+.lane { display: flex; flex-direction: column; min-height: 0; min-width: 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+.lane > .lh { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 14px; font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; }
+.lane.now > .lh { background: var(--now-soft); color: var(--now); border-bottom: 2px solid var(--now); }
+.lane.after > .lh { background: var(--accent-soft); color: var(--accent); border-bottom: 2px solid var(--accent); }
+.lane > .lh i { font-style: normal; text-transform: none; letter-spacing: 0; font-family: var(--f-body); font-size: 12px; opacity: .85; }
+.lane > .body { flex: 1; min-height: 0; overflow: auto; background: #f4f5f4; padding: 12px; }
+.lane.now > .body { background: #fff; }
+.strip { display: flex; gap: 12px; align-items: flex-start; height: 100%; }
+.shot { flex: 0 0 auto; width: 330px; display: flex; flex-direction: column; gap: 6px; max-height: 100%; }
+.shot.wide { width: 420px; }
+.shot .cap { font-size: 12px; color: var(--muted); line-height: 1.35; }
+.shot .cap b { color: var(--ink); }
+.shot > .frame { overflow: auto; min-height: 0; border-radius: 8px; }
+.note { font-size: 13px; color: var(--muted); line-height: 1.4; margin-top: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-size: 12.5px; border-radius: 6px; padding: 5px 10px; border: 1px solid var(--line); background: #fff; line-height: 1.3; }
+.chip b { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; margin-right: 6px; }
+.chip.keep b { color: var(--accent); } .chip.gain b { color: #2f6fb3; } .chip.lose b { color: var(--now); } .chip.change b { color: #6b4fa0; }
+.textlane { display: grid; gap: 10px; font-size: 14px; line-height: 1.45; }
+.textlane ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+
+/* summary table */
+table.sum { width: 100%; border-collapse: collapse; font-size: 13.5px; background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+table.sum th, table.sum td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.sum th { font-family: var(--f-mono); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); background: #f6f8f7; }
+table.sum td:first-child { font-weight: 600; white-space: nowrap; }
+
+/* ---- Slack rendering (from Block Kit JSON) ---- */
+.sk { font-family: var(--f-slack); color: var(--s-ink); font-size: 13.5px; line-height: 1.42; }
+.sk-msgs { background: var(--s-bg); border: 1px solid var(--s-line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 12px; }
+.sk-msg { display: grid; grid-template-columns: 32px 1fr; gap: 9px; }
+.sk-av { width: 32px; height: 32px; border-radius: 6px; display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 14px; }
+.sk-av.j { background: #0d6b60; } .sk-av.r { background: #8a7f6d; }
+.sk-who { font-weight: 900; font-size: 13.5px; }
+.sk-who .app { font-weight: 700; font-size: 9.5px; background: #e8e8e8; color: var(--s-muted); padding: 1px 4px; border-radius: 3px; margin-left: 4px; vertical-align: 1px; }
+.sk-who .t { font-weight: 400; color: var(--s-muted); font-size: 11px; margin-left: 5px; }
+.sk-body { display: grid; gap: 7px; min-width: 0; }
+.sk-text { white-space: normal; overflow-wrap: anywhere; }
+.sk-ctx { display: flex; flex-wrap: wrap; gap: 6px; color: var(--s-muted); font-size: 12px; }
+.sk-hr { height: 1px; background: var(--s-line); margin: 2px 0; }
+.sk-header { font-weight: 900; font-size: 16px; }
+.sk-sec { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+.sk-sec.noacc { grid-template-columns: 1fr; }
+.sk-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+.sk-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sk-btn { font-weight: 700; font-size: 12.5px; border: 1px solid #c8c8c8; background: #fff; color: var(--s-ink); border-radius: 4px; padding: 4px 10px; white-space: nowrap; }
+.sk-btn.primary { background: var(--s-green); border-color: var(--s-green); color: #fff; }
+.sk-btn.danger { background: #fff; color: var(--s-red); border-color: #c8c8c8; }
+.sk-ovf { border: 1px solid #c8c8c8; border-radius: 4px; padding: 0 8px; font-weight: 900; color: var(--s-muted); letter-spacing: 1px; line-height: 22px; }
+.sk-sel { border: 1px solid #c8c8c8; border-radius: 4px; padding: 5px 9px; display: flex; justify-content: space-between; gap: 8px; background: #fff; font-size: 13px; min-width: 0; }
+.sk-sel .ph { color: #8a8a8a; } .sk-sel .car { color: var(--s-muted); }
+.sk-in { border: 1px solid #c8c8c8; border-radius: 4px; padding: 6px 9px; background: #fff; font-size: 13px; min-height: 30px; }
+.sk-in.ml { min-height: 52px; } .sk-in .ph { color: #8a8a8a; }
+.sk-input { display: grid; gap: 4px; }
+.sk-label { font-weight: 700; font-size: 13px; } .sk-label i { font-weight: 400; color: var(--s-muted); font-style: normal; }
+.sk-hint { font-size: 11.5px; color: var(--s-muted); }
+.sk-opts { display: grid; gap: 6px; }
+.sk-opt { display: grid; grid-template-columns: 16px 1fr; gap: 7px; align-items: start; font-size: 13px; }
+.sk-opt .mk { width: 14px; height: 14px; border: 1.5px solid #9a9a9a; margin-top: 2px; background: #fff; }
+.sk-opt .mk.radio { border-radius: 50%; }
+.sk-opt .mk.on { border-color: var(--s-blue); background: radial-gradient(circle, var(--s-blue) 0 38%, #fff 42%); }
+.sk-opt .mk.box.on { background: var(--s-blue); border-color: var(--s-blue); position: relative; }
+.sk-opt .mk.box.on::after { content: "✓"; color: #fff; font-size: 10px; position: absolute; left: 2px; top: -2px; font-weight: 900; }
+.sk-opt .d { display: block; color: var(--s-muted); font-size: 11.5px; }
+.sk-opts.row { grid-template-columns: repeat(4, auto); justify-content: start; gap: 6px 12px; }
+.sk-modal { background: var(--s-bg); border: 1px solid var(--s-line); border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,.1); }
+.sk-mh { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--s-line); font-weight: 900; font-size: 15px; }
+.sk-mh .sk-av { width: 22px; height: 22px; font-size: 11px; border-radius: 4px; }
+.sk-mh .x { margin-left: auto; color: var(--s-muted); font-weight: 400; }
+.sk-mb { padding: 12px 14px; display: grid; gap: 11px; }
+.sk-mf { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--s-line); }
+.sk code { font-family: var(--f-mono); font-size: 12px; background: #f2f2f2; padding: 0 3px; border-radius: 3px; }
+
+/* nav */
+.nav { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; background: rgba(18,34,31,.88);
+  color: #e6efec; border-radius: 999px; padding: 5px 8px; font-family: var(--f-mono); font-size: 12px; z-index: 5; }
+.nav button { background: transparent; color: inherit; border: 0; font: inherit; padding: 5px 10px; border-radius: 999px; cursor: pointer; }
+.nav button:hover, .nav button:focus-visible { background: rgba(255,255,255,.14); outline: none; }
+
+@media (max-width: 760px) {
+  .viewport { position: static; display: block; overflow: visible; padding: 12px 16px 70px; }
+  .stage { width: auto; height: auto; transform: none !important; display: grid; gap: 16px; }
+  .slide { position: relative; display: flex; inset: auto; padding: 22px 18px 34px; overflow: visible; }
+  .slide.title { padding: 36px 22px; } .slide.title h1 { font-size: 38px; }
+  .ba, .grid2, .grid3 { grid-template-columns: 1fr; }
+  .flow { grid-template-columns: 1fr; } .flow .step { border-radius: 10px !important; border-left: 1px solid var(--line) !important; }
+  .lane > .body { max-height: 520px; }
+  .strip { flex-direction: column; height: auto; }
+  .shot, .shot.wide { width: 100%; }
+  .nav { display: none; }
+  table.sum { display: block; overflow-x: auto; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="viewport"><div class="stage" id="stage">
+
+<section class="slide title">
+  <span class="kicker">Jessie · studio booking assistant · pivot overview</span>
+  <h1>From chatbot<br>to Slack app</h1>
+  <p class="sub">Jessie books studios, booths and meeting rooms from Slack. This deck compares how each part works today, by chat, with how it works as a Slack app with buttons and forms - what we keep, gain, lose and change.</p>
+  <div class="tagrow"><span class="tag">October 2026</span><span class="tag">Design agreed · not yet built</span><span class="tag">Every screen is real Block Kit</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">Where Jessie is today</span><h2>A chat assistant with strict checks behind it</h2>
+  <p class="sub">People type to Jessie in a Slack DM. An AI model reads the conversation; every booking then passes through checks written in code, against Airtable and the studio calendar. Live, used for testing only - no real bookings by staff yet.</p></div>
+  <div class="grid3">
+    <div class="card"><h3>Book</h3><ul><li>Studios, M booths, conference rooms, the Lobby</li><li>Recurring series</li><li>On behalf of a colleague</li><li>Taken room → nearest free times, other studios, another day</li></ul></div>
+    <div class="card"><h3>Change and find out</h3><ul><li>Cancel and move, with ownership checks and coordinator rights</li><li>"What's free…", "what do I have…"</li><li>Room facts from Airtable (formats, vocals in-room)</li></ul></div>
+    <div class="card"><h3>Approvals and notices</h3><ul><li>Priority requests: a higher-priority session asks a booked one to move</li><li>Shared M booths with a standing hold</li><li>Notices to the booker and engineer when a booking changes</li></ul></div>
+  </div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">Why change</span><h2>The chat is where it breaks, not the checks</h2>
+  <p class="sub">A wide test on 13 Oct: 20 scenarios, ~45 messages in everyday phrasing - Taglish, typos, shorthand, vague requests, two requests at once, changes of mind.</p></div>
+  <div class="grid2" style="grid-template-columns: 300px 1fr">
+    <div class="card"><div class="big">8<small> / 20 passed</small></div><p>12 failed or were partial. What held was everything code decides once the details are right: confirmation, taken rooms, refusing to double-book, cancel and move, series.</p>
+      <p style="color:var(--muted);font-size:14px">Over the last ten builds, fixes that moved a job into code held. Fixes to the AI's wording went in circles, one phrasing at a time.</p></div>
+    <div class="card" style="gap:16px">
+      <div class="fail"><b class="n">6</b><p><b>Details carrying over between requests.</b> An earlier "vo rec" looped a later question; a declined request's project and time were put on a new one; "what's free tomorrow afternoon?" was answered for 10-11 AM. <em>Structural: the line between one request and the next is drawn by reading the thread.</em></p></div>
+      <div class="fail"><b class="n">4</b><p><b>Free text not read.</b> "bukas", "stdio 7" (became Studio F), "9am for 2 hours", two bookings in one message (one dropped). <em>Each can be patched; the space of phrasings is open-ended.</em></p></div>
+      <div class="fail"><b class="n">3</b><p><b>The AI's own wording.</b> Its working notes leaked into replies; questions phrased its own way slipped past the code-written ones. <em>Wording is the part of an AI that is hardest to pin down.</em></p></div>
+    </div>
+  </div>
+  <span class="src">Full log: docs/qa/wide-test-2026-10-13.md</span><span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">The new approach</span><h2>Type to start. Tap to book. Code writes every fact.</h2></div>
+  <div style="display:grid;gap:8px"><span class="lanelabel now">Now · chat</span>
+    <div class="flow now">
+      <div class="step"><b>1 · Ask</b><span>Type the request</span></div>
+      <div class="step"><b>2 · Back and forth</b><span>Jessie asks for what's missing, one message at a time; the AI reads every reply in context</span></div>
+      <div class="step"><b>3 · Card</b><span>A summary card; type "yes"</span></div>
+      <div class="step"><b>4 · Checks + calendar</b><span>Code checks and books</span></div>
+    </div></div>
+  <div style="display:grid;gap:8px"><span class="lanelabel after">After · Slack app</span>
+    <div class="flow after">
+      <div class="step"><b>1 · Ask</b><span>Type it, or tap <b>Book a room</b> in the menu</span></div>
+      <div class="step"><b>2 · Form</b><span>One form, pre-filled from what was typed; date and time pickers, rooms that are free, lists from Airtable</span></div>
+      <div class="step"><b>3 · Book</b><span>Pressing Book is the confirmation</span></div>
+      <div class="step"><b>4 · Checks + calendar</b><span>The same code checks and books; the result comes back with Move and Cancel</span></div>
+    </div></div>
+  <div class="grid2" style="flex:0 0 auto">
+    <div class="card"><p><b>The AI keeps two jobs:</b> understanding the first message (to pre-fill a form or find a booking) and answering questions.</p></div>
+    <div class="card"><p><b>Everything else is code and buttons:</b> booking, cancelling, moving, approving. Each form stands alone, so nothing carries over from an earlier request.</p></div>
+  </div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">Nothing is lost</span><h2>What stays exactly as it is</h2>
+  <p class="sub">The forms call the same back-end workflows the chat calls today. Every check that protects a booking runs on every form submission and every button press.</p></div>
+  <div class="grid3">
+    <div class="card"><h3>Booking checks</h3><ul><li>No double booking</li><li>The room suits the session; the usual rooms first (Airtable ranking)</li><li>Staff names and initials from Bookers</li><li>Clients checked; new ones sent for review</li><li>The room's own answer read back</li><li>Unusual length and past-date heads-ups</li></ul></div>
+    <div class="card"><h3>Changes and approvals</h3><ul><li>Only your own bookings, or your department's if you are a coordinator</li><li>A move creates the new booking before removing the old one</li><li>Priority and shared-booth approvals (one Google Sheet row per request, swept every 10 minutes)</li></ul></div>
+    <div class="card"><h3>Records and data</h3><ul><li>Calendar and Airtable remain the source of truth</li><li>The booking log, new-clients sheet and consent sheet</li><li>Notices to booker and engineer</li><li>Room facts: formats, vocals in-room, pairings</li></ul></div>
+  </div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">1 · Starting a request</span><h2>A menu in the DM; typing still works</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real reply, 13 Oct</i></div><div class="body"><div data-chat="weather"></div>
+      <p class="note">A thank-you and an off-topic question set off a warning about a booking discussed earlier. Everything in the thread is read as context.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="01-menu" data-user="hi"></div><p class="cap"><b>The menu</b> on a greeting, on "menu", and under every result (⋯).</p></div>
+      <div class="shot"><div class="frame" data-screen="03-typed-request" data-user="book studio 7 tomorrow 2-4pm, vo rec, project QAW1"></div><p class="cap"><b>A typed request</b> is read once, to fill in the form.</p></div>
+      <div class="shot"><div class="frame" data-screen="02-not-understood" data-user="thanks! what's the weather?"></div><p class="cap"><b>Anything else</b> gets the menu, not a guess.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>typing the first message</span><span class="chip gain"><b>Gain</b>three buttons: Book a room · My bookings · Studios</span><span class="chip lose"><b>Lose</b>typing "reset" between requests</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">2 · Booking a room · when, and what for</span><h2>From a back-and-forth to one form</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="loop"></div>
+      <p class="note">Five messages in, the booking still isn't ready, and the last answer repeats the question: the earlier "music mixing" was still being read.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot wide"><div class="frame" data-screen="04-book-step1"></div><p class="cap"><b>Step 1:</b> date and time first, then what it's for. Repeats is one small checkbox. The session type decides which rooms are offered next.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip change"><b>Change</b>questions one at a time → one form</span><span class="chip change"><b>Change</b>"which kind of mixing?" → a list from Airtable</span><span class="chip lose"><b>Lose</b>the card and typing "yes"</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">2 · Booking a room · the room and the details</span><h2>Only free rooms that fit, ranked; nothing to misread</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="freetext"></div><div style="height:10px"></div><div data-chat="two"></div>
+      <p class="note">"bukas" (tomorrow) wasn't read as a date; "stdio 7" became Studio F; of two bookings in one message, one was dropped without a word.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot wide"><div class="frame" data-screen="05-book-step2"></div><p class="cap"><b>Step 2:</b> free rooms that can do the session, ranked from Airtable, the top one recommended; a note names usual rooms that aren't free. The ⋯ on the date line holds the rare options. Pressing <b>Book</b> is the confirmation.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>the room ranking and every booking check</span><span class="chip change"><b>Change</b>title assembled by code from the fields</span><span class="chip gain"><b>Gain</b>taken rooms mostly never offered</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">2 · Booking a room · details by person and session</span><h2>The form asks only what applies</h2>
+  <p class="sub">Fields follow the requester's department (Airtable Booking Defaults) and the session type. Code fills in what it can: initials, department, Advertising vs Entertainment, the calendar title.</p></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="carry"></div>
+      <p class="note">A vague request after a "no" got the declined booking's project and time. A clear one got the AI's working notes and a guessed length instead of a question.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="06-details-arranger"></div><p class="cap"><b>An arranger, music session:</b> kind of booking, engineer required, arranger is you.</p></div>
+      <div class="shot"><div class="frame" data-screen="07-details-localization"></div><p class="cap"><b>Localization:</b> one project-code search; client and title come from it.</p></div>
+      <div class="shot"><div class="frame" data-screen="08-details-meeting"></div><p class="cap"><b>A meeting:</b> a title and notes, nothing else.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>nicknames read from the first message (pre-fill the people picker)</span><span class="chip keep"><b>Keep</b>"Did you mean…?" for a client typo</span><span class="chip lose"><b>Lose</b>carry-over from earlier requests</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">2 · Booking a room · after Book</span><h2>Problems on the form, results in the DM</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="book"></div>
+      <p class="note">This part works well today - the heads-up and alternatives carry over unchanged. They become one tap each.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="14-problem"></div><p class="cap"><b>A problem at Book</b> comes back on the form, with entries kept.</p></div>
+      <div class="shot"><div class="frame" data-screen="15-result-booked"></div><p class="cap"><b>The result</b> in the DM, with Move, Cancel and ⋯. The room's answer shows as a status.</p></div>
+      <div class="shot"><div class="frame" data-screen="16-result-declined"></div><p class="cap"><b>A room that declines:</b> Jessie removes her own event and offers a one-tap rebook.</p></div>
+      <div class="shot"><div class="frame" data-screen="12-booking"></div><div style="height:8px"></div><div class="frame" data-screen="13-booked"></div><p class="cap"><b>The form</b> turns into "Booking…", then "Booked".</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>taken-room alternatives</span><span class="chip change"><b>Change</b>"Booked" shown at once; the room's answer follows</span><span class="chip change"><b>Change</b>declined bookings are removed from the calendar</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">2 · Booking a room · recurring</span><h2>Series: every date visible before booking</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="series"></div>
+      <p class="note">This works today: code computes the dates (never open-ended, up to 16), and one yes books them all. The pattern is read from a sentence.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="17-series-step1"></div><p class="cap"><b>Repeats</b> adds how often, which days, and when it ends.</p></div>
+      <div class="shot wide"><div class="frame" data-screen="18-series-step2"></div><p class="cap"><b>Every date listed</b> with ✓ or ⚠️; a taken date offers a one-tap swap; each date has its own ⋯.</p></div>
+      <div class="shot"><div class="frame" data-screen="19-series-result"></div><p class="cap"><b>The result</b>, with a fix for a skipped date.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>dates computed in code; per-date skip, room or time</span><span class="chip gain"><b>Gain</b>move or cancel the whole series</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">2 · Booking a room · paired rooms</span><h2>Booths and holding rooms, from Airtable</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat</div><div class="body"><div class="textlane">
+      <p>One booking can hold several rooms ("Studio 1, Studio A"). A booth is allowed only alongside a studio.</p>
+      <ul><li>The booth comes from the requester's words or the AI's choice.</li><li>Celebrity Recording gets a note: "Want a holding room? (Likha, Katha or Salin)", answered in chat.</li><li>Airtable already records each room's <i>Paired with</i> booth and which studios record vocals in the room.</li></ul></div></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="09-paired-booth"></div><p class="cap"><b>A session that needs a booth</b> is offered pairs, both rooms free.</p></div>
+      <div class="shot"><div class="frame" data-screen="10-holding-rooms"></div><p class="cap"><b>Holding rooms</b> as a checklist of free conference rooms.</p></div>
+      <div class="shot"><div class="frame" data-screen="11-vocal-booth"></div><p class="cap"><b>Special cases:</b> ⋯ → Pair with a vocal booth, then pick one.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>several rooms on one booking</span><span class="chip change"><b>Change</b>booths offered from Airtable's pairings</span><span class="chip change"><b>Change</b>holding rooms on the form</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">3 · Finding out</span><h2>Answers written by code, each with a Book button</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="avail"></div>
+      <p class="note">Both answers used a 10-11 AM window left over from an earlier request - not the afternoon, not the whole day.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="22-typed-part-day" data-user="what's free tomorrow afternoon?"></div><p class="cap"><b>Part of a day:</b> the free rooms, each with Book.</p></div>
+      <div class="shot"><div class="frame" data-screen="21-typed-room-day" data-user="is studio 7 free friday?"></div><p class="cap"><b>One room:</b> free and taken times, Book, or the whole board.</p></div>
+      <div class="shot wide"><div class="frame" data-screen="20-day-board"></div><p class="cap"><b>Studios</b> (menu): every room's day at a glance; pick a date, filter, Book.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>typed questions, answered in code</span><span class="chip gain"><b>Gain</b>the day board</span><span class="chip lose"><b>Lose</b>questions borrowing an earlier request's details</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">3 · Finding out · my bookings</span><h2>A list built by code, with actions on each booking</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real reply, 13 Oct</i></div><div class="body"><div data-chat="mine"></div>
+      <p class="note">Correct here, but written by the AI from raw calendar events - the last place a misread could reach someone.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot wide"><div class="frame" data-screen="23-my-bookings"></div><p class="cap"><b>My bookings:</b> what you booked and what you're tagged on (engineer, arranger), the next 7 days; <b>See all upcoming</b> opens the rest. Cancel asks "are you sure?" first.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip change"><b>Change</b>AI-written list → code-written list</span><span class="chip gain"><b>Gain</b>Move and Cancel on every booking</span><span class="chip gain"><b>Gain</b>a department view for coordinators (later)</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">4 · Cancel and move</span><h2>Buttons on the exact booking; typing still finds it</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat <i>real replies, 13 Oct</i></div><div class="body"><div data-chat="change"></div>
+      <p class="note">This works today - finding a booking from a loose description, a card, a typed "yes". Two bookings with the same title need a "which one?" question.</p></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="24-typed-cancel" data-user="cancel my friday booking"></div><p class="cap"><b>Typed:</b> every match, each with its own buttons.</p></div>
+      <div class="shot"><div class="frame" data-screen="25-typed-move" data-user="make it 3pm"></div><div style="height:8px"></div><div class="frame" data-screen="27-after-change"></div><p class="cap"><b>"make it 3pm"</b> becomes one tap; messages update in place after a change.</p></div>
+      <div class="shot"><div class="frame" data-screen="26-move-form"></div><p class="cap"><b>Move</b> opens a pre-filled form; the new time is checked first.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>ownership, coordinator rights, create-before-delete</span><span class="chip lose"><b>Lose</b>"which one?" and typing "yes"</span><span class="chip gain"><b>Gain</b>old messages never show a stale booking</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">5 · Approvals, notices and reminders</span><h2>Approve with a button; reminders free up unused rooms</h2></div>
+  <div class="ba">
+    <div class="lane now"><div class="lh">Now · chat</div><div class="body"><div class="textlane">
+      <p>The approval engine is built (one Google Sheet row per request, a sweep every 10 minutes, a finalize that cannot double-book). The way people answer is the weak part:</p>
+      <ul><li>The holder types "yes" or "no"; the AI's router reads it.</li><li>The requester types "cleared with &lt;name&gt;" - this has looped.</li><li>Names have come out blank in the request messages.</li><li>The same request could open twice.</li><li>Only the booker is asked, not the engineer.</li><li>No reminders; notices only when someone else changes your booking.</li></ul></div></div></div>
+    <div class="lane after"><div class="lh">After · Slack app <i>Block Kit</i></div><div class="body"><div class="strip">
+      <div class="shot"><div class="frame" data-screen="28-approval-holder"></div><p class="cap"><b>The holder</b> (and the engineer): agree and move, or decline.</p></div>
+      <div class="shot"><div class="frame" data-screen="29-approval-requester"></div><div style="height:8px"></div><div class="frame" data-screen="30-shared-booth"></div><p class="cap"><b>The requester</b> can withdraw; <b>a held booth</b> is two buttons.</p></div>
+      <div class="shot"><div class="frame" data-screen="31-notices"></div><p class="cap"><b>Notices and reminders:</b> engineer notice; studio sessions the day before; booths and meeting rooms every Monday 9 AM.</p></div>
+    </div></div></div>
+  </div>
+  <div class="chips"><span class="chip keep"><b>Keep</b>the approval engine and its deadlines</span><span class="chip change"><b>Change</b>typed yes/no → buttons (fixes the loops and blank names)</span><span class="chip gain"><b>Gain</b>engineer can answer; withdraw; reminders</span></div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">Summary</span><h2>Keep, gain, lose, change</h2></div>
+  <table class="sum">
+    <tr><th>Area</th><th>Keep</th><th>Gain</th><th>Lose</th><th>Change</th></tr>
+    <tr><td>Starting</td><td>typing the first message</td><td>DM menu</td><td>"reset"</td><td>AI routes and pre-fills only</td></tr>
+    <tr><td>Booking</td><td>ranking, every check, heads-ups, alternatives</td><td>only free rooms offered; one-tap fixes</td><td>back-and-forth, card, "yes"</td><td>one two-step form; title by code</td></tr>
+    <tr><td>Details</td><td>nickname reading, "Did you mean…?", new clients</td><td>fields by department and session</td><td>carry-over between requests</td><td>pickers instead of parsing</td></tr>
+    <tr><td>Series</td><td>dates in code, per-date changes</td><td>move / cancel whole series</td><td>-</td><td>repeat fields; dates listed</td></tr>
+    <tr><td>Paired rooms</td><td>several rooms per booking</td><td>-</td><td>-</td><td>booths and holding rooms on the form</td></tr>
+    <tr><td>Finding out</td><td>typed questions, code answers</td><td>day board; Book on every answer</td><td>borrowed context</td><td>my bookings written by code</td></tr>
+    <tr><td>Cancel / move</td><td>ownership, create-before-delete</td><td>buttons on the exact booking; updated messages</td><td>"which one?", "yes"</td><td>confirm pop-up; move form</td></tr>
+    <tr><td>Approvals</td><td>engine, sheet, deadlines</td><td>engineer answers, withdraw, reminders</td><td>typed replies</td><td>buttons</td></tr>
+    <tr><td>Behind the scenes</td><td>logs, calendar, Airtable</td><td>a log of every click</td><td>silent failures during an outage</td><td>form flows tested by people</td></tr>
+  </table>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">Behind the scenes</span><h2>What changes for running and testing it</h2></div>
+  <div class="grid2">
+    <div class="card"><h3>Running</h3><ul>
+      <li>Slack app: Interactivity turned on (one request URL, one search URL); scopes as now.</li>
+      <li>Both new URLs added to the Cloudflare exemption rule, and to the uptime monitor.</li>
+      <li>Slack expects an answer within 3 seconds: each click is acknowledged at once ("Booking…"); the work follows.</li>
+      <li>During an outage, a click shows Slack's own error instead of being lost silently.</li>
+      <li>Reminders, the weekly message and the approval sweep run on a schedule, outage or not.</li></ul></div>
+    <div class="card"><h3>Testing and records</h3><ul>
+      <li>A new log: every button press and form submission (who, what, result, time).</li>
+      <li>Form flows are tested by people following a script, checked afterwards from the logs.</li>
+      <li>Offline checks feed recorded Slack payloads through the same code; layouts are checked in the Block Kit Builder.</li>
+      <li>Test dates stay a year ahead: date pickers open on next year during testing.</li>
+      <li>Launch notifications switch on in one place instead of several.</li></ul></div>
+  </div>
+  <span class="pageno"></span>
+</section>
+
+<section class="slide">
+  <div class="head"><span class="kicker">Next</span><h2>From design to build</h2>
+  <p class="sub">Not a rebuild from scratch: the back end is kept and called by the forms; the chat side gets smaller as each flow moves over. The chat keeps working until each form is tested.</p></div>
+  <div class="grid3">
+    <div class="card"><h3>1 · Set up</h3><ul><li>Slack app Interactivity</li><li>Cloudflare exemption for the new URLs</li><li>Series id on new series events</li></ul></div>
+    <div class="card"><h3>2 · Build in order</h3><ul><li>Menu and Book a room (studios)</li><li>Results, My bookings, cancel and move</li><li>Studios board and typed answers</li><li>Internal rooms, paired rooms, series</li><li>Approvals, notices, reminders</li></ul></div>
+    <div class="card"><h3>3 · Test each with people</h3><ul><li>A script per flow</li><li>Results checked from the logs</li><li>The chat path retires flow by flow</li></ul>
+      <p style="font-size:13.5px;color:var(--muted)"><b style="color:var(--ink)">Open question:</b> rooms on neither ranking list (bookable today after a warning) - offer them under "Show all suitable rooms", or not in the form?</p></div>
+  </div>
+  <span class="src">Design record: docs/design/slack-app-processes.md · screens: docs/design/blockkit/</span><span class="pageno"></span>
+</section>
+
+</div></div>
+<nav class="nav" aria-label="Slides"><button id="prev" aria-label="Previous slide">←</button><span id="count"></span><button id="next" aria-label="Next slide">→</button></nav>
+
+<script id="screens" type="application/json">/*SCREENS*/</script>
+<script id="before" type="application/json">/*BEFORE*/</script>
+<script>
+(function () {
+  const SCREENS = JSON.parse(document.getElementById('screens').textContent);
+  const BEFORE = JSON.parse(document.getElementById('before').textContent);
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function mrk(s) {
+    let h = esc(s);
+    h = h.replace(/\*([^*\n]+)\*/g, '<b>$1</b>');
+    h = h.replace(/(^|[\s(>])_([^_\n]+)_(?=$|[\s).,!?<:])/g, '$1<i>$2</i>');
+    h = h.replace(/(^|[\s(>])~([^~\n]+)~(?=$|[\s).,!?<])/g, '$1<s>$2</s>');
+    h = h.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    return h.replace(/\n/g, '<br>');
+  }
+  const txt = o => !o ? '' : (o.type === 'mrkdwn' ? mrk(o.text) : esc(o.text).replace(/\n/g, '<br>'));
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  function fdate(s) { const d = new Date(s + 'T00:00:00Z'); return DOW[d.getUTCDay()] + ', ' + MON[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear(); }
+  function ftime(s) { let [h, m] = s.split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; }
+  function sel(val, ph) { return '<div class="sk-sel">' + (val ? '<span>' + val + '</span>' : '<span class="ph">' + esc(ph || 'Select an item') + '</span>') + '<span class="car">▾</span></div>'; }
+  function opts(e, kind) {
+    const on = kind === 'radio' ? [e.initial_option && e.initial_option.value] : (e.initial_options || []).map(o => o.value);
+    const row = kind === 'box' && e.options.length > 4 && e.options.every(o => !o.description);
+    return '<div class="sk-opts' + (row ? ' row' : '') + '">' + e.options.map(o =>
+      '<div class="sk-opt"><span class="mk ' + kind + (on.indexOf(o.value) !== -1 ? ' on' : '') + '"></span><span>' + txt(o.text) +
+      (o.description ? '<span class="d">' + txt(o.description) + '</span>' : '') + '</span></div>').join('') + '</div>';
+  }
+  function el(e) {
+    switch (e.type) {
+      case 'button': return '<span class="sk-btn' + (e.style ? ' ' + e.style : '') + '">' + txt(e.text) + '</span>';
+      case 'overflow': return '<span class="sk-ovf" title="' + esc(e.options.map(o => o.text.text).join(' · ')) + '">⋯</span>';
+      case 'static_select': case 'external_select':
+        return sel(e.initial_option ? txt(e.initial_option.text) : '', e.placeholder && e.placeholder.text);
+      case 'users_select': return sel('', e.placeholder && e.placeholder.text);
+      case 'datepicker': return sel(e.initial_date ? '📅 ' + fdate(e.initial_date) : '', 'Select a date');
+      case 'timepicker': return sel(e.initial_time ? '🕑 ' + ftime(e.initial_time) : '', 'Select time');
+      case 'plain_text_input': return '<div class="sk-in' + (e.multiline ? ' ml' : '') + '">' + (e.initial_value ? esc(e.initial_value) : '<span class="ph">' + esc((e.placeholder && e.placeholder.text) || '') + '</span>') + '</div>';
+      case 'number_input': return '<div class="sk-in">' + esc(e.initial_value || '') + '</div>';
+      case 'radio_buttons': return opts(e, 'radio');
+      case 'checkboxes': return opts(e, 'box');
+      default: return '';
+    }
+  }
+  function block(b) {
+    switch (b.type) {
+      case 'section': {
+        const acc = b.accessory ? '<div>' + el(b.accessory) + '</div>' : '';
+        const f = b.fields ? '<div class="sk-fields">' + b.fields.map(x => '<div>' + txt(x) + '</div>').join('') + '</div>' : '';
+        return '<div class="sk-sec' + (acc ? '' : ' noacc') + '"><div class="sk-text">' + txt(b.text) + f + '</div>' + acc + '</div>';
+      }
+      case 'context': return '<div class="sk-ctx">' + b.elements.map(x => '<span>' + txt(x) + '</span>').join('') + '</div>';
+      case 'divider': return '<div class="sk-hr"></div>';
+      case 'header': return '<div class="sk-header">' + txt(b.text) + '</div>';
+      case 'actions': return '<div class="sk-actions">' + b.elements.map(el).join('') + '</div>';
+      case 'input': return '<div class="sk-input"><div class="sk-label">' + txt(b.label) + (b.optional ? ' <i>(optional)</i>' : '') + '</div>' + el(b.element) +
+        (b.hint ? '<div class="sk-hint">' + txt(b.hint) + '</div>' : '') + '</div>';
+      default: return '';
+    }
+  }
+  const blocks = bs => bs.map(block).join('');
+  const who = (w, name, t) => '<div class="sk-msg"><div class="sk-av ' + w + '">' + name[0] + '</div><div class="sk-body"><div class="sk-who">' + name +
+    (w === 'j' ? '<span class="app">APP</span>' : '') + '<span class="t">' + t + '</span></div>';
+  function message(m, user) {
+    let h = '<div class="sk sk-msgs">';
+    if (user) h += who('r', 'Requester', '10:02 AM') + '<div class="sk-text">' + esc(user) + '</div></div></div>';
+    return h + who('j', 'Jessie', '10:02 AM') + blocks(m.blocks) + '</div></div></div>';
+  }
+  function modal(m) {
+    return '<div class="sk sk-modal"><div class="sk-mh"><div class="sk-av j">J</div>' + txt(m.title) + '<span class="x">✕</span></div><div class="sk-mb">' + blocks(m.blocks) +
+      '</div>' + (m.close || m.submit ? '<div class="sk-mf">' + (m.close ? '<span class="sk-btn">' + txt(m.close) + '</span>' : '') +
+      (m.submit ? '<span class="sk-btn primary">' + txt(m.submit) + '</span>' : '') + '</div>' : '') + '</div>';
+  }
+  document.querySelectorAll('[data-screen]').forEach(n => {
+    const s = SCREENS[n.dataset.screen]; if (!s) return;
+    n.innerHTML = s.kind === 'modal' ? modal(s.json) : message(s.json, n.dataset.user);
+  });
+  document.querySelectorAll('[data-chat]').forEach(n => {
+    const c = BEFORE[n.dataset.chat]; if (!c) return;
+    n.innerHTML = '<div class="sk sk-msgs">' + c.map(([w, t]) => who(w, w === 'j' ? 'Jessie' : 'Requester', '') +
+      '<div class="sk-text">' + (w === 'j' ? mrk(t) : esc(t)) + '</div></div></div>').join('') + '</div>';
+  });
+
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  slides.forEach((s, i) => { const p = s.querySelector('.pageno'); if (p) p.textContent = (i + 1) + ' / ' + slides.length; });
+  let cur = 0;
+  const m = /^#s(\d+)$/.exec(location.hash || '');
+  if (m) cur = Math.min(slides.length - 1, Math.max(0, +m[1] - 1));
+  const count = document.getElementById('count');
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, k) => s.classList.toggle('on', k === cur));
+    count.textContent = (cur + 1) + ' / ' + slides.length;
+    try { history.replaceState(null, '', '#s' + (cur + 1)); } catch (e) {}
+  }
+  function fit() {
+    const st = document.getElementById('stage');
+    if (window.innerWidth <= 760) { st.style.transform = 'none'; return; }
+    const k = Math.min((window.innerWidth - 24) / 1280, (window.innerHeight - 60) / 720);
+    st.style.transform = 'scale(' + k + ')';
+  }
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  document.addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('input,textarea')) return;
+    if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    if (e.key === 'Home') show(0); if (e.key === 'End') show(slides.length - 1);
+  });
+  window.addEventListener('resize', fit);
+  show(cur); fit();
+})();
+</script>

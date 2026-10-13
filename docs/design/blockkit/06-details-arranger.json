@@ -1,0 +1,150 @@
+{
+  "type": "modal",
+  "callback_id": "view",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Back"
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Friday, Oct 15 · 1:00–5:00 PM · Music Mixing · Studio F*"
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "input",
+      "block_id": "kind",
+      "label": {
+        "type": "plain_text",
+        "text": "What kind of booking?"
+      },
+      "element": {
+        "type": "radio_buttons",
+        "action_id": "kind_pick",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Client work"
+            },
+            "value": "client"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Internal"
+            },
+            "value": "internal"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Personal project"
+            },
+            "value": "personal"
+          }
+        ],
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "Client work"
+          },
+          "value": "client"
+        }
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "project",
+      "label": {
+        "type": "plain_text",
+        "text": "Project"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "project_in",
+        "initial_value": "SUMMER JINGLE"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "client",
+      "label": {
+        "type": "plain_text",
+        "text": "Client"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "client_in",
+        "initial_value": "Acme Foods"
+      },
+      "optional": true,
+      "hint": {
+        "type": "plain_text",
+        "text": "For client work. Leave empty for internal or personal."
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "engineer",
+      "label": {
+        "type": "plain_text",
+        "text": "Engineer"
+      },
+      "element": {
+        "type": "users_select",
+        "action_id": "engineer_pick",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Who's engineering?"
+        }
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "A music engineer"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "arranger",
+      "label": {
+        "type": "plain_text",
+        "text": "Arranger"
+      },
+      "element": {
+        "type": "users_select",
+        "action_id": "arranger_pick",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "You"
+        }
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "Set to you"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Calendar title: *SUMMER JINGLE / Acme Foods / <engineer> x <arranger>*"
+        }
+      ]
+    }
+  ],
+  "submit": {
+    "type": "plain_text",
+    "text": "Book"
+  }
+}

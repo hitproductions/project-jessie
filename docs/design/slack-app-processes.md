@@ -4,7 +4,8 @@ Working notes, not for presenting. Every feature of the current chat build (main
 Move v29 / Room Availability v22, Claude Haiku 5.5) mapped to how the Slack-app version does it, so nothing is lost on the
 way. The before / after presentation is made from this file once the processes are settled.
 
-Status: **design agreed 13 Oct** (every section). Nothing is built. Block Kit samples live outside the repo until a design is settled.
+Status: **design agreed 13 Oct** (every section). Nothing is built. The screens are real Block Kit in `docs/design/blockkit/`
+(built by `scripts/pivot-deck/build.py`, which also writes the presentation `docs/design/slack-app-pivot-deck.html`).
 
 Legend for the last column: **Keep** (same behavior, same backend) · **Gain** (new) · **Lose** (goes away, and why that
 is fine) · **Change** (same goal, different way).

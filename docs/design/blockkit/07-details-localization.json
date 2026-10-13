@@ -1,0 +1,78 @@
+{
+  "type": "modal",
+  "callback_id": "view",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Back"
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Thursday, Oct 14 · 9:00 AM – 2:00 PM · Localization Dubbing · Studio 1 + Studio A*"
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "input",
+      "block_id": "code",
+      "label": {
+        "type": "plain_text",
+        "text": "Project code"
+      },
+      "element": {
+        "type": "external_select",
+        "action_id": "code_search",
+        "min_query_length": 1,
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Search project codes"
+        }
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "From Localization Projects. The client and the title come from it."
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "engineer",
+      "label": {
+        "type": "plain_text",
+        "text": "Engineer"
+      },
+      "element": {
+        "type": "users_select",
+        "action_id": "engineer_pick",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "You"
+        }
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "Set to you"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Booking type: Entertainment (always, for Localization) · Calendar title: *<project code> / HL*"
+        }
+      ]
+    }
+  ],
+  "submit": {
+    "type": "plain_text",
+    "text": "Book"
+  }
+}
