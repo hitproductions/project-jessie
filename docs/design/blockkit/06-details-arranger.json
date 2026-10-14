@@ -85,7 +85,7 @@
       "element": {
         "type": "plain_text_input",
         "action_id": "client_in",
-        "initial_value": "Acme Foods"
+        "initial_value": "Sasa Abella"
       },
       "optional": true,
       "hint": {
@@ -138,7 +138,7 @@
       "elements": [
         {
           "type": "mrkdwn",
-          "text": "Calendar title: *SUMMER JINGLE / Acme Foods / <engineer> x <arranger>*"
+          "text": "Calendar title: *SUMMER JINGLE / Sasa Abella / <engineer> x <arranger>*"
         }
       ]
     }

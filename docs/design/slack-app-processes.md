@@ -6,6 +6,7 @@ way. The before / after presentation is made from this file once the processes a
 
 Status: **design agreed 13 Oct** (every section). Nothing is built. The screens are real Block Kit in `docs/design/blockkit/`
 (built by `scripts/pivot-deck/build.py`, which also writes the presentation `docs/design/slack-app-pivot-deck.html`).
+Setup, testing and build order for when the build starts: [`slack-app-build-notes.md`](slack-app-build-notes.md).
 
 Legend for the last column: **Keep** (same behavior, same backend) · **Gain** (new) · **Lose** (goes away, and why that
 is fine) · **Change** (same goal, different way).

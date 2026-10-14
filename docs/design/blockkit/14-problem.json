@@ -104,12 +104,12 @@
       "element": {
         "type": "plain_text_input",
         "action_id": "client_in",
-        "initial_value": "Acme Food"
+        "initial_value": "Sasa Abela"
       },
       "optional": true,
       "hint": {
         "type": "plain_text",
-        "text": "Did you mean Acme Foods? Change it, or keep it as typed."
+        "text": "Did you mean Sasa Abella? Change it, or keep it as typed."
       }
     },
     {

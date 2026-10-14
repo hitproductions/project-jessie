@@ -61,7 +61,7 @@ B["avail"] = [
 
 B["mine"] = [
     ("r", "what do i have booked this week?"),
-    ("j", "Your bookings this week that I can find (Oct 13–17):\n\n*THUNDER CAT / [client] / HL*\n Date: October 13, 2027 (Wed)\n Time: 8:00 PM – 10:00 PM\n Room: Studio 7\n\n*YES / [client] / HL*\n Date: October 14, 2027 (Thu)\n Time: 2:00 PM – 5:00 PM\n Room: Studio 7\n\n*SOUPS / [client] / DR*\n Date: October 14, 2027 (Thu)\n Time: 1:00 PM – 4:00 PM\n Room: Studio 8 (booked by you, for [colleague]; [colleague] engineering)"),
+    ("j", "Your bookings this week that I can find (Oct 13–17):\n\n*THUNDER CAT / Jem Lim / HL*\n Date: October 13, 2027 (Wed)\n Time: 8:00 PM – 10:00 PM\n Room: Studio 7\n\n*YES / Sasa Abella / HL*\n Date: October 14, 2027 (Thu)\n Time: 2:00 PM – 5:00 PM\n Room: Studio 7\n\n*SOUPS / Angela Dela Calzada / PL x DR*\n Date: October 14, 2027 (Thu)\n Time: 1:00 PM – 4:00 PM\n Room: Studio 8 (booked by you, for Peter; Daryl engineering)"),
 ]
 
 B["change"] = [

@@ -181,7 +181,7 @@ table.sum td:first-child { font-weight: 600; white-space: nowrap; }
 
 <section class="slide title">
   <span class="kicker">Jessie · studio booking assistant · pivot overview</span>
-  <h1>From chatbot<br>to Slack app</h1>
+  <h1>Jessie: from<br>conversation to forms</h1>
   <p class="sub">Jessie books studios, booths and meeting rooms from Slack. This deck compares how each part works today, by chat, with how it works as a Slack app with buttons and forms - what we keep, gain, lose and change.</p>
   <div class="tagrow"><span class="tag">October 2026</span><span class="tag">Design agreed · not yet built</span><span class="tag">Every screen is real Block Kit</span></div>
   <span class="pageno"></span>
@@ -425,37 +425,6 @@ table.sum td:first-child { font-weight: 600; white-space: nowrap; }
     <tr><td>Behind the scenes</td><td>logs, calendar, Airtable</td><td>a log of every click</td><td>silent failures during an outage</td><td>form flows tested by people</td></tr>
   </table>
   <span class="pageno"></span>
-</section>
-
-<section class="slide">
-  <div class="head"><span class="kicker">Behind the scenes</span><h2>What changes for running and testing it</h2></div>
-  <div class="grid2">
-    <div class="card"><h3>Running</h3><ul>
-      <li>Slack app: Interactivity turned on (one request URL, one search URL); scopes as now.</li>
-      <li>Both new URLs added to the Cloudflare exemption rule, and to the uptime monitor.</li>
-      <li>Slack expects an answer within 3 seconds: each click is acknowledged at once ("Booking…"); the work follows.</li>
-      <li>During an outage, a click shows Slack's own error instead of being lost silently.</li>
-      <li>Reminders, the weekly message and the approval sweep run on a schedule, outage or not.</li></ul></div>
-    <div class="card"><h3>Testing and records</h3><ul>
-      <li>A new log: every button press and form submission (who, what, result, time).</li>
-      <li>Form flows are tested by people following a script, checked afterwards from the logs.</li>
-      <li>Offline checks feed recorded Slack payloads through the same code; layouts are checked in the Block Kit Builder.</li>
-      <li>Test dates stay a year ahead: date pickers open on next year during testing.</li>
-      <li>Launch notifications switch on in one place instead of several.</li></ul></div>
-  </div>
-  <span class="pageno"></span>
-</section>
-
-<section class="slide">
-  <div class="head"><span class="kicker">Next</span><h2>From design to build</h2>
-  <p class="sub">Not a rebuild from scratch: the back end is kept and called by the forms; the chat side gets smaller as each flow moves over. The chat keeps working until each form is tested.</p></div>
-  <div class="grid3">
-    <div class="card"><h3>1 · Set up</h3><ul><li>Slack app Interactivity</li><li>Cloudflare exemption for the new URLs</li><li>Series id on new series events</li></ul></div>
-    <div class="card"><h3>2 · Build in order</h3><ul><li>Menu and Book a room (studios)</li><li>Results, My bookings, cancel and move</li><li>Studios board and typed answers</li><li>Internal rooms, paired rooms, series</li><li>Approvals, notices, reminders</li></ul></div>
-    <div class="card"><h3>3 · Test each with people</h3><ul><li>A script per flow</li><li>Results checked from the logs</li><li>The chat path retires flow by flow</li></ul>
-      <p style="font-size:13.5px;color:var(--muted)"><b style="color:var(--ink)">Open question:</b> rooms on neither ranking list (bookable today after a warning) - offer them under "Show all suitable rooms", or not in the form?</p></div>
-  </div>
-  <span class="src">Design record: docs/design/slack-app-processes.md · screens: docs/design/blockkit/</span><span class="pageno"></span>
 </section>
 
 </div></div>

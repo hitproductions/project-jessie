@@ -4,7 +4,7 @@
       "type": "section",
       "text": {
         "type": "mrkdwn",
-        "text": "🔁 *Priority request for your booking*\n*QAW3 / LS* · Studio F · Thu, Oct 14 · 2:00–4:00 PM"
+        "text": "🔁 *Priority request for your booking*\n*QAW3 / MGM* · Studio F · Thu, Oct 14 · 2:00–4:00 PM"
       }
     },
     {
@@ -12,7 +12,7 @@
       "elements": [
         {
           "type": "mrkdwn",
-          "text": "Requested by Mara Cruz for a Celebrity Recording, which takes priority over VO Recording in Studio F."
+          "text": "Requested by Lea Lardizabal for a Celebrity Recording, which takes priority over VO Recording in Studio F."
         }
       ]
     },

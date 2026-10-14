@@ -158,10 +158,10 @@ S["06-details-arranger"] = ("modal", modal("Book a room", [
     dv,
     inp("kind", "What kind of booking?", radio("kind_pick", kind)),
     inp("project", "Project", text_in("project_in", "SUMMER JINGLE")),
-    inp("client", "Client", text_in("client_in", "Acme Foods"), optional=True, hint="For client work. Leave empty for internal or personal."),
+    inp("client", "Client", text_in("client_in", "Sasa Abella"), optional=True, hint="For client work. Leave empty for internal or personal."),
     inp("engineer", "Engineer", users("engineer_pick", "Who's engineering?"), hint="A music engineer"),
     inp("arranger", "Arranger", users("arranger_pick", "You"), hint="Set to you"),
-    ctx("Calendar title: *SUMMER JINGLE / Acme Foods / <engineer> x <arranger>*"),
+    ctx("Calendar title: *SUMMER JINGLE / Sasa Abella / <engineer> x <arranger>*"),
 ], submit="Book", close="Back"))
 S["07-details-localization"] = ("modal", modal("Book a room", [
     sec("🗓️ *Thursday, Oct 14 · 9:00 AM – 2:00 PM · Localization Dubbing · Studio 1 + Studio A*"),
@@ -215,7 +215,7 @@ S["12-booking"] = ("modal", modal("Book a room", [
     ctx("Checking the room and writing it to the calendar. This takes a few seconds."),
 ], close="Close"))
 S["13-booked"] = ("modal", modal("Book a room", [
-    sec("✅ *Booked.*\n*QAW1 / Acme Foods / HL*\nStudio 8 · Thursday, Oct 14 · 2:00–4:00 PM"),
+    sec("✅ *Booked.*\n*QAW1 / Sasa Abella / HL*\nStudio 8 · Thursday, Oct 14 · 2:00–4:00 PM"),
     ctx("The details and the Move / Cancel buttons are in your DM with Jessie."),
 ], close="Done"))
 S["14-problem"] = ("modal", modal("Book a room", [
@@ -224,17 +224,17 @@ S["14-problem"] = ("modal", modal("Book a room", [
     DATE_LINE,
     inp("room", "Room", radio("room_radio", [opt("Studio F", d="Recommended · usual for VO Recording"),
                                              opt("Studio C", d="Usual for VO Recording")])),
-    inp("client", "Client", text_in("client_in", "Acme Food"), optional=True, hint="Did you mean Acme Foods? Change it, or keep it as typed."),
+    inp("client", "Client", text_in("client_in", "Sasa Abela"), optional=True, hint="Did you mean Sasa Abella? Change it, or keep it as typed."),
     ctx("Everything else you entered is kept."),
 ], submit="Book", close="Back"))
 S["15-result-booked"] = ("message", message([
-    sec("✅ *Booked.*\n*QAW1 / Acme Foods / HL*\nStudio 8 · Thursday, Oct 14 · 2:00–4:00 PM"),
+    sec("✅ *Booked.*\n*QAW1 / Sasa Abella / HL*\nStudio 8 · Thursday, Oct 14 · 2:00–4:00 PM"),
     ctx("VO Recording · Engineer: you · Advertising"),
     ctx("✓ Studio 8 accepted"),
     acts(btn("Move", "move"), btn("Cancel", "cancel", style="danger"), MORE),
 ]))
 S["16-result-declined"] = ("message", message([
-    sec("❌ *Studio 8 turned this booking down.* Nothing is booked, and it was taken off the calendar.\n~QAW1 / Acme Foods / HL · Thu, Oct 14 · 2:00–4:00 PM~"),
+    sec("❌ *Studio 8 turned this booking down.* Nothing is booked, and it was taken off the calendar.\n~QAW1 / Sasa Abella / HL · Thu, Oct 14 · 2:00–4:00 PM~"),
     ctx("Studio F and Studio C are free then."),
     acts(btn("Book Studio F instead", "rebook_room", style="primary"), btn("Pick another room or time", "reopen")),
 ]))
@@ -337,22 +337,22 @@ def booking(title, line, meta, eid, buttons=True):
 
 S["23-my-bookings"] = ("message", message(
     [sec("*Your bookings · next 7 days*")]
-    + booking("QAW1 / Acme Foods / HL", "Thu, Oct 14 · 2:00–4:00 PM · Studio 8", "VO Recording · Engineer: you", "EV1")
+    + booking("QAW1 / Harold Orozco / HL", "Thu, Oct 14 · 2:00–4:00 PM · Studio 8", "VO Recording · Engineer: you", "EV1")
     + [dv] + booking("QAW7 / HL", "Mon, Oct 18 · 1:00–3:00 PM · Studio 8", "Music Mixing · Engineer: you", "EV2")
     + [dv, sec("*You're tagged on*")]
-    + booking("BLUE BIRD / LS", "Fri, Oct 15 · 10:00 AM – 12:00 PM · Studio F", "You're the engineer · booked by Leo Santos", "EV3", buttons=False)
+    + booking("BLUE BIRD / MGM", "Fri, Oct 15 · 10:00 AM – 12:00 PM · Studio F", "You're the engineer · booked by Glenn Mariano", "EV3", buttons=False)
     + [dv, acts(btn("See all upcoming", "all_upcoming"))]))
 S["24-typed-cancel"] = ("message", message(
     [sec("You have two bookings on Friday, Oct 15:")]
     + booking("QAW9 / HL", "Fri, Oct 15 · 10:00–11:00 AM · Studio 8", "VO Recording", "EV4")
     + booking("QAW9 / HL", "Fri, Oct 15 · 4:00–5:00 PM · Studio 8", "VO Recording", "EV5")))
 S["25-typed-move"] = ("message", message([
-    sec("*QAW1 / Acme Foods / HL* · Thu, Oct 14 · 2:00–4:00 PM · Studio 8"),
+    sec("*QAW1 / Harold Orozco / HL* · Thu, Oct 14 · 2:00–4:00 PM · Studio 8"),
     acts(btn("Move to 3:00–5:00 PM", "move_quick", "EV1|15:00-17:00", style="primary"), btn("Pick another time", "move", "EV1")),
     ctx("Studio 8 is free 3:00–5:00 PM on Thursday."),
 ]))
 S["26-move-form"] = ("modal", modal("Move booking", [
-    sec("*QAW1 / Acme Foods / HL*\nNow: Thu, Oct 14 · 2:00–4:00 PM · Studio 8"),
+    sec("*QAW1 / Harold Orozco / HL*\nNow: Thu, Oct 14 · 2:00–4:00 PM · Studio 8"),
     dv,
     inp("date", "New date", {"type": "datepicker", "action_id": "date_pick", "initial_date": "2027-10-15"}),
     inp("start", "Start", {"type": "timepicker", "action_id": "start_pick", "initial_time": "14:00", "timezone": "Asia/Manila"}),
@@ -366,15 +366,15 @@ S["27-after-change"] = ("message", message([
     sec("~QAW9 / HL~\n~Fri, Oct 15 · 10:00–11:00 AM · Studio 8~"),
     ctx("❌ Cancelled by you at 10:42 AM · Engineer notified"),
     dv,
-    sec("✅ *Moved.* QAW1 / Acme Foods / HL\nFri, Oct 15 · 2:00–4:00 PM · Studio 8"),
+    sec("✅ *Moved.* QAW1 / Harold Orozco / HL\nFri, Oct 15 · 2:00–4:00 PM · Studio 8"),
     ctx("Was Thu, Oct 14 · 2:00–4:00 PM · Engineer notified"),
     acts(btn("Move", "move"), btn("Cancel", "cancel", style="danger")),
 ]))
 
 # ---- 6. Approvals and notices -----------------------------------------------------------------------------------
 S["28-approval-holder"] = ("message", message([
-    sec("🔁 *Priority request for your booking*\n*QAW3 / LS* · Studio F · Thu, Oct 14 · 2:00–4:00 PM"),
-    ctx("Requested by Mara Cruz for a Celebrity Recording, which takes priority over VO Recording in Studio F."),
+    sec("🔁 *Priority request for your booking*\n*QAW3 / MGM* · Studio F · Thu, Oct 14 · 2:00–4:00 PM"),
+    ctx("Requested by Lea Lardizabal for a Celebrity Recording, which takes priority over VO Recording in Studio F."),
     sec("If you agree, move your session first. Free for you that day:\n• Studio 7 · 2:00–4:00 PM (same time)\n• Studio F · 4:00–6:00 PM (same room, later)"),
     ctx("Sent to you and the booking's engineer; the first answer decides. Answer by 6:00 PM today, or your booking stays."),
     acts(btn("Agree and move my booking", "consent_move", style="primary"),
@@ -382,21 +382,21 @@ S["28-approval-holder"] = ("message", message([
                                                "confirm": pt("Decline"), "deny": pt("Go back")})),
 ]))
 S["29-approval-requester"] = ("message", message([
-    sec("⏳ *Requested.* Studio F on Thu, Oct 14, 2:00–4:00 PM is held by *QAW3 / LS*. Jessie asked the booker and the engineer."),
+    sec("⏳ *Requested.* Studio F on Thu, Oct 14, 2:00–4:00 PM is held by *QAW3 / MGM*. Jessie asked the booker and the engineer."),
     ctx("You'll hear back here by 6:00 PM today. Nothing is booked until then."),
     acts(btn("I've already cleared it with them", "attest"), btn("Withdraw request", "withdraw", style="danger"),
          btn("Pick another room or time", "reopen")),
 ]))
 S["30-shared-booth"] = ("message", message([
     sec("🎙️ *Someone would like your booth*\n*M4* · Thu, Oct 14 · 3:00–4:00 PM — held for you"),
-    ctx("Requested by Leo Santos. If you don't answer by 2:00 PM, they get it for that hour."),
+    ctx("Requested by Glenn Mariano. If you don't answer by 2:00 PM, they get it for that hour."),
     acts(btn("Let them use it", "mbooth_yes", style="primary"), btn("Keep it", "mbooth_no")),
 ]))
 S["31-notices"] = ("message", message([
-    sec("🎧 *You're engineering* *QAW1 / Acme Foods / HL* · Studio 8 · Thu, Oct 14 · 2:00–4:00 PM"),
+    sec("🎧 *You're engineering* *QAW1 / Sasa Abella / HL* · Studio 8 · Thu, Oct 14 · 2:00–4:00 PM"),
     acts(btn("Got it", "ack")),
     dv,
-    sec("⏰ *Tomorrow:* QAW1 / Acme Foods / HL · Studio 8 · 2:00–4:00 PM. Still on?"),
+    sec("⏰ *Tomorrow:* QAW1 / Sasa Abella / HL · Studio 8 · 2:00–4:00 PM. Still on?"),
     acts(btn("Still on", "keep", style="primary"), btn("Move", "move"), btn("Free up the room", "release", style="danger")),
     dv,
     sec("📅 *Your booths and meeting rooms this week*"),
