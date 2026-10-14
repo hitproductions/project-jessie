@@ -26,7 +26,8 @@ https://signal.hitpromanila.net/webhook/jessie-interactions
 **2. Cloudflare - make sure Slack can reach that URL.** Open the exemption (skip) rule set on 1 Oct for Jessie's and
 Posty's webhooks (Security → WAF → Custom rules). If it matches every `/webhook/` path, nothing to do. If it lists
 specific paths, add `/webhook/jessie-interactions`. (Without it, Cloudflare can answer Slack with 403 - the outage
-mechanism in PENDING 21. Please copy the rule's expression into `docs/outages/OUTAGES.md`, which still says "to be copied".)
+mechanism in PENDING 21.) **Checked 14 Oct:** the rule matches every path starting with `/webhook/`, so this URL is
+already covered - nothing to add. The expression is now in `docs/outages/OUTAGES.md`.
 
 **3. n8n - import into a new workflow** (not into main or any existing workflow):
 - Workflows → **Create workflow** → ⋯ → **Import from File** → `workflows/slack-interactions-v1.json`.

@@ -490,7 +490,10 @@ Seen without any access to the server (IT's rule from 29 Sep), from Slack and th
 - **Back up ~10:45 PHT, 1 Oct:** a Cloudflare exemption (skip) rule was set for Jessie's and Posty's webhooks, and both
   answer again. So today's silence was Cloudflare's bot protection blocking Slack, as in PENDING 21. Still open: why it
   started at the same minute two days running (a daily security-setting change or reset at 01:30 UTC?) - keep watching
-  09:25-09:35 PHT tomorrow. The rule itself (which expression, which protections it skips) to be copied here.
+  09:25-09:35 PHT tomorrow. **The rule's expression** (copied 14 Oct):
+  `(http.host eq "signal.hitpromanila.net" and (starts_with(http.request.uri.path, "/webhook/") or http.request.uri.path eq "/healthz"))`
+  - it covers every `/webhook/` path, so new webhooks (e.g. the Slack-app Interactivity URL `/webhook/jessie-interactions`)
+  are exempt without changing it. Which protections it skips is still to be noted.
 
 ## Data point: 1 October 11:18 PHT - late deliveries after the exemption rule
 
