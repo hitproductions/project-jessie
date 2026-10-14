@@ -1,9 +1,16 @@
 #!/usr/bin/env node
-// Slice 1 step B offline (Slack Interactions v7): Read Step 2 -> Book Session prepare inputs; After Prepare (PREPARED ->
+// Slice 1 step B offline (Slack Interactions v7/v8): Read Step 2 -> Book Session prepare inputs; After Prepare (PREPARED ->
 // the booking inputs from prepare's fields; a question -> the form again, values kept, the question on top, an extra field
-// when needed); After Book (CREATED -> Booked + DM; declined / taken -> the form again). Usage: node scripts/sim-slice1-b.js [file]
+// when needed); After Book (CREATED -> Booked + DM; declined / taken -> the form again).
+// Since v8 every refusal goes through Book Session's real Return Rejection first - the shape the form actually receives
+// (gotcha 29: v7's sim fed Check Conflicts' raw output and missed the blank "Did you mean" notice).
+// Usage: node scripts/sim-slice1-b.js [slack interactions] [book session]
 const fs = require('fs');
-const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v7.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v8.json', 'utf8'));
+const bs = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/book-session-v110.json', 'utf8'));
+const bs109 = JSON.parse(fs.readFileSync('workflows/imported/book-session-v109-imported.json', 'utf8'));
+const rejectVia = (wf, raw) => new Function('$input', wf.nodes.find(n => n.name === 'Return Rejection').parameters.jsCode)({ first: () => ({ json: raw }) })[0].json;
+const reject = raw => rejectVia(bs, raw);
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = n => si.nodes.find(x => x.name === n).parameters.jsCode;
@@ -66,18 +73,35 @@ async function run(name, input, outs) {
   ok(A.book.description === 'Engineer: Howard Luistro | Booked by: Howard Luistro | ref: U1 | team: U1', 'book: description keeps ref and team - ' + A.book.description);
 
   // ---- After Prepare: questions -> the form again
-  A = (await run('After Prepare', [{ json: { status: 'REJECTED', reason: 'CLIENT_CHECK', typed: 'jem lin', suggestions: ['Jem Lim'] } }], outs))[0].json;
+  const CC = { verdict: 'REJECTED', reason: 'CLIENT_CHECK', typed: 'jem lin', suggestions: ['Jem Lim'],
+    human: 'Nothing was prepared - "jem lin" is not in the client list, but it is close to Jem Lim. Ask the requester once, naming both: "Did you mean Jem Lim, or is jem lin a new client?" Then call Prepare Booking again.' };
+  A = (await run('After Prepare', [{ json: reject(CC) }], outs))[0].json;
   const V = A.view;
   ok(!A.go && A.view_id === 'V1' && /Did you mean \*Jem Lim\*/.test(V.blocks[0].text.text), 'CLIENT_CHECK -> "Did you mean Jem Lim?" on top');
   ok(JSON.parse(V.private_metadata).asked === 'Did you mean Jem Lim, or is jem lin a new client?', 'the question is remembered, so Book again keeps the new name');
+  ok(!/""|\*\*/.test(V.blocks[0].text.text), 'never blank quotes or ** - ' + V.blocks[0].text.text);
+  // the same refusal through v109's Return Rejection (fields dropped): read back from Book Session's sentence
+  let A9 = (await run('After Prepare', [{ json: rejectVia(bs109, CC) }], outs))[0].json;
+  ok(/"jem lin" isn’t in the client list\. Did you mean \*Jem Lim\*/.test(A9.view.blocks[0].text.text)
+     && JSON.parse(A9.view.private_metadata).asked === 'Did you mean Jem Lim, or is jem lin a new client?', 'v109 shape (fields dropped) -> still "Did you mean Jem Lim?", read from the sentence');
+  ok(rejectVia(bs109, CC).typed === undefined && reject(CC).typed === 'jem lin' && reject(CC).suggestions[0] === 'Jem Lim', 'Book Session v110 passes typed and suggestions; v109 did not');
+  A9 = (await run('After Prepare', [{ json: rejectVia(bs109, { verdict: 'REJECTED', reason: 'CLIENT_CHECK', human: 'something else' }) }], outs))[0].json;
+  ok(/"jem lim" isn’t in the client list\. Check the spelling/.test(A9.view.blocks[0].text.text) && !/""|\*\*/.test(A9.view.blocks[0].text.text),
+     'nothing to read -> the client from the form, plain words, never blank');
+  ok(reject({ verdict: 'REJECTED', reason: 'ROOM_OCCUPIED', human: 'x' }).typed === undefined
+     && !('typed' in JSON.parse(JSON.stringify(reject({ verdict: 'REJECTED', reason: 'ROOM_OCCUPIED', human: 'x' })))), 'v110: no empty fields added to other refusals');
   const vb = id => V.blocks.find(b => b.block_id === id);
   ok(vb('project').element.initial_value === 'project qaw1' && vb('client').element.initial_value === 'jem lim' && vb('room').element.initial_option.value === 'Studio 8'
      && vb('engineer').element.initial_option.value === 'U1', 'entries kept (project, client, room, engineer)');
   ok(V.submit && V.close.text === 'Back' && V.callback_id === 'book_step2', 'still the step-2 form with Book');
-  A = (await run('After Prepare', [{ json: { status: 'REJECTED', reason: 'NEED_DEPARTMENT', options: ['Audio Post', 'Music'] } }], outs))[0].json;
+  const ND = { verdict: 'REJECTED', reason: 'NEED_DEPARTMENT', options: ['Audio Post', 'Music'],
+    human: 'Nothing was prepared - VO Recording can be Audio Post or Music. Ask the requester once: "Is this a Audio Post or a Music session?" Then call Prepare Booking again.' };
+  A = (await run('After Prepare', [{ json: reject(ND) }], outs))[0].json;
   const di = A.view.blocks.findIndex(b => b.block_id === 'department'), ni = A.view.blocks.findIndex(b => b.block_id === 'notes');
   ok(di !== -1 && di < ni && A.view.blocks[di].element.options.map(o => o.value).join() === 'Audio Post,Music', 'NEED_DEPARTMENT -> a Department choice before Notes');
-  A = (await run('After Prepare', [{ json: { status: 'REJECTED', reason: 'NEED_BOOKING_TYPE', options: ['Advertising', 'Personal'], askClient: true } }], outs))[0].json;
+  A9 = (await run('After Prepare', [{ json: rejectVia(bs109, ND) }], outs))[0].json;
+  ok(A9.view.blocks.find(b => b.block_id === 'department').element.options.map(o => o.value).join() === 'Audio Post,Music', 'v109 shape -> departments read from the sentence');
+  A = (await run('After Prepare', [{ json: reject({ verdict: 'REJECTED', reason: 'NEED_BOOKING_TYPE', options: ['Advertising', 'Personal'], askClient: true, human: 'x' }) }], outs))[0].json;
   ok(A.view.blocks.some(b => b.block_id === 'kind') && /client/.test(A.view.blocks[0].text.text), 'NEED_BOOKING_TYPE -> Kind of booking, and asks the client');
   A = (await run('After Prepare', [{ json: { status: 'REJECTED', reason: 'NEED_ARRANGER' } }], outs))[0].json;
   ok(/No arranger/.test(A.view.blocks[0].text.text), 'NEED_ARRANGER -> pick one or No arranger');
@@ -95,10 +119,14 @@ async function run(name, input, outs) {
   outs['After Prepare'] = await run('After Prepare', [{ json: { status: 'PREPARED', prep_payload: JSON.stringify({ v: 2, F }), title: F.Title } }], outs);
   let B = (await run('After Book', [{ json: { status: 'CREATED', event_id: 'E1', title: 'QAW1 / Jem Lim / HL', duration_note: '' } }], outs))[0].json;
   ok(B.ok && /✅ \*Booked\.\*/.test(B.view.blocks[0].text.text) && B.view.clear_on_close, 'CREATED -> Booked on the form; Done closes it');
-  ok(/QAW1 \/ Jem Lim \/ HL/.test(B.text) && /Studio 8 · Thursday, October 14, 2027 · 2:00 PM – 4:00 PM/.test(B.text) && /Engineer: Howard Luistro/.test(B.text) && B.channel === 'U1', 'DM: title, room, date, time, engineer - ' + B.text.replace(/\n/g, ' | '));
+  const CARD = '✅ *Booked.*\n*QAW1 / Jem Lim / HL*\n*Date:* Thursday, October 14, 2027\n*Time:* 2:00 PM – 4:00 PM\n*Room:* Studio 8';
+  ok(B.text === CARD && B.channel === 'U1', 'v8 DM: the card - title, Date, Time, Room, nothing else - ' + B.text.replace(/\n/g, ' | '));
+  ok(B.view.blocks[0].text.text === CARD, 'v8 form: the same card');
+  B = (await run('After Book', [{ json: { status: 'CREATED', event_id: 'E1', title: 'QAW1 / Jem Lim / HL', duration_note: 'Heads up: 9 hours is longer than usual.' } }], outs))[0].json;
+  ok(B.text === CARD + '\nHeads up: 9 hours is longer than usual.', 'v8 DM: an unusual length still says so, under the card');
   B = (await run('After Book', [{ json: { status: 'ROOM_DECLINED', removed: true } }], outs))[0].json;
   ok(!B.ok && /turned the booking down/.test(B.view.blocks[0].text.text) && /taken off the calendar/.test(B.view.blocks[0].text.text), 'ROOM_DECLINED -> the form again: declined, removed');
-  B = (await run('After Book', [{ json: { status: 'REJECTED', reason: 'ROOM_OCCUPIED' } }], outs))[0].json;
+  B = (await run('After Book', [{ json: reject({ verdict: 'REJECTED', reason: 'ROOM_OCCUPIED', human: 'x' }) }], outs))[0].json;
   ok(!B.ok && /just booked/.test(B.view.blocks[0].text.text), 'taken at the last second -> the form again');
 
   // ---- wiring

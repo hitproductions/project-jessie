@@ -4,7 +4,7 @@
 // step 2 checks and the calendar title). Usage: node scripts/sim-slice1-a.js [main v262] [slack interactions v3]
 const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v262.json', 'utf8'));
-const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v5.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v8.json', 'utf8'));
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
@@ -65,7 +65,18 @@ async function run(wf, name, input, outs) {
   ok(s1.view.blocks[1].element.initial_date.startsWith(String(new Date(Date.now() + 8 * 3600e3).getUTCFullYear() + 1)), 'step 1: date a year ahead');
 
   const sub1 = (vals) => ({ type: 'view_submission', view: { private_metadata: JSON.stringify({ requester: 'U1', channel: 'D1' }), state: { values: vals } } });
-  const vals = (d, a, b, p) => ({ date: { date_pick: { selected_date: d } }, start: { start_pick: { selected_time: a } }, end: { end_pick: { selected_time: b } },
+  // v8: Start / End are lists (selected_option); before v8 they were time pickers (selected_time)
+  const v8 = s1.view.blocks[2].element.type === 'static_select';
+  const tv = x => v8 ? { selected_option: x ? { value: x } : null } : { selected_time: x };
+  if (v8) {
+    const o = s1.view.blocks[2].element.options;
+    ok(o.length === 48 && o[0].value === '08:00' && o[0].text.text === '8:00 AM' && o[1].value === '08:30' && o[31].value === '23:30'
+       && o[32].value === '00:00' && o[32].text.text === '12:00 AM' && o[47].value === '07:30' && new Set(o.map(x => x.value)).size === 48,
+       'v8: half-hour times, opening at 8:00 AM, round to 7:30 AM - all 48 bookable');
+    ok(o[24].text.text === '8:00 PM' && o[8].text.text === '12:00 PM' && !s1.view.blocks[2].element.initial_option && !s1.view.blocks[3].element.initial_option,
+       'v8: labels (12:00 PM, 8:00 PM); nothing chosen in advance');
+  }
+  const vals = (d, a, b, p) => ({ date: { date_pick: { selected_date: d } }, start: { start_pick: tv(a) }, end: { end_pick: tv(b) },
     purpose: { purpose_pick: { selected_option: p ? { value: p } : null } } });
   const read1 = async (payload) => (await run(si, 'Read Step 1', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload } }] }))[0].json;
   let r1 = await read1(sub1(vals('2027-10-15', '16:00', '14:00', 'VO Recording')));

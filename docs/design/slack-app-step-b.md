@@ -31,3 +31,43 @@
 
 Offline: `node scripts/sim-slice1-b.js` 25 ok; `node scripts/sim-slice1-a.js workflows/project-jessie-v262.json
 workflows/slack-interactions-v7.json` 55; hello 20; Book Session v109: test-nodes 657, sim-room-decline 6.
+
+## Fixes from the step B test (15 Oct): Book Session v110 + Slack Interactions v8
+
+Found in the step B test (14 Oct, Howard's DM): a booking went through, but the "Did you mean …?" notice read `"" isn't in
+the client list. Did you mean **?`, the Booked result was not in the card's format, and the time pickers opened at the
+current hour. Typed booking requests still going the chat way is the next build (main v263 + Slack Interactions v9).
+
+- **Book Session v110 (details passed back):** `Return Rejection` kept only the reason and Book Session's sentence for
+  the chat, so the form never got the typed client or the suggestions. It now passes them on (typed, suggestions, options,
+  askClient, client, staff, guessed, removed - only when the check sent them). The chat reads only the sentence:
+  unchanged.
+- **Slack Interactions v8 (step B fixes):**
+  - **Booked** on the form and in the DM is the card: the title, then `Date:`, `Time:`, `Room:` - nothing else (an
+    unusual length still gets its heads-up line in the DM).
+  - **Start / End** are a list of half-hour times opening at **8:00 AM**, running to 11:30 PM and round to 7:30 AM -
+    every time still bookable, nothing chosen in advance, always Philippine Time.
+  - The **notices are never blank**: the form also reads the typed client and the suggestions from Book Session's
+    sentence (and the client field), and says it plainly if there is nothing to read.
+
+### Import (Book Session first)
+
+1. **Book Session v110** - into `EUG3sGXkfsJSYIMz`. Download into `workflows/imported/book-session-live-before-v110.json`
+   (should MATCH v109) → Import `workflows/book-session-v110.json` → Save → Publish "v110 - details passed back" →
+   download into `workflows/imported/book-session-v110-imported.json`.
+2. **Slack Interactions v8** - into `PyxSPoAMtSE1gzaH`. Download into
+   `workflows/imported/slack-interactions-live-before-v8.json` (should MATCH v7) → Import
+   `workflows/slack-interactions-v8.json` → Save → Publish "v8 - step B fixes" → download into
+   `workflows/imported/slack-interactions-v8-imported.json`.
+
+### Test (2027 dates)
+
+1. **hi → Book a room:** Start and End open at 8:00 AM, in half hours; scroll down - 11:30 PM, then 12:00 AM … 7:30 AM.
+2. Book something with Client `Jem Lin` → the notice reads *"Jem Lin" isn't in the client list. Did you mean Jem Lim?* →
+   press Book again → booked as a new client (or fix the name).
+3. **Booked** on the form and in the DM: title, Date, Time, Room only.
+4. Clean up the test bookings in the chat ("cancel <title> on <date>").
+
+Offline: `node scripts/sim-slice1-b.js` 33 ok (every refusal now goes through Book Session's real Return Rejection,
+v110's and v109's); `node scripts/sim-slice1-a.js` 57 (the time list); hello 20; Book Session v110: test-nodes 657,
+check-fromai and audit-model-text clean.
