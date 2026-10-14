@@ -9,7 +9,7 @@ was: is it possible, is it needed, what is the simplest thing that does the job.
 and tested; until then it stays on today's chat path. So building something in slice 2 loses nothing - it just stays in chat
 a little longer.
 
-Status: proposed 14 Oct, for review.
+Status: proposed 14 Oct, for review. Decided 14 Oct: the Move button is called **Change**; **no tentative / hold bookings**.
 
 ## Slice 1 - the everyday booking loop (built and tested first)
 
@@ -26,7 +26,7 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 | **After Book** | The form shows "Booking…", then **Booked** (after the room's answer is read back) or the problem with entries kept. The DM gets the result with **Move · Cancel**. A room that declines: Jessie deletes her event and says so, with **Pick another room or time**. |
 | **My bookings** | Next 7 days: bookings you made and ones you engineer or arrange - all with Move · Cancel. **Next 7 days / Previous 7 days** buttons page through the weeks (the message updates in place); a typed question ("what do I have next month?") covers any range. |
 | **Cancel** | Slack's "Are you sure?" pop-up, then the message updates to Cancelled. |
-| **Move** | A form that starts at the booking's current date, start, end and room - change only what moves; the new time is checked first. Pressing Move with nothing changed shows "Nothing changed" on the form at once (no calendar call) and nothing is moved or booked again. |
+| **Change** (was "Move", renamed 14 Oct: it covers a new date, a new time, a longer or shorter session and a new room - a session running over is just a new end time) | A form that starts at the booking's current date, start, end and room - change only what moves; the new time is checked first. Pressing Move with nothing changed shows "Nothing changed" on the form at once (no calendar call) and nothing is moved or booked again. |
 | **Series (repeating bookings)** | **Moved into slice 1 (14 Oct)** - Localization books dubbing in batches, and mixing, post sessions, M booth time and meetings also recur. A small *Repeats* box in step 1 adds how often (weekly / daily), which days (the first date's weekday ticked; Mon-Fri for a batch) and how many occurrences (up to 16) or an end date; step 2 lists every date with ✓ / ⚠️ and a ⋯ (skip, room, time), and the room list says on how many dates each room is free. The button says how many it books. Booking takes a few minutes for a batch (each date is checked and written), so the form says so and the result comes to the DM. **Shown on every booking's step 1** (studios, meetings, events, booths - decided 14 Oct); one code path. Moving or cancelling a whole series stays after release. |
 | **Typed cancel / move** | "cancel my friday booking" → the matching bookings, each with Move · Cancel. "make it 3pm" → opens the Move form pre-filled. |
 | **Typed questions** | Today's code-written availability answers, plus one **Book** button per free room (opens the form pre-filled). Room facts, people, session types answered as today. Off-topic and not understood → the menu. Each question reads only itself and the previous one. |

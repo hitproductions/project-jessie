@@ -30,7 +30,7 @@
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Move"
+            "text": "Change"
           },
           "action_id": "move4",
           "value": "x"

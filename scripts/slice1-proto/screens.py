@@ -147,11 +147,11 @@ def booking(room, when):
 
 def booked(title, line, room):
     return modal("Book a room", [sec("✅ *Booked.*\n*" + title + "*\n" + line),
-                                 ctx(room + " accepted. The details and the Move / Cancel buttons are in your DM.")], close="Done")
+                                 ctx(room + " accepted. The details and the Change / Cancel buttons are in your DM.")], close="Done")
 
 
 def result(title, line, meta):
-    return msg([sec("✅ *Booked.*\n*" + title + "*\n" + line), ctx(meta), acts(btn("Move", "move"), btn("Cancel", "cancel", "danger"))])
+    return msg([sec("✅ *Booked.*\n*" + title + "*\n" + line), ctx(meta), acts(btn("Change", "move"), btn("Cancel", "cancel", "danger"))])
 
 
 T1 = "QAW1 / Sasa Abella / HL"
@@ -217,7 +217,7 @@ S["31-step2-meeting"] = ("modal", modal("Book a room", [
 S["32-booking-likha"] = ("modal", booking("Likha", WM))
 S["33-booked-likha"] = ("modal", booked("LIKHA - Q4 planning", "Likha · " + WM, "Likha"))
 S["34-result-likha"] = ("message", msg([sec("✅ *Booked.*\n*LIKHA - Q4 planning*\nLikha · " + WM), ctx("Meeting"),
-                                         acts(btn("Move", "move"), btn("Cancel", "cancel", "danger"))]))
+                                         acts(btn("Change", "move"), btn("Cancel", "cancel", "danger"))]))
 def studio_booth(booth, studios, booth_note, series=False):
     """Studio and booth chosen separately: the booth defaults to the studio's usual one (Airtable Paired with) and any free
     vocal booth can be picked instead - the engineer patches it (Dante)."""
@@ -256,20 +256,20 @@ CONFIRM = {"title": pt("Cancel this booking?"), "text": md("*" + T1 + "*\nThu, O
 def my_bookings(first_state="live"):
     if first_state == "live":
         first = [sec("*" + T1 + "*\nThu, Oct 15 · 2:00–4:00 PM · Studio 8"), ctx("VO Recording · Engineer: you"),
-                 acts(btn("Move", "move"), btn("Cancel", "cancel", "danger", confirm=CONFIRM))]
+                 acts(btn("Change", "move"), btn("Cancel", "cancel", "danger", confirm=CONFIRM))]
     elif first_state == "cancelled":
         first = [sec("~" + T1 + "~\n~Thu, Oct 15 · 2:00–4:00 PM · Studio 8~"), ctx("❌ Cancelled by you")]
     else:
-        first = [sec("*" + T1 + "*\nFri, Oct 16 · 2:00–4:00 PM · Studio 8"), ctx("✅ Moved from Thu, Oct 15"),
-                 acts(btn("Move", "move"), btn("Cancel", "cancel", "danger"))]
+        first = [sec("*" + T1 + "*\nFri, Oct 16 · 2:00–4:00 PM · Studio 8"), ctx("✅ Changed from Thu, Oct 15"),
+                 acts(btn("Change", "move"), btn("Cancel", "cancel", "danger"))]
     return msg([sec("*Your bookings · next 7 days*")] + first + [
         dv,
         sec("*QAW7 / HL*\nMon, Oct 19 · 1:00–3:00 PM · Studio 8"), ctx("Music Mixing · Engineer: you"),
-        acts(btn("Move", "move2"), btn("Cancel", "cancel2", "danger")),
+        acts(btn("Change", "move2"), btn("Cancel", "cancel2", "danger")),
         dv,
         sec("*You're engineering*"),
         sec("*BLUE BIRD / Harold Orozco / HL*\nFri, Oct 16 · 10:00 AM – 12:00 PM · Studio F"), ctx("Booked by Glenn Mariano · you can change it too"),
-        acts(btn("Move", "move3"), btn("Cancel", "cancel3", "danger")),
+        acts(btn("Change", "move3"), btn("Cancel", "cancel3", "danger")),
         dv,
         acts(btn("Next 7 days", "week_next")),
         ctx("Or ask, like _what do I have next month?_"),
@@ -280,7 +280,7 @@ S["40-my-bookings"] = ("message", my_bookings())
 S["46-my-bookings-week2"] = ("message", msg([
     sec("*Your bookings · Oct 22 – 28*"),
     sec("*SUMMER JINGLE / Dante Nora / DR x HL*\nTue, Oct 27 · 1:00–5:00 PM · Studio F"), ctx("Music Mixing · Arranger: you"),
-    acts(btn("Move", "move4"), btn("Cancel", "cancel4", "danger")),
+    acts(btn("Change", "move4"), btn("Cancel", "cancel4", "danger")),
     dv,
     acts(btn("Previous 7 days", "week_prev"), btn("Next 7 days", "week_next2")),
 ]))
@@ -291,21 +291,21 @@ def move_form(day, warn=None):
         b += [sec(warn), dv]
     b += [sec("*" + T1 + "*\nNow: Thu, Oct 15 · 2:00–4:00 PM · Studio 8"),
           dv,
-          ctx("Starts at the booking's current date, time and room - change only what moves."),
+          ctx("Starts at the booking's current date, time and room - change the date, the time, the length or the room."),
           inp("date", "Date", date("date_pick", day)),
           inp("start", "Start", time("start_pick", "14:00")),
           inp("end", "End", time("end_pick", "16:00"), hint="Keeps the same length (2 hours) unless you change it."),
           inp("room", "Room", {"type": "static_select", "action_id": "room_pick", "initial_option": opt("Studio 8 (now)", "keep"),
                                "options": [opt("Studio 8 (now)", "keep"), opt("Studio F"), opt("Studio C"), opt("Studio 7")]}),
-          ctx("The new time is checked first. The booking stays where it is until the new one is in place.")]
-    return modal("Move booking", b, submit="Move", close="Cancel")
+          ctx("The new time is checked first. The booking stays as it is until the change is in place.")]
+    return modal("Change booking", b, submit="Change", close="Cancel")
 
 
 S["42-move-form"] = ("modal", move_form("2026-10-15"))
 S["42b-move-form-changed"] = ("modal", move_form("2026-10-16"))
-S["42c-move-unchanged"] = ("modal", move_form("2026-10-15", "⚠️ *Nothing changed.* This is the booking's current date, time and room. Change one of them, or press Cancel - nothing is moved or booked again."))
-S["43-moving"] = ("modal", modal("Move booking", [sec("⏳ *Moving " + T1 + "…*\nto Friday, Oct 16 · 2:00–4:00 PM · Studio 8")], close="Close"))
-S["44-moved"] = ("modal", modal("Move booking", [sec("✅ *Moved.*\n*" + T1 + "*\nFriday, Oct 16 · 2:00–4:00 PM · Studio 8"),
+S["42c-move-unchanged"] = ("modal", move_form("2026-10-15", "⚠️ *Nothing changed.* This is the booking's current date, time and room. Change one of them, or press Cancel - nothing is changed or booked again."))
+S["43-moving"] = ("modal", modal("Change booking", [sec("⏳ *Changing " + T1 + "…*\nto Friday, Oct 16 · 2:00–4:00 PM · Studio 8")], close="Close"))
+S["44-moved"] = ("modal", modal("Change booking", [sec("✅ *Changed.*\n*" + T1 + "*\nFriday, Oct 16 · 2:00–4:00 PM · Studio 8"),
                                                  ctx("Your bookings list is updated.")], close="Done"))
 S["45-my-bookings-moved"] = ("message", my_bookings("moved"))
 
@@ -316,9 +316,9 @@ C2 = {"title": pt("Cancel this booking?"), "text": md("*QAW9 / HL*\nFri, Oct 16 
 
 def typed_matches(second_cancelled=False):
     second = ([sec("~QAW9 / HL~\n~Fri, Oct 16 · 4:00–5:00 PM · Studio 8~"), ctx("❌ Cancelled by you")] if second_cancelled else
-              [sec("*QAW9 / HL*\nFri, Oct 16 · 4:00–5:00 PM · Studio 8"), acts(btn("Move", "move_b"), btn("Cancel", "cancel_b", "danger", confirm=C2))])
+              [sec("*QAW9 / HL*\nFri, Oct 16 · 4:00–5:00 PM · Studio 8"), acts(btn("Change", "move_b"), btn("Cancel", "cancel_b", "danger", confirm=C2))])
     return msg([sec("You have two bookings on Friday, Oct 16:"),
-                sec("*QAW9 / HL*\nFri, Oct 16 · 10:00–11:00 AM · Studio 8"), acts(btn("Move", "move"), btn("Cancel", "cancel", "danger"))] + second)
+                sec("*QAW9 / HL*\nFri, Oct 16 · 10:00–11:00 AM · Studio 8"), acts(btn("Change", "move"), btn("Cancel", "cancel", "danger"))] + second)
 
 
 S["50-typed-cancel"] = ("message", typed_matches())
@@ -387,7 +387,7 @@ S["63-series-booking"] = ("modal", modal("Book a room", [
 ], close="Close"))
 S["64-series-result"] = ("message", msg([
     sec("✅ *Booked 10 of 10 dates.* LOPH S2 / HL · Studio 1 + Studio A · 9:00 AM – 2:00 PM\n" + "\n".join("• " + d for d in _dates)),
-    acts(btn("Move a date", "move_date"), btn("Cancel a date", "cancel_date", "danger")),
+    acts(btn("Change a date", "move_date"), btn("Cancel a date", "cancel_date", "danger")),
 ]))
 
 
@@ -420,4 +420,4 @@ S["74-booking-celeb"] = ("modal", booking("Studio F, Likha and Studio A", WC))
 S["75-booked-celeb"] = ("modal", booked("CELEB VO / Harold Orozco / HL", "Studio F + Studio A, holding room Likha · " + WC, "Studio F, Studio A and Likha"))
 S["76-result-celeb"] = ("message", msg([sec("✅ *Booked.*\n*CELEB VO / Harold Orozco / HL*\nStudio F + Studio A · " + WC + "\nHolding room: Likha"),
                                         ctx("Celebrity Recording · Engineer: you · Advertising"),
-                                        acts(btn("Move", "move"), btn("Cancel", "cancel", "danger"))]))
+                                        acts(btn("Change", "move"), btn("Cancel", "cancel", "danger"))]))

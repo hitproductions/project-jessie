@@ -19,7 +19,7 @@
       "elements": [
         {
           "type": "mrkdwn",
-          "text": "✅ Moved from Thu, Oct 15"
+          "text": "✅ Changed from Thu, Oct 15"
         }
       ]
     },
@@ -30,7 +30,7 @@
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Move"
+            "text": "Change"
           },
           "action_id": "move",
           "value": "x"
@@ -73,7 +73,7 @@
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Move"
+            "text": "Change"
           },
           "action_id": "move2",
           "value": "x"
@@ -123,7 +123,7 @@
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Move"
+            "text": "Change"
           },
           "action_id": "move3",
           "value": "x"

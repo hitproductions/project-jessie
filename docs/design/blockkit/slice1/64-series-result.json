@@ -14,7 +14,7 @@
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Move a date"
+            "text": "Change a date"
           },
           "action_id": "move_date",
           "value": "x"

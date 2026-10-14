@@ -59,7 +59,7 @@ FLOWS = [
     {"id": "cancel", "title": "See my bookings and cancel one",
      "stats": "3 taps (My bookings, Cancel, Cancel booking)",
      "look": ["The \"Are you sure?\" pop-up adds a tap. Keep it for something that can't be undone?",
-              "Sessions you engineer have Move and Cancel too: the booker and the assigned engineer or arranger can both manage a booking.",
+              "Sessions you engineer have Change and Cancel too: the booker and the assigned engineer or arranger can both manage a booking.",
               "The list shows 7 days. Enough?"],
      "states": [
          state([HI, ["j", "01-menu"]], go={"my_bookings": 1}),
@@ -75,9 +75,9 @@ FLOWS = [
          state([HI, ["j", "01-menu"], ["j", "40-my-bookings"]], go={"week_next": 2}),
          state([HI, ["j", "01-menu"], ["j", "46-my-bookings-week2"]], go={"week_prev": 1}),
      ]},
-    {"id": "move", "title": "Move a booking",
-     "stats": "4 taps · the form starts at the booking's current date, time and room - change only what moves",
-     "look": ["Tap the date to change it (here: to Friday). Start, end and room stay as they were.",
+    {"id": "move", "title": "Change a booking (time, length or room)",
+     "stats": "4 taps · the form starts at the booking's current date, time and room - change what you need (running over: change the end time)",
+     "look": ["Tap the date to change it (here: to Friday). Start, end and room stay as they were. A session running over is the same form: change the end time.",
               "The end time keeps the length - if someone changes only the start, should the end follow automatically?"],
      "states": [
          state([HI, ["j", "01-menu"], ["j", "40-my-bookings"]], go={"move": 1}),
@@ -87,8 +87,8 @@ FLOWS = [
          state([HI, ["j", "01-menu"], ["j", "40-my-bookings"]], "44-moved", {"__close": 5}),
          state([HI, ["j", "01-menu"], ["j", "45-my-bookings-moved"]]),
      ]},
-    {"id": "movesame", "title": "Press Move without changing anything",
-     "stats": "Caught on the form at once - nothing is moved or booked again",
+    {"id": "movesame", "title": "Press Change without changing anything",
+     "stats": "Caught on the form at once - nothing is changed or booked again",
      "look": ["The check is instant (same date, time and room as now), so it needs no calendar call.",
               "In the build this shows as a red note under the fields; the prototype shows it at the top."],
      "states": [

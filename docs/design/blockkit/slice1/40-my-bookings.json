@@ -30,7 +30,7 @@
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Move"
+            "text": "Change"
           },
           "action_id": "move",
           "value": "x"
@@ -92,7 +92,7 @@
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Move"
+            "text": "Change"
           },
           "action_id": "move2",
           "value": "x"
@@ -142,7 +142,7 @@
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Move"
+            "text": "Change"
           },
           "action_id": "move3",
           "value": "x"

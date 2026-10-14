@@ -3,7 +3,7 @@
   "callback_id": "view",
   "title": {
     "type": "plain_text",
-    "text": "Move booking"
+    "text": "Change booking"
   },
   "close": {
     "type": "plain_text",
@@ -25,7 +25,7 @@
       "elements": [
         {
           "type": "mrkdwn",
-          "text": "Starts at the booking's current date, time and room - change only what moves."
+          "text": "Starts at the booking's current date, time and room - change the date, the time, the length or the room."
         }
       ]
     },
@@ -128,13 +128,13 @@
       "elements": [
         {
           "type": "mrkdwn",
-          "text": "The new time is checked first. The booking stays where it is until the new one is in place."
+          "text": "The new time is checked first. The booking stays as it is until the change is in place."
         }
       ]
     }
   ],
   "submit": {
     "type": "plain_text",
-    "text": "Move"
+    "text": "Change"
   }
 }
