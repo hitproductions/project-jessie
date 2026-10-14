@@ -78,7 +78,7 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 
 1. **"Hello form" test:** a button opens a one-field form; Submit says "got it" and then posts a message - proves the
    Cloudflare path, the signature check, the 3-second reply and the year-shifted date picker.
-2. **Airtable data check:** a Booking Defaults row for every department; complete Session Types rankings; Client Name on
+2. **Airtable data check (PENDING 114, Tel):** a Booking Defaults row for every department; complete Session Types rankings; Client Name on
    every Localization project; Paired with on the studios.
 
 ## Decisions for review
