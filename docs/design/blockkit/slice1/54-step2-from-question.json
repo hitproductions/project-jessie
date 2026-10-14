@@ -85,6 +85,24 @@
       }
     },
     {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "checkboxes",
+          "action_id": "add_booth",
+          "options": [
+            {
+              "text": {
+                "type": "mrkdwn",
+                "text": "_+ Vocal booth_"
+              },
+              "value": "add_booth"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "type": "divider"
     },
     {

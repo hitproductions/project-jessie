@@ -110,14 +110,34 @@ VO_ROOMS = [opt("Studio 8", d="Recommended · usual for VO Recording"), opt("Stu
 
 
 def step2(when, rooms, note=None, project=None, client=None, title="*QAW1 / <client> / HL*", lead="*Step 2 of 2* · room and details",
-          warn=None):
+          warn=None, extras=None):
     b = []
     if warn:
         b += [sec(warn), dv]
     b += [ctx(lead), sec("🗓️ *" + when + "*"), inp("room", "Room", radio("room_radio", rooms))]
     if note:
         b.append(ctx(note))
+    if extras:
+        b += extras
     return modal("Book a room", b + studio_details(project, client, title), submit="Book", close="Back", cb="book_step2")
+
+
+def add_check(action, label, ticked=False):
+    """One small unlabeled checkbox line under the room list - ticking it redraws the form with that picker."""
+    o = {"text": md("_" + label + "_"), "value": action}
+    e = {"type": "checkboxes", "action_id": action, "options": [o]}
+    if ticked:
+        e["initial_options"] = [o]
+    return acts(e)
+
+
+def booth_picker(note):
+    return inp("booth", "Booth", {"type": "static_select", "action_id": "booth_pick", "initial_option": opt("Studio A"),
+                                  "option_groups": [{"label": pt("Free then"), "options": [opt("Studio A"), opt("Studio B"), opt("Studio D")]}]},
+               hint=note)
+
+
+VO_EXTRAS = [add_check("add_booth", "+ Vocal booth")]
 
 
 def booking(room, when):
@@ -156,14 +176,14 @@ S["03-not-understood"] = ("message", msg([
 
 # ---- booking a studio ------------------------------------------------------------------------------------------------
 S["10-step1"] = ("modal", step1("2026-10-15", "14:00", "16:00", "VO Recording"))
-S["11-step2"] = ("modal", step2(W1 + " · VO Recording", VO_ROOMS, "Not free then: Studio 7 (free from 4:00 PM)", "QAW1"))
+S["11-step2"] = ("modal", step2(W1 + " · VO Recording", VO_ROOMS, "Not free then: Studio 7 (free from 4:00 PM)", "QAW1", extras=VO_EXTRAS))
 S["12-booking-s8"] = ("modal", booking("Studio 8", W1))
 S["13-booked-s8"] = ("modal", booked(T1, "Studio 8 · " + W1, "Studio 8"))
 S["14-result-s8"] = ("message", result(T1, "Studio 8 · " + W1, "VO Recording · Engineer: you · Advertising"))
 
 S["15-step2-prefilled"] = ("modal", step2(W1 + " · VO Recording",
     [opt("Studio 7", d="You asked for this · usual for VO Recording")] + VO_ROOMS[:2], None, "QAW1", "Sasa Abella",
-    "*QAW1 / Sasa Abella / HL*", "*Step 2 of 2* · _date, time and session type came from your message - Back to change them_"))
+    "*QAW1 / Sasa Abella / HL*", "*Step 2 of 2* · _date, time and session type came from your message - Back to change them_", extras=VO_EXTRAS))
 S["16-booking-s7"] = ("modal", booking("Studio 7", W1))
 S["17-booked-s7"] = ("modal", booked(T1, "Studio 7 · " + W1, "Studio 7"))
 S["18-result-s7"] = ("message", result(T1, "Studio 7 · " + W1, "VO Recording · Engineer: you · Advertising"))
@@ -314,7 +334,7 @@ _q = step1("2026-10-15", "12:00", "18:00", "VO Recording")
 _q["blocks"][0] = ctx("*Step 1 of 2* · _Studio 8 and the free window came from the answer - shorten the time and pick what it's for_")
 S["53-step1-from-question"] = ("modal", _q)
 S["54-step2-from-question"] = ("modal", step2("Thursday, Oct 15 · 12:00–2:00 PM · VO Recording",
-    [opt("Studio 8", d="You picked this · usual for VO Recording")] + VO_ROOMS[1:], None, "QAW1"))
+    [opt("Studio 8", d="You picked this · usual for VO Recording")] + VO_ROOMS[1:], None, "QAW1", extras=VO_EXTRAS))
 
 # ---- series (moved into slice 1 on 14 Oct for Localization batches) ----------------------------------------------------
 _days = [opt(a, b) for a, b in [("Mon", "MO"), ("Tue", "TU"), ("Wed", "WE"), ("Thu", "TH"), ("Fri", "FR"), ("Sat", "SA"), ("Sun", "SU")]]
@@ -369,3 +389,35 @@ S["64-series-result"] = ("message", msg([
     sec("✅ *Booked 10 of 10 dates.* LOPH S2 / HL · Studio 1 + Studio A · 9:00 AM – 2:00 PM\n" + "\n".join("• " + d for d in _dates)),
     acts(btn("Move a date", "move_date"), btn("Cancel a date", "cancel_date", "danger")),
 ]))
+
+
+# ---- recording with extras: Celebrity Recording (holding rooms + optional vocal booth) ---------------------------------
+WC = "Thursday, Oct 15 · 1:00–5:00 PM"
+CELEB_ROOMS = [opt("Studio F", d="Recommended · usual for Celebrity Recording · records vocals in the room"),
+               opt("Studio C", d="Usual for Celebrity Recording · records vocals in the room")]
+
+
+def celeb_step2(holding=False, booth=False):
+    ex = [add_check("add_holding", "+ Holding room", holding)]
+    if holding:
+        ex.append(inp("holding", "Holding rooms", {"type": "checkboxes", "action_id": "holding_pick",
+                                                   "options": [opt("Likha", d="Free 1:00–5:00 PM"), opt("Katha", d="Free 1:00–5:00 PM")],
+                                                   "initial_options": [opt("Likha", d="Free 1:00–5:00 PM")]},
+                      hint="For the talent and their team. Salin isn't free then."))
+    ex.append(add_check("add_booth", "+ Vocal booth", booth))
+    if booth:
+        ex.append(booth_picker("Studio F records vocals in the room - add a booth only if the session needs one."))
+    return modal("Book a room", [ctx("*Step 2 of 2* · room and details"), sec("🗓️ *" + WC + " · Celebrity Recording*"),
+                                 inp("room", "Room", radio("room_radio", CELEB_ROOMS))] + ex +
+                 studio_details("CELEB VO", "Harold Orozco", "*CELEB VO / Harold Orozco / HL*"), submit="Book", close="Back", cb="book_step2")
+
+
+S["70-step1-celeb"] = ("modal", step1("2026-10-15", "13:00", "17:00", "Celebrity Recording"))
+S["71-step2-celeb"] = ("modal", celeb_step2())
+S["72-step2-celeb-holding"] = ("modal", celeb_step2(holding=True))
+S["73-step2-celeb-holding-booth"] = ("modal", celeb_step2(holding=True, booth=True))
+S["74-booking-celeb"] = ("modal", booking("Studio F, Likha and Studio A", WC))
+S["75-booked-celeb"] = ("modal", booked("CELEB VO / Harold Orozco / HL", "Studio F + Studio A, holding room Likha · " + WC, "Studio F, Studio A and Likha"))
+S["76-result-celeb"] = ("message", msg([sec("✅ *Booked.*\n*CELEB VO / Harold Orozco / HL*\nStudio F + Studio A · " + WC + "\nHolding room: Likha"),
+                                        ctx("Celebrity Recording · Engineer: you · Advertising"),
+                                        acts(btn("Move", "move"), btn("Cancel", "cancel", "danger"))]))

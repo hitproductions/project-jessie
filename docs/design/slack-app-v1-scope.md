@@ -20,7 +20,7 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 | **Menu** | "What would you like to do?" + **Book a room · My bookings** (Studios joins with the day board in slice 2). Shown on a greeting, on anything not understood, and on "menu". |
 | **Typed request → form** | The first message pre-fills the form with what today's code already reads (date, time, room, session type, project, client, engineer). Nothing is booked from it. |
 | **Book a room - step 1** | Date, start, end, a small *Repeats* box, What's it for? (session types + Meeting / Event / Booth time). |
-| **Book a room - step 2** | Room: free rooms that fit, ranked from Airtable, top one recommended; Last Resort rooms listed only when no usual room is free; a note for usual rooms not free then. Localization Dubbing: Studio and Booth picked separately - the booth starts at the studio's usual one, any free vocal booth can be chosen (mix and match). Then the details. **Book** is the confirmation. |
+| **Book a room - step 2** | Room: free rooms that fit, ranked from Airtable, top one recommended; Last Resort rooms listed only when no usual room is free; a note for usual rooms not free then. Localization Dubbing: Studio and Booth picked separately - the booth starts at the studio's usual one, any free vocal booth can be chosen (mix and match). **Recording sessions:** small *+ Vocal booth* and (Celebrity Recording) *+ Holding room* lines under the room list; ticking one opens its picker (decided 14 Oct). Then the details. **Book** is the confirmation. |
 | **Details** | Project (text) · Client (text, checked on Book: "Did you mean…?", new names to the New Clients sheet) · Engineer (studio sessions only; people picker, defaults to you; required for arrangers) · Arranger (music sessions) · Kind of booking (only for departments with a choice) · Project code (text, Localization) · Meeting title (meetings, events) · Notes. |
 | **Title** | Built by code from the fields (ALL CAPS project for post and music; Localization code as written; `ROOM - title` for meetings). |
 | **After Book** | The form shows "Booking…", then **Booked** (after the room's answer is read back) or the problem with entries kept. The DM gets the result with **Move · Cancel**. A room that declines: Jessie deletes her event and says so, with **Pick another room or time**. |
@@ -38,7 +38,6 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 |---|---|
 | **Approvals as buttons** (priority and shared-booth requests; engineer may answer; withdraw) | Rare. Open decision below. |
 | **Studios day board** (third menu button) | Typed "what's free…" covers it in slice 1. |
-| **Holding rooms** checklist (Celebrity Recording) | Rare; stays on chat. |
 | **Engineer notice** on every new booking | Needs the shared recipient filter (one `DEV_REDIRECT`). |
 | **Reminders** (studio day-before; weekly booths and meeting rooms, standing holds) | New feature, builds on the same filter. |
 | **⋯ at the end of results** (Book another, My bookings) | The menu covers it in slice 1. |
@@ -53,7 +52,7 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 - One-tap "Move to 3:00–5:00 PM" (the release opens the Move form instead).
 - Updating every old message when a booking changes (the release updates the one clicked; a click on an old message re-checks the
   calendar anyway).
-- The ⋯ room options: *Show all suitable rooms* and *Pair with a vocal booth* (rare; chat covers them meanwhile).
+- *Show all suitable rooms* in the ⋯ on the date line (rare; chat covers it meanwhile).
 - "Your recent clients" beside the client field; type-ahead search.
 
 ## Simplifications made in this pass

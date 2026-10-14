@@ -1,0 +1,194 @@
+{
+  "type": "modal",
+  "callback_id": "book_step2",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Back"
+  },
+  "blocks": [
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "*Step 2 of 2* · room and details"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Thursday, Oct 15 · 1:00–5:00 PM · Celebrity Recording*"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "room",
+      "label": {
+        "type": "plain_text",
+        "text": "Room"
+      },
+      "element": {
+        "type": "radio_buttons",
+        "action_id": "room_radio",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio F"
+            },
+            "value": "Studio F",
+            "description": {
+              "type": "plain_text",
+              "text": "Recommended · usual for Celebrity Recording · records vocals in the room"
+            }
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio C"
+            },
+            "value": "Studio C",
+            "description": {
+              "type": "plain_text",
+              "text": "Usual for Celebrity Recording · records vocals in the room"
+            }
+          }
+        ],
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "Studio F"
+          },
+          "value": "Studio F",
+          "description": {
+            "type": "plain_text",
+            "text": "Recommended · usual for Celebrity Recording · records vocals in the room"
+          }
+        }
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "checkboxes",
+          "action_id": "add_holding",
+          "options": [
+            {
+              "text": {
+                "type": "mrkdwn",
+                "text": "_+ Holding room_"
+              },
+              "value": "add_holding"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "checkboxes",
+          "action_id": "add_booth",
+          "options": [
+            {
+              "text": {
+                "type": "mrkdwn",
+                "text": "_+ Vocal booth_"
+              },
+              "value": "add_booth"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "input",
+      "block_id": "project",
+      "label": {
+        "type": "plain_text",
+        "text": "Project"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "project_in",
+        "initial_value": "CELEB VO"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "client",
+      "label": {
+        "type": "plain_text",
+        "text": "Client"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "client_in",
+        "initial_value": "Harold Orozco"
+      },
+      "optional": true,
+      "hint": {
+        "type": "plain_text",
+        "text": "Leave empty if there's no client. A new name is fine."
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "engineer",
+      "label": {
+        "type": "plain_text",
+        "text": "Engineer"
+      },
+      "element": {
+        "type": "users_select",
+        "action_id": "engineer_pick",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "You"
+        }
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "Set to you. Change it if someone else is engineering."
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "notes",
+      "label": {
+        "type": "plain_text",
+        "text": "Notes"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "notes_in",
+        "multiline": true
+      },
+      "optional": true
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Calendar title: *CELEB VO / Harold Orozco / HL*"
+        }
+      ]
+    }
+  ],
+  "submit": {
+    "type": "plain_text",
+    "text": "Book"
+  }
+}

@@ -136,6 +136,10 @@ Airtable, so these must be right before the first slice is built. Owner: Tel.
   Check every row's Engineer, Default Type, Also possible and Expects client against how each department really books.
 - **Session Types:** Priority (and Last Resort where it applies) filled for every type - they decide which rooms the form
   offers.
+- **Session Types - extras:** which types need a vocal booth (always / optional) and which use holding rooms. Today this is
+  free text in Room Requirements ("Separate vocal booth", "pair with one or more conference room as holding areas"); a
+  clear field (e.g. *Booth*: required / optional / none, *Holding rooms*: yes / no) would let the form decide without
+  reading sentences.
 - **Localization Projects:** Client Name on every project code - the form takes the client from it.
 - **Rooms & Studios:** Paired with on every studio that pairs with a booth; Vocal Booth on the booths; Active / Bookable
   correct.

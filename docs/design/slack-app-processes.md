@@ -76,17 +76,18 @@ Studio 2 → B, Studios 3-7 → A, B or D "can change using Dante", Studio D →
 |---|---|---|
 | Several rooms on one booking; booth only with a studio | Same | Keep |
 | Booth chosen by the model / requester's words | Studio and booth picked separately; the booth defaults to the studio's usual one (Paired with), any free vocal booth allowed | Change |
-| A booth with any studio when asked (special cases) | Pair with a vocal booth checkbox, off by default | Change |
-| "Want a holding room?" note, answered in chat | Holding rooms checklist on the form | Change |
+| A booth with any studio when asked (special cases) | **+ Vocal booth** line on recording sessions, unticked by default | Change |
+| "Want a holding room?" note, answered in chat | **+ Holding room** line on sessions that use holding areas; ticking it shows the free conference rooms | Change |
 | Which rooms record vocals in-room (Airtable checkbox, v229) | Same data; a typed question answers it | Keep |
 
-Decided (13 Oct): no booth by default unless the session type is set up that way (Room Requirements). Any studio can still
-be connected to a vocal booth in special cases, so studio sessions get an unticked **Pair with a vocal booth** checkbox
-under the room list; ticking it adds **Which booth?** - the vocal booths (Airtable Vocal Booth: A, B, D) free then, the
-studio's Paired with booths first - and a note when the pairing is not the usual one (the engineer patches it).
-Not shown for internal rooms. **Where it lives:** both rare options - *Show all suitable rooms* and *Pair with a vocal
-booth* - sit in a small ⋯ menu at the end of the 🗓️ line (decided 13 Oct), so they take no space; picking one redraws
-the form with the full room list or the Which booth? dropdown.
+**Extras on recording sessions (decided 14 Oct; replaces the ⋯ "Pair with a vocal booth" of 13 Oct).** Under the room list,
+recording sessions get small unticked lines - **+ Vocal booth** (VO, music vocal, celebrity, band recording) and, for
+sessions that use holding areas (Celebrity Recording), **+ Holding room**. Unticked, each is one line; ticking one redraws
+the form with its picker: the vocal booths free then (the studio's usual one first, a note when it isn't the usual
+pairing) or the conference rooms free then (one or more). Sessions that need a booth (Localization Dubbing) always show
+the Booth field instead. Which session types get which extra comes from Airtable (Session Types' Room Requirements; a
+clearer field could replace the free text - PENDING 114). Not shown for mixing, editing, meetings or internal rooms.
+*Show all suitable rooms* stays in the ⋯ on the 🗓️ line.
 
 ## 2b. After Book — results
 

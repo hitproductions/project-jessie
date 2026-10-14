@@ -1,0 +1,44 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✅ *Booked.*\n*CELEB VO / Harold Orozco / HL*\nStudio F + Studio A · Thursday, Oct 15 · 1:00–5:00 PM\nHolding room: Likha"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Celebrity Recording · Engineer: you · Advertising"
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Move"
+          },
+          "action_id": "move",
+          "value": "x"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Cancel"
+          },
+          "action_id": "cancel",
+          "value": "x",
+          "style": "danger"
+        }
+      ]
+    }
+  ]
+}

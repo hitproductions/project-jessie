@@ -1,0 +1,30 @@
+{
+  "type": "modal",
+  "callback_id": "view",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Done"
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✅ *Booked.*\n*CELEB VO / Harold Orozco / HL*\nStudio F + Studio A, holding room Likha · Thursday, Oct 15 · 1:00–5:00 PM"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Studio F, Studio A and Likha accepted. The details and the Move / Cancel buttons are in your DM."
+        }
+      ]
+    }
+  ]
+}
