@@ -4,7 +4,7 @@
 // step 2 checks and the calendar title). Usage: node scripts/sim-slice1-a.js [main v262] [slack interactions v3]
 const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v262.json', 'utf8'));
-const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v4.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v5.json', 'utf8'));
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
@@ -85,10 +85,10 @@ async function run(wf, name, input, outs) {
   const engEl = s2.view.blocks.find(b => b.block_id === 'engineer').element;
   if (engEl.type === 'users_select') ok(engEl.initial_user === 'U1', 'step 2: engineer set to the requester');
   else {
-    const all = engEl.option_groups.flatMap(g => g.options.map(o => o.text.text));
+    const all = engEl.options ? engEl.options.map(o => o.text.text) : engEl.option_groups.flatMap(g => g.options.map(o => o.text.text));
     ok(engEl.initial_option && engEl.initial_option.value === 'U1', 'step 2: engineer set to the requester (an engineer)');
-    ok(all.join() === 'Daryl Reyes,Howard Luistro,Jetrho Ty' && engEl.option_groups[0].label.text === 'Post Engineers' && engEl.option_groups[0].options.length === 2,
-       'engineers only, from Bookers, the required role first: ' + JSON.stringify(engEl.option_groups.map(g => [g.label.text, g.options.map(o => o.text.text)])));
+    ok(all.join() === 'Daryl Reyes,Howard Luistro,Jetrho Ty', 'engineers only, from Bookers: ' + all.join());
+    if (engEl.options) ok(!engEl.option_groups, 'one list, A to Z (no groups)');
     const r1lea = Object.assign({}, r1, { s: Object.assign({}, r1.s, { requester: 'U5' }) });
     const sLea = await step2(r1lea, { status: 'OK', free_priority: ['Studio 8'], free_last_resort: [] });
     const eLea = sLea.view.blocks.find(b => b.block_id === 'engineer').element;
@@ -113,6 +113,7 @@ async function run(wf, name, input, outs) {
   if (arrEl.type === 'static_select') ok(arrEl.options.map(o => o.text.text).join() === 'Peter Legaste', 'arrangers only, from Bookers');
   const engM = s2.view.blocks.find(b => b.block_id === 'engineer').element;
   if (engM.option_groups) ok(engM.option_groups[0].label.text === 'Music Engineers' && engM.option_groups[0].options.map(o => o.text.text).join() === 'Daryl Reyes,Howard Luistro', 'music: music engineers first');
+  else ok(engM.options.map(o => o.text.text).join() === 'Daryl Reyes,Howard Luistro,Jetrho Ty', 'music: the same A to Z list');
 
   // step 2 submit (dry run)
   const meta = Object.assign({}, r1.s, { when: 'Friday, Oct 15 · 2:00 PM–4:00 PM', label: 'VO Recording' });
