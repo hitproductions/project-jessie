@@ -115,7 +115,7 @@ async function run(wf, name, input, outs) {
   s2 = await step2(rMus, { status: 'OK', free_priority: ['Studio F'], free_last_resort: [] });
   ok(s2.view.blocks.some(b => b.block_id === 'arranger'), 'music: arranger field');
   const arrEl = s2.view.blocks.find(b => b.block_id === 'arranger').element;
-  if (arrEl.type === 'static_select') ok(arrEl.options.map(o => o.text.text).join() === 'Peter Legaste', 'arrangers only, from Bookers');
+  if (arrEl.type === 'static_select') ok(['Peter Legaste', 'No arranger,Peter Legaste'].indexOf(arrEl.options.map(o => o.text.text).join()) !== -1, 'arrangers only, from Bookers (v7: plus No arranger first)');
   const engM = s2.view.blocks.find(b => b.block_id === 'engineer').element;
   if (engM.option_groups) ok(engM.option_groups[0].label.text === 'Music Engineers' && engM.option_groups[0].options.map(o => o.text.text).join() === 'Daryl Reyes,Howard Luistro', 'music: music engineers first');
   else ok(engM.options.map(o => o.text.text).join() === 'Daryl Reyes,Howard Luistro,Jetrho Ty', 'music: the same A to Z list');
