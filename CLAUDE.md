@@ -788,6 +788,18 @@ the task runner), for whoever has shell access to the box.
     node's input directly can pass while live fails because the node feeding it never runs on that path (PENDING 82: Client Aliases only
     ran for on-behalf bookings) - check the upstream node's own conditions before trusting the sim.
 
+38. **Importing can create a second workflow, and two workflows can't share a webhook path** (14 Oct). Importing Slack
+    Interactions v2 made a whole new workflow next to the existing one; publishing then failed with "Conflicting Webhook
+    Path" (`/webhook/jessie-interactions`). n8n is right to refuse - Slack can send clicks to one place only. Import into
+    the existing workflow (open it first, then ⋯ → Import from File), check the URL still shows its id, and remove a
+    duplicate rather than deactivating the live one.
+
+39. **"Execute workflow" on a workflow with a Webhook trigger listens for a test call instead of running the step you
+    meant** (14 Oct). Slack Interactions has two starting points (Post Test Button and the Slack webhook); the main Execute
+    button picked the webhook and spun on "waiting". Stop it at once - test-listening on a live trigger is half of the 2 Sep
+    outage - then run the step itself (its own ▶, or pick it in the ▾ beside Execute). If clicks stop working afterwards,
+    unpublish and publish once to re-register the production webhook.
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the

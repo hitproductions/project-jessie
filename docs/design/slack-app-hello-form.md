@@ -1,6 +1,7 @@
 # Slack app — the hello-form test
 
-**Result (14 Oct, 17:01-17:02 PHT): passed.** Workflow `PyxSPoAMtSE1gzaH`. Signature OK (request age 1 s), raw body
+**v2 (secret moved out) passed too, 14 Oct 17:14-17:15 PHT** - the signature now comes from Jessie — Slack Signature
+(`R06CBQNhFK0x4ZuO`); no paste step on import. **v1 result (14 Oct, 17:01-17:02 PHT): passed.** Workflow `PyxSPoAMtSE1gzaH`. Signature OK (request age 1 s), raw body
 from binary (2733 chars), date picker opened on 2027-10-14 (year ahead), form updated 3.6 s after Send (3 s pretend work),
 views.update OK, clicks reached n8n through Cloudflare. The payload was read from n8n's parsed body, not the raw text
 (the sandbox likely lacks URLSearchParams) - fine: the signature uses the raw bytes, the contents n8n's parsed copy.
