@@ -1,0 +1,1367 @@
+{
+  "name": "Jessie — Slack Interactions — v6 (PHT times, M booth)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        7952,
+        -64
+      ],
+      "id": "f502679e-2c34-4b63-9a56-f24dc03becee",
+      "name": "Post Test Button"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: 'U08V3CKDGJF', text: 'Hello form test', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '*Hello form test* - tap the button to open a test form.' } },{ type: 'actions', elements: [ { type: 'button', style: 'primary', action_id: 'hello_open', value: 'hello', text: { type: 'plain_text', text: 'Open test form' } } ] } ] }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8192,
+        -64
+      ],
+      "id": "c595da68-dd78-4e6e-8669-98c3e8fe1d21",
+      "name": "Send Button",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jessie-interactions",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        7952,
+        432
+      ],
+      "id": "f04c77b0-b263-4078-bc4c-a4121fb3f767",
+      "name": "Slack Interactions",
+      "webhookId": "6f1d2c1e-4a7b-4c0e-9a51-1e2f3a4b5c6d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read Request: the raw body (for the signature), the Slack headers and the interaction payload.\nconst item = $input.first();\nconst j = item.json || {};\nconst h = j.headers || {};\nlet raw = '', rawSource = 'none';\ntry {\n  if (item.binary && item.binary.data) {\n    const buf = await this.helpers.getBinaryDataBuffer(0, 'data');\n    raw = buf.toString('utf8'); rawSource = 'binary';\n  }\n} catch (e) { rawSource = 'binary-error: ' + String(e.message || e).slice(0, 80); }\nif (!raw && typeof j.body === 'string') { raw = j.body; rawSource = 'body-string'; }\nlet payload = null, payloadSource = 'none';\nif (j.body && j.body.payload) {\n  try { payload = typeof j.body.payload === 'string' ? JSON.parse(j.body.payload) : j.body.payload; payloadSource = 'parsed-body'; } catch (e) {}\n}\nif (!payload) {\n  try { const m = raw.match(/(?:^|&)payload=([^&]*)/); if (m) { payload = JSON.parse(decodeURIComponent(m[1].replace(/\\+/g, ' '))); payloadSource = 'raw'; } } catch (e) {}\n}\nreturn [{ json: {\n  raw, rawSource, rawLength: raw.length,\n  sig: String(h['x-slack-signature'] || ''),\n  ts: String(h['x-slack-request-timestamp'] || ''),\n  payload: payload || {}, payloadSource,\n  receivedAt: Date.now()\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8176,
+        432
+      ],
+      "id": "2b76001b-a3d0-4eb4-80c8-6ba130704422",
+      "name": "Read Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// To Sign: the string Slack signs - 'v0:' + timestamp + ':' + raw body - for Jessie — Slack Signature.\nconst r = $input.first().json;\nreturn [{ json: { base: 'v0:' + r.ts + ':' + r.raw } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8368,
+        432
+      ],
+      "id": "6ea6a8f9-1108-4c8f-b5a3-c52135d780cd",
+      "name": "To Sign"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "R06CBQNhFK0x4ZuO",
+          "cachedResultName": "Jessie — Slack Signature — v1"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        8576,
+        432
+      ],
+      "id": "3f60135d-5b5b-4419-8ee7-a2d601b39c9b",
+      "name": "Signature"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check Signature: Slack signs 'v0:' + timestamp + ':' + raw body (HMAC-SHA256, hex). Refuse a timestamp more than\n// 5 minutes off. Then pick the route.\nconst r = $('Read Request').first().json;\nconst computed = String($input.first().json.computed || '');\nconst sigOk = !!r.sig && ('v0=' + computed) === r.sig;\nconst ageSec = r.ts ? Math.round(Date.now() / 1000 - Number(r.ts)) : null;\nconst fresh = ageSec !== null && Math.abs(ageSec) <= 300;\nconst p = r.payload || {};\nconst action = (p.actions && p.actions[0] && p.actions[0].action_id) || '';\nconst cb = (p.view && p.view.callback_id) || '';\nconst ROUTES = { refused: 0, hello_open: 1, hello_submit: 2, other: 3, open_book: 4, book_step1: 5, book_step2: 6, my_bookings: 7 };\nlet route = ROUTES.other;\nif (!(sigOk && fresh)) route = ROUTES.refused;\nelse if (p.type === 'block_actions' && action === 'hello_open') route = ROUTES.hello_open;\nelse if (p.type === 'view_submission' && cb === 'hello_submit') route = ROUTES.hello_submit;\nelse if (p.type === 'block_actions' && action === 'open_book') route = ROUTES.open_book;\nelse if (p.type === 'block_actions' && action === 'my_bookings') route = ROUTES.my_bookings;\nelse if (p.type === 'view_submission' && cb === 'book_step1') route = ROUTES.book_step1;\nelse if (p.type === 'view_submission' && cb === 'book_step2') route = ROUTES.book_step2;\nreturn [{ json: { route, sigOk, fresh, ageSec, type: p.type || '', action, cb,\n  user: (p.user && p.user.id) || '', triggerId: p.trigger_id || '', viewId: (p.view && p.view.id) || '',\n  channel: (p.channel && p.channel.id) || (p.container && p.container.channel_id) || '',\n  rawSource: r.rawSource, rawLength: r.rawLength, payloadSource: r.payloadSource, receivedAt: r.receivedAt } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8768,
+        432
+      ],
+      "id": "a01d771e-cad3-44ce-b877-f5f6eccb6b45",
+      "name": "Check Signature"
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 8,
+        "output": "={{ $json.route }}"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        8992,
+        432
+      ],
+      "id": "583b3486-2acb-4981-aa9c-381862590d68",
+      "name": "Route"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        9232,
+        -288
+      ],
+      "id": "c1f3cfa1-a1b0-4646-bd89-d8adfc05f802",
+      "name": "Refuse"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Refused: the signature or the timestamp did not check out - tell the tester why (nothing else happens).\nconst c = $('Check Signature').first().json;\nconst lines = ['*Slack Interactions - a request was refused*',\n  '• Signature: ' + (c.sigOk ? 'OK' : 'did not match') + ' · timestamp age ' + c.ageSec + ' s (allowed: 300)',\n  '• Raw body: ' + c.rawSource + ' (' + c.rawLength + ' chars) · payload from ' + c.payloadSource + ' · type ' + (c.type || '?'),\n  'If the signature did not match: check the secret in the Sign node of Jessie — Slack Signature, and that the Webhook node has Raw Body on.'];\nreturn [{ json: { channel: 'U08V3CKDGJF', text: lines.join('\\n') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9472,
+        -288
+      ],
+      "id": "5fd5d141-ad0b-4456-8018-0855527918e0",
+      "name": "Report Refused"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9712,
+        -288
+      ],
+      "id": "32c8bf8c-2913-428b-bb14-f8b25dbd1e83",
+      "name": "DM Refused",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        9232,
+        -144
+      ],
+      "id": "abe3cadc-0a72-4cae-98d0-6bbc309c2eb4",
+      "name": "Ack Click"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Form: the hello form (diagnostics). The date picker opens a year ahead (the QA year shift).\nconst c = $('Check Signature').first().json;\nconst m = new Date(Date.now() + 8 * 3600 * 1000);\nconst d = (m.getUTCFullYear() + 1) + '-' + String(m.getUTCMonth() + 1).padStart(2, '0') + '-' + String(m.getUTCDate()).padStart(2, '0');\nconst view = { type: 'modal', callback_id: 'hello_submit', title: { type: 'plain_text', text: 'Hello form' },\n  submit: { type: 'plain_text', text: 'Send' }, close: { type: 'plain_text', text: 'Cancel' },\n  blocks: [\n    { type: 'section', text: { type: 'mrkdwn', text: 'Test form for the Slack-app build. Pick a date, type anything, press *Send*.' } },\n    { type: 'input', block_id: 'date', label: { type: 'plain_text', text: 'Date' }, element: { type: 'datepicker', action_id: 'date_pick', initial_date: d } },\n    { type: 'input', block_id: 'note', label: { type: 'plain_text', text: 'Say something' }, element: { type: 'plain_text_input', action_id: 'note_in' } } ] };\nreturn [{ json: { trigger_id: c.triggerId, view } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9472,
+        -144
+      ],
+      "id": "3ac10c1b-32d1-4e8a-9e32-839052350c20",
+      "name": "Build Form"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.open",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ trigger_id: $json.trigger_id, view: $json.view }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9712,
+        -144
+      ],
+      "id": "db5618a4-e066-4559-a6e5-5b695ed4060c",
+      "name": "Open Form",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Report Open: say if views.open failed (the trigger_id lasts 3 seconds).\nconst r = $input.first().json;\nif (r.ok === true) return [];\nconst c = $('Check Signature').first().json;\nreturn [{ json: { channel: c.user || 'U08V3CKDGJF', text: '⚠️ The form did not open: ' + JSON.stringify(r).slice(0, 300) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9952,
+        -144
+      ],
+      "id": "ddecb1fc-fe37-4aa1-bd73-0de9b7161d1b",
+      "name": "Report Open"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10192,
+        -144
+      ],
+      "id": "cb64b1a9-3e71-4271-a1b6-7df0d4dde7c0",
+      "name": "DM Open Failed",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read Submission (hello form).\nconst c = $('Check Signature').first().json;\nconst p = $('Read Request').first().json.payload || {};\nconst v = (p.view && p.view.state && p.view.state.values) || {};\nconst date = (v.date && v.date.date_pick && v.date.date_pick.selected_date) || '';\nconst note = (v.note && v.note.note_in && v.note.note_in.value) || '';\nconst view = (text) => ({ type: 'modal', title: { type: 'plain_text', text: 'Hello form' }, close: { type: 'plain_text', text: 'Close' },\n  blocks: [{ type: 'section', text: { type: 'mrkdwn', text } }] });\nreturn [{ json: { viewId: c.viewId, user: c.user || 'U08V3CKDGJF', date, note,\n  working: { response_action: 'update', view: view('⏳ *Working…*') },\n  done: view('✅ *Done.* Details are in your DM.') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9232,
+        0
+      ],
+      "id": "7e7877a1-175c-40f2-8043-b23b60e11daa",
+      "name": "Read Submission"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.working) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        9472,
+        0
+      ],
+      "id": "d605bea6-e687-402d-80fd-b801ab7326cc",
+      "name": "Answer Working"
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        9712,
+        0
+      ],
+      "id": "3c02aaef-3bd8-43e0-ac63-553f49c859c3",
+      "name": "Pretend Work",
+      "webhookId": "421981ba-948b-45a3-b4f9-26a6a6b48c33"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ view_id: $('Read Submission').first().json.viewId, view: $('Read Submission').first().json.done }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9952,
+        0
+      ],
+      "id": "01d603c3-a319-4c49-85df-cc641c588419",
+      "name": "Update Form",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Report (hello form).\nconst s = $('Read Submission').first().json;\nconst c = $('Check Signature').first().json;\nconst lines = ['*Hello form - result*',\n  '• Signature check: ' + (c.sigOk ? 'OK' : 'FAILED') + ' · request age ' + c.ageSec + ' s',\n  '• Raw body: ' + c.rawSource + ' (' + c.rawLength + ' chars) · payload from ' + c.payloadSource,\n  '• Date picked: ' + (s.date || '(none)') + ' · note: ' + (s.note || '(empty)'),\n  '• Update call: ' + ($('Update Form').first().json.ok === true ? 'OK' : 'FAILED ' + JSON.stringify($('Update Form').first().json).slice(0, 150))];\nreturn [{ json: { channel: s.user, text: lines.join('\\n') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10192,
+        0
+      ],
+      "id": "7c1da510-cf4e-404e-95b9-98de885f7ba9",
+      "name": "Report"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10432,
+        0
+      ],
+      "id": "5e12279a-94df-4d2d-bd7d-ec30e716705b",
+      "name": "DM Result",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        9232,
+        144
+      ],
+      "id": "4d727118-5dbb-438c-8c22-5ba012a4b484",
+      "name": "Ack Other"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        9232,
+        320
+      ],
+      "id": "d6e5bacb-a92e-4cb9-8c2c-1f71b7bbd004",
+      "name": "Ack Book"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "cachedResultName": "Jessie Reference Cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        9472,
+        320
+      ],
+      "id": "ca974b15-3ba7-4862-a556-971d22f9a3dc",
+      "name": "Read Cache",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// Build Step 1: date, start, end, what it's for. Session types from the reference cache; the date picker opens on\n// Manila's today a year ahead (QA year shift - at launch: YEAR_SHIFT = 0).\nconst YEAR_SHIFT = 1;\nconst c = $('Check Signature').first().json;\nconst data = readCache($('Read Cache').all().map(i => i.json || {}));\nconst types = data ? data.sessionTypes.map(r => String((r.fields || {}).Type || '').trim()).filter(Boolean) : [];\nconst NOT_SESSION = ['Meeting', 'Event'];\nconst sessions = types.filter(t => NOT_SESSION.indexOf(t) === -1).sort();\nconst opt = (t, v) => ({ text: { type: 'plain_text', text: t }, value: v || t });\nconst groups = [];\nif (sessions.length) groups.push({ label: { type: 'plain_text', text: 'Sessions' }, options: sessions.slice(0, 100).map(t => opt(t)) });\ngroups.push({ label: { type: 'plain_text', text: 'Not a session' },\n  options: NOT_SESSION.filter(t => types.indexOf(t) !== -1).map(t => opt(t)).concat([opt('M booth', '__booth')]) });\nconst m = new Date(Date.now() + 8 * 3600 * 1000);\nconst today = (m.getUTCFullYear() + YEAR_SHIFT) + '-' + String(m.getUTCMonth() + 1).padStart(2, '0') + '-' + String(m.getUTCDate()).padStart(2, '0');\nconst view = {\n  type: 'modal', callback_id: 'book_step1',\n  title: { type: 'plain_text', text: 'Book a room' },\n  submit: { type: 'plain_text', text: 'Find rooms' }, close: { type: 'plain_text', text: 'Cancel' },\n  private_metadata: JSON.stringify({ requester: c.user, channel: c.channel }),\n  blocks: [\n    { type: 'context', elements: [{ type: 'mrkdwn', text: '*Step 1 of 2* · when, and what for' }] },\n    { type: 'input', block_id: 'date', label: { type: 'plain_text', text: 'Date' },\n      element: { type: 'datepicker', action_id: 'date_pick', initial_date: today } },\n    { type: 'input', block_id: 'start', label: { type: 'plain_text', text: 'Start' },\n      element: { type: 'timepicker', action_id: 'start_pick' } },\n    { type: 'input', block_id: 'end', label: { type: 'plain_text', text: 'End' },\n      element: { type: 'timepicker', action_id: 'end_pick' } },\n    { type: 'input', block_id: 'purpose', label: { type: 'plain_text', text: \"What's it for?\" },\n      hint: { type: 'plain_text', text: 'Jessie offers the rooms that can do this, the usual ones first.' },\n      element: { type: 'static_select', action_id: 'purpose_pick', placeholder: { type: 'plain_text', text: 'Choose' }, option_groups: groups } }\n  ]\n};\nreturn [{ json: { trigger_id: c.triggerId, view, cacheOk: !!data } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9712,
+        320
+      ],
+      "id": "34a9d8d0-5d5c-4b39-b37d-24a05112c7f6",
+      "name": "Build Step 1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.open",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ trigger_id: $json.trigger_id, view: $json.view }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9952,
+        320
+      ],
+      "id": "3baa076f-77ce-4b8e-90d0-97ba08acac44",
+      "name": "Open Step 1",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Report Open: say if views.open failed (the trigger_id lasts 3 seconds).\nconst r = $input.first().json;\nif (r.ok === true) return [];\nconst c = $('Check Signature').first().json;\nreturn [{ json: { channel: c.user || 'U08V3CKDGJF', text: '⚠️ The form did not open: ' + JSON.stringify(r).slice(0, 300) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10192,
+        320
+      ],
+      "id": "635ac590-d8ac-4d85-9140-da408d4ef4c8",
+      "name": "Report Open 1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10432,
+        320
+      ],
+      "id": "323cc5c9-3ed4-4066-914a-53a8c2c9242f",
+      "name": "DM Open 1 Failed",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// Read Step 1: the values, checked at once (Slack shows errors next to the fields only in this first answer).\n// Valid -> push a \"Finding rooms…\" view (external_id, so it can be updated after Room Availability answers).\nconst c = $('Check Signature').first().json;\nconst p = $('Read Request').first().json.payload || {};\nconst v = (p.view && p.view.state && p.view.state.values) || {};\nconst date = (v.date && v.date.date_pick && v.date.date_pick.selected_date) || '';\nconst t0 = (v.start && v.start.start_pick && v.start.start_pick.selected_time) || '';\nconst t1 = (v.end && v.end.end_pick && v.end.end_pick.selected_time) || '';\nconst purpose = (v.purpose && v.purpose.purpose_pick && v.purpose.purpose_pick.selected_option && v.purpose.purpose_pick.selected_option.value) || '';\nlet meta = {}; try { meta = JSON.parse((p.view && p.view.private_metadata) || '{}'); } catch (e) {}\nconst errors = {};\nif (!date) errors.date = 'Pick a date.';\nif (!t0) errors.start = 'Pick a start time.';\nif (!t1) errors.end = 'Pick an end time.';\nif (t0 && t1 && t1 <= t0) errors.end = 'The end has to be after the start.';\nif (!purpose) errors.purpose = \"Pick what it's for.\";\nconst valid = Object.keys(errors).length === 0;\nconst ext = 's2-' + (c.user || 'x') + '-' + Date.now();\nconst kind = purpose === '__booth' ? 'booth' : (purpose === 'Meeting' || purpose === 'Event') ? 'meeting'\n  : /^localization/i.test(purpose) ? 'loc' : 'studio';\nconst s = { date, t0, t1, purpose, kind, requester: meta.requester || c.user, channel: meta.channel || '', ext };\nconst loading = { type: 'modal', external_id: ext, callback_id: 'book_step2',\n  title: { type: 'plain_text', text: 'Book a room' }, close: { type: 'plain_text', text: 'Back' },\n  private_metadata: JSON.stringify(s),\n  blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '⏳ *Finding free rooms…*' } }] };\nreturn [{ json: { valid, s,\n  answer: valid ? { response_action: 'push', view: loading } : { response_action: 'errors', errors } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9232,
+        512
+      ],
+      "id": "290985a6-6fa0-45c9-858b-598f00e4381e",
+      "name": "Read Step 1"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.answer) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        9472,
+        512
+      ],
+      "id": "82e5cc00-efa0-47d6-b09d-13d2fc7cd61c",
+      "name": "Answer Step 1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a129b1ec-f2a8-4af6-a6e4-10fd1c8b28e2",
+              "leftValue": "={{ $('Read Step 1').first().json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        9712,
+        512
+      ],
+      "id": "3c2db42c-4f5d-404f-8f68-b05621f0bff4",
+      "name": "Step 1 OK?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "cachedResultName": "Jessie Reference Cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        9952,
+        480
+      ],
+      "id": "3eb53eeb-f45e-4036-85af-92f94ef4373d",
+      "name": "Read Cache 2",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// To Room Availability: the window, the session type (none for booth time) and the reference data built the same way as\n// main's Room Table (rooms with booth / common flags; session types with Priority / Last Resort record ids).\nconst s = $('Read Step 1').first().json.s;\nconst data = readCache($('Read Cache 2').all().map(i => i.json || {})) || { rooms: [], sessionTypes: [] };\nconst refRooms = [];\nfor (const r of data.rooms) {\n  const f = r.fields || {};\n  if (!r.id || !f['Room Name']) continue;\n  const kinds = [].concat(f['Room Type'] || []).map(x => String(x).toLowerCase());\n  refRooms.push({ id: r.id, name: String(f['Room Name']).trim(), vocalBooth: f['Vocal Booth'] === true,\n    booth: f['Vocal Booth'] === true || kinds.indexOf('recording booth') !== -1,\n    common: kinds.indexOf('conference room') !== -1 || kinds.indexOf('lobby') !== -1 });\n}\nconst refTypes = []; const preemptionRanks = {};\nfor (const r of data.sessionTypes) {\n  const f = r.fields || {}; const t = String(f['Type'] || '').trim();\n  if (!t) continue;\n  refTypes.push({ type: t, min: f['Min Duration (mins)'] || null, max: f['Max Duration (mins)'] || null, typical: f['Typical Duration'] || null,\n    roles: [].concat(f['Engineer Role Required'] || []), req: String(f['Room Requirements'] || ''),\n    priority: [].concat(f['Priority'] || []), last: [].concat(f['Last Resort'] || []) });\n  const rk = Number(f['Preemption Rank']); if (Number.isFinite(rk)) preemptionRanks[t] = rk;\n}\nreturn [{ json: {\n  // Always Philippine Time: the pickers carry no time zone, so the picked hh:mm is taken as Manila time (+08:00).\n  start_iso: s.date + 'T' + s.t0 + ':00+08:00', end_iso: s.date + 'T' + s.t1 + ':00+08:00',\n  session_type: s.kind === 'booth' ? '' : s.purpose, room: '', scope: '', hours: '',\n  reference_data: JSON.stringify({ rooms: refRooms, types: refTypes, preemptionRanks })\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10192,
+        480
+      ],
+      "id": "9a4f18d5-0824-4839-b7aa-434462d15518",
+      "name": "To Room Availability"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "e7tBQB458nstrqei",
+          "cachedResultName": "Jessie — Room Availability"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        10432,
+        480
+      ],
+      "id": "6171d609-40fb-4163-9029-02da48aec9ae",
+      "name": "Room Availability"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// Build Step 2: the free rooms that fit (ranked; usual first, others only when no usual room is free), then the details\n// for this kind of booking. Replaces the \"Finding free rooms…\" view by its external_id.\nconst s = $('Read Step 1').first().json.s;\nconst ra = $input.first().json || {};\nconst data = readCache($('Read Cache 2').all().map(i => i.json || {})) || { rooms: [], sessionTypes: [], bookers: [] };\nconst opt = (t, v, d) => Object.assign({ text: { type: 'plain_text', text: t }, value: v || t }, d ? { description: { type: 'plain_text', text: d } } : {});\nconst md = t => ({ type: 'mrkdwn', text: t });\nconst ctx = t => ({ type: 'context', elements: [md(t)] });\nconst input = (bid, label, element, o) => Object.assign({ type: 'input', block_id: bid, label: { type: 'plain_text', text: label }, element }, o || {});\nconst fmtT = hm => { let [h, m] = hm.split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; };\nconst dt = new Date(s.date + 'T00:00:00Z');\nconst DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst when = DOW[dt.getUTCDay()] + ', ' + MON[dt.getUTCMonth()] + ' ' + dt.getUTCDate() + ' · ' + fmtT(s.t0) + '–' + fmtT(s.t1);\nconst label = s.kind === 'booth' ? 'M booth' : s.purpose;\nlet rooms = [], note = '';\nif (ra.status !== 'OK') {\n  note = '⚠️ The calendar could not be checked (' + (ra.status || 'no answer') + '). Go Back and try again.';\n} else if (s.kind === 'booth') {\n  rooms = (ra.free_rooms || []).filter(r => /^M\\d+$/i.test(r)).map(r => opt(r, r));\n} else {\n  const pri = ra.free_priority || [], last = ra.free_last_resort || [];\n  rooms = pri.map((r, i) => opt(r, r, (i === 0 ? 'Recommended · ' : '') + 'usual for ' + label));\n  if (!rooms.length) rooms = last.map((r, i) => opt(r, r, (i === 0 ? 'Recommended · ' : '') + 'can do ' + label + ' · not a usual room'));\n  const st = (data.sessionTypes || []).find(r => String((r.fields || {}).Type || '').trim() === s.purpose);\n  const nameOf = {}; for (const r of data.rooms || []) nameOf[r.id] = String((r.fields || {})['Room Name'] || '').trim();\n  const usual = st ? [].concat((st.fields || {}).Priority || []).map(id => nameOf[id]).filter(Boolean) : [];\n  const taken = usual.filter(r => pri.indexOf(r) === -1);\n  if (taken.length && rooms.length) note = 'Not free then: ' + taken.join(', ');\n}\nrooms = rooms.slice(0, 10);\nconst blocks = [ctx('*Step 2 of 2* · room and details'), { type: 'section', text: md('🗓️ *' + when + ' · ' + label + '*') }];\nif (!rooms.length) {\n  blocks.push({ type: 'section', text: md(note || ('Nothing that does ' + label + ' is free then. Go *Back* and try another time.')) });\n} else {\n  blocks.push(input('room', 'Room', { type: 'radio_buttons', action_id: 'room_radio', options: rooms, initial_option: rooms[0] }));\n  if (note) blocks.push(ctx(note));\n  blocks.push({ type: 'divider' });\n  // Engineers and arrangers come from Bookers (Info names the role), never from everyone in Slack - one list, A to Z.\n  const people = (data.bookers || []).map(b => { const f = b.fields || {};\n    return { name: String(f.Name || '').trim(), info: String(f.Info || ''),\n             slack: String(f['Slack User ID'] || '').split(/[\\s,]+/).filter(Boolean)[0] || '' }; }).filter(p => p.name && p.slack);\n  const isEng = p => /\\bengineer\\b/i.test(p.info);\n  const engs = people.filter(isEng).sort((a, b) => a.name.localeCompare(b.name));\n  const popt = p => ({ text: { type: 'plain_text', text: p.name }, value: p.slack });\n  const me = engs.find(p => p.slack === s.requester);\n  const engEl = { type: 'static_select', action_id: 'engineer_pick', placeholder: { type: 'plain_text', text: \"Who's engineering?\" }, options: engs.slice(0, 100).map(popt) };\n  if (me) engEl.initial_option = popt(me);\n  const engineer = input('engineer', 'Engineer', engEl,\n    { hint: { type: 'plain_text', text: me ? 'Set to you. Change it if someone else is engineering.' : 'Only engineers are listed (from Bookers).' } });\n  const arrs = people.filter(p => /\\bmusic arranger\\b/i.test(p.info)).sort((a, b) => a.name.localeCompare(b.name));\n  const meArr = arrs.find(p => p.slack === s.requester);\n  const arrEl = { type: 'static_select', action_id: 'arranger_pick', placeholder: { type: 'plain_text', text: 'Choose' }, options: arrs.slice(0, 100).map(popt) };\n  if (meArr) arrEl.initial_option = popt(meArr);\n  const notes = input('notes', 'Notes', { type: 'plain_text_input', action_id: 'notes_in', multiline: true }, { optional: true });\n  if (s.kind === 'meeting') {\n    blocks.push(input('title', 'Meeting title', { type: 'plain_text_input', action_id: 'title_in' }), notes);\n  } else if (s.kind === 'booth') {\n    blocks.push(notes);\n  } else if (s.kind === 'loc') {\n    blocks.push(input('code', 'Project code', { type: 'plain_text_input', action_id: 'code_in' },\n      { hint: { type: 'plain_text', text: 'As in Localization Projects. The client and the title come from it.' } }), engineer, notes);\n  } else {\n    blocks.push(input('project', 'Project', { type: 'plain_text_input', action_id: 'project_in' }),\n      input('client', 'Client', { type: 'plain_text_input', action_id: 'client_in' },\n        { optional: true, hint: { type: 'plain_text', text: \"Leave empty if there's no client. A new name is fine.\" } }),\n      engineer);\n    if (/music|band/i.test(s.purpose))\n      if (arrs.length) blocks.push(input('arranger', 'Arranger', arrEl, { optional: true }));\n    blocks.push(notes);\n  }\n}\nconst view = { type: 'modal', callback_id: 'book_step2', title: { type: 'plain_text', text: 'Book a room' },\n  close: { type: 'plain_text', text: 'Back' }, private_metadata: JSON.stringify(Object.assign({}, s, { when, label })), blocks };\nif (rooms.length) view.submit = { type: 'plain_text', text: 'Book' };\nreturn [{ json: { external_id: s.ext, view } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10672,
+        480
+      ],
+      "id": "c3c30fe7-7bba-4f3e-ba5a-5564459c4e12",
+      "name": "Build Step 2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ external_id: $json.external_id, view: $json.view }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10912,
+        480
+      ],
+      "id": "4033d475-ccd4-48f8-8338-5715a4b93835",
+      "name": "Show Step 2",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "cachedResultName": "Jessie Reference Cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        9232,
+        688
+      ],
+      "id": "5a19c064-853a-4f08-8c65-266ada3babc0",
+      "name": "Read Cache 3",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// Read Step 2: the details, checked at once, and the calendar title built by code (no AI). STEP A = DRY RUN: the form\n// answers with what would be booked; nothing is written to the calendar (step B: Book Session).\nconst c = $('Check Signature').first().json;\nconst p = $('Read Request').first().json.payload || {};\nconst v = (p.view && p.view.state && p.view.state.values) || {};\nlet s = {}; try { s = JSON.parse((p.view && p.view.private_metadata) || '{}'); } catch (e) {}\nconst val = (b, a) => (v[b] && v[b][a] && (v[b][a].value || v[b][a].selected_user || (v[b][a].selected_option && v[b][a].selected_option.value))) || '';\nconst room = val('room', 'room_radio');\nconst project = String(val('project', 'project_in')).trim().replace(/^(project|proj)\\s+/i, '');\nconst client = String(val('client', 'client_in')).trim();\nconst code = String(val('code', 'code_in')).trim();\nconst title = String(val('title', 'title_in')).trim();\nconst engineerId = val('engineer', 'engineer_pick');\nconst arrangerId = val('arranger', 'arranger_pick');\nconst notes = String(val('notes', 'notes_in')).trim();\nconst errors = {};\nif (!room) errors.room = 'Pick a room.';\nif (s.kind === 'studio' && !project) errors.project = 'What is the project called?';\nif (s.kind === 'loc' && !code) errors.code = 'Type the project code.';\nif (s.kind === 'meeting' && !title) errors.title = 'Give the meeting a title.';\nif ((s.kind === 'studio' || s.kind === 'loc') && !engineerId) errors.engineer = 'Pick the engineer.';\nconst data = readCache($('Read Cache 3').all().map(i => i.json || {})) || { bookers: [] };\nconst bySlack = {};\nfor (const b of data.bookers || []) { const f = b.fields || {}; String(f['Slack User ID'] || '').split(/[\\s,]+/).filter(Boolean).forEach(id => { bySlack[id] = f; }); }\nconst who = id => bySlack[id] || null;\nconst ini = id => { const f = who(id); return f ? String(f.Initials || '').trim() : ''; };\nif (engineerId && !who(engineerId)) errors.engineer = \"That person isn't in Bookers yet - pick someone who is, or ask for them to be added.\";\nconst first = id => { const f = who(id); return f ? String(f.Name || '').trim().split(/\\s+/)[0] : ''; };\nlet calTitle = '';\nif (s.kind === 'meeting') calTitle = room.toUpperCase() + ' - ' + title;\nelse if (s.kind === 'booth') calTitle = room.toUpperCase() + ' - ' + first(s.requester);\nelse if (s.kind === 'loc') calTitle = code + ' / ' + ini(engineerId);\nelse calTitle = [project.toUpperCase(), client, [ini(engineerId), ini(arrangerId)].filter(Boolean).join(' x ')].filter(Boolean).join(' / ');\nconst valid = Object.keys(errors).length === 0;\nconst lines = ['🧪 *Test run - nothing was booked.* This is what would be booked:', '',\n  '*' + calTitle + '*', room + ' · ' + s.when, s.label,\n  (engineerId ? 'Engineer: ' + ((who(engineerId) || {}).Name || engineerId) : ''),\n  (arrangerId ? 'Arranger: ' + ((who(arrangerId) || {}).Name || arrangerId) : ''),\n  (client && s.kind === 'studio' ? 'Client: ' + client + ' (checked against Clients when booking for real)' : ''),\n  (notes ? 'Notes: ' + notes : '')].filter(x => x !== '');\nconst done = { type: 'modal', clear_on_close: true, title: { type: 'plain_text', text: 'Book a room' }, close: { type: 'plain_text', text: 'Done' },\n  blocks: [{ type: 'section', text: { type: 'mrkdwn', text: lines.join('\\n') } },\n           { type: 'context', elements: [{ type: 'mrkdwn', text: 'Step A of the Slack-app build: the real booking comes in step B.' }] }] };\nreturn [{ json: { valid, calTitle, channel: s.requester || c.user, text: lines.join('\\n'),\n  answer: valid ? { response_action: 'update', view: done } : { response_action: 'errors', errors } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9472,
+        688
+      ],
+      "id": "95e9afd2-949a-467b-bc00-b2b0d54c1552",
+      "name": "Read Step 2"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.answer) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        9712,
+        688
+      ],
+      "id": "52b72a4b-7532-42f9-a434-8aac8fdbbb4e",
+      "name": "Answer Step 2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2673af80-df4e-45c2-bff0-bb82c22c8ada",
+              "leftValue": "={{ $('Read Step 2').first().json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        9952,
+        688
+      ],
+      "id": "81c2f857-63cc-42a6-adb2-dcbc0e9accca",
+      "name": "Step 2 OK?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $('Read Step 2').first().json.channel, text: $('Read Step 2').first().json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10192,
+        672
+      ],
+      "id": "7cba1f2a-4dde-444f-8ad0-d936a63db4a5",
+      "name": "DM Test Run",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        9232,
+        864
+      ],
+      "id": "68611bd8-433a-46f5-a5f2-33eb8141fd86",
+      "name": "Ack My Bookings"
+    },
+    {
+      "parameters": {
+        "jsCode": "// My bookings: step C. For now, say so.\nconst c = $('Check Signature').first().json;\nreturn [{ json: { channel: c.user, text: 'My bookings comes in the next build. Until then, ask me \"what do I have booked this week?\"' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9472,
+        864
+      ],
+      "id": "c52ddbff-8390-43fc-95f5-7842ce0d500e",
+      "name": "My Bookings"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9712,
+        864
+      ],
+      "id": "65a6a86e-e6fa-4684-a5bf-56095f8b0694",
+      "name": "DM My Bookings",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Jessie — Slack Interactions\nEvery Slack button click and form submission. The signature comes from **Jessie — Slack Signature** (nothing to paste).\n\n**v6 = slice 1 step A:** the menu's Book a room opens the two-step booking form; Book is a dry run (nothing written). My bookings: next build.\n\nRequest URL: `https://signal.hitpromanila.net/webhook/jessie-interactions`",
+        "height": 320,
+        "width": 460
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        7904,
+        -400
+      ],
+      "id": "8fcc3a0e-9aef-4992-b6d6-6694701ce10b",
+      "name": "About"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Post Test Button": {
+      "main": [
+        [
+          {
+            "node": "Send Button",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Interactions": {
+      "main": [
+        [
+          {
+            "node": "Read Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Request": {
+      "main": [
+        [
+          {
+            "node": "To Sign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To Sign": {
+      "main": [
+        [
+          {
+            "node": "Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signature": {
+      "main": [
+        [
+          {
+            "node": "Check Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Signature": {
+      "main": [
+        [
+          {
+            "node": "Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route": {
+      "main": [
+        [
+          {
+            "node": "Refuse",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack Click",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Submission",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack Other",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack Book",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Step 1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Cache 3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack My Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refuse": {
+      "main": [
+        [
+          {
+            "node": "Report Refused",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Refused": {
+      "main": [
+        [
+          {
+            "node": "DM Refused",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack Click": {
+      "main": [
+        [
+          {
+            "node": "Build Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Form": {
+      "main": [
+        [
+          {
+            "node": "Open Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open Form": {
+      "main": [
+        [
+          {
+            "node": "Report Open",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Open": {
+      "main": [
+        [
+          {
+            "node": "DM Open Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Submission": {
+      "main": [
+        [
+          {
+            "node": "Answer Working",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Working": {
+      "main": [
+        [
+          {
+            "node": "Pretend Work",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pretend Work": {
+      "main": [
+        [
+          {
+            "node": "Update Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Form": {
+      "main": [
+        [
+          {
+            "node": "Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report": {
+      "main": [
+        [
+          {
+            "node": "DM Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack Book": {
+      "main": [
+        [
+          {
+            "node": "Read Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cache": {
+      "main": [
+        [
+          {
+            "node": "Build Step 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Step 1": {
+      "main": [
+        [
+          {
+            "node": "Open Step 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open Step 1": {
+      "main": [
+        [
+          {
+            "node": "Report Open 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Open 1": {
+      "main": [
+        [
+          {
+            "node": "DM Open 1 Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Step 1": {
+      "main": [
+        [
+          {
+            "node": "Answer Step 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Step 1": {
+      "main": [
+        [
+          {
+            "node": "Step 1 OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 1 OK?": {
+      "main": [
+        [
+          {
+            "node": "Read Cache 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cache 2": {
+      "main": [
+        [
+          {
+            "node": "To Room Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To Room Availability": {
+      "main": [
+        [
+          {
+            "node": "Room Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Room Availability": {
+      "main": [
+        [
+          {
+            "node": "Build Step 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Step 2": {
+      "main": [
+        [
+          {
+            "node": "Show Step 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cache 3": {
+      "main": [
+        [
+          {
+            "node": "Read Step 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Step 2": {
+      "main": [
+        [
+          {
+            "node": "Answer Step 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Step 2": {
+      "main": [
+        [
+          {
+            "node": "Step 2 OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2 OK?": {
+      "main": [
+        [
+          {
+            "node": "DM Test Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack My Bookings": {
+      "main": [
+        [
+          {
+            "node": "My Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "My Bookings": {
+      "main": [
+        [
+          {
+            "node": "DM My Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "eb68fa68-34b6-4601-9ce4-b75bfe0fb481",
+  "meta": {
+    "instanceId": "47b8f2db30f5474de1dd72088d2efb6e9f5862c79e8ac68a94619b94d7aeb560"
+  },
+  "nodeGroups": [],
+  "id": "PyxSPoAMtSE1gzaH",
+  "tags": []
+}
