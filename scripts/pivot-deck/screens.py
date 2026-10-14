@@ -181,14 +181,12 @@ S["08-details-meeting"] = ("modal", modal("Book a room", [
 ], submit="Book", close="Back"))
 
 # paired rooms
-pair = [opt("Studio 1 + Studio A", "Studio 1|Studio A", "Recommended · control room and its booth"),
-        opt("Studio 2 + Studio B", "Studio 2|Studio B", "Control room and its booth"),
-        opt("Studio 6 + Studio D", "Studio 6|Studio D", "Control room and its booth")]
 S["09-paired-booth"] = ("modal", modal("Book a room", [
-    {"type": "section", "text": md("🗓️ *Thursday, Oct 14 · 9:00 AM – 2:00 PM · Localization Dubbing*"),
-     "accessory": overflow("room_more", ("Show all suitable rooms", "show_all"), ("Choose the booth myself", "booth"))},
-    inp("room", "Room and booth", radio("room_radio", pair)),
-    ctx("Pairs come from each room's *Paired with* in Airtable. Only pairs where both rooms are free are listed."),
+    sec("🗓️ *Thursday, Oct 14 · 9:00 AM – 2:00 PM · Localization Dubbing*"),
+    inp("room", "Studio", radio("room_radio", [opt("Studio 1", d="Recommended · usual for Localization Dubbing"), opt("Studio 2", d="Usual for Localization Dubbing")])),
+    inp("booth", "Booth", {"type": "static_select", "action_id": "booth_pick", "initial_option": opt("Studio A"),
+                           "option_groups": [{"label": pt("Free then"), "options": [opt("Studio A"), opt("Studio B"), opt("Studio D")]}]},
+        hint="Set to Studio 1's usual booth. Any free booth works - the engineer patches it."),
 ], submit="Next", close="Back"))
 S["10-holding-rooms"] = ("modal", modal("Book a room", [
     DATE_LINE | {"text": md("🗓️ *Thursday, Oct 14 · 1:00–5:00 PM · Celebrity Recording*")},

@@ -64,9 +64,10 @@ room? (Likha, Katha or Salin)" from its Room Requirements; Airtable has each con
 Studio 2 → B, Studios 3-7 → A, B or D "can change using Dante", Studio D → 6, Studio E → 7) and **Records Vocals In-Room**
 (7, 8, C, D, F).
 
-- **A session that needs a booth** (Room Requirements say so: Localization Dubbing): the room list offers **pairs** -
-  "Studio 1 + Studio A", "Studio 2 + Studio B" - built from Paired with, only where both rooms are free. One pick, no
-  second question.
+- **A session that needs a booth** (Room Requirements say so: Localization Dubbing): **Studio** and **Booth** are picked
+  separately (decided 14 Oct, so any studio can go with any booth - "Studio 1 + Studio B"). The booth starts at the studio's
+  usual one (Paired with) and lists every vocal booth free then (free on all dates, for a series); changing the studio
+  resets it. A booth that isn't the studio's usual one gets a note: the engineer patches it (Dante).
 - **Holding rooms** (Room Requirements mention conference rooms: Celebrity Recording): a **Holding rooms** checklist of the
   conference rooms free then; one or more, or none.
 - Both go on the one booking, as today; Move and Cancel take every room with them.
@@ -74,7 +75,7 @@ Studio 2 → B, Studios 3-7 → A, B or D "can change using Dante", Studio D →
 | Feature now | After the pivot | |
 |---|---|---|
 | Several rooms on one booking; booth only with a studio | Same | Keep |
-| Booth chosen by the model / requester's words | Pairs offered from Airtable's Paired with | Change |
+| Booth chosen by the model / requester's words | Studio and booth picked separately; the booth defaults to the studio's usual one (Paired with), any free vocal booth allowed | Change |
 | A booth with any studio when asked (special cases) | Pair with a vocal booth checkbox, off by default | Change |
 | "Want a holding room?" note, answered in chat | Holding rooms checklist on the form | Change |
 | Which rooms record vocals in-room (Airtable checkbox, v229) | Same data; a typed question answers it | Keep |

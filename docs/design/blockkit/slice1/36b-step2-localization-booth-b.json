@@ -1,0 +1,209 @@
+{
+  "type": "modal",
+  "callback_id": "view",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Back"
+  },
+  "blocks": [
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "*Step 2 of 2* · room and details"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Thursday, Oct 15 · 9:00 AM – 2:00 PM · Localization Dubbing*"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "room",
+      "label": {
+        "type": "plain_text",
+        "text": "Studio"
+      },
+      "element": {
+        "type": "radio_buttons",
+        "action_id": "room_radio",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio 1"
+            },
+            "value": "Studio 1",
+            "description": {
+              "type": "plain_text",
+              "text": "Recommended · usual for Localization Dubbing"
+            }
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio 2"
+            },
+            "value": "Studio 2",
+            "description": {
+              "type": "plain_text",
+              "text": "Usual for Localization Dubbing"
+            }
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio 6"
+            },
+            "value": "Studio 6",
+            "description": {
+              "type": "plain_text",
+              "text": "Usual for Localization Dubbing"
+            }
+          }
+        ],
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "Studio 1"
+          },
+          "value": "Studio 1",
+          "description": {
+            "type": "plain_text",
+            "text": "Recommended · usual for Localization Dubbing"
+          }
+        }
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "booth",
+      "label": {
+        "type": "plain_text",
+        "text": "Booth"
+      },
+      "element": {
+        "type": "static_select",
+        "action_id": "booth_pick",
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "Studio B"
+          },
+          "value": "Studio B"
+        },
+        "option_groups": [
+          {
+            "label": {
+              "type": "plain_text",
+              "text": "Free then"
+            },
+            "options": [
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Studio A"
+                },
+                "value": "Studio A"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Studio B"
+                },
+                "value": "Studio B"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Studio D"
+                },
+                "value": "Studio D"
+              }
+            ]
+          }
+        ]
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "Not Studio 1's usual booth - the engineer patches it (Dante)."
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "input",
+      "block_id": "code",
+      "label": {
+        "type": "plain_text",
+        "text": "Project code"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "code_in",
+        "initial_value": "LOPH S2"
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "As in Localization Projects. The client and the title come from it."
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "engineer",
+      "label": {
+        "type": "plain_text",
+        "text": "Engineer"
+      },
+      "element": {
+        "type": "users_select",
+        "action_id": "engineer_pick",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "You"
+        }
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "Set to you."
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "notes",
+      "label": {
+        "type": "plain_text",
+        "text": "Notes"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "notes_in",
+        "multiline": true
+      },
+      "optional": true
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Booking type: Entertainment · Calendar title: *LOPH S2 / HL*"
+        }
+      ]
+    }
+  ],
+  "submit": {
+    "type": "plain_text",
+    "text": "Book"
+  }
+}

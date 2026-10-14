@@ -198,21 +198,35 @@ S["32-booking-likha"] = ("modal", booking("Likha", WM))
 S["33-booked-likha"] = ("modal", booked("LIKHA - Q4 planning", "Likha · " + WM, "Likha"))
 S["34-result-likha"] = ("message", msg([sec("✅ *Booked.*\n*LIKHA - Q4 planning*\nLikha · " + WM), ctx("Meeting"),
                                          acts(btn("Move", "move"), btn("Cancel", "cancel", "danger"))]))
+def studio_booth(booth, studios, booth_note, series=False):
+    """Studio and booth chosen separately: the booth defaults to the studio's usual one (Airtable Paired with) and any free
+    vocal booth can be picked instead - the engineer patches it (Dante)."""
+    booths = [opt("Studio A"), opt("Studio B"), opt("Studio D")]
+    return [inp("room", "Studio", radio("room_radio", studios)),
+            inp("booth", "Booth", {"type": "static_select", "action_id": "booth_pick", "initial_option": opt(booth),
+                                   "option_groups": [{"label": pt("Free then" + (" on all dates" if series else "")), "options": booths}]},
+                hint=booth_note)]
+
+
 WL = "Thursday, Oct 15 · 9:00 AM – 2:00 PM"
 S["35-step1-localization"] = ("modal", step1("2026-10-15", "09:00", "14:00", "Localization Dubbing"))
-S["36-step2-localization"] = ("modal", modal("Book a room", [
+def loc_step2(booth, note):
+    return modal("Book a room", [
     ctx("*Step 2 of 2* · room and details"),
     sec("🗓️ *" + WL + " · Localization Dubbing*"),
-    inp("room", "Room and booth", radio("room_radio", [opt("Studio 1 + Studio A", "Studio 1|Studio A", "Recommended · control room and its booth"),
-                                                       opt("Studio 2 + Studio B", "Studio 2|Studio B", "Control room and its booth")])),
+] + studio_booth(booth, [opt("Studio 1", d="Recommended · usual for Localization Dubbing"), opt("Studio 2", d="Usual for Localization Dubbing"), opt("Studio 6", d="Usual for Localization Dubbing")], note) + [
     dv,
     inp("code", "Project code", text_in("code_in", "LOPH S2"), hint="As in Localization Projects. The client and the title come from it."),
     inp("engineer", "Engineer", users("engineer_pick", "You"), hint="Set to you."),
     inp("notes", "Notes", text_in("notes_in", multiline=True), optional=True),
     ctx("Booking type: Entertainment · Calendar title: *LOPH S2 / HL*"),
-], submit="Book", close="Back"))
-S["37-booking-loc"] = ("modal", booking("Studio 1 + Studio A", WL))
-S["38-booked-loc"] = ("modal", booked("LOPH S2 / HL", "Studio 1 + Studio A · " + WL, "Studio 1 and Studio A"))
+], submit="Book", close="Back")
+
+
+S["36-step2-localization"] = ("modal", loc_step2("Studio A", "Set to Studio 1's usual booth. Any free booth works - the engineer patches it."))
+S["36b-step2-localization-booth-b"] = ("modal", loc_step2("Studio B", "Not Studio 1's usual booth - the engineer patches it (Dante)."))
+S["37-booking-loc"] = ("modal", booking("Studio 1 + Studio B", WL))
+S["38-booked-loc"] = ("modal", booked("LOPH S2 / HL", "Studio 1 + Studio B · " + WL, "Studio 1 and Studio B"))
 
 # ---- my bookings, cancel, move ---------------------------------------------------------------------------------------
 CONFIRM = {"title": pt("Cancel this booking?"), "text": md("*" + T1 + "*\nThu, Oct 15 · 2:00–4:00 PM · Studio 8"),
@@ -336,8 +350,8 @@ def _date_line(t):
 S["62-series-step2"] = ("modal", modal("Book a room", [
     ctx("*Step 2 of 2* · room and details"),
     sec("🗓️ *Mon – Fri · 9:00 AM – 2:00 PM · 10 dates from Oct 19 · Localization Dubbing*"),
-    inp("room", "Room and booth", radio("room_radio", [opt("Studio 1 + Studio A", "Studio 1|Studio A", "Recommended · free on all 10 dates"),
-                                                       opt("Studio 2 + Studio B", "Studio 2|Studio B", "Free on 9 of 10 dates")])),
+] + studio_booth("Studio A", [opt("Studio 1", d="Recommended · free on all 10 dates"), opt("Studio 2", d="Free on 9 of 10 dates")],
+                 "Set to Studio 1's usual booth. Any booth free on all dates works.", series=True) + [
     dv,
     sec("*Dates*"),
 ] + [_date_line("✓ " + d) for d in _dates] + [

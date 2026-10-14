@@ -14,7 +14,7 @@
       "type": "section",
       "text": {
         "type": "mrkdwn",
-        "text": "✅ *Booked.*\n*LOPH S2 / HL*\nStudio 1 + Studio A · Thursday, Oct 15 · 9:00 AM – 2:00 PM"
+        "text": "✅ *Booked.*\n*LOPH S2 / HL*\nStudio 1 + Studio B · Thursday, Oct 15 · 9:00 AM – 2:00 PM"
       }
     },
     {
@@ -22,7 +22,7 @@
       "elements": [
         {
           "type": "mrkdwn",
-          "text": "Studio 1 and Studio A accepted. The details and the Move / Cancel buttons are in your DM."
+          "text": "Studio 1 and Studio B accepted. The details and the Move / Cancel buttons are in your DM."
         }
       ]
     }

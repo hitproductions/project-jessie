@@ -31,7 +31,7 @@
       "block_id": "room",
       "label": {
         "type": "plain_text",
-        "text": "Room and booth"
+        "text": "Studio"
       },
       "element": {
         "type": "radio_buttons",
@@ -40,37 +40,102 @@
           {
             "text": {
               "type": "plain_text",
-              "text": "Studio 1 + Studio A"
+              "text": "Studio 1"
             },
-            "value": "Studio 1|Studio A",
+            "value": "Studio 1",
             "description": {
               "type": "plain_text",
-              "text": "Recommended · control room and its booth"
+              "text": "Recommended · usual for Localization Dubbing"
             }
           },
           {
             "text": {
               "type": "plain_text",
-              "text": "Studio 2 + Studio B"
+              "text": "Studio 2"
             },
-            "value": "Studio 2|Studio B",
+            "value": "Studio 2",
             "description": {
               "type": "plain_text",
-              "text": "Control room and its booth"
+              "text": "Usual for Localization Dubbing"
+            }
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio 6"
+            },
+            "value": "Studio 6",
+            "description": {
+              "type": "plain_text",
+              "text": "Usual for Localization Dubbing"
             }
           }
         ],
         "initial_option": {
           "text": {
             "type": "plain_text",
-            "text": "Studio 1 + Studio A"
+            "text": "Studio 1"
           },
-          "value": "Studio 1|Studio A",
+          "value": "Studio 1",
           "description": {
             "type": "plain_text",
-            "text": "Recommended · control room and its booth"
+            "text": "Recommended · usual for Localization Dubbing"
           }
         }
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "booth",
+      "label": {
+        "type": "plain_text",
+        "text": "Booth"
+      },
+      "element": {
+        "type": "static_select",
+        "action_id": "booth_pick",
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "Studio A"
+          },
+          "value": "Studio A"
+        },
+        "option_groups": [
+          {
+            "label": {
+              "type": "plain_text",
+              "text": "Free then"
+            },
+            "options": [
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Studio A"
+                },
+                "value": "Studio A"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Studio B"
+                },
+                "value": "Studio B"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Studio D"
+                },
+                "value": "Studio D"
+              }
+            ]
+          }
+        ]
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "Set to Studio 1's usual booth. Any free booth works - the engineer patches it."
       }
     },
     {
