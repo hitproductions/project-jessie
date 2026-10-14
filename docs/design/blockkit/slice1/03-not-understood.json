@@ -1,0 +1,35 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "I can only help with studio bookings. Here's what I can do:"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Book a room"
+          },
+          "action_id": "open_book",
+          "value": "x",
+          "style": "primary"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "My bookings"
+          },
+          "action_id": "my_bookings",
+          "value": "x"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,185 @@
+{
+  "type": "modal",
+  "callback_id": "book_step2",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Back"
+  },
+  "blocks": [
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "*Step 2 of 2* · room and details"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Thursday, Oct 15 · 12:00–2:00 PM · VO Recording*"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "room",
+      "label": {
+        "type": "plain_text",
+        "text": "Room"
+      },
+      "element": {
+        "type": "radio_buttons",
+        "action_id": "room_radio",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio 8"
+            },
+            "value": "Studio 8",
+            "description": {
+              "type": "plain_text",
+              "text": "You picked this · usual for VO Recording"
+            }
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio F"
+            },
+            "value": "Studio F",
+            "description": {
+              "type": "plain_text",
+              "text": "Usual for VO Recording"
+            }
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio C"
+            },
+            "value": "Studio C",
+            "description": {
+              "type": "plain_text",
+              "text": "Usual for VO Recording"
+            }
+          }
+        ],
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "Studio 8"
+          },
+          "value": "Studio 8",
+          "description": {
+            "type": "plain_text",
+            "text": "You picked this · usual for VO Recording"
+          }
+        }
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "input",
+      "block_id": "project",
+      "label": {
+        "type": "plain_text",
+        "text": "Project"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "project_in",
+        "initial_value": "QAW1"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "client",
+      "label": {
+        "type": "plain_text",
+        "text": "Client"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "client_in"
+      },
+      "optional": true,
+      "hint": {
+        "type": "plain_text",
+        "text": "Leave empty if there's no client. A new name is fine."
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "engineer",
+      "label": {
+        "type": "plain_text",
+        "text": "Engineer"
+      },
+      "element": {
+        "type": "users_select",
+        "action_id": "engineer_pick",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "You"
+        }
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "Set to you. Change it if someone else is engineering."
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "for",
+      "label": {
+        "type": "plain_text",
+        "text": "Booking for"
+      },
+      "element": {
+        "type": "users_select",
+        "action_id": "for_pick",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Leave empty if it's for you"
+        }
+      },
+      "optional": true
+    },
+    {
+      "type": "input",
+      "block_id": "notes",
+      "label": {
+        "type": "plain_text",
+        "text": "Notes"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "notes_in",
+        "multiline": true
+      },
+      "optional": true
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Calendar title: *QAW1 / <client> / HL*"
+        }
+      ]
+    }
+  ],
+  "submit": {
+    "type": "plain_text",
+    "text": "Book"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "type": "modal",
+  "callback_id": "view",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Close"
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "⏳ *Booking Likha…*\nThursday, Oct 15 · 3:00–4:00 PM"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Checking the room, writing it to the calendar and waiting for the room to accept. A few seconds."
+        }
+      ]
+    }
+  ]
+}

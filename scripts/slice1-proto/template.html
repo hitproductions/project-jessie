@@ -1,0 +1,233 @@
+<title>Jessie Slice 1 Prototype</title>
+<meta name="description" content="Click-through prototype of the first Slack-app slice: booking, my bookings, cancel and move, typed requests and questions.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&family=Lato:wght@400;700;900&display=swap">
+<style>
+/* Layout: flows down the left; a Slack DM window in the middle with forms opening on top; what to look at on the right.
+   Slack's light look throughout (one deliberate theme, since the screens mimic Slack). */
+:root {
+  color-scheme: light;
+  --bg: #eef1ef; --panel: #ffffff; --ink: #18201e; --muted: #5a6763; --line: #d8dfdc;
+  --accent: #0d6b60; --accent-soft: #e1f0ec; --hot: #f2a33a;
+  --s-bg: #ffffff; --s-ink: #1d1c1d; --s-muted: #616061; --s-line: #dddddd; --s-green: #007a5a; --s-red: #e01e5a; --s-blue: #1264a3;
+  --s-side: #3f0e40;
+  --f-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --f-slack: "Lato", "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; }
+.wrap { display: grid; grid-template-columns: 270px minmax(0, 1fr) 280px; gap: 16px; padding: 16px; min-height: 100vh; align-items: start; }
+h1 { font-family: var(--f-display); font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+.sub { color: var(--muted); font-size: 13px; line-height: 1.45; margin: 0 0 12px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.flows { display: grid; gap: 6px; }
+.flow { text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 9px 11px; cursor: pointer; font: inherit; color: inherit; display: grid; gap: 3px; }
+.flow:hover, .flow:focus-visible { border-color: var(--accent); outline: none; }
+.flow.on { border-color: var(--accent); background: var(--accent-soft); }
+.flow b { font-size: 13.5px; } .flow span { font-size: 11.5px; color: var(--muted); line-height: 1.35; }
+.kicker { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.side { display: grid; gap: 12px; position: sticky; top: 16px; }
+.look ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 8px; font-size: 13px; line-height: 1.45; }
+.stepbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.stepbar button { font: inherit; font-size: 12.5px; border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.stepbar button:hover, .stepbar button:focus-visible { border-color: var(--accent); outline: none; }
+.stepbar .count { font-family: var(--f-mono); font-size: 12px; color: var(--muted); margin-right: auto; }
+.hint { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.hint i { font-style: normal; background: #fff3df; border: 1px solid var(--hot); border-radius: 4px; padding: 0 4px; }
+
+/* the Slack window */
+.slackwin { background: var(--s-bg); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; height: calc(100vh - 32px); min-height: 600px; position: sticky; top: 16px; }
+.chan { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--s-line); font-family: var(--f-slack); font-weight: 900; font-size: 15px; color: var(--s-ink); }
+.chan .sk-av { width: 22px; height: 22px; font-size: 11px; border-radius: 4px; }
+.dm { padding: 14px 16px 24px; display: grid; gap: 14px; align-content: start; overflow: auto; }
+.overlay { position: absolute; inset: 0; background: rgba(29,28,29,.42); display: grid; place-items: start center; padding: 26px 14px; overflow: auto; }
+.overlay[hidden] { display: none; }
+.overlay .sk-modal { width: min(520px, 100%); }
+.dialog { position: absolute; inset: 0; background: rgba(29,28,29,.42); display: grid; place-items: center; padding: 14px; }
+.dialog[hidden] { display: none; }
+.dialog .box { background: #fff; border-radius: 8px; width: min(420px, 100%); padding: 18px 20px; display: grid; gap: 12px; font-family: var(--f-slack); color: var(--s-ink); box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+.dialog .box h4 { margin: 0; font-size: 18px; font-weight: 900; }
+.dialog .box .acts { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Slack rendering from Block Kit JSON */
+.sk { font-family: var(--f-slack); color: var(--s-ink); font-size: 14px; line-height: 1.45; }
+.sk-msg { display: grid; grid-template-columns: 36px 1fr; gap: 10px; }
+.sk-av { width: 36px; height: 36px; border-radius: 6px; display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 15px; }
+.sk-av.j { background: #0d6b60; } .sk-av.u { background: #8a7f6d; }
+.sk-who { font-weight: 900; font-size: 14px; }
+.sk-who .app { font-weight: 700; font-size: 10px; background: #e8e8e8; color: var(--s-muted); padding: 1px 4px; border-radius: 3px; margin-left: 4px; vertical-align: 1px; }
+.sk-who .t { font-weight: 400; color: var(--s-muted); font-size: 11.5px; margin-left: 5px; }
+.sk-body { display: grid; gap: 8px; min-width: 0; }
+.sk-text { overflow-wrap: anywhere; }
+.sk-ctx { display: flex; flex-wrap: wrap; gap: 6px; color: var(--s-muted); font-size: 12.5px; }
+.sk-hr { height: 1px; background: var(--s-line); margin: 2px 0; }
+.sk-sec { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+.sk-sec.noacc { grid-template-columns: 1fr; }
+.sk-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sk-btn { font-weight: 700; font-size: 13px; border: 1px solid #c8c8c8; background: #fff; color: var(--s-ink); border-radius: 4px; padding: 5px 11px; white-space: nowrap; font-family: var(--f-slack); }
+.sk-btn.primary { background: var(--s-green); border-color: var(--s-green); color: #fff; }
+.sk-btn.danger { color: var(--s-red); }
+.sk-btn.danger.solid { background: var(--s-red); border-color: var(--s-red); color: #fff; }
+.hot { cursor: pointer; box-shadow: 0 0 0 3px var(--hot); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(242,163,58,.35); } }
+@media (prefers-reduced-motion: reduce) { .hot { animation: none; } }
+.sk-sel { border: 1px solid #c8c8c8; border-radius: 4px; padding: 6px 10px; display: flex; justify-content: space-between; gap: 8px; background: #fff; font-size: 13.5px; }
+.sk-sel .ph, .sk-in .ph { color: #8a8a8a; } .sk-sel .car { color: var(--s-muted); }
+.sk-in { border: 1px solid #c8c8c8; border-radius: 4px; padding: 7px 10px; background: #fff; font-size: 13.5px; min-height: 32px; }
+.sk-in.ml { min-height: 54px; }
+.sk-input { display: grid; gap: 4px; }
+.sk-label { font-weight: 700; font-size: 13.5px; } .sk-label i { font-weight: 400; color: var(--s-muted); font-style: normal; }
+.sk-hint { font-size: 12px; color: var(--s-muted); }
+.sk-opts { display: grid; gap: 7px; }
+.sk-opt { display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: start; font-size: 13.5px; }
+.sk-opt .mk { width: 14px; height: 14px; border: 1.5px solid #9a9a9a; margin-top: 3px; background: #fff; border-radius: 50%; }
+.sk-opt .mk.on { border-color: var(--s-blue); background: radial-gradient(circle, var(--s-blue) 0 38%, #fff 42%); }
+.sk-opt .d { display: block; color: var(--s-muted); font-size: 12px; }
+.sk-modal { background: var(--s-bg); border-radius: 8px; overflow: hidden; box-shadow: 0 12px 34px rgba(0,0,0,.25); }
+.sk-mh { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--s-line); font-weight: 900; font-size: 17px; }
+.sk-mh .sk-av { width: 24px; height: 24px; font-size: 12px; border-radius: 4px; }
+.sk-mh .x { margin-left: auto; color: var(--s-muted); font-weight: 400; }
+.sk-mb { padding: 14px 16px; display: grid; gap: 12px; }
+.sk-mf { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--s-line); }
+
+@media (max-width: 1100px) { .wrap { grid-template-columns: 240px minmax(0, 1fr); } .side { grid-column: 1 / -1; position: static; } }
+@media (max-width: 720px) { .wrap { grid-template-columns: 1fr; padding: 12px 16px; } .slackwin { position: relative; top: 0; height: 640px; min-height: 0; } }
+</style>
+
+<div class="wrap">
+  <aside class="panel">
+    <span class="kicker">Slice 1 · prototype</span>
+    <h1>Jessie in Slack</h1>
+    <p class="sub">Pick a flow, then tap the highlighted button to move through it. Every screen is real Block Kit.</p>
+    <div class="flows" id="flows"></div>
+  </aside>
+  <main class="slackwin" aria-label="Slack DM with Jessie">
+    <div class="chan"><div class="sk-av j">J</div>Jessie</div>
+    <div class="dm sk" id="dm"></div>
+    <div class="overlay" id="overlay" hidden></div>
+    <div class="dialog" id="dialog" hidden></div>
+  </main>
+  <aside class="side">
+    <div class="panel">
+      <div class="stepbar"><span class="count" id="count"></span><button id="back">Back</button><button id="restart">Restart</button></div>
+      <p class="hint" style="margin-top:8px">Tap the button outlined in <i>orange</i>. "Booking…" screens move on by themselves.</p>
+    </div>
+    <div class="panel"><span class="kicker">This flow</span><p id="stats" style="margin:6px 0 0;font-size:13px;line-height:1.45"></p></div>
+    <div class="panel look"><span class="kicker">What to look at</span><ul id="look"></ul></div>
+  </aside>
+</div>
+
+<script id="screens" type="application/json">/*SCREENS*/</script>
+<script id="flowsdata" type="application/json">/*FLOWS*/</script>
+<script>
+(function () {
+  const SCREENS = JSON.parse(document.getElementById('screens').textContent);
+  const FLOWS = JSON.parse(document.getElementById('flowsdata').textContent);
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function mrk(s) {
+    let h = esc(s);
+    h = h.replace(/\*([^*\n]+)\*/g, '<b>$1</b>');
+    h = h.replace(/(^|[\s(>·])_([^_\n]+)_(?=$|[\s).,!?<:])/g, '$1<i>$2</i>');
+    h = h.replace(/(^|[\s(>])~([^~\n]+)~(?=$|[\s).,!?<])/g, '$1<s>$2</s>');
+    return h.replace(/\n/g, '<br>');
+  }
+  const txt = o => !o ? '' : (o.type === 'mrkdwn' ? mrk(o.text) : esc(o.text).replace(/\n/g, '<br>'));
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const fdate = s => { const d = new Date(s + 'T00:00:00Z'); return DOW[d.getUTCDay()] + ', ' + MON[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear(); };
+  const ftime = s => { let [h, m] = s.split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; };
+  const sel = (v, ph) => '<div class="sk-sel">' + (v ? '<span>' + v + '</span>' : '<span class="ph">' + esc(ph || 'Select an item') + '</span>') + '<span class="car">▾</span></div>';
+  function opts(e) {
+    const on = e.initial_option && e.initial_option.value;
+    return '<div class="sk-opts">' + e.options.map(o => '<div class="sk-opt"><span class="mk' + (o.value === on ? ' on' : '') + '"></span><span>' + txt(o.text) +
+      (o.description ? '<span class="d">' + txt(o.description) + '</span>' : '') + '</span></div>').join('') + '</div>';
+  }
+  function el(e) {
+    switch (e.type) {
+      case 'button': return '<span class="sk-btn' + (e.style ? ' ' + e.style : '') + '" data-action="' + esc(e.action_id) + '">' + txt(e.text) + '</span>';
+      case 'static_select': return sel(e.initial_option ? txt(e.initial_option.text) : '', e.placeholder && e.placeholder.text);
+      case 'users_select': return sel('', e.placeholder && e.placeholder.text);
+      case 'datepicker': return sel(e.initial_date ? '📅 ' + fdate(e.initial_date) : '', 'Select a date');
+      case 'timepicker': return sel(e.initial_time ? '🕑 ' + ftime(e.initial_time) : '', 'Select time');
+      case 'plain_text_input': return '<div class="sk-in' + (e.multiline ? ' ml' : '') + '">' + (e.initial_value ? esc(e.initial_value) : '<span class="ph">' + esc((e.placeholder && e.placeholder.text) || '') + '</span>') + '</div>';
+      case 'radio_buttons': return opts(e);
+      default: return '';
+    }
+  }
+  function block(b) {
+    switch (b.type) {
+      case 'section': { const acc = b.accessory ? '<div>' + el(b.accessory) + '</div>' : '';
+        return '<div class="sk-sec' + (acc ? '' : ' noacc') + '"><div class="sk-text">' + txt(b.text) + '</div>' + acc + '</div>'; }
+      case 'context': return '<div class="sk-ctx">' + b.elements.map(x => '<span>' + txt(x) + '</span>').join('') + '</div>';
+      case 'divider': return '<div class="sk-hr"></div>';
+      case 'actions': return '<div class="sk-actions">' + b.elements.map(el).join('') + '</div>';
+      case 'input': return '<div class="sk-input"><div class="sk-label">' + txt(b.label) + (b.optional ? ' <i>(optional)</i>' : '') + '</div>' + el(b.element) +
+        (b.hint ? '<div class="sk-hint">' + txt(b.hint) + '</div>' : '') + '</div>';
+      default: return '';
+    }
+  }
+  const head = (who, cls, app) => '<div class="sk-msg"><div class="sk-av ' + cls + '">' + who[0] + '</div><div class="sk-body"><div class="sk-who">' + who +
+    (app ? '<span class="app">APP</span>' : '') + '<span class="t">10:02 AM</span></div>';
+  function modalHtml(m) {
+    return '<div class="sk-modal" role="dialog" aria-label="' + esc(m.title.text) + '"><div class="sk-mh"><div class="sk-av j">J</div>' + txt(m.title) +
+      '<span class="x">✕</span></div><div class="sk-mb">' + m.blocks.map(block).join('') + '</div><div class="sk-mf">' +
+      (m.close ? '<span class="sk-btn" data-action="__close">' + txt(m.close) + '</span>' : '') +
+      (m.submit ? '<span class="sk-btn primary" data-action="__submit">' + txt(m.submit) + '</span>' : '') + '</div></div>';
+  }
+  function findConfirm(blocks, id) {
+    for (const b of blocks || []) {
+      const els = (b.elements || []).concat(b.accessory ? [b.accessory] : []);
+      for (const e of els) if (e.action_id === id && e.confirm) return e.confirm;
+    }
+    return null;
+  }
+
+  let flow = FLOWS[0], idx = 0, timer = null;
+  const $ = id => document.getElementById(id);
+  function render() {
+    clearTimeout(timer);
+    const st = flow.states[idx];
+    $('dm').innerHTML = st.dm.map(([w, v]) => w === 'u' ? head('You', 'u') + '<div class="sk-text">' + esc(v) + '</div></div></div>'
+      : head('Jessie', 'j', true) + SCREENS[v].json.blocks.map(block).join('') + '</div></div>').join('');
+    const ov = $('overlay');
+    if (st.modal) { ov.innerHTML = modalHtml(SCREENS[st.modal].json); ov.hidden = false; } else { ov.innerHTML = ''; ov.hidden = true; }
+    $('dialog').hidden = true;
+    const scope = st.modal ? ov : $('dm');
+    scope.querySelectorAll('[data-action]').forEach(n => {
+      const a = n.dataset.action;
+      if (!(a in st.go)) return;
+      n.classList.add('hot'); n.setAttribute('role', 'button'); n.tabIndex = 0;
+      const act = () => {
+        const blocks = st.modal ? SCREENS[st.modal].json.blocks : st.dm.filter(d => d[0] === 'j').flatMap(d => SCREENS[d[1]].json.blocks);
+        const c = findConfirm(blocks, a);
+        if (c) return showConfirm(c, () => go(st.go[a]));
+        go(st.go[a]);
+      };
+      n.addEventListener('click', act);
+      n.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+    });
+    if (st.auto !== undefined) timer = setTimeout(() => go(st.auto), 1500);
+    $('count').textContent = 'Screen ' + (idx + 1) + ' of ' + flow.states.length;
+    $('stats').textContent = flow.stats;
+    $('look').innerHTML = flow.look.map(l => '<li>' + esc(l) + '</li>').join('');
+    document.querySelectorAll('.flow').forEach(b => b.classList.toggle('on', b.dataset.id === flow.id));
+    const last = scope.querySelector('.hot'); if (last && st.modal == null) last.scrollIntoView({ block: 'nearest' });
+  }
+  function showConfirm(c, ok) {
+    const d = $('dialog');
+    d.innerHTML = '<div class="box sk" role="alertdialog"><h4>' + txt(c.title) + '</h4><div>' + txt(c.text) + '</div><div class="acts">' +
+      '<span class="sk-btn" id="deny">' + txt(c.deny) + '</span><span class="sk-btn danger solid hot" id="ok" tabindex="0" role="button">' + txt(c.confirm) + '</span></div></div>';
+    d.hidden = false;
+    $('ok').onclick = ok; $('ok').onkeydown = e => { if (e.key === 'Enter') ok(); };
+    $('deny').onclick = () => { d.hidden = true; };
+  }
+  function go(i) { idx = i; render(); }
+  $('flows').innerHTML = FLOWS.map(f => '<button class="flow" data-id="' + f.id + '"><b>' + esc(f.title) + '</b><span>' + esc(f.stats) + '</span></button>').join('');
+  document.querySelectorAll('.flow').forEach(b => b.onclick = () => { flow = FLOWS.find(f => f.id === b.dataset.id); idx = 0; render(); });
+  $('back').onclick = () => { if (idx > 0) go(idx - 1); };
+  $('restart').onclick = () => go(0);
+  render();
+})();
+</script>

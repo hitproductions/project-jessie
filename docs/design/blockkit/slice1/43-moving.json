@@ -1,0 +1,21 @@
+{
+  "type": "modal",
+  "callback_id": "view",
+  "title": {
+    "type": "plain_text",
+    "text": "Move booking"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Close"
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "⏳ *Moving QAW1 / Sasa Abella / HL…*\nto Friday, Oct 16 · 2:00–4:00 PM · Studio 8"
+      }
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "type": "modal",
+  "callback_id": "view",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Back"
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "❌ *Studio 8 turned this booking down*, so it was taken off the calendar. Nothing is booked. Pick another room, or go Back to change the time."
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Thursday, Oct 15 · 2:00–4:00 PM · VO Recording*"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "room",
+      "label": {
+        "type": "plain_text",
+        "text": "Room"
+      },
+      "element": {
+        "type": "radio_buttons",
+        "action_id": "room_radio",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio F"
+            },
+            "value": "Studio F",
+            "description": {
+              "type": "plain_text",
+              "text": "Recommended · usual for VO Recording"
+            }
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio C"
+            },
+            "value": "Studio C",
+            "description": {
+              "type": "plain_text",
+              "text": "Usual for VO Recording"
+            }
+          }
+        ],
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "Studio F"
+          },
+          "value": "Studio F",
+          "description": {
+            "type": "plain_text",
+            "text": "Recommended · usual for VO Recording"
+          }
+        }
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Everything you entered is kept."
+        }
+      ]
+    }
+  ],
+  "submit": {
+    "type": "plain_text",
+    "text": "Book"
+  }
+}

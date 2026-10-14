@@ -1,0 +1,35 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Studio 7 · Thursday, Oct 15 · 2:00–4:00 PM*\nVO Recording · QAW1 · Sasa Abella"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Book a room"
+          },
+          "action_id": "open_book_prefilled",
+          "value": "x",
+          "style": "primary"
+        }
+      ]
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Opens the form with these filled in."
+        }
+      ]
+    }
+  ]
+}

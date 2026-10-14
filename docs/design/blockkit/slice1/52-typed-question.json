@@ -1,0 +1,68 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Free tomorrow, Thu Oct 15, 12:00 – 6:00 PM*"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Studio 8* · free the whole afternoon"
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Book"
+        },
+        "action_id": "book_s8",
+        "value": "x"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Studio 6* · free 3:00 – 6:00 PM"
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Book"
+        },
+        "action_id": "book_s6",
+        "value": "x"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Studio C* · free 12:00 – 2:00 PM"
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Book"
+        },
+        "action_id": "book_sc",
+        "value": "x"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Studios only. Afternoon = 12:00 – 6:00 PM."
+        }
+      ]
+    }
+  ]
+}

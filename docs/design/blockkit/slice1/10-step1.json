@@ -1,0 +1,214 @@
+{
+  "type": "modal",
+  "callback_id": "book_step1",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Cancel"
+  },
+  "blocks": [
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "*Step 1 of 2* · when, and what for"
+        }
+      ]
+    },
+    {
+      "type": "input",
+      "block_id": "date",
+      "label": {
+        "type": "plain_text",
+        "text": "Date"
+      },
+      "element": {
+        "type": "datepicker",
+        "action_id": "date_pick",
+        "initial_date": "2026-10-15"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "start",
+      "label": {
+        "type": "plain_text",
+        "text": "Start"
+      },
+      "element": {
+        "type": "timepicker",
+        "action_id": "start_pick",
+        "initial_time": "14:00",
+        "timezone": "Asia/Manila"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "end",
+      "label": {
+        "type": "plain_text",
+        "text": "End"
+      },
+      "element": {
+        "type": "timepicker",
+        "action_id": "end_pick",
+        "initial_time": "16:00",
+        "timezone": "Asia/Manila"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "purpose",
+      "label": {
+        "type": "plain_text",
+        "text": "What's it for?"
+      },
+      "element": {
+        "type": "static_select",
+        "action_id": "purpose_pick",
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "VO Recording"
+          },
+          "value": "VO Recording"
+        },
+        "option_groups": [
+          {
+            "label": {
+              "type": "plain_text",
+              "text": "Sessions"
+            },
+            "options": [
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "VO Recording"
+                },
+                "value": "VO Recording"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Post Mixing"
+                },
+                "value": "Post Mixing"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Music Mixing"
+                },
+                "value": "Music Mixing"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Music Vocal Recording"
+                },
+                "value": "Music Vocal Recording"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Band Recording"
+                },
+                "value": "Band Recording"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Celebrity Recording"
+                },
+                "value": "Celebrity Recording"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "QC"
+                },
+                "value": "QC"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Post Processing"
+                },
+                "value": "Post Processing"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Localization Dubbing"
+                },
+                "value": "Localization Dubbing"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Localization Editing"
+                },
+                "value": "Localization Editing"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Localization Mixing"
+                },
+                "value": "Localization Mixing"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Localization Atmos Mixing"
+                },
+                "value": "Localization Atmos Mixing"
+              }
+            ]
+          },
+          {
+            "label": {
+              "type": "plain_text",
+              "text": "Not a session"
+            },
+            "options": [
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Meeting"
+                },
+                "value": "Meeting"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Event"
+                },
+                "value": "Event"
+              },
+              {
+                "text": {
+                  "type": "plain_text",
+                  "text": "Booth time (M booth)"
+                },
+                "value": "booth"
+              }
+            ]
+          }
+        ]
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "Jessie offers the rooms that can do this, the usual ones first."
+      }
+    }
+  ],
+  "submit": {
+    "type": "plain_text",
+    "text": "Find rooms"
+  }
+}

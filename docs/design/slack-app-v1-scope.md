@@ -75,6 +75,12 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 - **Main:** route a typed request to "pre-fill the form" instead of the chat booking flow, flow by flow.
 - **New workflow:** `Jessie — Slack Interactions` (clicks and form submissions), with its own version numbers.
 
+## See it
+
+Click-through prototype of slice 1 (11 flows, real Block Kit, taps and fields counted per flow):
+`docs/design/slack-app-slice1-prototype.html` - rebuild with `python3 scripts/slice1-proto/build.py`; the screens are in
+`docs/design/blockkit/slice1/` for the Block Kit Builder.
+
 ## Before the first slice
 
 1. **"Hello form" test:** a button opens a one-field form; Submit says "got it" and then posts a message - proves the

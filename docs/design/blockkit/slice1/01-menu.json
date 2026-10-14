@@ -1,0 +1,44 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "Hi! What would you like to do?"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Book a room"
+          },
+          "action_id": "open_book",
+          "value": "x",
+          "style": "primary"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "My bookings"
+          },
+          "action_id": "my_bookings",
+          "value": "x"
+        }
+      ]
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Or just type it, like _book studio 7 tomorrow 2-4pm_ or _is studio 8 free friday?_"
+        }
+      ]
+    }
+  ]
+}
