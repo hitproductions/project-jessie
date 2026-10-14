@@ -19,7 +19,7 @@
       "elements": [
         {
           "type": "mrkdwn",
-          "text": "❌ Cancelled by you · the engineer was told"
+          "text": "❌ Cancelled by you"
         }
       ]
     },

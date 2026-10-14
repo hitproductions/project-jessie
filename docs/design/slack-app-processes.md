@@ -277,6 +277,10 @@ No answer with the free alternatives and a one-tap rebook.
 **Shared booth (M booth with a standing hold), holder:** **Let them use it** / **Keep it**; no answer by the deadline books it
 for the requester (as today), and the message says so up front.
 
+**Who is told (decided 14 Oct):** never the person who made the change. A result says who was told only when
+someone else was ("Glenn Mariano (booker) was told"); when the person acting is the booker and the engineer, it says
+nothing about it.
+
 **Notices:** a coordinator's cancel or move → booker and engineer, with My bookings; a new booking → the engineer, with
 **Got it**; a declined room → the requester (section 2b).
 

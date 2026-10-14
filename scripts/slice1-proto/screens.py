@@ -223,9 +223,9 @@ def my_bookings(first_state="live"):
         first = [sec("*" + T1 + "*\nThu, Oct 15 · 2:00–4:00 PM · Studio 8"), ctx("VO Recording · Engineer: you"),
                  acts(btn("Move", "move"), btn("Cancel", "cancel", "danger", confirm=CONFIRM))]
     elif first_state == "cancelled":
-        first = [sec("~" + T1 + "~\n~Thu, Oct 15 · 2:00–4:00 PM · Studio 8~"), ctx("❌ Cancelled by you · the engineer was told")]
+        first = [sec("~" + T1 + "~\n~Thu, Oct 15 · 2:00–4:00 PM · Studio 8~"), ctx("❌ Cancelled by you")]
     else:
-        first = [sec("*" + T1 + "*\nFri, Oct 16 · 2:00–4:00 PM · Studio 8"), ctx("✅ Moved from Thu, Oct 15 · the engineer was told"),
+        first = [sec("*" + T1 + "*\nFri, Oct 16 · 2:00–4:00 PM · Studio 8"), ctx("✅ Moved from Thu, Oct 15"),
                  acts(btn("Move", "move"), btn("Cancel", "cancel", "danger"))]
     return msg([sec("*Your bookings · next 7 days*")] + first + [
         dv,
@@ -252,7 +252,7 @@ S["42-move-form"] = ("modal", modal("Move booking", [
 ], submit="Move", close="Cancel"))
 S["43-moving"] = ("modal", modal("Move booking", [sec("⏳ *Moving " + T1 + "…*\nto Friday, Oct 16 · 2:00–4:00 PM · Studio 8")], close="Close"))
 S["44-moved"] = ("modal", modal("Move booking", [sec("✅ *Moved.*\n*" + T1 + "*\nFriday, Oct 16 · 2:00–4:00 PM · Studio 8"),
-                                                 ctx("The engineer was told. Your bookings list is updated.")], close="Done"))
+                                                 ctx("Your bookings list is updated.")], close="Done"))
 S["45-my-bookings-moved"] = ("message", my_bookings("moved"))
 
 # ---- typed changes and questions -------------------------------------------------------------------------------------

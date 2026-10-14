@@ -363,10 +363,10 @@ S["26-move-form"] = ("modal", modal("Move booking", [
 ], submit="Move", close="Cancel"))
 S["27-after-change"] = ("message", message([
     sec("~QAW9 / HL~\n~Fri, Oct 15 · 10:00–11:00 AM · Studio 8~"),
-    ctx("❌ Cancelled by you at 10:42 AM · Engineer notified"),
+    ctx("❌ Cancelled by you at 10:42 AM"),
     dv,
     sec("✅ *Moved.* QAW1 / Harold Orozco / HL\nFri, Oct 15 · 2:00–4:00 PM · Studio 8"),
-    ctx("Was Thu, Oct 14 · 2:00–4:00 PM · Engineer notified"),
+    ctx("Was Thu, Oct 14 · 2:00–4:00 PM"),
     acts(btn("Move", "move"), btn("Cancel", "cancel", style="danger")),
 ]))
 
