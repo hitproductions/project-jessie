@@ -5,9 +5,10 @@
 // usual / not a room for this) and the details filled in.
 // Usage: node scripts/sim-typed-to-form.js [main v263] [slack interactions v9]
 const fs = require('fs');
-const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v263.json', 'utf8'));
-const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v9.json', 'utf8'));
+const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v264.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v10.json', 'utf8'));
 let pass = 0, fail = 0;
+const M264 = /Project: /.test(main.nodes.find(n => n.name === 'Form Offer').parameters.jsCode), V10 = si.nodes.some(n => n.name === 'Note Toggle');
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
 async function run(wf, name, input, outs) {
@@ -47,12 +48,34 @@ async function run(wf, name, input, outs) {
   ok(r.keep === 1 && F.offer && F.why === 'a booking request', 'a booking request -> an offer (the item passes through)');
   ok(JSON.stringify(F.prefill) === JSON.stringify({ d: '2027-10-14', s: '14:00', e: '16:00', r: 'Studio 7', p: 'VO Recording', pj: 'ORANGE', c: 'Jem Lim', en: 'U1', enN: 'Howard Luistro' }),
      'read by code: date, times, room, type, project, client, engineer - ' + JSON.stringify(F.prefill));
-  ok(F.text === 'Here’s what I have so far:\n🗓️ *Studio 7 · Thursday, October 14 · 2:00 PM – 4:00 PM*\nVO Recording · Project ORANGE · Client Jem Lim · Engineer Howard Luistro',
+  ok(F.text === 'Here’s what I have so far:\n🗓️ *Studio 7 · Thursday, October 14 · 2:00 PM – 4:00 PM*\nVO Recording · Project' + (M264 ? ': ' : ' ') + 'ORANGE · Client' + (M264 ? ': ' : ' ') + 'Jem Lim · Engineer' + (M264 ? ': ' : ' ') + 'Howard Luistro',
      'the reply, written by code - ' + F.text.replace(/\n/g, ' | '));
   const btn = F.blocks[1].elements[0];
   ok(btn.action_id === 'open_book' && JSON.parse(btn.value).r === 'Studio 7' && btn.value.length < 1900 && F.blocks[0].text.text === F.text, 'Book a room button carries the prefill');
   ok(!/Confirm to book|yes\/no|Reply yes/i.test(JSON.stringify(F.blocks)), 'no chat card, no yes/no');
 
+  if (M264) {
+    // v264: "for X" as the project (the live 01:30 message), never a colleague / room / type / date word
+    const ask = async (text, bf) => (await offer(text, { dates: '2027-10-16', bf })).formOffer.prefill;
+    let q = await ask('book studio 7 tomorrow 2-4pm VO recording for ORANGE, client Jem Lim', { timeStart: '14:00', timeEnd: '16:00', client: 'Jem Lim' });
+    ok(q.pj === 'ORANGE' && q.c === 'Jem Lim', 'v264: "for ORANGE, client Jem Lim" -> project ORANGE (the live 01:30 message)');
+    q = await ask('book studio 7 tomorrow for orange, client Jem Lim', { client: 'Jem Lim' });
+    ok(q.pj === 'orange', 'v264: client named separately -> "for orange" is the project as typed');
+    q = await ask('book studio 7 tomorrow for BLUE BIRD', {});
+    ok(q.pj === 'BLUE BIRD', 'v264: capitals, no client -> the project');
+    q = await ask('book studio 7 tomorrow for Jem Lim', { forClient: 'Jem Lim' });
+    ok(!q.pj && q.c === 'Jem Lim', 'v264: "for Jem Lim", no client named -> still the client');
+    q = await ask('book studio 7 for daryl tomorrow, client Jem Lim', { client: 'Jem Lim', bookedFor: 'Daryl Reyes', matched: 'daryl' });
+    ok(!q.pj, 'v264: "for daryl" is a colleague, not a project');
+    q = await ask('book a room for tomorrow 2pm, client Jem Lim', { client: 'Jem Lim' });
+    ok(!q.pj, 'v264: "for tomorrow" is not a project');
+    q = await ask('book studio 7 for VO recording tomorrow, client Jem Lim', { client: 'Jem Lim' });
+    ok(!q.pj, 'v264: "for VO recording" is not a project');
+    q = await ask('book a room for STUDIO 7 tomorrow', {});
+    ok(!q.pj, 'v264: "for STUDIO 7" is a room, not a project');
+    q = await ask('book studio 7 for project KIWI, client Jem Lim', { client: 'Jem Lim', project: 'KIWI' });
+    ok(q.pj === 'KIWI', 'v264: Booked For\'s project wins');
+  }
   r = await offer('book a room', {});
   ok(r.formOffer.offer && r.formOffer.text === 'Let’s book it with the form.' && /Pick the date/.test(r.formOffer.blocks[2].elements[0].text), 'nothing read -> the form, plainly');
   r = await offer('pls book M4 tomorrow 10-12', { dates: '2027-10-14', bf: { timeStart: '10:00', timeEnd: '12:00' } });
@@ -158,6 +181,44 @@ async function run(wf, name, input, outs) {
   ok(v2.blocks.some(b => b.text && b.text.text === '⚠️ Studio 7 is taken then.') && !v2.submit, 'step 2: nothing free -> taken said, no Book');
   v2 = await step2(Object.assign({}, r1.s, { purpose: 'Music Mixing', pre: { ar: 'U4', en: 'U9' } }), { status: 'OK', free_priority: ['Studio F'], free_last_resort: [] });
   ok(b2('arranger').element.initial_option.value === 'U4' && b2('engineer').element.initial_option.value === 'U1', 'step 2: arranger filled in; an engineer not on the list falls back to the requester');
+  if (V10) {
+    // v10: the note on the top room only; not-usual rooms remembered in the form
+    v2 = await step2(Object.assign({}, r1.s, { pre: undefined }), { status: 'OK', free_priority: ['Studio 7', 'Studio 8', 'Studio F', 'Studio C'], free_last_resort: [] });
+    const ro = b2('room').element.options;
+    ok(ro[0].description.text === 'Recommended · usual for VO Recording' && ro.slice(1).every(o => !o.description), 'v10: only the top room has a note');
+    ok(!JSON.parse(v2.private_metadata).nu, 'v10: usual rooms -> nothing remembered as not usual');
+    v2 = await step2(Object.assign({}, r1.s, { pre: undefined }), { status: 'OK', free_priority: [], free_last_resort: ['Studio 4', 'Studio C'] });
+    ok(/not a usual room/.test(b2('room').element.options[0].description.text) && !b2('room').element.options[1].description
+       && JSON.parse(v2.private_metadata).nu.join() === 'Studio 4,Studio C', 'v10: not-usual rooms -> one note, all remembered');
+    v2 = await step2(Object.assign({}, r1.s, { pre: { r: 'Studio 4' } }), { status: 'OK', free_priority: ['Studio 8'], free_last_resort: ['Studio 4'], free_rooms: ['Studio 8', 'Studio 4'] });
+    ok(JSON.parse(v2.private_metadata).nu.join() === 'Studio 4', 'v10: the typed not-usual room remembered');
+    // Read Step 2: a not-usual room picked from the list (no note on it) is booked as asked
+    const cache3 = cache;
+    const meta2 = Object.assign({}, r1.s, { when: 'Saturday, Oct 16 · 2:00 PM–4:00 PM', label: 'VO Recording', nu: ['Studio 4', 'Studio C'] });
+    const sub = { type: 'view_submission', view: { id: 'V1', private_metadata: JSON.stringify(meta2), blocks: [],
+      state: { values: { room: { room_radio: { selected_option: { value: 'Studio C' } } }, project: { project_in: { value: 'X' } }, engineer: { engineer_pick: { selected_option: { value: 'U1' } } } } } } };
+    const rd = (await run(si, 'Read Step 2', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: sub } }], 'Read Cache 3': cache3 }))[0].json;
+    ok(rd.prep.room_override === true, 'v10: a not-usual room without a note on it -> booked as asked (room_override)');
+    ok(/This takes a few seconds\./.test(JSON.stringify(rd.answer.view)) && !/writing it to the calendar/.test(JSON.stringify(rd.answer.view)), 'v10: "This takes a few seconds."');
+    // the note checkbox
+    v2 = await step2(Object.assign({}, r1.s, { pre: undefined }), { status: 'OK', free_priority: ['Studio 7'], free_last_resort: [] });
+    const nt = b2('note_toggle');
+    ok(nt && nt.type === 'actions' && nt.elements[0].type === 'checkboxes' && nt.elements[0].options[0].text.text === 'Add a note' && !b2('notes'), 'v10: "Add a note" checkbox, no Notes field');
+    const tog = async (checked, blocks, values) => (await run(si, 'Note Toggle', [], { 'Read Request': [{ json: { payload: { type: 'block_actions',
+      actions: [{ action_id: 'note_toggle', selected_options: checked ? [{ value: 'note' }] : [] }],
+      view: { id: 'V9', hash: 'h1', callback_id: 'book_step2', title: v2.title, close: v2.close, submit: v2.submit, private_metadata: v2.private_metadata, blocks, state: { values } } } } }] }))[0].json;
+    let tg = await tog(true, v2.blocks, { project: { project_in: { value: 'KIWI' } }, room: { room_radio: { selected_option: { value: 'Studio 7' } } } });
+    const ti = tg.view.blocks.findIndex(b => b.block_id === 'note_toggle');
+    ok(tg.ok && tg.view_id === 'V9' && tg.hash === 'h1' && tg.view.blocks[ti + 1].block_id === 'notes' && tg.view.blocks[ti + 1].optional
+       && tg.view.blocks[ti].elements[0].initial_options.length === 1, 'v10: ticked -> the Note field under it, the box stays ticked');
+    ok(tg.view.blocks.find(b => b.block_id === 'project').element.initial_value === 'KIWI' && tg.view.private_metadata === v2.private_metadata && tg.view.submit.text === 'Book',
+       'v10: entries, metadata and Book kept');
+    tg = await tog(false, tg.view.blocks, {});
+    ok(!tg.view.blocks.some(b => b.block_id === 'notes') && !tg.view.blocks.find(b => b.block_id === 'note_toggle').elements[0].initial_options, 'v10: unticked -> the field goes');
+    const ck = await run(si, 'Check Signature', [{ json: { computed: 'abc' } }], { 'Read Request': [{ json: { sig: 'v0=abc', ts: String(Math.floor(Date.now() / 1000)),
+      payload: { type: 'block_actions', actions: [{ action_id: 'note_toggle' }] } } }] });
+    ok(ck[0].json.route === 8 && si.connections['Route'].main[8][0].node === 'Ack Note' && si.connections['Note Toggle'].main[0][0].node === 'Show Note', 'v10: route 8 -> Ack Note -> Note Toggle -> Show Note');
+  }
   v2 = await step2(Object.assign({}, r1.s, { pre: undefined }), { status: 'OK', free_priority: ['Studio 8', 'Studio 7'], free_last_resort: [] });
   ok(b2('room').element.initial_option.value === 'Studio 8' && !b2('project').element.initial_value, 'no prefill: as v8');
 

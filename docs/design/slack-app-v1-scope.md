@@ -15,6 +15,13 @@ Status: proposed 14 Oct, for review. Decided 14 Oct: the Move button is called *
 
 Enough to move the most-used flows (book, see, cancel, move) off the chat.
 
+**Build order and progress (15 Oct).** Done and live: the menu, typed request → form (main v263/v264), Book a room
+steps 1-2 and After Book (Slack Interactions v3-v10, Book Session v109/v110). Next: **step C** - My bookings, Change,
+Cancel, Change / Cancel on the Booked DM, and typed cancel / change leading to them. Then **series** (the Repeats box) -
+to be built soon after step C (decided 15 Oct). **No confirmation is typed** (decided 15 Oct): every yes/no is a button or a
+form; each chat yes/no card comes out when its replacement goes in - the series card's typed yes stays until Repeats.
+Notes sit behind a small "Add a note" checkbox (15 Oct).
+
 | Feature | Simplest version in slice 1 |
 |---|---|
 | **Menu** | "What would you like to do?" + **Book a room · My bookings** (Studios joins with the day board in slice 2). Shown on a greeting, on anything not understood, and on "menu". |

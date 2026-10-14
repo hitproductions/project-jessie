@@ -6,7 +6,8 @@
 // (gotcha 29: v7's sim fed Check Conflicts' raw output and missed the blank "Did you mean" notice).
 // Usage: node scripts/sim-slice1-b.js [slack interactions] [book session]
 const fs = require('fs');
-const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v8.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v10.json', 'utf8'));
+const V10 = si.nodes.some(n => n.name === 'Note Toggle');   // v10: a blank line after Booked.
 const bs = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/book-session-v110.json', 'utf8'));
 const bs109 = JSON.parse(fs.readFileSync('workflows/imported/book-session-v109-imported.json', 'utf8'));
 const rejectVia = (wf, raw) => new Function('$input', wf.nodes.find(n => n.name === 'Return Rejection').parameters.jsCode)({ first: () => ({ json: raw }) })[0].json;
@@ -119,9 +120,10 @@ async function run(name, input, outs) {
   outs['After Prepare'] = await run('After Prepare', [{ json: { status: 'PREPARED', prep_payload: JSON.stringify({ v: 2, F }), title: F.Title } }], outs);
   let B = (await run('After Book', [{ json: { status: 'CREATED', event_id: 'E1', title: 'QAW1 / Jem Lim / HL', duration_note: '' } }], outs))[0].json;
   ok(B.ok && /✅ \*Booked\.\*/.test(B.view.blocks[0].text.text) && B.view.clear_on_close, 'CREATED -> Booked on the form; Done closes it');
-  const CARD = '✅ *Booked.*\n*QAW1 / Jem Lim / HL*\n*Date:* Thursday, October 14, 2027\n*Time:* 2:00 PM – 4:00 PM\n*Room:* Studio 8';
+  const CARD = '✅ *Booked.*\n' + (V10 ? '\n' : '') + '*QAW1 / Jem Lim / HL*\n*Date:* Thursday, October 14, 2027\n*Time:* 2:00 PM – 4:00 PM\n*Room:* Studio 8';
   ok(B.text === CARD && B.channel === 'U1', 'v8 DM: the card - title, Date, Time, Room, nothing else - ' + B.text.replace(/\n/g, ' | '));
   ok(B.view.blocks[0].text.text === CARD, 'v8 form: the same card');
+  if (V10) ok(B.view.blocks.length === 1, 'v10: no "A copy is in your DM" line');
   B = (await run('After Book', [{ json: { status: 'CREATED', event_id: 'E1', title: 'QAW1 / Jem Lim / HL', duration_note: 'Heads up: 9 hours is longer than usual.' } }], outs))[0].json;
   ok(B.text === CARD + '\nHeads up: 9 hours is longer than usual.', 'v8 DM: an unusual length still says so, under the card');
   B = (await run('After Book', [{ json: { status: 'ROOM_DECLINED', removed: true } }], outs))[0].json;

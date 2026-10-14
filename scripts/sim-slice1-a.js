@@ -3,8 +3,8 @@
 // (routes, step 1 from the cache, step 1 checks, Room Availability input, step 2 for studio / meeting / booth / errors,
 // step 2 checks and the calendar title). Usage: node scripts/sim-slice1-a.js [main v262] [slack interactions v3]
 const fs = require('fs');
-const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v262.json', 'utf8'));
-const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v8.json', 'utf8'));
+const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v264.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v10.json', 'utf8'));
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
@@ -96,7 +96,7 @@ async function run(wf, name, input, outs) {
   const radio = s2.view.blocks.find(b => b.block_id === 'room').element;
   ok(radio.options.map(o => o.value).join() === 'Studio 8,Studio F' && /Recommended/.test(radio.options[0].description.text), 'step 2: usual free rooms, top recommended');
   ok(JSON.stringify(s2.view).indexOf('Not free then: Studio 7, Studio C') !== -1, 'step 2: names the usual rooms not free');
-  ok(['project', 'client', 'engineer', 'notes'].every(b => s2.view.blocks.some(x => x.block_id === b)) && s2.view.submit && s2.external_id === r1.s.ext, 'step 2: studio fields, Book, same external_id');
+  ok(['project', 'client', 'engineer'].every(b => s2.view.blocks.some(x => x.block_id === b)) && s2.view.blocks.some(x => x.block_id === 'notes' || x.block_id === 'note_toggle') && s2.view.submit && s2.external_id === r1.s.ext, 'step 2: studio fields, Book, same external_id');
   const engEl = s2.view.blocks.find(b => b.block_id === 'engineer').element;
   if (engEl.type === 'users_select') ok(engEl.initial_user === 'U1', 'step 2: engineer set to the requester');
   else {
