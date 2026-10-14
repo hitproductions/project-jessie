@@ -145,6 +145,11 @@ Airtable, so these must be right before the first slice is built. Owner: Tel.
   correct.
 - **Bookers:** Department set for everyone (it picks the Booking Defaults row); Slack User ID was checked on 13 Oct (all
   58 set).
+- **Bookers - roles in Info:** the booking form lists as engineers only the people whose Info names an engineer role (Post /
+  Music / Loc Engineer, secondary roles too), and as arrangers only "Music Arranger" (Slack Interactions v4). Everyone who
+  engineers must say so in Info. Known gap (14 Oct): **Regie Ambas** is an engineer but Info says only "Head of Audio Post"
+  - add "Post Engineer". Check the other heads too (Head of Music, Head of Localization, Head of Video Post) and anyone
+  else who engineers or arranges.
 
 ### 107. "next next thursday" read as next Thursday (9 Oct 14:20)
 
