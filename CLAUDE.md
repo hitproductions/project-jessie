@@ -800,6 +800,12 @@ the task runner), for whoever has shell access to the box.
     outage - then run the step itself (its own ▶, or pick it in the ▾ beside Execute). If clicks stop working afterwards,
     unpublish and publish once to re-register the production webhook.
 
+40. **Importing over a workflow without clearing the canvas adds a second copy beside the first, and the old one keeps
+    running** (15 Oct). Book Session v110 went in on top of v109: 69 nodes, every new one suffixed "1" ("Return
+    Rejection1"), and the trigger still wired to the v109 chain - so Jessie ran v109 and nothing looked wrong. Only
+    `check-import after` caught it ("nodes only in the download: …1"). Before Import from File: download, then select all
+    (Cmd+A) and delete, then import. A download with "…1" node names is this, not a build problem.
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the
