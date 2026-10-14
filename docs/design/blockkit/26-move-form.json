@@ -25,12 +25,12 @@
       "block_id": "date",
       "label": {
         "type": "plain_text",
-        "text": "New date"
+        "text": "Date"
       },
       "element": {
         "type": "datepicker",
         "action_id": "date_pick",
-        "initial_date": "2027-10-15"
+        "initial_date": "2027-10-14"
       }
     },
     {
@@ -78,7 +78,7 @@
         "initial_option": {
           "text": {
             "type": "plain_text",
-            "text": "Keep Studio 8"
+            "text": "Studio 8 (now)"
           },
           "value": "keep"
         },
@@ -86,7 +86,7 @@
           {
             "text": {
               "type": "plain_text",
-              "text": "Keep Studio 8"
+              "text": "Studio 8 (now)"
             },
             "value": "keep"
           },

@@ -233,7 +233,7 @@ button and **Pick another time**.
 | Two bookings with the same title on a day → "which one?" by time (72) | Each booking has its own buttons; typed path lists each match with its own buttons | Lose (the question) |
 | Two cancels in one message → one card (55 / 60) | Typed path lists every match with its own buttons | Gain (fixes the gap) |
 | Cancel card + typed "yes" | Slack confirm pop-up | Change |
-| Move card ("Now: … → New: …") + typed "yes" | Move form; Move button = confirmation | Change |
+| Move card ("Now: … → New: …") + typed "yes" | Move form, **starting at the booking's current date, time and room** (change only what moves); Move button = confirmation. **Nothing changed → "Nothing changed" on the form at once, nothing moved or re-booked** (decided 14 Oct) | Change |
 | "make it 3pm" (Move Direct) | One-tap move suggestion | Keep + Change |
 | New time checked before the card; taken → free times, no card (v29) | Same check, shown on the form field | Keep |
 | Replacement created before the original is deleted; `PARTIAL` if the delete fails | Same | Keep |

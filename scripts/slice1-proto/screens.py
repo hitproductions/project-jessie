@@ -235,21 +235,40 @@ def my_bookings(first_state="live"):
         sec("*You're engineering*"),
         sec("*BLUE BIRD / Harold Orozco / HL*\nFri, Oct 16 · 10:00 AM – 12:00 PM · Studio F"), ctx("Booked by Glenn Mariano · you can change it too"),
         acts(btn("Move", "move3"), btn("Cancel", "cancel3", "danger")),
+        dv,
+        acts(btn("Next 7 days", "week_next")),
+        ctx("Or ask, like _what do I have next month?_"),
     ])
 
 
 S["40-my-bookings"] = ("message", my_bookings())
-S["41-my-bookings-cancelled"] = ("message", my_bookings("cancelled"))
-S["42-move-form"] = ("modal", modal("Move booking", [
-    sec("*" + T1 + "*\nNow: Thu, Oct 15 · 2:00–4:00 PM · Studio 8"),
+S["46-my-bookings-week2"] = ("message", msg([
+    sec("*Your bookings · Oct 22 – 28*"),
+    sec("*SUMMER JINGLE / Dante Nora / DR x HL*\nTue, Oct 27 · 1:00–5:00 PM · Studio F"), ctx("Music Mixing · Arranger: you"),
+    acts(btn("Move", "move4"), btn("Cancel", "cancel4", "danger")),
     dv,
-    inp("date", "New date", date("date_pick", "2026-10-16")),
-    inp("start", "Start", time("start_pick", "14:00")),
-    inp("end", "End", time("end_pick", "16:00"), hint="Set to keep the same length (2 hours)."),
-    inp("room", "Room", {"type": "static_select", "action_id": "room_pick", "initial_option": opt("Keep Studio 8", "keep"),
-                         "options": [opt("Keep Studio 8", "keep"), opt("Studio F"), opt("Studio C"), opt("Studio 7")]}),
-    ctx("The new time is checked first. The booking stays where it is until the new one is in place."),
-], submit="Move", close="Cancel"))
+    acts(btn("Previous 7 days", "week_prev"), btn("Next 7 days", "week_next2")),
+]))
+S["41-my-bookings-cancelled"] = ("message", my_bookings("cancelled"))
+def move_form(day, warn=None):
+    b = []
+    if warn:
+        b += [sec(warn), dv]
+    b += [sec("*" + T1 + "*\nNow: Thu, Oct 15 · 2:00–4:00 PM · Studio 8"),
+          dv,
+          ctx("Starts at the booking's current date, time and room - change only what moves."),
+          inp("date", "Date", date("date_pick", day)),
+          inp("start", "Start", time("start_pick", "14:00")),
+          inp("end", "End", time("end_pick", "16:00"), hint="Keeps the same length (2 hours) unless you change it."),
+          inp("room", "Room", {"type": "static_select", "action_id": "room_pick", "initial_option": opt("Studio 8 (now)", "keep"),
+                               "options": [opt("Studio 8 (now)", "keep"), opt("Studio F"), opt("Studio C"), opt("Studio 7")]}),
+          ctx("The new time is checked first. The booking stays where it is until the new one is in place.")]
+    return modal("Move booking", b, submit="Move", close="Cancel")
+
+
+S["42-move-form"] = ("modal", move_form("2026-10-15"))
+S["42b-move-form-changed"] = ("modal", move_form("2026-10-16"))
+S["42c-move-unchanged"] = ("modal", move_form("2026-10-15", "⚠️ *Nothing changed.* This is the booking's current date, time and room. Change one of them, or press Cancel - nothing is moved or booked again."))
 S["43-moving"] = ("modal", modal("Move booking", [sec("⏳ *Moving " + T1 + "…*\nto Friday, Oct 16 · 2:00–4:00 PM · Studio 8")], close="Close"))
 S["44-moved"] = ("modal", modal("Move booking", [sec("✅ *Moved.*\n*" + T1 + "*\nFriday, Oct 16 · 2:00–4:00 PM · Studio 8"),
                                                  ctx("Your bookings list is updated.")], close="Done"))

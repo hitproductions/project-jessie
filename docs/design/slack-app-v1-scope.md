@@ -24,9 +24,9 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 | **Details** | Project (text) · Client (text, checked on Book: "Did you mean…?", new names to the New Clients sheet) · Engineer (studio sessions only; people picker, defaults to you; required for arrangers) · Arranger (music sessions) · Kind of booking (only for departments with a choice) · Project code (text, Localization) · Meeting title (meetings, events) · Notes. |
 | **Title** | Built by code from the fields (ALL CAPS project for post and music; Localization code as written; `ROOM - title` for meetings). |
 | **After Book** | The form shows "Booking…", then **Booked** (after the room's answer is read back) or the problem with entries kept. The DM gets the result with **Move · Cancel**. A room that declines: Jessie deletes her event and says so, with **Pick another room or time**. |
-| **My bookings** | Next 7 days: bookings you made and ones you engineer or arrange - all with Move · Cancel. |
+| **My bookings** | Next 7 days: bookings you made and ones you engineer or arrange - all with Move · Cancel. **Next 7 days / Previous 7 days** buttons page through the weeks (the message updates in place); a typed question ("what do I have next month?") covers any range. |
 | **Cancel** | Slack's "Are you sure?" pop-up, then the message updates to Cancelled. |
-| **Move** | A form pre-filled with date, start, end and room; the new time is checked first. |
+| **Move** | A form that starts at the booking's current date, start, end and room - change only what moves; the new time is checked first. Pressing Move with nothing changed shows "Nothing changed" on the form at once (no calendar call) and nothing is moved or booked again. |
 | **Typed cancel / move** | "cancel my friday booking" → the matching bookings, each with Move · Cancel. "make it 3pm" → opens the Move form pre-filled. |
 | **Typed questions** | Today's code-written availability answers, plus one **Book** button per free room (opens the form pre-filled). Room facts, people, session types answered as today. Off-topic and not understood → the menu. Each question reads only itself and the previous one. |
 | **Behind the scenes** | Interactions log; date pickers open a year ahead during QA; one new Slack URL (Interactivity) in the Cloudflare rule. |
@@ -46,7 +46,7 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 ## After release (optional)
 
 - Move or cancel a whole series (needs a series id on each event).
-- "See all upcoming" (the release shows 7 days).
+- "See all upcoming" in one scrolling form (the release pages week by week instead).
 - Department bookings view for coordinators.
 - Book again (copy a past booking).
 - "Got it" on engineer notices; Withdraw if approvals land without it.
@@ -74,7 +74,8 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
   HAIST Dev as now. Book Session writes the engineer's and arranger's Slack ids into the event (beside `ref:`), and
   Check Ownership / Resolve Booking (Cancel, Move) accept them. Not from the title initials: two people in Bookers share
   initials (LS). Older events without the ids keep today's rule.
-- **Cancel / Move:** otherwise none - both already take the exact booking id.
+- **Cancel / Move:** otherwise none - both already take the exact booking id. Move Booking also treats a move to the same
+  date, time and room as "nothing to do" (a second guard behind the form's own check), never creating a copy.
 - **Room Availability:** free rooms for a window, ranked for a session type - it already answers this; confirm the shape.
 - **Main:** route a typed request to "pre-fill the form" instead of the chat booking flow, flow by flow.
 - **New workflow:** `Jessie — Slack Interactions` (clicks and form submissions), with its own version numbers.

@@ -21,16 +21,25 @@
       "type": "divider"
     },
     {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Starts at the booking's current date, time and room - change only what moves."
+        }
+      ]
+    },
+    {
       "type": "input",
       "block_id": "date",
       "label": {
         "type": "plain_text",
-        "text": "New date"
+        "text": "Date"
       },
       "element": {
         "type": "datepicker",
         "action_id": "date_pick",
-        "initial_date": "2026-10-16"
+        "initial_date": "2026-10-15"
       }
     },
     {
@@ -62,7 +71,7 @@
       },
       "hint": {
         "type": "plain_text",
-        "text": "Set to keep the same length (2 hours)."
+        "text": "Keeps the same length (2 hours) unless you change it."
       }
     },
     {
@@ -78,7 +87,7 @@
         "initial_option": {
           "text": {
             "type": "plain_text",
-            "text": "Keep Studio 8"
+            "text": "Studio 8 (now)"
           },
           "value": "keep"
         },
@@ -86,7 +95,7 @@
           {
             "text": {
               "type": "plain_text",
-              "text": "Keep Studio 8"
+              "text": "Studio 8 (now)"
             },
             "value": "keep"
           },

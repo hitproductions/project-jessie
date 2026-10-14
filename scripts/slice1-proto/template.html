@@ -138,7 +138,7 @@ h1 { font-family: var(--f-display); font-size: 22px; margin: 0 0 4px; letter-spa
   const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const fdate = s => { const d = new Date(s + 'T00:00:00Z'); return DOW[d.getUTCDay()] + ', ' + MON[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear(); };
   const ftime = s => { let [h, m] = s.split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; };
-  const sel = (v, ph) => '<div class="sk-sel">' + (v ? '<span>' + v + '</span>' : '<span class="ph">' + esc(ph || 'Select an item') + '</span>') + '<span class="car">▾</span></div>';
+  const sel = (v, ph, a) => '<div class="sk-sel"' + (a ? ' data-action="' + esc(a) + '"' : '') + '>' + (v ? '<span>' + v + '</span>' : '<span class="ph">' + esc(ph || 'Select an item') + '</span>') + '<span class="car">▾</span></div>';
   function opts(e) {
     const on = e.initial_option && e.initial_option.value;
     return '<div class="sk-opts">' + e.options.map(o => '<div class="sk-opt"><span class="mk' + (o.value === on ? ' on' : '') + '"></span><span>' + txt(o.text) +
@@ -147,10 +147,10 @@ h1 { font-family: var(--f-display); font-size: 22px; margin: 0 0 4px; letter-spa
   function el(e) {
     switch (e.type) {
       case 'button': return '<span class="sk-btn' + (e.style ? ' ' + e.style : '') + '" data-action="' + esc(e.action_id) + '">' + txt(e.text) + '</span>';
-      case 'static_select': return sel(e.initial_option ? txt(e.initial_option.text) : '', e.placeholder && e.placeholder.text);
+      case 'static_select': return sel(e.initial_option ? txt(e.initial_option.text) : '', e.placeholder && e.placeholder.text, e.action_id);
       case 'users_select': return sel('', e.placeholder && e.placeholder.text);
-      case 'datepicker': return sel(e.initial_date ? '📅 ' + fdate(e.initial_date) : '', 'Select a date');
-      case 'timepicker': return sel(e.initial_time ? '🕑 ' + ftime(e.initial_time) : '', 'Select time');
+      case 'datepicker': return sel(e.initial_date ? '📅 ' + fdate(e.initial_date) : '', 'Select a date', e.action_id);
+      case 'timepicker': return sel(e.initial_time ? '🕑 ' + ftime(e.initial_time) : '', 'Select time', e.action_id);
       case 'plain_text_input': return '<div class="sk-in' + (e.multiline ? ' ml' : '') + '">' + (e.initial_value ? esc(e.initial_value) : '<span class="ph">' + esc((e.placeholder && e.placeholder.text) || '') + '</span>') + '</div>';
       case 'radio_buttons': return opts(e);
       default: return '';

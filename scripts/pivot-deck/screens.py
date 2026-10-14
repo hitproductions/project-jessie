@@ -353,12 +353,12 @@ S["25-typed-move"] = ("message", message([
 S["26-move-form"] = ("modal", modal("Move booking", [
     sec("*QAW1 / Harold Orozco / HL*\nNow: Thu, Oct 14 · 2:00–4:00 PM · Studio 8"),
     dv,
-    inp("date", "New date", {"type": "datepicker", "action_id": "date_pick", "initial_date": "2027-10-15"}),
+    inp("date", "Date", {"type": "datepicker", "action_id": "date_pick", "initial_date": "2027-10-14"}),
     inp("start", "Start", {"type": "timepicker", "action_id": "start_pick", "initial_time": "14:00", "timezone": "Asia/Manila"}),
     inp("end", "End", {"type": "timepicker", "action_id": "end_pick", "initial_time": "16:00", "timezone": "Asia/Manila"},
         hint="Set to keep the same length (2 hours)."),
-    inp("room", "Room", {"type": "static_select", "action_id": "room_pick", "initial_option": opt("Keep Studio 8", "keep"),
-                         "options": [opt("Keep Studio 8", "keep"), opt("Studio 7"), opt("Studio F"), opt("Studio C")]}),
+    inp("room", "Room", {"type": "static_select", "action_id": "room_pick", "initial_option": opt("Studio 8 (now)", "keep"),
+                         "options": [opt("Studio 8 (now)", "keep"), opt("Studio 7"), opt("Studio F"), opt("Studio C")]}),
     ctx("The new time is checked first. The booking stays where it is until the new one is in place."),
 ], submit="Move", close="Cancel"))
 S["27-after-change"] = ("message", message([

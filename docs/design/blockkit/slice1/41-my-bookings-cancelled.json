@@ -115,6 +115,32 @@
           "style": "danger"
         }
       ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Next 7 days"
+          },
+          "action_id": "week_next",
+          "value": "x"
+        }
+      ]
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Or ask, like _what do I have next month?_"
+        }
+      ]
     }
   ]
 }
