@@ -177,13 +177,6 @@ S["19-problem"] = ("modal", modal("Book a room", [
     inp("client", "Client", text_in("client_in", "Sasa Abela"), optional=True, hint="Did you mean Sasa Abella? Change it, or keep it as typed."),
     ctx("Everything else you entered is kept."),
 ], submit="Book", close="Back"))
-S["20-declined"] = ("modal", modal("Book a room", [
-    sec("❌ *Studio 8 turned this booking down*, so it was taken off the calendar. Nothing is booked. Pick another room, or go Back to change the time."),
-    dv,
-    sec("🗓️ *" + W1 + " · VO Recording*"),
-    inp("room", "Room", radio("room_radio", [opt("Studio F", d="Recommended · usual for VO Recording"), opt("Studio C", d="Usual for VO Recording")])),
-    ctx("Everything you entered is kept."),
-], submit="Book", close="Back"))
 S["21-booking-sf"] = ("modal", booking("Studio F", W1))
 S["22-booked-sf"] = ("modal", booked(T1, "Studio F · " + W1, "Studio F"))
 S["23-result-sf"] = ("message", result(T1, "Studio F · " + W1, "VO Recording · Engineer: you · Advertising"))
