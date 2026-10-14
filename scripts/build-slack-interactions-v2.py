@@ -193,7 +193,7 @@ sg = add({"parameters": {"source": "database", "mode": "each",
                          "options": {}},
           "type": "n8n-nodes-base.executeWorkflow", "typeVersion": 1.2, "position": [600, 0], "id": nid(), "name": "Signature"})
 ck = add(code("Check Signature", CHECK, [800, 0]))
-rt = add({"parameters": {"mode": "expression", "numberOutputs": 4, "output": "={{ $json.route }}"},
+rt = add({"parameters": {"mode": "expression", "output": "={{ $json.route }}"},
           "type": "n8n-nodes-base.switch", "typeVersion": 3.2, "position": [960, 0], "id": nid(), "name": "Route"})
 for a, b in [(wh, rr), (rr, ts), (ts, sg), (sg, ck), (ck, rt)]:
     link(a, b)

@@ -9,7 +9,7 @@
         0,
         -320
       ],
-      "id": "669f260a-6dba-44ff-8e7e-4ddb8ad894da",
+      "id": "2e023698-7ce6-4254-916d-c3aa630913e4",
       "name": "Post Test Button"
     },
     {
@@ -29,7 +29,7 @@
         240,
         -320
       ],
-      "id": "40e8008d-0fe8-4b7c-90ad-4e87cf2eba9b",
+      "id": "d2ac69c2-55f6-4802-9c21-c77802b687ce",
       "name": "Send Button",
       "credentials": {
         "slackApi": {
@@ -54,7 +54,7 @@
         0,
         0
       ],
-      "id": "281fc951-fa38-4005-805c-67853ec9511a",
+      "id": "d1ba52ad-d8cc-4917-a6e9-54f32130f5da",
       "name": "Slack Interactions",
       "webhookId": "6f1d2c1e-4a7b-4c0e-9a51-1e2f3a4b5c6d"
     },
@@ -68,7 +68,7 @@
         240,
         0
       ],
-      "id": "cc1b4cf3-03ea-4cfd-82fd-2190f5667e7e",
+      "id": "c2c80b8a-bbb8-41a8-8d43-0280ead6e670",
       "name": "Read Request"
     },
     {
@@ -81,7 +81,7 @@
         400,
         0
       ],
-      "id": "65392541-a7d2-4cbf-8bc1-4e00106fcc31",
+      "id": "c9e354d2-da9a-4eb0-9795-a05627289579",
       "name": "To Sign"
     },
     {
@@ -102,7 +102,7 @@
         600,
         0
       ],
-      "id": "d74a2013-7280-43fa-92af-4fc4bb607ad6",
+      "id": "0b49abbd-89f8-4398-9004-8dffce9b038c",
       "name": "Signature"
     },
     {
@@ -115,13 +115,12 @@
         800,
         0
       ],
-      "id": "5c02caa2-9e17-4a42-b4ac-9cdc8f3908df",
+      "id": "38b09295-0c41-44ca-a9c9-13a960074fe2",
       "name": "Check Signature"
     },
     {
       "parameters": {
         "mode": "expression",
-        "numberOutputs": 4,
         "output": "={{ $json.route }}"
       },
       "type": "n8n-nodes-base.switch",
@@ -130,7 +129,7 @@
         960,
         0
       ],
-      "id": "ceb3e9c7-a7da-4540-b966-3132acc2b1ab",
+      "id": "cc9adc96-a894-4bd1-934b-cefcb9411eb8",
       "name": "Route"
     },
     {
@@ -146,7 +145,7 @@
         1200,
         -300
       ],
-      "id": "a1342344-e577-43ed-afd9-74e2da7a44b8",
+      "id": "db5bcbe3-70da-4ab5-809b-493941899f90",
       "name": "Refuse"
     },
     {
@@ -159,7 +158,7 @@
         1440,
         -300
       ],
-      "id": "1d3f2705-2496-4a1d-b871-43c573602c55",
+      "id": "c853d192-e176-4e15-afda-b92969f62485",
       "name": "Report Refused"
     },
     {
@@ -179,7 +178,7 @@
         1680,
         -300
       ],
-      "id": "b82e78e5-1312-48a0-a4a7-5f63dd5e455a",
+      "id": "2e35cd99-8539-42e5-b649-a7ac5efe70f2",
       "name": "DM Refused",
       "credentials": {
         "slackApi": {
@@ -202,7 +201,7 @@
         1200,
         -100
       ],
-      "id": "a3fde4da-3d82-4c80-b5a3-34d4ddb37cf9",
+      "id": "9f3e390a-a7ea-4e26-8063-813c70df1af8",
       "name": "Ack Click"
     },
     {
@@ -215,7 +214,7 @@
         1440,
         -100
       ],
-      "id": "310db3df-791e-475a-ad09-4f2aa2e81e21",
+      "id": "1ce04283-4244-4972-86da-41d06703204d",
       "name": "Build Form"
     },
     {
@@ -235,7 +234,7 @@
         1680,
         -100
       ],
-      "id": "3a3297fc-afe4-413f-9396-e56a07cfeb20",
+      "id": "d651c07d-39b9-485d-bcf6-a664fec487ef",
       "name": "Open Form",
       "credentials": {
         "slackApi": {
@@ -255,7 +254,7 @@
         1920,
         -100
       ],
-      "id": "255e6552-1434-44cc-86e4-226ef9853a0f",
+      "id": "a8c8a02a-00d5-4c0c-817a-23627087f04a",
       "name": "Report Open"
     },
     {
@@ -275,7 +274,7 @@
         2160,
         -100
       ],
-      "id": "723c1849-adf2-4d86-8918-171eddf81a58",
+      "id": "1f1392e2-dd2b-43ed-8af9-c919bc5c2cfc",
       "name": "DM Open Failed",
       "credentials": {
         "slackApi": {
@@ -295,7 +294,7 @@
         1200,
         100
       ],
-      "id": "34cf4fc8-10c7-49c8-bc89-6c9b5eaad30d",
+      "id": "ab985261-fae9-4115-818f-ab25d5b99869",
       "name": "Read Submission"
     },
     {
@@ -312,7 +311,7 @@
         1440,
         100
       ],
-      "id": "44b6efd4-c57a-411f-868b-375319be79b0",
+      "id": "688c6214-1fff-4fb4-aec7-aab0480bd3d8",
       "name": "Answer Working"
     },
     {
@@ -325,9 +324,9 @@
         1680,
         100
       ],
-      "id": "3c89614f-cf8a-4f21-9f20-a64aa0bff02d",
+      "id": "31179c6f-70e6-4168-9261-3c7db3bb06e0",
       "name": "Pretend Work",
-      "webhookId": "40f9f5d9-ef26-4053-91c7-2c4dfef574ff"
+      "webhookId": "af45e125-b2f6-4fd8-958c-708e0f98857e"
     },
     {
       "parameters": {
@@ -346,7 +345,7 @@
         1920,
         100
       ],
-      "id": "7b9ccb8e-3989-4b92-92f2-1123f728762c",
+      "id": "259015f6-b0ba-40df-b44f-d84ff3ea5993",
       "name": "Update Form",
       "credentials": {
         "slackApi": {
@@ -366,7 +365,7 @@
         2160,
         100
       ],
-      "id": "3cf116a7-d8db-4e9e-b8bf-bd4b61cddd37",
+      "id": "c13bca86-f04e-4eaa-a0ce-d9beed410dd7",
       "name": "Report"
     },
     {
@@ -386,7 +385,7 @@
         2400,
         100
       ],
-      "id": "ae7ff66c-9076-445c-9997-cab7bf8f29a7",
+      "id": "4e912d1d-0aab-422d-aeba-0cd3546e3c71",
       "name": "DM Result",
       "credentials": {
         "slackApi": {
@@ -409,7 +408,7 @@
         1200,
         300
       ],
-      "id": "3c3af695-d47b-42e1-a2d8-20ca9a8bfe01",
+      "id": "3ed96129-7c02-4779-b269-56eb938a5993",
       "name": "Ack Other"
     },
     {
@@ -424,7 +423,7 @@
         -40,
         -620
       ],
-      "id": "283dd1d8-3292-4940-bef9-ab0dfa7a9e89",
+      "id": "7b85dea1-d323-46a3-ba15-cb8380f7caf5",
       "name": "About"
     }
   ],
