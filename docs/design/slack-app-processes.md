@@ -115,7 +115,9 @@ Decided (13 Oct):
 
 ## 2c. Recurring bookings (series)
 
-**In slice 1** (moved 14 Oct): Localization books dubbing sessions in batches, so series cannot wait for slice 2.
+**In slice 1** (moved 14 Oct): Localization books dubbing sessions in batches, so series cannot wait for slice 2. It is
+one scenario for every kind of booking (Repeats is on every step 1): dubbing and mixing batches, recurring post sessions,
+recurring M booth time, weekly meetings.
 
 (Agreed 13 Oct.) Today: the model reads the pattern and calls Prepare Series; Expand Series computes the
 dates in code (daily or weekly on chosen weekdays, a count or an end date, never open-ended, within a year); Book Series
