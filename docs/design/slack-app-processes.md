@@ -115,6 +115,8 @@ Decided (13 Oct):
 
 ## 2c. Recurring bookings (series)
 
+**In slice 1** (moved 14 Oct): Localization books dubbing sessions in batches, so series cannot wait for slice 2.
+
 (Agreed 13 Oct.) Today: the model reads the pattern and calls Prepare Series; Expand Series computes the
 dates in code (daily or weekly on chosen weekdays, a count or an end date, never open-ended, within a year); Book Series
 books up to 16 dates server-side and reports booked / skipped / failed; before the yes a date can be skipped or given

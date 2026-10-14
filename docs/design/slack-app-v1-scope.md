@@ -27,6 +27,7 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 | **My bookings** | Next 7 days: bookings you made and ones you engineer or arrange - all with Move · Cancel. **Next 7 days / Previous 7 days** buttons page through the weeks (the message updates in place); a typed question ("what do I have next month?") covers any range. |
 | **Cancel** | Slack's "Are you sure?" pop-up, then the message updates to Cancelled. |
 | **Move** | A form that starts at the booking's current date, start, end and room - change only what moves; the new time is checked first. Pressing Move with nothing changed shows "Nothing changed" on the form at once (no calendar call) and nothing is moved or booked again. |
+| **Series (batches)** | **Moved into slice 1 (14 Oct)** - Localization books dubbing in batches. A small *Repeats* box in step 1 adds how often (weekly / daily), which days (the first date's weekday ticked; Mon-Fri for a batch) and how many occurrences (up to 16) or an end date; step 2 lists every date with ✓ / ⚠️ and a ⋯ (skip, room, time), and the room list says on how many dates each room is free. The button says how many it books. Booking takes a few minutes for a batch (each date is checked and written), so the form says so and the result comes to the DM. Available for every studio booking - it is one code path. Moving or cancelling a whole series stays after release. |
 | **Typed cancel / move** | "cancel my friday booking" → the matching bookings, each with Move · Cancel. "make it 3pm" → opens the Move form pre-filled. |
 | **Typed questions** | Today's code-written availability answers, plus one **Book** button per free room (opens the form pre-filled). Room facts, people, session types answered as today. Off-topic and not understood → the menu. Each question reads only itself and the previous one. |
 | **Behind the scenes** | Interactions log; date pickers open a year ahead during QA; one new Slack URL (Interactivity) in the Cloudflare rule. |
@@ -35,7 +36,6 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 
 | Feature | Note |
 |---|---|
-| **Series** (Repeats in step 1, dates list in step 2) | Stays on the chat path until then - it works there today. |
 | **Approvals as buttons** (priority and shared-booth requests; engineer may answer; withdraw) | Rare. Open decision below. |
 | **Studios day board** (third menu button) | Typed "what's free…" covers it in slice 1. |
 | **Holding rooms** checklist (Celebrity Recording) | Rare; stays on chat. |

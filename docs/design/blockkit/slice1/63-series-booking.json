@@ -1,0 +1,30 @@
+{
+  "type": "modal",
+  "callback_id": "view",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Close"
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "⏳ *Booking 10 dates…*\nStudio 1 + Studio A · Mon – Fri · 9:00 AM – 2:00 PM"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Each date is checked and written to the calendar. This takes a few minutes - you can close this; the result comes to your DM."
+        }
+      ]
+    }
+  ]
+}

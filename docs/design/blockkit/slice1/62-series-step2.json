@@ -1,0 +1,494 @@
+{
+  "type": "modal",
+  "callback_id": "view",
+  "title": {
+    "type": "plain_text",
+    "text": "Book a room"
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Back"
+  },
+  "blocks": [
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "*Step 2 of 2* · room and details"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🗓️ *Mon – Fri · 9:00 AM – 2:00 PM · 10 dates from Oct 19 · Localization Dubbing*"
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "room",
+      "label": {
+        "type": "plain_text",
+        "text": "Room and booth"
+      },
+      "element": {
+        "type": "radio_buttons",
+        "action_id": "room_radio",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio 1 + Studio A"
+            },
+            "value": "Studio 1|Studio A",
+            "description": {
+              "type": "plain_text",
+              "text": "Recommended · free on all 10 dates"
+            }
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Studio 2 + Studio B"
+            },
+            "value": "Studio 2|Studio B",
+            "description": {
+              "type": "plain_text",
+              "text": "Free on 9 of 10 dates"
+            }
+          }
+        ],
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "Studio 1 + Studio A"
+          },
+          "value": "Studio 1|Studio A",
+          "description": {
+            "type": "plain_text",
+            "text": "Recommended · free on all 10 dates"
+          }
+        }
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Dates*"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Mon, Oct 19"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "Skip this date"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "Use another room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "Change the time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Tue, Oct 20"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "Skip this date"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "Use another room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "Change the time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Wed, Oct 21"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "Skip this date"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "Use another room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "Change the time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Thu, Oct 22"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "Skip this date"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "Use another room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "Change the time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Fri, Oct 23"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "Skip this date"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "Use another room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "Change the time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Mon, Oct 26"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "Skip this date"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "Use another room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "Change the time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Tue, Oct 27"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "Skip this date"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "Use another room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "Change the time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Wed, Oct 28"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "Skip this date"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "Use another room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "Change the time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Thu, Oct 29"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "Skip this date"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "Use another room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "Change the time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Fri, Oct 30"
+      },
+      "accessory": {
+        "type": "overflow",
+        "action_id": "date_menu",
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Skip this date"
+            },
+            "value": "Skip this date"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Use another room"
+            },
+            "value": "Use another room"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Change the time"
+            },
+            "value": "Change the time"
+          }
+        ]
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Use ⋯ on a date to skip it, change its room or its time."
+        }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "input",
+      "block_id": "code",
+      "label": {
+        "type": "plain_text",
+        "text": "Project code"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "code_in",
+        "initial_value": "LOPH S2"
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "As in Localization Projects. The client and the title come from it."
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "engineer",
+      "label": {
+        "type": "plain_text",
+        "text": "Engineer"
+      },
+      "element": {
+        "type": "users_select",
+        "action_id": "engineer_pick",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "You"
+        }
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "Set to you."
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "notes",
+      "label": {
+        "type": "plain_text",
+        "text": "Notes"
+      },
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "notes_in",
+        "multiline": true
+      },
+      "optional": true
+    }
+  ],
+  "submit": {
+    "type": "plain_text",
+    "text": "Book 10 dates"
+  }
+}

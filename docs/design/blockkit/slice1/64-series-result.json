@@ -1,0 +1,35 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✅ *Booked 10 of 10 dates.* LOPH S2 / HL · Studio 1 + Studio A · 9:00 AM – 2:00 PM\n• Mon, Oct 19\n• Tue, Oct 20\n• Wed, Oct 21\n• Thu, Oct 22\n• Fri, Oct 23\n• Mon, Oct 26\n• Tue, Oct 27\n• Wed, Oct 28\n• Thu, Oct 29\n• Fri, Oct 30"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Move a date"
+          },
+          "action_id": "move_date",
+          "value": "x"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Cancel a date"
+          },
+          "action_id": "cancel_date",
+          "value": "x",
+          "style": "danger"
+        }
+      ]
+    }
+  ]
+}

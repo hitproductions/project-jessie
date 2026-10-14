@@ -300,3 +300,57 @@ _q["blocks"][0] = ctx("*Step 1 of 2* · _Studio 8 and the free window came from 
 S["53-step1-from-question"] = ("modal", _q)
 S["54-step2-from-question"] = ("modal", step2("Thursday, Oct 15 · 12:00–2:00 PM · VO Recording",
     [opt("Studio 8", d="You picked this · usual for VO Recording")] + VO_ROOMS[1:], None, "QAW1"))
+
+# ---- series (moved into slice 1 on 14 Oct for Localization batches) ----------------------------------------------------
+_days = [opt(a, b) for a, b in [("Mon", "MO"), ("Tue", "TU"), ("Wed", "WE"), ("Thu", "TH"), ("Fri", "FR"), ("Sat", "SA"), ("Sun", "SU")]]
+_rep = {"text": md("_Repeats_"), "value": "repeat"}
+
+
+def series_step1(ticked):
+    b = [ctx("*Step 1 of 2* · when, and what for"),
+         inp("date", "First date", date("date_pick", "2026-10-19")),
+         inp("start", "Start", time("start_pick", "09:00")),
+         inp("end", "End", time("end_pick", "14:00")),
+         acts(dict({"type": "checkboxes", "action_id": "repeat_toggle", "options": [_rep]}, **({"initial_options": [_rep]} if ticked else {})))]
+    if ticked:
+        b += [inp("freq", "How often", radio("freq_pick", [opt("Weekly", "weekly"), opt("Daily", "daily")])),
+              inp("days", "On", {"type": "checkboxes", "action_id": "days_pick", "options": _days, "initial_options": _days[:5]}),
+              inp("ends", "Ends", radio("ends_pick", [opt("After a number of occurrences", "count"), opt("On a date", "until")])),
+              inp("count", "Number of occurrences", {"type": "number_input", "action_id": "count_in", "is_decimal_allowed": False,
+                                                     "min_value": "2", "max_value": "16", "initial_value": "10"}, hint="Up to 16, within a year.")]
+    b.append(what_for("Localization Dubbing"))
+    return modal("Book a room", b, submit="Find rooms", cb="book_step1")
+
+
+S["60-series-step1"] = ("modal", series_step1(False))
+S["61-series-step1-repeats"] = ("modal", series_step1(True))
+_dates = ["Mon, Oct 19", "Tue, Oct 20", "Wed, Oct 21", "Thu, Oct 22", "Fri, Oct 23", "Mon, Oct 26", "Tue, Oct 27", "Wed, Oct 28", "Thu, Oct 29", "Fri, Oct 30"]
+
+
+def _date_line(t):
+    return {"type": "section", "text": md(t),
+            "accessory": {"type": "overflow", "action_id": "date_menu", "options": [{"text": pt(x), "value": x} for x in ("Skip this date", "Use another room", "Change the time")]}}
+
+
+S["62-series-step2"] = ("modal", modal("Book a room", [
+    ctx("*Step 2 of 2* · room and details"),
+    sec("🗓️ *Mon – Fri · 9:00 AM – 2:00 PM · 10 dates from Oct 19 · Localization Dubbing*"),
+    inp("room", "Room and booth", radio("room_radio", [opt("Studio 1 + Studio A", "Studio 1|Studio A", "Recommended · free on all 10 dates"),
+                                                       opt("Studio 2 + Studio B", "Studio 2|Studio B", "Free on 9 of 10 dates")])),
+    dv,
+    sec("*Dates*"),
+] + [_date_line("✓ " + d) for d in _dates] + [
+    ctx("Use ⋯ on a date to skip it, change its room or its time."),
+    dv,
+    inp("code", "Project code", text_in("code_in", "LOPH S2"), hint="As in Localization Projects. The client and the title come from it."),
+    inp("engineer", "Engineer", users("engineer_pick", "You"), hint="Set to you."),
+    inp("notes", "Notes", text_in("notes_in", multiline=True), optional=True),
+], submit="Book 10 dates", close="Back"))
+S["63-series-booking"] = ("modal", modal("Book a room", [
+    sec("⏳ *Booking 10 dates…*\nStudio 1 + Studio A · Mon – Fri · 9:00 AM – 2:00 PM"),
+    ctx("Each date is checked and written to the calendar. This takes a few minutes - you can close this; the result comes to your DM."),
+], close="Close"))
+S["64-series-result"] = ("message", msg([
+    sec("✅ *Booked 10 of 10 dates.* LOPH S2 / HL · Studio 1 + Studio A · 9:00 AM – 2:00 PM\n" + "\n".join("• " + d for d in _dates)),
+    acts(btn("Move a date", "move_date"), btn("Cancel a date", "cancel_date", "danger")),
+]))
