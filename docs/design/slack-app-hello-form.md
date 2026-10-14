@@ -73,6 +73,17 @@ on signed requests (a click, a submission, a forged signature, a 10-minute-old r
 14 checks. Not checked offline: the real Crypto, Webhook and Respond nodes, Cloudflare and Slack - that is what this
 test is for.
 
+**Where the secret lives (decided 14 Oct):** a separate workflow, **Jessie — Slack Signature**
+(`workflows/slack-signature-v1.json`), holds it. Slack Interactions sends it the string to sign and gets back only the
+signature, so the secret never leaves that workflow, never shows in Slack Interactions' saved executions (Slack Signature
+saves none of its own), and is pasted once - Slack Signature is never re-imported. From Slack Interactions v2 on, no
+paste step. An n8n environment variable (needs IT) remains the alternative.
+
+1. Import `workflows/slack-signature-v1.json` into a **new** workflow; paste the signing secret into its **Sign** node
+   (Secret); Save; Publish. Send its workflow id.
+2. Claude builds Slack Interactions v2, whose Signature step calls it; import v2 into the existing Slack Interactions
+   workflow (`PyxSPoAMtSE1gzaH`) with the usual before / after downloads; run the hello test again.
+
 **Known follow-up for the real build:** the signing secret lives in the Signature node, so every re-import of this
 workflow means pasting it again. Before slice 1, decide where it lives for good (an n8n environment variable needs IT;
 otherwise keep the paste step in the import routine).

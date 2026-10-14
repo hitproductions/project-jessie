@@ -1,0 +1,103 @@
+{
+  "name": "Jessie — Slack Signature — v1",
+  "nodes": [
+    {
+      "id": "sig-trigger",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "base"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sig-sign",
+      "name": "Sign",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.base }}",
+        "dataPropertyName": "computed",
+        "secret": "PASTE-THE-SLACK-SIGNING-SECRET-HERE",
+        "encoding": "hex"
+      }
+    },
+    {
+      "id": "sig-out",
+      "name": "Signature Only",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Return only the computed signature - never the input or the secret.\nreturn [{ json: { computed: String($input.first().json.computed || '') } }];"
+      }
+    },
+    {
+      "id": "sig-note",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "width": 460,
+        "height": 240,
+        "content": "## Holds the Slack signing secret\nPaste it once into **Sign** (Secret). Never re-import this workflow - a re-import erases the secret.\n\nCalled by Jessie — Slack Interactions with the string to sign; returns only the signature. Executions are not saved, so the secret never lands in a log."
+      }
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Sign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign": {
+      "main": [
+        [
+          {
+            "node": "Signature Only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "active": false
+}
