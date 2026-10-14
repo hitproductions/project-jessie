@@ -140,23 +140,6 @@
     },
     {
       "type": "input",
-      "block_id": "for",
-      "label": {
-        "type": "plain_text",
-        "text": "Booking for"
-      },
-      "element": {
-        "type": "users_select",
-        "action_id": "for_pick",
-        "placeholder": {
-          "type": "plain_text",
-          "text": "Leave empty if it's for you"
-        }
-      },
-      "optional": true
-    },
-    {
-      "type": "input",
       "block_id": "notes",
       "label": {
         "type": "plain_text",

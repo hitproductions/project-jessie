@@ -99,7 +99,6 @@ def studio_details(project=None, client=None, title_hint="*QAW1 / <client> / HL*
         inp("project", "Project", text_in("project_in", project)),
         inp("client", "Client", text_in("client_in", client), optional=True, hint="Leave empty if there's no client. A new name is fine."),
         inp("engineer", "Engineer", users("engineer_pick", "You"), hint="Set to you. Change it if someone else is engineering."),
-        inp("for", "Booking for", users("for_pick", "Leave empty if it's for you"), optional=True),
         inp("notes", "Notes", text_in("notes_in", multiline=True), optional=True),
         ctx("Calendar title: " + title_hint),
     ]
@@ -215,7 +214,6 @@ S["36-step2-localization"] = ("modal", modal("Book a room", [
     dv,
     inp("code", "Project code", text_in("code_in", "LOPH S2"), hint="As in Localization Projects. The client and the title come from it."),
     inp("engineer", "Engineer", users("engineer_pick", "You"), hint="Set to you."),
-    inp("for", "Booking for", users("for_pick", "Leave empty if it's for you"), optional=True),
     inp("notes", "Notes", text_in("notes_in", multiline=True), optional=True),
     ctx("Booking type: Entertainment · Calendar title: *LOPH S2 / HL*"),
 ], submit="Book", close="Back"))
@@ -242,7 +240,8 @@ def my_bookings(first_state="live"):
         acts(btn("Move", "move2"), btn("Cancel", "cancel2", "danger")),
         dv,
         sec("*You're engineering*"),
-        sec("*BLUE BIRD / Harold Orozco / MGM*\nFri, Oct 16 · 10:00 AM – 12:00 PM · Studio F"), ctx("Booked by Glenn Mariano"),
+        sec("*BLUE BIRD / Harold Orozco / HL*\nFri, Oct 16 · 10:00 AM – 12:00 PM · Studio F"), ctx("Booked by Glenn Mariano · you can change it too"),
+        acts(btn("Move", "move3"), btn("Cancel", "cancel3", "danger")),
     ])
 
 

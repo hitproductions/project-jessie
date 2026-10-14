@@ -167,7 +167,6 @@ field; type-ahead only after the basics are proven.
 | Arranger | music sessions | you, if you are an arranger |
 | What kind of booking? Client work / Internal / Personal | departments with more than one option | department default; code decides Advertising vs Entertainment (department + client's Client Type; Localization always Entertainment) |
 | Department | only for people in more than one | — |
-| Booking for someone else | behind a checkbox | empty = you |
 | Meeting title | Meeting, Event | typed |
 | Notes | always, optional | — |
 | Repeats (days of week, number of weeks) | step 1 | — |
@@ -177,7 +176,7 @@ field; type-ahead only after the basics are proven.
 | Title written by the AI, then repaired by code (initials, project / client put back, "(new client)" stripped, M booth first name) | Title assembled by code from the fields: `PROJECT / Client / initials`, `ROOM - title` for meetings, `<code> / initials` for Localization | Change (the repairs become formatting) |
 | Nickname → staff (Booked For, Bookers "Goes by") | Same reader pre-fills the people picker (all 58 Bookers have a Slack User ID) | Keep |
 | Client / staff nickname clash asked ("Anj", 82) | The picker stays empty for an unresolved or shared nickname | Change |
-| "for X" → booked for / client (Booked For, forClient) | Pre-fills the checkbox field or the client field | Keep |
+| "for X" → booked for / client (Booked For, forClient) | **No "Booking for" field** (decided 14 Oct): a coordinator booking for someone fills in the engineer / arranger. "for <client>" still pre-fills the client | Change |
 | Near-miss client "Did you mean …?" | Same, on the form field | Keep |
 | New client → New Clients sheet | Same | Keep |
 | NEED_DEPARTMENT / NEED_BOOKING_TYPE / NEED_ARRANGER questions | Form fields shown only when needed | Change |
@@ -240,7 +239,7 @@ button and **Pick another time**.
 | Replacement created before the original is deleted; `PARTIAL` if the delete fails | Same | Keep |
 | Room change in a move (`new_rooms`) | Room choice in the Move form | Keep |
 | Duration kept unless changed | End time pre-filled to keep the duration | Keep |
-| Only your own bookings (`NOT_YOURS`); coordinators within their department; HAIST Dev any | Same checks on every click; buttons shown only where allowed | Keep |
+| Only your own bookings (`NOT_YOURS`); coordinators within their department; HAIST Dev any | **The booker and the assigned engineer and arranger** may move or cancel it (decided 14 Oct), plus coordinators and HAIST Dev as now; checked on every click; buttons shown only where allowed | Change |
 | Moving into a priority slot opens a consent request | Same | Keep |
 | Notices to the booker and engineer (DEV_REDIRECT during QA) | Same | Keep |
 | — | Old messages updated when a booking changes (no stale "Booked." with live buttons) | Gain |

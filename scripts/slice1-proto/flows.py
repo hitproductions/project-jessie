@@ -17,7 +17,7 @@ FLOWS = [
      "stats": "4 taps · 4 picks (date, start, end, what it's for) · 1-2 typed (project, client) · 2 form screens",
      "look": ["Step 1 asks for the end time. Could it default from the session type's usual length, so most people only pick a start?",
               "Step 2 is the longest screen: the room plus five fields. Which of them do people actually fill in?",
-              "\"Booking for\" is on every booking but rarely used. Keep it visible, or move it?"],
+              "No \"Booking for\" field: a coordinator booking for someone fills in the engineer (and arranger) - they can manage the booking too."],
      "states": [
          state([HI, ["j", "01-menu"]], go={"open_book": 1}),
          state([HI, ["j", "01-menu"]], "10-step1", {"__submit": 2}),
@@ -70,7 +70,7 @@ FLOWS = [
     {"id": "cancel", "title": "See my bookings and cancel one",
      "stats": "3 taps (My bookings, Cancel, Cancel booking)",
      "look": ["The \"Are you sure?\" pop-up adds a tap. Keep it for something that can't be undone?",
-              "Sessions you engineer are listed without buttons - only the booker changes them.",
+              "Sessions you engineer have Move and Cancel too: the booker and the assigned engineer or arranger can both manage a booking.",
               "The list shows 7 days. Enough?"],
      "states": [
          state([HI, ["j", "01-menu"]], go={"my_bookings": 1}),

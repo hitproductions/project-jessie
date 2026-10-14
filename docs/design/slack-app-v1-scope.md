@@ -21,10 +21,10 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 | **Typed request → form** | The first message pre-fills the form with what today's code already reads (date, time, room, session type, project, client, engineer). Nothing is booked from it. |
 | **Book a room - step 1** | Date, start, end, What's it for? (session types + Meeting / Event / Booth time). |
 | **Book a room - step 2** | Room: free rooms that fit, ranked from Airtable, top one recommended; Last Resort rooms listed only when no usual room is free; a note for usual rooms not free then. Localization Dubbing offered as studio + booth pairs. Then the details. **Book** is the confirmation. |
-| **Details** | Project (text) · Client (text, checked on Book: "Did you mean…?", new names to the New Clients sheet) · Engineer (studio sessions only; people picker, defaults to you; required for arrangers) · Arranger (music sessions) · Kind of booking (only for departments with a choice) · Project code (text, Localization) · Meeting title (meetings, events) · **Booking for (optional people picker)** · Notes. |
+| **Details** | Project (text) · Client (text, checked on Book: "Did you mean…?", new names to the New Clients sheet) · Engineer (studio sessions only; people picker, defaults to you; required for arrangers) · Arranger (music sessions) · Kind of booking (only for departments with a choice) · Project code (text, Localization) · Meeting title (meetings, events) · Notes. |
 | **Title** | Built by code from the fields (ALL CAPS project for post and music; Localization code as written; `ROOM - title` for meetings). |
 | **After Book** | The form shows "Booking…", then **Booked** (after the room's answer is read back) or the problem with entries kept. The DM gets the result with **Move · Cancel**. A room that declines: Jessie deletes her event and says so, with **Pick another room or time**. |
-| **My bookings** | Next 7 days: bookings you made (with Move · Cancel) and ones you engineer (no buttons). |
+| **My bookings** | Next 7 days: bookings you made and ones you engineer or arrange - all with Move · Cancel. |
 | **Cancel** | Slack's "Are you sure?" pop-up, then the message updates to Cancelled. |
 | **Move** | A form pre-filled with date, start, end and room; the new time is checked first. |
 | **Typed cancel / move** | "cancel my friday booking" → the matching bookings, each with Move · Cancel. "make it 3pm" → opens the Move form pre-filled. |
@@ -60,7 +60,7 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 
 | Designed | Built as | Why |
 |---|---|---|
-| "Booking for someone else" behind a checkbox that redraws the form | An optional people field, always shown | No redraw; one less moving part |
+| "Booking for someone else" behind a checkbox that redraws the form | **Removed** (decided 14 Oct) | The engineer and arranger fields already say who the session is for; they can manage the booking too |
 | "Booked" at once, then a status line that updates when the room answers | "Booked" shown after the room's answer | One update instead of two; the wait is a few seconds on "Booking…" |
 | Three menu buttons | Two (Studios comes with the day board) | Nothing behind the third button yet |
 | One-tap typed move | Typed move opens the Move form | Same check, one screen fewer |
@@ -70,7 +70,11 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 
 - **Book Session:** accept a form booking directly (no AI, no card) - fields in, title built from them; delete its own
   event when the room declines (PENDING 44).
-- **Cancel / Move:** none - both already take the exact booking id.
+- **Who can change a booking** (decided 14 Oct): the booker **and the assigned engineer and arranger**, plus coordinators and
+  HAIST Dev as now. Book Session writes the engineer's and arranger's Slack ids into the event (beside `ref:`), and
+  Check Ownership / Resolve Booking (Cancel, Move) accept them. Not from the title initials: two people in Bookers share
+  initials (LS). Older events without the ids keep today's rule.
+- **Cancel / Move:** otherwise none - both already take the exact booking id.
 - **Room Availability:** free rooms for a window, ranked for a session type - it already answers this; confirm the shape.
 - **Main:** route a typed request to "pre-fill the form" instead of the chat booking flow, flow by flow.
 - **New workflow:** `Jessie — Slack Interactions` (clicks and form submissions), with its own version numbers.

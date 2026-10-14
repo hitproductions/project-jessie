@@ -80,7 +80,7 @@
       "type": "section",
       "text": {
         "type": "mrkdwn",
-        "text": "*BLUE BIRD / Harold Orozco / MGM*\nFri, Oct 16 · 10:00 AM – 12:00 PM · Studio F"
+        "text": "*BLUE BIRD / Harold Orozco / HL*\nFri, Oct 16 · 10:00 AM – 12:00 PM · Studio F"
       }
     },
     {
@@ -88,7 +88,31 @@
       "elements": [
         {
           "type": "mrkdwn",
-          "text": "Booked by Glenn Mariano"
+          "text": "Booked by Glenn Mariano · you can change it too"
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Move"
+          },
+          "action_id": "move3",
+          "value": "x"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Cancel"
+          },
+          "action_id": "cancel3",
+          "value": "x",
+          "style": "danger"
         }
       ]
     }
