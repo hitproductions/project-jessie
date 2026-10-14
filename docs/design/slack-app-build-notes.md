@@ -7,9 +7,10 @@ they are for the people building it rather than for stakeholders). The full desi
 ## What changes for running and testing it
 
 **Running**
-- Slack app: Interactivity turned on (one request URL, one search URL for the project-code search); scopes as now
+- Slack app: Interactivity turned on (one request URL; no search URL - client and project code are text fields in this
+  build); scopes as now
   (`chat:write`, `im:write`, `users:read`); no slash command, no Home tab.
-- Both new URLs added to the Cloudflare exemption rule (PENDING 21), and to the uptime monitor (PENDING 15).
+- The new URL added to the Cloudflare exemption rule (PENDING 21), and to the uptime monitor (PENDING 15).
 - Slack expects an answer within 3 seconds: each click is acknowledged at once ("Booking…"); the work follows and updates
   the form or the message.
 - During an outage, a click shows Slack's own error instead of being lost silently.

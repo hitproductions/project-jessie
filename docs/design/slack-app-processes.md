@@ -150,10 +150,17 @@ result reports moved / skipped / failed. Needs the series id (section 5).
 Step 2 is built for the requester (Bookers department → **Booking Defaults** row) and the session type, so only fields
 that apply are shown.
 
+**Rule for this build (decided 14 Oct): free-text inputs stay text fields.** Client and project code are typed and checked
+on Book - no type-ahead search, no dropdown that needs Jessie to answer while someone types. Slack caps a fixed dropdown at
+100 options (Airtable had 96 clients on 14 Oct and grows with new clients), and type-ahead depends on a ~3 s answer through
+Cloudflare and n8n; a text field has neither limit nor timing risk. Native pickers (date, time, people) and short fixed
+lists built from Airtable (rooms, session types) stay. Later, if wanted: a small "your recent clients" list beside the text
+field; type-ahead only after the basics are proven.
+
 | Field | Shown when | Default / source |
 |---|---|---|
 | Project | studio sessions | typed; title uses it in ALL CAPS (post and music) |
-| Project code | Localization sessions | searched from **Localization Projects**; client and title come from it; written as in the table |
+| Project code | Localization sessions | **typed**; on Book, matched against **Localization Projects** (near miss → "Did you mean …?" on the field); client and title come from the matched record; written as in the table |
 | Client | studio sessions except Localization | **typed** (option A): on Book, exact match → that record; near miss → "Did you mean …?" on the field; not found → booked as typed + New Clients sheet |
 | Engineer | studio sessions | Slack people picker; you if your department's rule is "self"; required if "ask" (arrangers, Marketing) |
 | Arranger | music sessions | you, if you are an arranger |
@@ -315,8 +322,8 @@ reminders, the weekly message, approval buttons. Every message to someone other 
 recipient filter with the one `DEV_REDIRECT`, so the launch flip is one place, not five. `TEST_COORD` and HAIST Dev as before.
 
 **Outages and Slack's rules.**
-- New URLs: the **Interactivity** request URL (every click and submission) and the **options** URL (the project-code search)
-  must be added to the **Cloudflare exemption rule** (PENDING 21), and the uptime monitor (15) should probe them.
+- New URL: the **Interactivity** request URL (every click and submission; no options-load URL, since there is no
+  type-ahead search in this build) must be added to the **Cloudflare exemption rule** (PENDING 21), and the uptime monitor (15) should probe it.
 - Slack does not retry a click the way it retries a message event: during an edge outage the person sees Slack's "didn't
   respond" error at once. Visible, not silent - nothing is half-done, they can try again.
 - **3 seconds:** every click and submission is acknowledged at once ("Booking…", a redrawn form); the slow work runs after
@@ -331,7 +338,7 @@ recipient filter with the one `DEV_REDIRECT`, so the launch flip is one place, n
   test-nodes feeds Gate Context and Guard Probe today; layouts are checked in the Block Kit Builder.
 - QA rounds become: testers follow a script in Slack; Claude reads the Interactions and Log rows afterwards.
 
-**Slack app settings (owner).** Interactivity on, with its request URL; an options load URL; scopes as now (`chat:write`,
+**Slack app settings (owner).** Interactivity on, with its request URL; scopes as now (`chat:write`,
 `im:write`, `users:read`); no slash command or Home tab (decided).
 
 | Now | After the pivot | |

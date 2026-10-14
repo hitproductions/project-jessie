@@ -166,9 +166,8 @@ S["06-details-arranger"] = ("modal", modal("Book a room", [
 S["07-details-localization"] = ("modal", modal("Book a room", [
     sec("🗓️ *Thursday, Oct 14 · 9:00 AM – 2:00 PM · Localization Dubbing · Studio 1 + Studio A*"),
     dv,
-    inp("code", "Project code", {"type": "external_select", "action_id": "code_search", "min_query_length": 1,
-                                 "placeholder": pt("Search project codes")},
-        hint="From Localization Projects. The client and the title come from it."),
+    inp("code", "Project code", text_in("code_in", "LOPH S2"),
+        hint="As in Localization Projects. The client and the title come from it."),
     inp("engineer", "Engineer", users("engineer_pick", "You"), hint="Set to you"),
     ctx("Booking type: Entertainment (always, for Localization) · Calendar title: *<project code> / HL*"),
 ], submit="Book", close="Back"))

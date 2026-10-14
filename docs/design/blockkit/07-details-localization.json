@@ -28,17 +28,13 @@
         "text": "Project code"
       },
       "element": {
-        "type": "external_select",
-        "action_id": "code_search",
-        "min_query_length": 1,
-        "placeholder": {
-          "type": "plain_text",
-          "text": "Search project codes"
-        }
+        "type": "plain_text_input",
+        "action_id": "code_in",
+        "initial_value": "LOPH S2"
       },
       "hint": {
         "type": "plain_text",
-        "text": "From Localization Projects. The client and the title come from it."
+        "text": "As in Localization Projects. The client and the title come from it."
       }
     },
     {
