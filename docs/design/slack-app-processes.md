@@ -163,7 +163,7 @@ field; type-ahead only after the basics are proven.
 | Project | studio sessions | typed; title uses it in ALL CAPS (post and music) |
 | Project code | Localization sessions | **typed**; on Book, matched against **Localization Projects** (near miss → "Did you mean …?" on the field); client and title come from the matched record; written as in the table |
 | Client | studio sessions except Localization | **typed** (option A): on Book, exact match → that record; near miss → "Did you mean …?" on the field; not found → booked as typed + New Clients sheet |
-| Engineer | studio sessions | Slack people picker; you if your department's rule is "self"; required if "ask" (arrangers, Marketing) |
+| Engineer | studio sessions only | Slack people picker; you if your department's rule is "self"; required when someone else engineers (arrangers) |
 | Arranger | music sessions | you, if you are an arranger |
 | What kind of booking? Client work / Internal / Personal | departments with more than one option | department default; code decides Advertising vs Entertainment (department + client's Client Type; Localization always Entertainment) |
 | Department | only for people in more than one | — |
