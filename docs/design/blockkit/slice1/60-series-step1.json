@@ -24,7 +24,7 @@
       "block_id": "date",
       "label": {
         "type": "plain_text",
-        "text": "First date"
+        "text": "Date"
       },
       "element": {
         "type": "datepicker",

@@ -89,6 +89,7 @@ def step1(d, t0, t1, purpose):
         inp("date", "Date", date("date_pick", d)),
         inp("start", "Start", time("start_pick", t0)),
         inp("end", "End", time("end_pick", t1)),
+        acts({"type": "checkboxes", "action_id": "repeat_toggle", "options": [{"text": md("_Repeats_"), "value": "repeat"}]}),
         what_for(purpose),
     ], submit="Find rooms", cb="book_step1")
 
@@ -308,7 +309,7 @@ _rep = {"text": md("_Repeats_"), "value": "repeat"}
 
 def series_step1(ticked):
     b = [ctx("*Step 1 of 2* · when, and what for"),
-         inp("date", "First date", date("date_pick", "2026-10-19")),
+         inp("date", "First date" if ticked else "Date", date("date_pick", "2026-10-19")),
          inp("start", "Start", time("start_pick", "09:00")),
          inp("end", "End", time("end_pick", "14:00")),
          acts(dict({"type": "checkboxes", "action_id": "repeat_toggle", "options": [_rep]}, **({"initial_options": [_rep]} if ticked else {})))]

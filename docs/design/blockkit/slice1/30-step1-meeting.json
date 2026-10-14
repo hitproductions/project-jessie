@@ -61,6 +61,24 @@
       }
     },
     {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "checkboxes",
+          "action_id": "repeat_toggle",
+          "options": [
+            {
+              "text": {
+                "type": "mrkdwn",
+                "text": "_Repeats_"
+              },
+              "value": "repeat"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "type": "input",
       "block_id": "purpose",
       "label": {
