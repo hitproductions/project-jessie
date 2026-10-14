@@ -11,7 +11,7 @@ B["loop"] = [
     ("j", "I need the session type, project title and client (or \"none\") to prepare the Studio 8 booking for Monday, October 25, 1:00–3:00 PM."),
     ("r", "music mixing, project QAW7"),
     ("j", "🗓️ Studio 8 · Monday, October 25 · 1:00 PM – 3:00 PM\n\nWho’s the client? (or \"none\")"),
-    ("r", "wait, make it post mixing. client is [client]"),
+    ("r", "wait, make it post mixing. client is dante nora"),
     ("j", "Which kind of mixing - Post Mixing, Localization Mixing, Localization Atmos Mixing or Music Mixing?"),
     ("r", "post mixing"),
     ("j", "Which kind of mixing - Post Mixing, Localization Mixing, Localization Atmos Mixing or Music Mixing?"),
