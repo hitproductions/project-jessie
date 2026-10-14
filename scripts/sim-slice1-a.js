@@ -58,6 +58,10 @@ async function run(wf, name, input, outs) {
   const grp = s1.view.blocks[4].element.option_groups;
   ok(s1.cacheOk && grp[0].options.map(o => o.value).join() === 'Music Mixing,VO Recording', 'step 1: sessions from the cache, sorted');
   ok(grp[1].options.map(o => o.value).join() === 'Meeting,Event,__booth', 'step 1: not-a-session group');
+  if (JSON.stringify(s1.view).indexOf("'M booth'") !== -1 || s1.view.blocks[4].element.option_groups[1].options.some(o => o.text.text === 'M booth')) {
+    ok(!s1.view.blocks[2].element.timezone && !s1.view.blocks[3].element.timezone, 'v6: time pickers carry no time zone (no note); times read as PHT');
+    ok(grp[1].options.find(o => o.value === '__booth').text.text === 'M booth', 'v6: "M booth", not "Booth time"');
+  }
   ok(s1.view.blocks[1].element.initial_date.startsWith(String(new Date(Date.now() + 8 * 3600e3).getUTCFullYear() + 1)), 'step 1: date a year ahead');
 
   const sub1 = (vals) => ({ type: 'view_submission', view: { private_metadata: JSON.stringify({ requester: 'U1', channel: 'D1' }), state: { values: vals } } });
@@ -106,6 +110,7 @@ async function run(wf, name, input, outs) {
   const rBooth = await read1(sub1(vals('2027-10-15', '15:00', '16:00', '__booth')));
   s2 = await step2(rBooth, { status: 'OK', free_rooms: ['Likha', 'M4', 'Studio 7'] });
   ok(s2.view.blocks.find(b => b.block_id === 'room').element.options.map(o => o.value).join() === 'M4', 'booth time: only M booths');
+  ok(s2.view.blocks.find(b => b.block_id === 'room').element.options.every(o => !o.description) || si.name.indexOf('v6') === -1, 'v6: booths listed without a note');
   const rMus = await read1(sub1(vals('2027-10-15', '13:00', '17:00', 'Music Mixing')));
   s2 = await step2(rMus, { status: 'OK', free_priority: ['Studio F'], free_last_resort: [] });
   ok(s2.view.blocks.some(b => b.block_id === 'arranger'), 'music: arranger field');

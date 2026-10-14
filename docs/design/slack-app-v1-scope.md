@@ -36,7 +36,7 @@ Enough to move the most-used flows (book, see, cancel, move) off the chat.
 
 | Feature | Note |
 |---|---|
-| **Approvals as buttons** (priority and shared-booth requests; engineer may answer; withdraw) | Rare. Open decision below. |
+| **Approvals as buttons** (priority and shared-booth requests; engineer may answer; withdraw). Until then the form offers only free M booths - a booth with a standing hold (M1 Rico, M4 Japs, M6 Marketing, M7 Ana on 14 Oct) is not listed; asking its holder comes with this | Rare. Open decision below. |
 | **Studios day board** (third menu button) | Typed "what's free…" covers it in slice 1. |
 | **Engineer notice** on every new booking | Needs the shared recipient filter (one `DEV_REDIRECT`). |
 | **Reminders** (studio day-before; weekly booths and meeting rooms, standing holds) | New feature, builds on the same filter. |
