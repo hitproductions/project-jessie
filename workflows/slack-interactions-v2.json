@@ -1,0 +1,657 @@
+{
+  "name": "Jessie — Slack Interactions — v2 (secret moved out)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -320
+      ],
+      "id": "669f260a-6dba-44ff-8e7e-4ddb8ad894da",
+      "name": "Post Test Button"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: 'U08V3CKDGJF', text: 'Hello form test', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '*Hello form test* - tap the button to open a test form.' } },{ type: 'actions', elements: [ { type: 'button', style: 'primary', action_id: 'hello_open', value: 'hello', text: { type: 'plain_text', text: 'Open test form' } } ] } ] }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        -320
+      ],
+      "id": "40e8008d-0fe8-4b7c-90ad-4e87cf2eba9b",
+      "name": "Send Button",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jessie-interactions",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "281fc951-fa38-4005-805c-67853ec9511a",
+      "name": "Slack Interactions",
+      "webhookId": "6f1d2c1e-4a7b-4c0e-9a51-1e2f3a4b5c6d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read Request: the raw body (for the signature), the Slack headers and the interaction payload.\n// Slack sends application/x-www-form-urlencoded: payload=<url-encoded JSON>. The signature is over the exact raw bytes,\n// so the Webhook node's Raw Body option must be on; rawSource says which way the raw body was found.\nconst item = $input.first();\nconst j = item.json || {};\nconst h = j.headers || {};\nlet raw = '', rawSource = 'none';\ntry {\n  if (item.binary && item.binary.data) {\n    const buf = await this.helpers.getBinaryDataBuffer(0, 'data');\n    raw = buf.toString('utf8'); rawSource = 'binary';\n  }\n} catch (e) { rawSource = 'binary-error: ' + String(e.message || e).slice(0, 80); }\nif (!raw && typeof j.body === 'string') { raw = j.body; rawSource = 'body-string'; }\nif (!raw && j.rawBody) { raw = String(j.rawBody); rawSource = 'rawBody'; }\nlet payload = null, payloadSource = 'none';\ntry { const p = new URLSearchParams(raw).get('payload'); if (p) { payload = JSON.parse(p); payloadSource = 'raw'; } } catch (e) {}\nif (!payload && j.body && j.body.payload) {\n  try { payload = typeof j.body.payload === 'string' ? JSON.parse(j.body.payload) : j.body.payload; payloadSource = 'parsed-body'; } catch (e) {}\n}\nreturn [{ json: {\n  raw, rawSource, rawLength: raw.length,\n  sig: String(h['x-slack-signature'] || ''),\n  ts: String(h['x-slack-request-timestamp'] || ''),\n  payload: payload || {}, payloadSource,\n  receivedAt: Date.now()\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "cc1b4cf3-03ea-4cfd-82fd-2190f5667e7e",
+      "name": "Read Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// To Sign: the string Slack signs - 'v0:' + timestamp + ':' + raw body - for Jessie — Slack Signature.\nconst r = $input.first().json;\nreturn [{ json: { base: 'v0:' + r.ts + ':' + r.raw } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "65392541-a7d2-4cbf-8bc1-4e00106fcc31",
+      "name": "To Sign"
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "mode": "each",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "R06CBQNhFK0x4ZuO",
+          "cachedResultName": "Jessie — Slack Signature — v1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        600,
+        0
+      ],
+      "id": "d74a2013-7280-43fa-92af-4fc4bb607ad6",
+      "name": "Signature"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check Signature: Slack signs 'v0:' + timestamp + ':' + raw body with the signing secret (HMAC-SHA256, hex).\n// Also refuse a timestamp more than 5 minutes off (replay protection). Then pick the route.\nconst r = $('Read Request').first().json;\nconst computed = String($input.first().json.computed || '');\nconst sigOk = !!r.sig && ('v0=' + computed) === r.sig;\nconst ageSec = r.ts ? Math.round(Date.now() / 1000 - Number(r.ts)) : null;\nconst fresh = ageSec !== null && Math.abs(ageSec) <= 300;\nconst p = r.payload || {};\nconst action = (p.actions && p.actions[0] && p.actions[0].action_id) || '';\nconst cb = (p.view && p.view.callback_id) || '';\nlet route = 3;                                              // anything else: just acknowledge\nif (!(sigOk && fresh)) route = 0;                           // refused\nelse if (p.type === 'block_actions' && action === 'hello_open') route = 1;\nelse if (p.type === 'view_submission' && cb === 'hello_submit') route = 2;\nreturn [{ json: { route, sigOk, fresh, ageSec, type: p.type || '', action, cb,\n  user: (p.user && p.user.id) || '', triggerId: p.trigger_id || '', viewId: (p.view && p.view.id) || '',\n  rawSource: r.rawSource, rawLength: r.rawLength, payloadSource: r.payloadSource, receivedAt: r.receivedAt } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ],
+      "id": "5c02caa2-9e17-4a42-b4ac-9cdc8f3908df",
+      "name": "Check Signature"
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 4,
+        "output": "={{ $json.route }}"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        960,
+        0
+      ],
+      "id": "ceb3e9c7-a7da-4540-b966-3132acc2b1ab",
+      "name": "Route"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        -300
+      ],
+      "id": "a1342344-e577-43ed-afd9-74e2da7a44b8",
+      "name": "Refuse"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Refused: the signature or the timestamp did not check out - tell the tester why (nothing else happens).\nconst c = $('Check Signature').first().json;\nconst lines = ['*Hello form - a request was refused*',\n  '• Signature: ' + (c.sigOk ? 'OK' : 'did not match') + ' · timestamp age ' + c.ageSec + ' s (allowed: 300)',\n  '• Raw body: ' + c.rawSource + ' (' + c.rawLength + ' chars) · payload from ' + c.payloadSource + ' · type ' + (c.type || '?'),\n  'If the signature did not match: check the secret in the Sign node of Jessie — Slack Signature, and that the Webhook node has Raw Body on.'];\nreturn [{ json: { channel: 'U08V3CKDGJF', text: lines.join('\\n') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -300
+      ],
+      "id": "1d3f2705-2496-4a1d-b871-43c573602c55",
+      "name": "Report Refused"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        -300
+      ],
+      "id": "b82e78e5-1312-48a0-a4a7-5f63dd5e455a",
+      "name": "DM Refused",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        -100
+      ],
+      "id": "a3fde4da-3d82-4c80-b5a3-34d4ddb37cf9",
+      "name": "Ack Click"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Form: the hello form. The date picker opens a year ahead (the QA year shift), on Manila's today.\nconst c = $('Check Signature').first().json;\nconst m = new Date(Date.now() + 8 * 3600 * 1000);\nconst d = (m.getUTCFullYear() + 1) + '-' + String(m.getUTCMonth() + 1).padStart(2, '0') + '-' + String(m.getUTCDate()).padStart(2, '0');\nconst view = {\n  type: 'modal', callback_id: 'hello_submit',\n  title: { type: 'plain_text', text: 'Hello form' },\n  submit: { type: 'plain_text', text: 'Send' }, close: { type: 'plain_text', text: 'Cancel' },\n  private_metadata: JSON.stringify({ openedAt: Date.now(), clickAge: c.ageSec }),\n  blocks: [\n    { type: 'section', text: { type: 'mrkdwn', text: 'Test form for the Slack-app build. Pick a date, type anything, press *Send*.' } },\n    { type: 'input', block_id: 'date', label: { type: 'plain_text', text: 'Date' },\n      element: { type: 'datepicker', action_id: 'date_pick', initial_date: d } },\n    { type: 'input', block_id: 'note', label: { type: 'plain_text', text: 'Say something' },\n      element: { type: 'plain_text_input', action_id: 'note_in' } }\n  ]\n};\nreturn [{ json: { trigger_id: c.triggerId, view } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -100
+      ],
+      "id": "310db3df-791e-475a-ad09-4f2aa2e81e21",
+      "name": "Build Form"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.open",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ trigger_id: $json.trigger_id, view: $json.view }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        -100
+      ],
+      "id": "3a3297fc-afe4-413f-9396-e56a07cfeb20",
+      "name": "Open Form",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Report Open: say if views.open failed (the trigger_id lasts 3 seconds).\nconst r = $input.first().json;\nif (r.ok === true) return [];\nreturn [{ json: { channel: 'U08V3CKDGJF', text: '*Hello form - the form did not open:* ' + JSON.stringify(r).slice(0, 300) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -100
+      ],
+      "id": "255e6552-1434-44cc-86e4-226ef9853a0f",
+      "name": "Report Open"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2160,
+        -100
+      ],
+      "id": "723c1849-adf2-4d86-8918-171eddf81a58",
+      "name": "DM Open Failed",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read Submission: what was entered, and the views for \"working\" (sent at once) and \"done\" (sent after).\nconst c = $('Check Signature').first().json;\nconst p = $('Read Request').first().json.payload || {};\nconst v = (p.view && p.view.state && p.view.state.values) || {};\nconst date = (v.date && v.date.date_pick && v.date.date_pick.selected_date) || '';\nconst note = (v.note && v.note.note_in && v.note.note_in.value) || '';\nlet meta = {}; try { meta = JSON.parse((p.view && p.view.private_metadata) || '{}'); } catch (e) {}\nconst view = (text) => ({ type: 'modal', title: { type: 'plain_text', text: 'Hello form' }, close: { type: 'plain_text', text: 'Close' },\n  blocks: [{ type: 'section', text: { type: 'mrkdwn', text } }] });\nreturn [{ json: {\n  viewId: c.viewId, user: c.user || 'U08V3CKDGJF', date, note, meta,\n  working: { response_action: 'update', view: view('⏳ *Working…* (this is the 3-second answer)') },\n  done: view('✅ *Done.* The form was updated after the answer. Details are in your DM.')\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        100
+      ],
+      "id": "34cf4fc8-10c7-49c8-bc89-6c9b5eaad30d",
+      "name": "Read Submission"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.working) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        100
+      ],
+      "id": "44b6efd4-c57a-411f-868b-375319be79b0",
+      "name": "Answer Working"
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        100
+      ],
+      "id": "3c89614f-cf8a-4f21-9f20-a64aa0bff02d",
+      "name": "Pretend Work",
+      "webhookId": "40f9f5d9-ef26-4053-91c7-2c4dfef574ff"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ view_id: $('Read Submission').first().json.viewId, view: $('Read Submission').first().json.done }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        100
+      ],
+      "id": "7b9ccb8e-3989-4b92-92f2-1123f728762c",
+      "name": "Update Form",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Report: the diagnostics message for the tester's DM.\nconst s = $('Read Submission').first().json;\nconst c = $('Check Signature').first().json;\nconst done = Date.now();\nconst lines = [\n  '*Hello form - result*',\n  '• Signature check: ' + (c.sigOk ? 'OK' : 'FAILED') + ' · request age ' + c.ageSec + ' s',\n  '• Raw body: ' + c.rawSource + ' (' + c.rawLength + ' chars) · payload from ' + c.payloadSource,\n  '• Date picked: ' + (s.date || '(none)') + ' · note: ' + (s.note || '(empty)'),\n  '• Form update after the answer: ' + ((done - c.receivedAt) / 1000).toFixed(1) + ' s after Send reached n8n',\n  '• Update call: ' + ($('Update Form').first().json.ok === true ? 'OK' : 'FAILED ' + JSON.stringify($('Update Form').first().json).slice(0, 150))\n];\nreturn [{ json: { channel: s.user, text: lines.join('\\n') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        100
+      ],
+      "id": "3cf116a7-d8db-4e9e-b8bf-bd4b61cddd37",
+      "name": "Report"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        100
+      ],
+      "id": "ae7ff66c-9076-445c-9997-cab7bf8f29a7",
+      "name": "DM Result",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        300
+      ],
+      "id": "3c3af695-d47b-42e1-a2d8-20ca9a8bfe01",
+      "name": "Ack Other"
+    },
+    {
+      "parameters": {
+        "content": "## Hello form (Slack-app build, test)\nThe signature is computed by **Jessie — Slack Signature**, which holds the secret - nothing to paste here.\n\nRun **Post Test Button** by hand: a button appears in the tester's DM. Every run DMs a diagnostics line.\n\nSlack Interactivity request URL: `https://signal.hitpromanila.net/webhook/jessie-interactions`",
+        "height": 300,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -620
+      ],
+      "id": "283dd1d8-3292-4940-bef9-ab0dfa7a9e89",
+      "name": "About"
+    }
+  ],
+  "connections": {
+    "Post Test Button": {
+      "main": [
+        [
+          {
+            "node": "Send Button",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Interactions": {
+      "main": [
+        [
+          {
+            "node": "Read Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Request": {
+      "main": [
+        [
+          {
+            "node": "To Sign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To Sign": {
+      "main": [
+        [
+          {
+            "node": "Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signature": {
+      "main": [
+        [
+          {
+            "node": "Check Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Signature": {
+      "main": [
+        [
+          {
+            "node": "Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route": {
+      "main": [
+        [
+          {
+            "node": "Refuse",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack Click",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Submission",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack Other",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refuse": {
+      "main": [
+        [
+          {
+            "node": "Report Refused",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Refused": {
+      "main": [
+        [
+          {
+            "node": "DM Refused",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack Click": {
+      "main": [
+        [
+          {
+            "node": "Build Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Form": {
+      "main": [
+        [
+          {
+            "node": "Open Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open Form": {
+      "main": [
+        [
+          {
+            "node": "Report Open",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Open": {
+      "main": [
+        [
+          {
+            "node": "DM Open Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Submission": {
+      "main": [
+        [
+          {
+            "node": "Answer Working",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Working": {
+      "main": [
+        [
+          {
+            "node": "Pretend Work",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pretend Work": {
+      "main": [
+        [
+          {
+            "node": "Update Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Form": {
+      "main": [
+        [
+          {
+            "node": "Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report": {
+      "main": [
+        [
+          {
+            "node": "DM Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

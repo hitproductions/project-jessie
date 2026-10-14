@@ -241,7 +241,8 @@ because it read like a build number.
 | `Jessie — Open Consent Request` | `nEHnCMMXS0am59Zy` | consent engine — writes a PENDING row to the Consent Requests Sheet + DMs the holder/incumbent (both cross-dept **priority preemption** and **M-booth** shared-booth requests) |
 | `Jessie — Finalize Consent` | `TO1UnZTZ2LhtE9J3` | consent engine — on approval, places the requester: **M-booth** = cancel the holder's hold instance then book (resource transfer); **preempt** = place-only after the incumbent has moved |
 | `Jessie — Consent Sweep` | `QHHDevaWhMk8gSBX` | consent engine — **scheduled ~10 min**; on a PENDING row past its `Deadline`: M-booth → book (timeout=book), preempt → mark EXPIRED. Fires even during a Cloudflare edge outage |
-| `Jessie — Slack Interactions` | `PyxSPoAMtSE1gzaH` | the Slack-app pivot: every button click and form submission (Slack Interactivity → `/webhook/jessie-interactions`), signature-checked. v1 is the hello-form test (passed 14 Oct); slice 1 builds on it. The Slack signing secret is pasted into its **Signature** node after each import - it is not in the repo |
+| `Jessie — Slack Interactions` | `PyxSPoAMtSE1gzaH` | the Slack-app pivot: every button click and form submission (Slack Interactivity → `/webhook/jessie-interactions`), signature-checked. v1 is the hello-form test (passed 14 Oct); slice 1 builds on it. From v2 the signature comes from `Jessie — Slack Signature` - nothing to paste on import |
+| `Jessie — Slack Signature` | `R06CBQNhFK0x4ZuO` | holds the Slack signing secret (pasted once into its **Sign** node) and returns only the HMAC of what it is given; saves no executions. **Never re-import it** - that erases the secret |
 
 The **consent engine** (the three workflows above) handles two callers that both need someone's OK before
 acting: **cross-department priority preemption** (a higher-ranked session bumps a lower one, incumbent

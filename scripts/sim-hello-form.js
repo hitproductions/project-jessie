@@ -34,8 +34,15 @@ async function pipeline(payload, opts) {
   const out = {};
   out['Read Request'] = await run('Read Request', [item], out, helpers);
   const r = out['Read Request'][0].json;
-  const computed = crypto.createHmac('sha256', SECRET).update('v0:' + r.ts + ':' + r.raw).digest('hex');   // the Crypto node
-  out['Signature'] = [{ json: Object.assign({}, r, { computed }) }];
+  if (node('To Sign')) {            // v2: To Sign -> Jessie — Slack Signature (emulated) returns only { computed }
+    out['To Sign'] = await run('To Sign', out['Read Request'], out, helpers);
+    const base = out['To Sign'][0].json.base;
+    ok(base === 'v0:' + r.ts + ':' + r.raw, 'To Sign builds the signed string');
+    out['Signature'] = [{ json: { computed: crypto.createHmac('sha256', SECRET).update(base).digest('hex') } }];
+  } else {                          // v1: the Crypto node in this workflow
+    const computed = crypto.createHmac('sha256', SECRET).update('v0:' + r.ts + ':' + r.raw).digest('hex');
+    out['Signature'] = [{ json: Object.assign({}, r, { computed }) }];
+  }
   out['Check Signature'] = await run('Check Signature', out['Signature'], out, helpers);
   return out;
 }
@@ -77,10 +84,13 @@ async function pipeline(payload, opts) {
   o['Refused'] = await run('Report Refused', [], o, {});
 
   const types = new Set(wf.nodes.map(n => n.type));
-  ok(['n8n-nodes-base.webhook', 'n8n-nodes-base.crypto', 'n8n-nodes-base.respondToWebhook'].every(t => types.has(t)), 'node types present');
+  const v2 = !!node('To Sign');
+  ok(['n8n-nodes-base.webhook', v2 ? 'n8n-nodes-base.executeWorkflow' : 'n8n-nodes-base.crypto', 'n8n-nodes-base.respondToWebhook'].every(t => types.has(t)), 'node types present');
+  if (v2) ok(node('Signature').parameters.workflowId.value === 'R06CBQNhFK0x4ZuO' && JSON.stringify(wf).indexOf('PASTE-THE') === -1,
+             'v2 calls Jessie — Slack Signature and carries no secret placeholder');
   ok(node('Slack Interactions').parameters.options.rawBody === true && node('Slack Interactions').parameters.responseMode === 'responseNode',
      'webhook: raw body on, answers through Respond nodes');
-  ok(JSON.stringify(wf).indexOf('PASTE-THE-SLACK-SIGNING-SECRET-HERE') !== -1, 'the secret is a placeholder in the file');
+  if (!v2) ok(JSON.stringify(wf).indexOf('PASTE-THE-SLACK-SIGNING-SECRET-HERE') !== -1, 'the secret is a placeholder in the file');
   console.log(pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();
