@@ -4,7 +4,7 @@
 // step 2 checks and the calendar title). Usage: node scripts/sim-slice1-a.js [main v262] [slack interactions v3]
 const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v262.json', 'utf8'));
-const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v3.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v4.json', 'utf8'));
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
@@ -42,10 +42,14 @@ async function run(wf, name, input, outs) {
   const R = (id, name, extra) => ({ id, fields: Object.assign({ 'Room Name': name }, extra || {}) });
   const rooms = [R('r7', 'Studio 7'), R('r8', 'Studio 8'), R('rf', 'Studio F'), R('rc', 'Studio C'), R('r4', 'Studio 4'),
     R('rl', 'Likha', { 'Room Type': ['Conference Room'] }), R('m4', 'M4', { 'Room Type': ['M Booth'] }), R('ra', 'Studio A', { 'Vocal Booth': true })];
-  const ST = (t, pri, last) => ({ id: 'st-' + t, fields: { Type: t, Priority: pri, 'Last Resort': last || [] } });
-  const sessionTypes = [ST('VO Recording', ['r7', 'r8', 'rf', 'rc'], ['r4']), ST('Meeting', ['rl']), ST('Event', ['rl']), ST('Music Mixing', ['rf'], ['rc'])];
-  const bookers = [{ id: 'b1', fields: { Name: 'Howard Luistro', Initials: 'HL', 'Slack User ID': 'U1' } },
-                   { id: 'b2', fields: { Name: 'Daryl Reyes', Initials: 'DR', 'Slack User ID': 'U2\n' } }];
+  const ST = (t, pri, last, role) => ({ id: 'st-' + t, fields: { Type: t, Priority: pri, 'Last Resort': last || [], 'Engineer Role Required': role ? [role] : [] } });
+  const sessionTypes = [ST('VO Recording', ['r7', 'r8', 'rf', 'rc'], ['r4'], 'Post Engineer'), ST('Meeting', ['rl']), ST('Event', ['rl']), ST('Music Mixing', ['rf'], ['rc'], 'Music Engineer')];
+  const bookers = [{ id: 'b1', fields: { Name: 'Howard Luistro', Initials: 'HL', 'Slack User ID': 'U1', Info: 'Post Engineer, Secondary Music Engineer, Goes by Howard.' } },
+                   { id: 'b2', fields: { Name: 'Daryl Reyes', Initials: 'DR', 'Slack User ID': 'U2\n', Info: 'Music Engineer, Post Engineer. Goes by Daryl.' } },
+                   { id: 'b3', fields: { Name: 'Jetrho Ty', Initials: 'JT', 'Slack User ID': 'U3', Info: 'Loc Engineer, Goes by Jetrho.' } },
+                   { id: 'b4', fields: { Name: 'Peter Legaste', Initials: 'PL', 'Slack User ID': 'U4', Info: 'Music Arranger, Goes by Peter.' } },
+                   { id: 'b5', fields: { Name: 'Lea Lardizabal', Initials: 'LL', 'Slack User ID': 'U5', Info: 'Sales Lead, Goes by Lea.' } },
+                   { id: 'b6', fields: { Name: 'Regie Ambas', Initials: 'RA', 'Slack User ID': 'U6', Info: 'Head of Audio Post, Goes by Regie.' } }];
   const cacheRow = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Date().toISOString(), payload: JSON.stringify({ rooms, sessionTypes, bookers }) } }];
   const chk = { json: { user: 'U1', triggerId: 'T1', channel: 'D1' } };
 
@@ -78,7 +82,18 @@ async function run(wf, name, input, outs) {
   ok(radio.options.map(o => o.value).join() === 'Studio 8,Studio F' && /Recommended/.test(radio.options[0].description.text), 'step 2: usual free rooms, top recommended');
   ok(JSON.stringify(s2.view).indexOf('Not free then: Studio 7, Studio C') !== -1, 'step 2: names the usual rooms not free');
   ok(['project', 'client', 'engineer', 'notes'].every(b => s2.view.blocks.some(x => x.block_id === b)) && s2.view.submit && s2.external_id === r1.s.ext, 'step 2: studio fields, Book, same external_id');
-  ok(s2.view.blocks.find(b => b.block_id === 'engineer').element.initial_user === 'U1', 'step 2: engineer set to the requester');
+  const engEl = s2.view.blocks.find(b => b.block_id === 'engineer').element;
+  if (engEl.type === 'users_select') ok(engEl.initial_user === 'U1', 'step 2: engineer set to the requester');
+  else {
+    const all = engEl.option_groups.flatMap(g => g.options.map(o => o.text.text));
+    ok(engEl.initial_option && engEl.initial_option.value === 'U1', 'step 2: engineer set to the requester (an engineer)');
+    ok(all.join() === 'Daryl Reyes,Howard Luistro,Jetrho Ty' && engEl.option_groups[0].label.text === 'Post Engineers' && engEl.option_groups[0].options.length === 2,
+       'engineers only, from Bookers, the required role first: ' + JSON.stringify(engEl.option_groups.map(g => [g.label.text, g.options.map(o => o.text.text)])));
+    const r1lea = Object.assign({}, r1, { s: Object.assign({}, r1.s, { requester: 'U5' }) });
+    const sLea = await step2(r1lea, { status: 'OK', free_priority: ['Studio 8'], free_last_resort: [] });
+    const eLea = sLea.view.blocks.find(b => b.block_id === 'engineer').element;
+    ok(!eLea.initial_option && /Only engineers/.test(sLea.view.blocks.find(b => b.block_id === 'engineer').hint.text), 'a non-engineer requester: no default, must pick');
+  }
   s2 = await step2(r1, { status: 'OK', free_priority: [], free_last_resort: ['Studio 4'] });
   ok(/not a usual room/.test(JSON.stringify(s2.view)), 'step 2: last resort only when no usual room is free');
   s2 = await step2(r1, { status: 'OK', free_priority: [], free_last_resort: [] });
@@ -94,6 +109,10 @@ async function run(wf, name, input, outs) {
   const rMus = await read1(sub1(vals('2027-10-15', '13:00', '17:00', 'Music Mixing')));
   s2 = await step2(rMus, { status: 'OK', free_priority: ['Studio F'], free_last_resort: [] });
   ok(s2.view.blocks.some(b => b.block_id === 'arranger'), 'music: arranger field');
+  const arrEl = s2.view.blocks.find(b => b.block_id === 'arranger').element;
+  if (arrEl.type === 'static_select') ok(arrEl.options.map(o => o.text.text).join() === 'Peter Legaste', 'arrangers only, from Bookers');
+  const engM = s2.view.blocks.find(b => b.block_id === 'engineer').element;
+  if (engM.option_groups) ok(engM.option_groups[0].label.text === 'Music Engineers' && engM.option_groups[0].options.map(o => o.text.text).join() === 'Daryl Reyes,Howard Luistro', 'music: music engineers first');
 
   // step 2 submit (dry run)
   const meta = Object.assign({}, r1.s, { when: 'Friday, Oct 15 · 2:00 PM–4:00 PM', label: 'VO Recording' });
@@ -101,15 +120,15 @@ async function run(wf, name, input, outs) {
   const read2 = async (payload) => (await run(si, 'Read Step 2', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload } }], 'Read Cache 3': cacheRow }))[0].json;
   const V = (o) => { const v = {}; for (const [b, [a, val]] of Object.entries(o)) v[b] = { [a]: val }; return v; };
   let r2 = await read2(sub2(V({ room: ['room_radio', { selected_option: { value: 'Studio 8' } }], project: ['project_in', { value: 'project qaw1' }],
-    client: ['client_in', { value: 'Sasa Abella' }], engineer: ['engineer_pick', { selected_user: 'U1' }] })));
+    client: ['client_in', { value: 'Sasa Abella' }], engineer: ['engineer_pick', { selected_option: { value: 'U1' } }] })));
   ok(r2.valid && r2.calTitle === 'QAW1 / Sasa Abella / HL' && r2.answer.response_action === 'update' && r2.answer.view.clear_on_close, 'dry run: title by code, "project" dropped, closes the stack');
   r2 = await read2(sub2(V({ room: ['room_radio', { selected_option: { value: 'Studio 8' } }], engineer: ['engineer_pick', { selected_user: 'U1' }] })));
   ok(!r2.valid && r2.answer.errors.project, 'missing project -> error on Project');
   r2 = await read2(sub2(V({ room: ['room_radio', { selected_option: { value: 'Studio 8' } }], project: ['project_in', { value: 'X' }], engineer: ['engineer_pick', { selected_user: 'U9' }] })));
   ok(!r2.valid && /Bookers/.test(r2.answer.errors.engineer), 'engineer not in Bookers -> error');
   r2 = await read2(sub2(V({ room: ['room_radio', { selected_option: { value: 'Studio F' } }], project: ['project_in', { value: 'jingle' }],
-    engineer: ['engineer_pick', { selected_user: 'U2' }], arranger: ['arranger_pick', { selected_user: 'U1' }] }), Object.assign({}, meta, { purpose: 'Music Mixing' })));
-  ok(r2.calTitle === 'JINGLE / DR x HL', 'no client: PROJECT / engineer x arranger');
+    engineer: ['engineer_pick', { selected_option: { value: 'U2' } }], arranger: ['arranger_pick', { selected_option: { value: 'U4' } }] }), Object.assign({}, meta, { purpose: 'Music Mixing' })));
+  ok(r2.calTitle === 'JINGLE / DR x PL', 'no client: PROJECT / engineer x arranger');
   r2 = await read2(sub2(V({ room: ['room_radio', { selected_option: { value: 'Likha' } }], title: ['title_in', { value: 'Q4 planning' }] }), Object.assign({}, meta, { kind: 'meeting' })));
   ok(r2.valid && r2.calTitle === 'LIKHA - Q4 planning', 'meeting title');
   r2 = await read2(sub2(V({ room: ['room_radio', { selected_option: { value: 'M4' } }] }), Object.assign({}, meta, { kind: 'booth' })));
