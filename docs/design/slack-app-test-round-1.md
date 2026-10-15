@@ -152,7 +152,7 @@ My bookings buttons; the chat answers questions only.
    booking reply and the form (PENDING 116).
 4. **The AI answers questions only** (PENDING 117): its seven booking tools are removed, and its prompt is rewritten - what
    is free, what is booked, rooms, people, session types, clients; never booking details, cards or yes/no. (33,450
-   characters -> about 3,500.) An old chat card already on screen can still be answered yes.
+   characters -> about 7,100, keeping Showing bookings, the availability rules and Who is who.) An old chat card already on screen can still be answered yes.
 
 ### Import (main only) - Cmd+A then **Delete** before importing
 
@@ -162,6 +162,9 @@ buttons" (Publish reloads the agent's tools) → download into `workflows/import
 
 ### Test
 
+0. **Factual questions first** (the prompt is new - this is the real check; the eval cannot run without n8n access):
+   "what's free friday afternoon?", "is studio 7 free tomorrow 2-4?", "what do I have this week?", "who's the engineer for
+   ORANGE?", "which rooms can do 5.1?", "who's Drey?" - each answered from the tools, with the buttons under it.
 1. `what can you do for me` -> what Jessie does + the buttons.
 2. `project orange` -> the booking reply with Project: ORANGE.
 3. `is studio 7 free friday?` -> the answer, with Book a room / My bookings under it.
