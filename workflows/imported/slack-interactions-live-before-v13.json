@@ -1,0 +1,2726 @@
+{
+  "name": "Jessie — Slack Interactions — v12 (change at the typed time)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        22080,
+        -1120
+      ],
+      "id": "ce543f12-6d77-4348-a5a4-9f2c3b37f2bf",
+      "name": "Post Test Button"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: 'U08V3CKDGJF', text: 'Hello form test', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '*Hello form test* - tap the button to open a test form.' } },{ type: 'actions', elements: [ { type: 'button', style: 'primary', action_id: 'hello_open', value: 'hello', text: { type: 'plain_text', text: 'Open test form' } } ] } ] }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        22320,
+        -1120
+      ],
+      "id": "b9b48d3b-6939-49bb-8eeb-1dfaf99d1e68",
+      "name": "Send Button",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jessie-interactions",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        22080,
+        -640
+      ],
+      "id": "8b2974c6-f15e-44c2-974e-ec4adb1159f5",
+      "name": "Slack Interactions",
+      "webhookId": "6f1d2c1e-4a7b-4c0e-9a51-1e2f3a4b5c6d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read Request: the raw body (for the signature), the Slack headers and the interaction payload.\nconst item = $input.first();\nconst j = item.json || {};\nconst h = j.headers || {};\nlet raw = '', rawSource = 'none';\ntry {\n  if (item.binary && item.binary.data) {\n    const buf = await this.helpers.getBinaryDataBuffer(0, 'data');\n    raw = buf.toString('utf8'); rawSource = 'binary';\n  }\n} catch (e) { rawSource = 'binary-error: ' + String(e.message || e).slice(0, 80); }\nif (!raw && typeof j.body === 'string') { raw = j.body; rawSource = 'body-string'; }\nlet payload = null, payloadSource = 'none';\nif (j.body && j.body.payload) {\n  try { payload = typeof j.body.payload === 'string' ? JSON.parse(j.body.payload) : j.body.payload; payloadSource = 'parsed-body'; } catch (e) {}\n}\nif (!payload) {\n  try { const m = raw.match(/(?:^|&)payload=([^&]*)/); if (m) { payload = JSON.parse(decodeURIComponent(m[1].replace(/\\+/g, ' '))); payloadSource = 'raw'; } } catch (e) {}\n}\nreturn [{ json: {\n  raw, rawSource, rawLength: raw.length,\n  sig: String(h['x-slack-signature'] || ''),\n  ts: String(h['x-slack-request-timestamp'] || ''),\n  payload: payload || {}, payloadSource,\n  receivedAt: Date.now()\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        22304,
+        -640
+      ],
+      "id": "15c14464-f85b-47c1-96ac-571a6e92ccbf",
+      "name": "Read Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// To Sign: the string Slack signs - 'v0:' + timestamp + ':' + raw body - for Jessie — Slack Signature.\nconst r = $input.first().json;\nreturn [{ json: { base: 'v0:' + r.ts + ':' + r.raw } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        22496,
+        -640
+      ],
+      "id": "1f8b1db1-72ee-4f9d-8fa3-2237bd7a214e",
+      "name": "To Sign"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "R06CBQNhFK0x4ZuO",
+          "cachedResultName": "Jessie — Slack Signature — v1"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        22704,
+        -640
+      ],
+      "id": "3d473ebc-af6f-49a0-87d3-90c4913d1433",
+      "name": "Signature"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check Signature: Slack signs 'v0:' + timestamp + ':' + raw body (HMAC-SHA256, hex). Refuse a timestamp more than\n// 5 minutes off. Then pick the route.\nconst r = $('Read Request').first().json;\nconst computed = String($input.first().json.computed || '');\nconst sigOk = !!r.sig && ('v0=' + computed) === r.sig;\nconst ageSec = r.ts ? Math.round(Date.now() / 1000 - Number(r.ts)) : null;\nconst fresh = ageSec !== null && Math.abs(ageSec) <= 300;\nconst p = r.payload || {};\nconst action = (p.actions && p.actions[0] && p.actions[0].action_id) || '';\nconst cb = (p.view && p.view.callback_id) || '';\nconst ROUTES = { refused: 0, hello_open: 1, hello_submit: 2, other: 3, open_book: 4, book_step1: 5, book_step2: 6, my_bookings: 7, note_toggle: 8, bk_cancel: 9, bk_change: 10, change_booking: 11, my_page: 12 };\nlet route = ROUTES.other;\nif (!(sigOk && fresh)) route = ROUTES.refused;\nelse if (p.type === 'block_actions' && action === 'hello_open') route = ROUTES.hello_open;\nelse if (p.type === 'view_submission' && cb === 'hello_submit') route = ROUTES.hello_submit;\nelse if (p.type === 'block_actions' && action === 'open_book') route = ROUTES.open_book;\nelse if (p.type === 'block_actions' && action === 'my_bookings') route = ROUTES.my_bookings;\nelse if (p.type === 'block_actions' && action === 'note_toggle') route = ROUTES.note_toggle;   // v10\nelse if (p.type === 'block_actions' && action === 'bk_cancel') route = ROUTES.bk_cancel;   // v11\nelse if (p.type === 'block_actions' && action === 'bk_change') route = ROUTES.bk_change;\nelse if (p.type === 'block_actions' && action === 'my_page') route = ROUTES.my_page;\nelse if (p.type === 'view_submission' && cb === 'change_booking') route = ROUTES.change_booking;\nelse if (p.type === 'view_submission' && cb === 'book_step1') route = ROUTES.book_step1;\nelse if (p.type === 'view_submission' && cb === 'book_step2') route = ROUTES.book_step2;\nreturn [{ json: { route, sigOk, fresh, ageSec, type: p.type || '', action, cb,\n  user: (p.user && p.user.id) || '', triggerId: p.trigger_id || '', viewId: (p.view && p.view.id) || '',\n  channel: (p.channel && p.channel.id) || (p.container && p.container.channel_id) || '',\n  rawSource: r.rawSource, rawLength: r.rawLength, payloadSource: r.payloadSource, receivedAt: r.receivedAt } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        22896,
+        -640
+      ],
+      "id": "98232f17-3368-4829-89fd-62f7bbd57e89",
+      "name": "Check Signature"
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 13,
+        "output": "={{ $json.route }}"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        23120,
+        -640
+      ],
+      "id": "5886afb8-4d63-4e34-8259-ca2ab5ce82fa",
+      "name": "Route"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        23360,
+        -1344
+      ],
+      "id": "c5b52df8-ccb0-4b60-a953-2eafd2221959",
+      "name": "Refuse"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Refused: the signature or the timestamp did not check out - tell the tester why (nothing else happens).\nconst c = $('Check Signature').first().json;\nconst lines = ['*Slack Interactions - a request was refused*',\n  '• Signature: ' + (c.sigOk ? 'OK' : 'did not match') + ' · timestamp age ' + c.ageSec + ' s (allowed: 300)',\n  '• Raw body: ' + c.rawSource + ' (' + c.rawLength + ' chars) · payload from ' + c.payloadSource + ' · type ' + (c.type || '?'),\n  'If the signature did not match: check the secret in the Sign node of Jessie — Slack Signature, and that the Webhook node has Raw Body on.'];\nreturn [{ json: { channel: 'U08V3CKDGJF', text: lines.join('\\n') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23600,
+        -1344
+      ],
+      "id": "2cc05825-ed30-41b4-b7a2-2c07061027ed",
+      "name": "Report Refused"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        23840,
+        -1344
+      ],
+      "id": "10a05b07-e092-4f3a-825d-18ef12169c0c",
+      "name": "DM Refused",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        23360,
+        -1200
+      ],
+      "id": "9bb5aaa9-1358-48d2-818a-3b7302ad69b4",
+      "name": "Ack Click"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Form: the hello form (diagnostics). The date picker opens a year ahead (the QA year shift).\nconst c = $('Check Signature').first().json;\nconst m = new Date(Date.now() + 8 * 3600 * 1000);\nconst d = (m.getUTCFullYear() + 1) + '-' + String(m.getUTCMonth() + 1).padStart(2, '0') + '-' + String(m.getUTCDate()).padStart(2, '0');\nconst view = { type: 'modal', callback_id: 'hello_submit', title: { type: 'plain_text', text: 'Hello form' },\n  submit: { type: 'plain_text', text: 'Send' }, close: { type: 'plain_text', text: 'Cancel' },\n  blocks: [\n    { type: 'section', text: { type: 'mrkdwn', text: 'Test form for the Slack-app build. Pick a date, type anything, press *Send*.' } },\n    { type: 'input', block_id: 'date', label: { type: 'plain_text', text: 'Date' }, element: { type: 'datepicker', action_id: 'date_pick', initial_date: d } },\n    { type: 'input', block_id: 'note', label: { type: 'plain_text', text: 'Say something' }, element: { type: 'plain_text_input', action_id: 'note_in' } } ] };\nreturn [{ json: { trigger_id: c.triggerId, view } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23600,
+        -1200
+      ],
+      "id": "e0526957-7c73-4b22-966f-80275065be36",
+      "name": "Build Form"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.open",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ trigger_id: $json.trigger_id, view: $json.view }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        23840,
+        -1200
+      ],
+      "id": "eae96945-0d1a-4d29-9aaf-c16a31acf422",
+      "name": "Open Form",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Report Open: say if views.open failed (the trigger_id lasts 3 seconds).\nconst r = $input.first().json;\nif (r.ok === true) return [];\nconst c = $('Check Signature').first().json;\nreturn [{ json: { channel: c.user || 'U08V3CKDGJF', text: '⚠️ The form did not open: ' + JSON.stringify(r).slice(0, 300) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24080,
+        -1200
+      ],
+      "id": "950f02c6-becf-4ed8-85a4-73d65f4220e5",
+      "name": "Report Open"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24320,
+        -1200
+      ],
+      "id": "99db35c6-c6f2-4fd2-97e6-82034e23d60c",
+      "name": "DM Open Failed",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read Submission (hello form).\nconst c = $('Check Signature').first().json;\nconst p = $('Read Request').first().json.payload || {};\nconst v = (p.view && p.view.state && p.view.state.values) || {};\nconst date = (v.date && v.date.date_pick && v.date.date_pick.selected_date) || '';\nconst note = (v.note && v.note.note_in && v.note.note_in.value) || '';\nconst view = (text) => ({ type: 'modal', title: { type: 'plain_text', text: 'Hello form' }, close: { type: 'plain_text', text: 'Close' },\n  blocks: [{ type: 'section', text: { type: 'mrkdwn', text } }] });\nreturn [{ json: { viewId: c.viewId, user: c.user || 'U08V3CKDGJF', date, note,\n  working: { response_action: 'update', view: view('⏳ *Working…*') },\n  done: view('✅ *Done.* Details are in your DM.') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23360,
+        -1056
+      ],
+      "id": "4959d634-908a-4cb3-9187-4af927df262f",
+      "name": "Read Submission"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.working) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        23600,
+        -1056
+      ],
+      "id": "078c5691-a6a8-4dde-a55f-7972e849aaca",
+      "name": "Answer Working"
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        23840,
+        -1056
+      ],
+      "id": "9e3dbcf5-427f-45b5-954a-b85975f69198",
+      "name": "Pretend Work",
+      "webhookId": "95936212-932a-4af8-862a-20f0cf5698d5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ view_id: $('Read Submission').first().json.viewId, view: $('Read Submission').first().json.done }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24080,
+        -1056
+      ],
+      "id": "58c0fd3e-c2b4-4b87-bb35-ed32d71563e5",
+      "name": "Update Form",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Report (hello form).\nconst s = $('Read Submission').first().json;\nconst c = $('Check Signature').first().json;\nconst lines = ['*Hello form - result*',\n  '• Signature check: ' + (c.sigOk ? 'OK' : 'FAILED') + ' · request age ' + c.ageSec + ' s',\n  '• Raw body: ' + c.rawSource + ' (' + c.rawLength + ' chars) · payload from ' + c.payloadSource,\n  '• Date picked: ' + (s.date || '(none)') + ' · note: ' + (s.note || '(empty)'),\n  '• Update call: ' + ($('Update Form').first().json.ok === true ? 'OK' : 'FAILED ' + JSON.stringify($('Update Form').first().json).slice(0, 150))];\nreturn [{ json: { channel: s.user, text: lines.join('\\n') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24320,
+        -1056
+      ],
+      "id": "03dfe34d-9cc1-419f-8123-9b121cc06b3d",
+      "name": "Report"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24560,
+        -1056
+      ],
+      "id": "45fafac6-6b5a-44c0-a5fc-6ed3407af608",
+      "name": "DM Result",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        23360,
+        -912
+      ],
+      "id": "5e7caaf8-f86d-453b-87ff-4b515c479152",
+      "name": "Ack Other"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        23360,
+        -736
+      ],
+      "id": "cfcf94df-fa3b-4dd0-8423-d32b4b339a00",
+      "name": "Ack Book"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "cachedResultName": "Jessie Reference Cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        23600,
+        -736
+      ],
+      "id": "3063e57c-55c2-4875-921f-c9919666ad9f",
+      "name": "Read Cache",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// Build Step 1: date, start, end, what it's for. Session types from the reference cache; the date picker opens on\n// Manila's today a year ahead (QA year shift - at launch: YEAR_SHIFT = 0).\nconst YEAR_SHIFT = 1;\nconst c = $('Check Signature').first().json;\nconst data = readCache($('Read Cache').all().map(i => i.json || {}));\nconst types = data ? data.sessionTypes.map(r => String((r.fields || {}).Type || '').trim()).filter(Boolean) : [];\nconst NOT_SESSION = ['Meeting', 'Event'];\nconst sessions = types.filter(t => NOT_SESSION.indexOf(t) === -1).sort();\nconst opt = (t, v) => ({ text: { type: 'plain_text', text: t }, value: v || t });\nconst groups = [];\nif (sessions.length) groups.push({ label: { type: 'plain_text', text: 'Sessions' }, options: sessions.slice(0, 100).map(t => opt(t)) });\ngroups.push({ label: { type: 'plain_text', text: 'Not a session' },\n  options: NOT_SESSION.filter(t => types.indexOf(t) !== -1).map(t => opt(t)).concat([opt('M booth', '__booth')]) });\n// Start / End: half-hour times, the list opening at 8:00 AM and running round to 7:30 AM (all bookable, read as PHT).\nconst times = [];\nfor (let i = 0; i < 48; i++) { const mins = (8 * 60 + i * 30) % (24 * 60), h = Math.floor(mins / 60), mm = mins % 60;\n  times.push({ text: { type: 'plain_text', text: ((h % 12) || 12) + ':' + String(mm).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM') },\n               value: String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0') }); }\nconst timeEl = (id, o) => Object.assign({ type: 'static_select', action_id: id, placeholder: { type: 'plain_text', text: 'Choose a time' }, options: times }, o ? { initial_option: o } : {});\n// v9: what main read from a typed request rides on the button's value (the menu's button says \"menu\": nothing to fill in)\nlet pre = {};\ntry { const a = ((($('Read Request').first().json.payload || {}).actions) || [])[0] || {}; if (/^\\{/.test(String(a.value || ''))) pre = JSON.parse(a.value) || {}; } catch (e) { pre = {}; }\nconst hm = x => /^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(x || '')) ? String(x) : '';\nconst tOpt = v => { let o = times.find(x => x.value === v); if (o) return o;\n  const [h, mm] = v.split(':').map(Number); o = { text: { type: 'plain_text', text: ((h % 12) || 12) + ':' + String(mm).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM') }, value: v };\n  const key = x => (Number(x.split(':')[0]) * 60 + Number(x.split(':')[1]) - 480 + 1440) % 1440;   // the list's order: from 8:00 AM round\n  const at = times.findIndex(x => key(x.value) > key(v)); times.splice(at === -1 ? times.length : at, 0, o); return o; };\nconst preS = hm(pre.s), preE = hm(pre.e);\nconst startOpt = preS ? tOpt(preS) : null, endOpt = preE ? tOpt(preE) : null;\nconst allPurpose = [].concat(...groups.map(gr => gr.options));\nconst purposeOpt = pre.p ? allPurpose.find(o => o.value === pre.p) || null : null;\nconst m = new Date(Date.now() + 8 * 3600 * 1000);\nconst today = (m.getUTCFullYear() + YEAR_SHIFT) + '-' + String(m.getUTCMonth() + 1).padStart(2, '0') + '-' + String(m.getUTCDate()).padStart(2, '0');\nconst view = {\n  type: 'modal', callback_id: 'book_step1',\n  title: { type: 'plain_text', text: 'Book a room' },\n  submit: { type: 'plain_text', text: 'Find rooms' }, close: { type: 'plain_text', text: 'Cancel' },\n  private_metadata: JSON.stringify(Object.assign({ requester: c.user, channel: c.channel }, Object.keys(pre).length ? { pre } : {})),\n  blocks: [\n    { type: 'context', elements: [{ type: 'mrkdwn', text: '*Step 1 of 2* · when, and what for' }] },\n    { type: 'input', block_id: 'date', label: { type: 'plain_text', text: 'Date' },\n      element: { type: 'datepicker', action_id: 'date_pick', initial_date: /^\\d{4}-\\d{2}-\\d{2}$/.test(String(pre.d || '')) ? pre.d : today } },\n    { type: 'input', block_id: 'start', label: { type: 'plain_text', text: 'Start' },\n      element: timeEl('start_pick', startOpt) },\n    { type: 'input', block_id: 'end', label: { type: 'plain_text', text: 'End' },\n      element: timeEl('end_pick', endOpt) },\n    { type: 'input', block_id: 'purpose', label: { type: 'plain_text', text: \"What's it for?\" },\n      hint: { type: 'plain_text', text: 'Jessie offers the rooms that can do this, the usual ones first.' },\n      element: Object.assign({ type: 'static_select', action_id: 'purpose_pick', placeholder: { type: 'plain_text', text: 'Choose' }, option_groups: groups }, purposeOpt ? { initial_option: purposeOpt } : {}) }\n  ]\n};\nreturn [{ json: { trigger_id: c.triggerId, view, cacheOk: !!data } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23840,
+        -736
+      ],
+      "id": "f9b6f247-50b3-4e42-aac6-6ec756e20c40",
+      "name": "Build Step 1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.open",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ trigger_id: $json.trigger_id, view: $json.view }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24080,
+        -736
+      ],
+      "id": "a0812f37-4441-453b-912d-08436550a25f",
+      "name": "Open Step 1",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Report Open: say if views.open failed (the trigger_id lasts 3 seconds).\nconst r = $input.first().json;\nif (r.ok === true) return [];\nconst c = $('Check Signature').first().json;\nreturn [{ json: { channel: c.user || 'U08V3CKDGJF', text: '⚠️ The form did not open: ' + JSON.stringify(r).slice(0, 300) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24320,
+        -736
+      ],
+      "id": "0395dae5-9214-4f36-8c7f-a6951ede922b",
+      "name": "Report Open 1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24560,
+        -736
+      ],
+      "id": "151bb8c8-b31b-494e-ba9c-9193ba167296",
+      "name": "DM Open 1 Failed",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// Read Step 1: the values, checked at once (Slack shows errors next to the fields only in this first answer).\n// Valid -> push a \"Finding rooms…\" view (external_id, so it can be updated after Room Availability answers).\nconst c = $('Check Signature').first().json;\nconst p = $('Read Request').first().json.payload || {};\nconst v = (p.view && p.view.state && p.view.state.values) || {};\nconst date = (v.date && v.date.date_pick && v.date.date_pick.selected_date) || '';\nconst pickT = (b, a) => (v[b] && v[b][a] && ((v[b][a].selected_option && v[b][a].selected_option.value) || v[b][a].selected_time)) || '';\nconst t0 = pickT('start', 'start_pick');\nconst t1 = pickT('end', 'end_pick');\nconst purpose = (v.purpose && v.purpose.purpose_pick && v.purpose.purpose_pick.selected_option && v.purpose.purpose_pick.selected_option.value) || '';\nlet meta = {}; try { meta = JSON.parse((p.view && p.view.private_metadata) || '{}'); } catch (e) {}\nconst errors = {};\nif (!date) errors.date = 'Pick a date.';\nif (!t0) errors.start = 'Pick a start time.';\nif (!t1) errors.end = 'Pick an end time.';\nif (t0 && t1 && t1 <= t0) errors.end = 'The end has to be after the start.';\nif (!purpose) errors.purpose = \"Pick what it's for.\";\nconst valid = Object.keys(errors).length === 0;\nconst ext = 's2-' + (c.user || 'x') + '-' + Date.now();\nconst kind = purpose === '__booth' ? 'booth' : (purpose === 'Meeting' || purpose === 'Event') ? 'meeting'\n  : /^localization/i.test(purpose) ? 'loc' : 'studio';\nconst s = { date, t0, t1, purpose, kind, requester: meta.requester || c.user, channel: meta.channel || '', ext };\nif (meta.pre && typeof meta.pre === 'object') s.pre = meta.pre;   // v9: what main read, for step 2\nconst loading = { type: 'modal', external_id: ext, callback_id: 'book_step2',\n  title: { type: 'plain_text', text: 'Book a room' }, close: { type: 'plain_text', text: 'Back' },\n  private_metadata: JSON.stringify(s),\n  blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '⏳ *Finding free rooms…*' } }] };\nreturn [{ json: { valid, s,\n  answer: valid ? { response_action: 'push', view: loading } : { response_action: 'errors', errors } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23360,
+        -560
+      ],
+      "id": "c0843fb0-ace3-486e-9c02-b8b877aaabc9",
+      "name": "Read Step 1"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.answer) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        23600,
+        -560
+      ],
+      "id": "64232893-fab8-4065-9c3f-ae1054334313",
+      "name": "Answer Step 1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "02909609-0587-4282-84d9-6c13389a533e",
+              "leftValue": "={{ $('Read Step 1').first().json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        23840,
+        -560
+      ],
+      "id": "d899c9a1-b50b-4878-86e7-1ed12caf95ca",
+      "name": "Step 1 OK?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "cachedResultName": "Jessie Reference Cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        24080,
+        -576
+      ],
+      "id": "12749bf7-b900-447e-8aee-03312ad8c275",
+      "name": "Read Cache 2",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// To Room Availability: the window, the session type (none for booth time) and the reference data built the same way as\n// main's Room Table (rooms with booth / common flags; session types with Priority / Last Resort record ids).\nconst s = $('Read Step 1').first().json.s;\nconst data = readCache($('Read Cache 2').all().map(i => i.json || {})) || { rooms: [], sessionTypes: [] };\nconst refRooms = [];\nfor (const r of data.rooms) {\n  const f = r.fields || {};\n  if (!r.id || !f['Room Name']) continue;\n  const kinds = [].concat(f['Room Type'] || []).map(x => String(x).toLowerCase());\n  refRooms.push({ id: r.id, name: String(f['Room Name']).trim(), vocalBooth: f['Vocal Booth'] === true,\n    booth: f['Vocal Booth'] === true || kinds.indexOf('recording booth') !== -1,\n    common: kinds.indexOf('conference room') !== -1 || kinds.indexOf('lobby') !== -1 });\n}\nconst refTypes = []; const preemptionRanks = {};\nfor (const r of data.sessionTypes) {\n  const f = r.fields || {}; const t = String(f['Type'] || '').trim();\n  if (!t) continue;\n  refTypes.push({ type: t, min: f['Min Duration (mins)'] || null, max: f['Max Duration (mins)'] || null, typical: f['Typical Duration'] || null,\n    roles: [].concat(f['Engineer Role Required'] || []), req: String(f['Room Requirements'] || ''),\n    priority: [].concat(f['Priority'] || []), last: [].concat(f['Last Resort'] || []) });\n  const rk = Number(f['Preemption Rank']); if (Number.isFinite(rk)) preemptionRanks[t] = rk;\n}\nreturn [{ json: {\n  // Always Philippine Time: the pickers carry no time zone, so the picked hh:mm is taken as Manila time (+08:00).\n  start_iso: s.date + 'T' + s.t0 + ':00+08:00', end_iso: s.date + 'T' + s.t1 + ':00+08:00',\n  session_type: s.kind === 'booth' ? '' : s.purpose, room: '', scope: '', hours: '',\n  reference_data: JSON.stringify({ rooms: refRooms, types: refTypes, preemptionRanks })\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24320,
+        -576
+      ],
+      "id": "d7d84212-d50c-40ea-874f-cd536998e174",
+      "name": "To Room Availability"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "e7tBQB458nstrqei",
+          "cachedResultName": "Jessie — Room Availability"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        24560,
+        -576
+      ],
+      "id": "4d15c3b2-7687-4715-a176-9788df4f1477",
+      "name": "Room Availability"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// Build Step 2: the free rooms that fit (ranked; usual first, others only when no usual room is free), then the details\n// for this kind of booking. Replaces the \"Finding free rooms…\" view by its external_id.\nconst s = $('Read Step 1').first().json.s;\nconst ra = $input.first().json || {};\nconst data = readCache($('Read Cache 2').all().map(i => i.json || {})) || { rooms: [], sessionTypes: [], bookers: [] };\nconst opt = (t, v, d) => Object.assign({ text: { type: 'plain_text', text: t }, value: v || t }, d ? { description: { type: 'plain_text', text: d } } : {});\nconst md = t => ({ type: 'mrkdwn', text: t });\nconst ctx = t => ({ type: 'context', elements: [md(t)] });\nconst input = (bid, label, element, o) => Object.assign({ type: 'input', block_id: bid, label: { type: 'plain_text', text: label }, element }, o || {});\nconst fmtT = hm => { let [h, m] = hm.split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; };\nconst dt = new Date(s.date + 'T00:00:00Z');\nconst DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst when = DOW[dt.getUTCDay()] + ', ' + MON[dt.getUTCMonth()] + ' ' + dt.getUTCDate() + ' · ' + fmtT(s.t0) + '–' + fmtT(s.t1);\nconst label = s.kind === 'booth' ? 'M booth' : s.purpose;\nlet rooms = [], note = '';\nconst nu = [];   // v10: rooms offered that are not usual for this session (booked as asked)\nif (ra.status !== 'OK') {\n  note = '⚠️ The calendar could not be checked (' + (ra.status || 'no answer') + '). Go Back and try again.';\n} else if (s.kind === 'booth') {\n  rooms = (ra.free_rooms || []).filter(r => /^M\\d+$/i.test(r)).map(r => opt(r, r));\n} else {\n  const pri = ra.free_priority || [], last = ra.free_last_resort || [];\n  // v10: only the top room carries a note; the not-usual rooms are remembered in the form (nu), not read from the notes\n  rooms = pri.map((r, i) => i === 0 ? opt(r, r, 'Recommended · usual for ' + label) : opt(r, r));\n  if (!rooms.length) { rooms = last.map((r, i) => i === 0 ? opt(r, r, 'Recommended · can do ' + label + ' · not a usual room') : opt(r, r)); nu.push(...last); }\n  const st = (data.sessionTypes || []).find(r => String((r.fields || {}).Type || '').trim() === s.purpose);\n  const nameOf = {}; for (const r of data.rooms || []) nameOf[r.id] = String((r.fields || {})['Room Name'] || '').trim();\n  const usual = st ? [].concat((st.fields || {}).Priority || []).map(id => nameOf[id]).filter(Boolean) : [];\n  const taken = usual.filter(r => pri.indexOf(r) === -1);\n  if (taken.length && rooms.length) note = 'Not free then: ' + taken.join(', ');\n}\n// v9: the room the requester typed - chosen when it is free and fits; a free room that is not a usual one is offered as\n// such (booked as asked); otherwise say it is taken, or that it is not a room for this.\nconst pre = (s.pre && typeof s.pre === 'object') ? s.pre : {};\nlet preRoom = null, preNote = '';\nif (pre.r && ra.status === 'OK') {\n  const i = rooms.findIndex(o => o.value === pre.r);\n  if (i !== -1) { preRoom = rooms[i]; if (i >= 10) { rooms.splice(i, 1); rooms.unshift(preRoom); } }\n  else if (s.kind !== 'booth' && [].concat(ra.free_last_resort || []).indexOf(pre.r) !== -1) {\n    preRoom = opt(pre.r, pre.r, 'can do ' + label + ' · not a usual room'); rooms.unshift(preRoom); nu.push(pre.r); }\n  else if ([].concat(ra.free_rooms || []).indexOf(pre.r) !== -1) preNote = pre.r + ' isn’t a room for ' + label + '.';\n  else preNote = pre.r + ' is taken then.';\n  if (preNote && rooms.length) preNote += ' These are free:';\n}\nrooms = rooms.slice(0, 10);\nconst blocks = [ctx('*Step 2 of 2* · room and details'), { type: 'section', text: md('🗓️ *' + when + ' · ' + label + '*') }];\nif (!rooms.length) {\n  if (preNote) blocks.push({ type: 'section', text: md('⚠️ ' + preNote) });\n  blocks.push({ type: 'section', text: md(note || ('Nothing that does ' + label + ' is free then. Go *Back* and try another time.')) });\n} else {\n  if (preNote) blocks.push({ type: 'section', text: md('⚠️ ' + preNote) });\n  blocks.push(input('room', 'Room', { type: 'radio_buttons', action_id: 'room_radio', options: rooms, initial_option: preRoom || rooms[0] }));\n  if (note) blocks.push(ctx(note));\n  blocks.push({ type: 'divider' });\n  // Engineers and arrangers come from Bookers (Info names the role), never from everyone in Slack - one list, A to Z.\n  const people = (data.bookers || []).map(b => { const f = b.fields || {};\n    return { name: String(f.Name || '').trim(), info: String(f.Info || ''),\n             slack: String(f['Slack User ID'] || '').split(/[\\s,]+/).filter(Boolean)[0] || '' }; }).filter(p => p.name && p.slack);\n  const isEng = p => /\\bengineer\\b/i.test(p.info);\n  const engs = people.filter(isEng).sort((a, b) => a.name.localeCompare(b.name));\n  const popt = p => ({ text: { type: 'plain_text', text: p.name }, value: p.slack });\n  const me = engs.find(p => p.slack === s.requester);\n  const engEl = { type: 'static_select', action_id: 'engineer_pick', placeholder: { type: 'plain_text', text: \"Who's engineering?\" }, options: engs.slice(0, 100).map(popt) };\n  const preEng = engs.find(p => p.slack === pre.en);   // v9: the engineer named in the typed request\n  if (preEng) engEl.initial_option = popt(preEng); else if (me) engEl.initial_option = popt(me);\n  const engineer = input('engineer', 'Engineer', engEl,\n    { hint: { type: 'plain_text', text: preEng ? 'As you typed it.' : me ? 'Set to you. Change it if someone else is engineering.' : 'Only engineers are listed (from Bookers).' } });\n  const arrs = people.filter(p => /\\bmusic arranger\\b/i.test(p.info)).sort((a, b) => a.name.localeCompare(b.name));\n  const meArr = arrs.find(p => p.slack === s.requester);\n  const arrEl = { type: 'static_select', action_id: 'arranger_pick', placeholder: { type: 'plain_text', text: 'Choose' },\n    options: [{ text: { type: 'plain_text', text: 'No arranger' }, value: 'none' }].concat(arrs.slice(0, 99).map(popt)) };\n  const preArr = arrs.find(p => p.slack === pre.ar);\n  if (preArr) arrEl.initial_option = popt(preArr); else if (meArr) arrEl.initial_option = popt(meArr);\n  const iv = (el, v) => { v = String(v || '').trim().slice(0, 150); if (v) el.initial_value = v; return el; };   // v9: typed values\n  // v10: Notes sits behind a small checkbox; ticking it adds the field (route 8)\n  const notes = { type: 'actions', block_id: 'note_toggle', elements: [{ type: 'checkboxes', action_id: 'note_toggle',\n    options: [{ text: { type: 'plain_text', text: 'Add a note' }, value: 'note' }] }] };\n  if (s.kind === 'meeting') {\n    blocks.push(input('title', 'Meeting title', { type: 'plain_text_input', action_id: 'title_in' }), notes);\n  } else if (s.kind === 'booth') {\n    blocks.push(notes);\n  } else if (s.kind === 'loc') {\n    blocks.push(input('code', 'Project code', iv({ type: 'plain_text_input', action_id: 'code_in' }, pre.cd),\n      { hint: { type: 'plain_text', text: 'As in Localization Projects. The client and the title come from it.' } }), engineer, notes);\n  } else {\n    blocks.push(input('project', 'Project', iv({ type: 'plain_text_input', action_id: 'project_in' }, pre.pj)),\n      input('client', 'Client', iv({ type: 'plain_text_input', action_id: 'client_in' }, pre.c),\n        { optional: true, hint: { type: 'plain_text', text: \"Leave empty if there's no client. A new name is fine.\" } }),\n      engineer);\n    if (/music|band/i.test(s.purpose))\n      if (arrs.length) blocks.push(input('arranger', 'Arranger', arrEl, { optional: true }));\n    blocks.push(notes);\n  }\n}\nconst view = { type: 'modal', callback_id: 'book_step2', title: { type: 'plain_text', text: 'Book a room' },\n  close: { type: 'plain_text', text: 'Back' }, private_metadata: JSON.stringify(Object.assign({}, s, { when, label }, nu.length ? { nu } : {})), blocks };\nif (rooms.length) view.submit = { type: 'plain_text', text: 'Book' };\nreturn [{ json: { external_id: s.ext, view } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24800,
+        -576
+      ],
+      "id": "8894a4de-479b-4227-890e-e1e1b6366ab1",
+      "name": "Build Step 2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ external_id: $json.external_id, view: $json.view }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        25040,
+        -576
+      ],
+      "id": "b7fa38cd-b38b-47fb-b69e-13a4c6b7370a",
+      "name": "Show Step 2",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "cachedResultName": "Jessie Reference Cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        23360,
+        -384
+      ],
+      "id": "db249247-7b19-4d32-9daf-05748942c7f8",
+      "name": "Read Cache 3",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// Read Step 2 (v7): the details, checked at once (errors next to the fields), the calendar title built by code, and Book\n// Session's prepare inputs. Valid -> the form shows \"Booking…\" at once; prepare and book follow.\nconst c = $('Check Signature').first().json;\nconst p = $('Read Request').first().json.payload || {};\nconst v = (p.view && p.view.state && p.view.state.values) || {};\nlet s = {}; try { s = JSON.parse((p.view && p.view.private_metadata) || '{}'); } catch (e) {}\nconst val = (b, a) => (v[b] && v[b][a] && (v[b][a].value || v[b][a].selected_user || (v[b][a].selected_option && v[b][a].selected_option.value))) || '';\nconst room = val('room', 'room_radio');\nconst project = String(val('project', 'project_in')).trim().replace(/^(project|proj)\\s+/i, '');\nconst client = String(val('client', 'client_in')).trim();\nconst code = String(val('code', 'code_in')).trim();\nconst title = String(val('title', 'title_in')).trim();\nconst engineerId = val('engineer', 'engineer_pick');\nconst arrPick = val('arranger', 'arranger_pick');\nconst arrangerId = arrPick === 'none' ? '' : arrPick;\nconst notes = String(val('notes', 'notes_in')).trim();\nconst dept = val('department', 'department_pick');\nconst kind = val('kind', 'kind_pick');\nconst errors = {};\nif (!room) errors.room = 'Pick a room.';\nif (s.kind === 'studio' && !project) errors.project = 'What is the project called?';\nif (s.kind === 'loc' && !code) errors.code = 'Type the project code.';\nif (s.kind === 'meeting' && !title) errors.title = 'Give the meeting a title.';\nif ((s.kind === 'studio' || s.kind === 'loc') && !engineerId) errors.engineer = 'Pick the engineer.';\nconst data = readCache($('Read Cache 3').all().map(i => i.json || {})) || { bookers: [], rooms: [], sessionTypes: [] };\nconst bySlack = {};\nfor (const b of data.bookers || []) { const f = b.fields || {}; String(f['Slack User ID'] || '').split(/[\\s,]+/).filter(Boolean).forEach(id => { bySlack[id] = f; }); }\nconst who = id => bySlack[id] || null;\nconst nm = id => { const f = who(id); return f ? String(f.Name || '').trim() : ''; };\nconst ini = id => { const f = who(id); return f ? String(f.Initials || '').trim() : ''; };\nif (engineerId && !who(engineerId)) errors.engineer = \"That person isn't in Bookers yet - pick someone who is, or ask for them to be added.\";\nconst first = id => nm(id).split(/\\s+/)[0] || '';\nlet calTitle = '';\nif (s.kind === 'meeting') calTitle = room.toUpperCase() + ' - ' + title;\nelse if (s.kind === 'booth') calTitle = room.toUpperCase() + ' - ' + first(s.requester);\nelse if (s.kind === 'loc') calTitle = code + ' / ' + ini(engineerId);\nelse calTitle = [project.toUpperCase(), client, [ini(engineerId), ini(arrangerId)].filter(Boolean).join(' x ')].filter(Boolean).join(' / ');\nconst valid = Object.keys(errors).length === 0;\n// the room offered as \"not a usual room\" (only when no usual room was free) is booked as asked - no second question\nlet notUsual = false;\ntry { for (const bl of (p.view.blocks || [])) if (bl.block_id === 'room') for (const o of (bl.element.options || []))\n  if (o.value === room && o.description && /not a usual room/i.test(o.description.text || '')) notUsual = true; } catch (e) {}\nif ([].concat(s.nu || []).indexOf(room) !== -1) notUsual = true;   // v10: remembered by step 2\nconst req = who(s.requester) || {};\nconst fmt = hm => { let [h, m] = String(hm).split(':').map(Number); const ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; };\nconst KIND_WORDS = { Advertising: 'client work', Entertainment: 'client work', Internal: 'internal', Personal: 'personal project' };\n// What the requester \"typed\", for Book Session's checks that read the requester's words: every value comes from the form.\nconst said = [\n  (s.kind === 'booth' ? 'M booth' : s.purpose) + ' in ' + room + ' on ' + s.date + ' ' + fmt(s.t0) + '-' + fmt(s.t1),\n  project ? 'project ' + project : '', code ? 'project code ' + code : '', title ? title : '',\n  (s.kind === 'studio') ? (client ? 'client ' + client : 'no client') : '',\n  engineerId ? 'engineer ' + nm(engineerId) : '',\n  /music|band/i.test(s.purpose || '') ? (arrangerId ? 'arranger ' + nm(arrangerId) : (arrPick === 'none' ? 'no arranger' : '')) : '',\n  kind ? (KIND_WORDS[kind] || kind) : '', dept ? dept : '', notes ? 'notes: ' + notes : ''\n].filter(Boolean).join(', ');\nconst team = [engineerId, arrangerId].filter(Boolean).join(' ');\nconst descParts = [engineerId ? 'Engineer: ' + nm(engineerId) : '', arrangerId ? 'Arranger: ' + nm(arrangerId) : '',\n  'Booked by: ' + (req.Name || ''), 'ref: ' + s.requester, team ? 'team: ' + team : '', notes ? 'Notes: ' + notes.replace(/\\|/g, '/') : ''].filter(Boolean);\nconst staff = (data.bookers || []).map(b => b.fields || {}).filter(f => f.Name).map(f => ({ Name: f.Name, Initials: f.Initials || '', Info: f.Info || '',\n  Department: f.Department || [], 'Default Type': f['Default Type'] || [] }));\nconst prep = {\n  mode: 'prepare', summary: calTitle, start_iso: s.date + 'T' + s.t0 + ':00+08:00', end_iso: s.date + 'T' + s.t1 + ':00+08:00',\n  rooms: room, description: descParts.join(' | '), all_day: false, exclude_event_id: '', confirmed: false,\n  session_type: s.kind === 'booth' ? '' : s.purpose, client: s.kind === 'studio' ? client : '', room_override: notUsual,\n  engineer: engineerId ? nm(engineerId) : '', bookingType: kind || '', series: false, department: dept || '',\n  authority: [].concat(req.Authority || []).map(a => (a && a.name) || a).join(', '), expected_date: s.date,\n  requester_text: said, require_prepared: false, prepared_ok: false, start_only: false, staff_data: JSON.stringify(staff),\n  asked_text: s.asked || '', move_instead: '', series_alt: false, reference_data: ''\n};\nconst working = { type: 'modal', clear_on_close: true, title: { type: 'plain_text', text: 'Book a room' }, close: { type: 'plain_text', text: 'Close' },\n  private_metadata: JSON.stringify(s),\n  blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '⏳ *Booking ' + room + '…*\\n' + s.when } },\n           { type: 'context', elements: [{ type: 'mrkdwn', text: 'This takes a few seconds.' }] }] };\nreturn [{ json: { valid, calTitle, room, s, prep, team, descTail: descParts.filter(x => !/^(Engineer|Arranger):/.test(x)).join(' | '),\n  viewId: (p.view && p.view.id) || '', channel: s.requester || c.user,\n  answer: valid ? { response_action: 'update', view: working } : { response_action: 'errors', errors } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23600,
+        -384
+      ],
+      "id": "10cdfb8c-01a7-4c1a-9963-415879297a71",
+      "name": "Read Step 2"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.answer) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        23840,
+        -384
+      ],
+      "id": "e6282c78-2ed1-4391-80b2-46928f842feb",
+      "name": "Answer Step 2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a8623e0a-5296-44ba-b4bb-14fc935709d6",
+              "leftValue": "={{ $('Read Step 2').first().json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        24080,
+        -384
+      ],
+      "id": "2952839c-2fdb-48df-8b92-53ff66c4c69e",
+      "name": "Step 2 OK?"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// To Prepare: Book Session's inputs for prepare mode, with the reference data built like main's Room Table.\nconst r = $('Read Step 2').first().json;\nconst data = readCache($('Read Cache 3').all().map(i => i.json || {})) || { rooms: [], sessionTypes: [] };\nconst refRooms = [];\nfor (const x of data.rooms || []) { const f = x.fields || {}; if (!x.id || !f['Room Name']) continue;\n  const k = [].concat(f['Room Type'] || []).map(y => String(y).toLowerCase());\n  refRooms.push({ id: x.id, name: String(f['Room Name']).trim(), vocalBooth: f['Vocal Booth'] === true,\n    booth: f['Vocal Booth'] === true || k.indexOf('recording booth') !== -1, common: k.indexOf('conference room') !== -1 || k.indexOf('lobby') !== -1 }); }\nconst refTypes = []; const ranks = {};\nfor (const x of data.sessionTypes || []) { const f = x.fields || {}; const t = String(f['Type'] || '').trim(); if (!t) continue;\n  refTypes.push({ type: t, min: f['Min Duration (mins)'] || null, max: f['Max Duration (mins)'] || null, typical: f['Typical Duration'] || null,\n    roles: [].concat(f['Engineer Role Required'] || []), req: String(f['Room Requirements'] || ''), priority: [].concat(f['Priority'] || []), last: [].concat(f['Last Resort'] || []) });\n  const rk = Number(f['Preemption Rank']); if (Number.isFinite(rk)) ranks[t] = rk; }\nreturn [{ json: Object.assign({}, r.prep, { reference_data: JSON.stringify({ rooms: refRooms, types: refTypes, preemptionRanks: ranks }) }) }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24320,
+        -400
+      ],
+      "id": "4695cf39-2e1f-4f74-927d-f6cdb33a6533",
+      "name": "To Prepare"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "EUG3sGXkfsJSYIMz",
+          "cachedResultName": "Jessie — Book Session"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        24560,
+        -400
+      ],
+      "id": "992f7e69-5eda-40b5-86bb-c361b44acce1",
+      "name": "Prepare"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The step-2 form again, as it was submitted (values kept), with the problem on top and, when Book Session needs one, an\n// extra field (department, kind of booking). Shown by views.update on the same view.\nfunction formAgain(warn, extra, asked) {\n  const p = $('Read Request').first().json.payload || {};\n  const V = p.view || {};\n  const st = (V.state && V.state.values) || {};\n  let meta = {}; try { meta = JSON.parse(V.private_metadata || '{}'); } catch (e) {}\n  if (asked !== undefined) meta.asked = asked;\n  const extraIds = (extra || []).map(b => b.block_id);\n  const blocks = JSON.parse(JSON.stringify(V.blocks || [])).filter(b => b.block_id !== 'problem' && b.block_id !== 'problem_div' && extraIds.indexOf(b.block_id) === -1);\n  for (const b of blocks) {\n    if (b.type !== 'input' || !b.element) continue;\n    const e = b.element, sv = (st[b.block_id] || {})[e.action_id] || {};\n    if (e.type === 'plain_text_input') { if (sv.value) e.initial_value = sv.value; else delete e.initial_value; }\n    else if (e.type === 'static_select' || e.type === 'radio_buttons') {\n      const want = sv.selected_option && sv.selected_option.value;\n      const all = (e.options || []).concat(...((e.option_groups || []).map(g => g.options || [])));\n      const o = all.find(x => x.value === want);\n      if (o) e.initial_option = o; else delete e.initial_option;\n    }\n  }\n  // v10: the note checkbox keeps its tick\n  for (const b of blocks) if (b.type === 'actions') for (const e of b.elements || []) if (e.type === 'checkboxes') {\n    const sv = (st[b.block_id] || {})[e.action_id] || {};\n    const on = (sv.selected_options || e.initial_options || []).map(o => o.value);\n    const o = (e.options || []).filter(x => on.indexOf(x.value) !== -1);\n    if (o.length) e.initial_options = o; else delete e.initial_options;\n  }\n  let at = blocks.findIndex(b => b.block_id === 'notes');\n  if (at === -1) at = blocks.findIndex(b => b.block_id === 'note_toggle');\n  if (extra && extra.length) blocks.splice(at === -1 ? blocks.length : at, 0, ...extra);\n  blocks.unshift({ type: 'section', block_id: 'problem', text: { type: 'mrkdwn', text: '⚠️ ' + warn } }, { type: 'divider', block_id: 'problem_div' });\n  return { type: 'modal', callback_id: 'book_step2', title: { type: 'plain_text', text: 'Book a room' }, submit: { type: 'plain_text', text: 'Book' },\n           close: { type: 'plain_text', text: 'Back' }, private_metadata: JSON.stringify(meta), blocks };\n}\nconst radioBlock = (bid, label, opts) => { const o = opts.map(x => ({ text: { type: 'plain_text', text: String(x) }, value: String(x) }));\n  return { type: 'input', block_id: bid, label: { type: 'plain_text', text: label }, element: { type: 'radio_buttons', action_id: bid + '_pick', options: o } }; };\n// Book Session's refusal -> words for the form (its own texts are written for the chat's AI, never shown as they are)\n// v8: Book Session v110 passes the question's fields (typed, suggestions, options); before it, only its sentence (human)\n// came through, so they are read from that sentence too, and the typed client from the form - a notice is never blank.\nfunction formClient() { const st = ((($('Read Request').first().json.payload || {}).view || {}).state || {}).values || {};\n  return String((st.client && st.client.client_in && st.client.client_in.value) || '').trim(); }\nfunction problemFor(r) {\n  const reason = r.reason || r.status || '';\n  const human = String(r.human || '');\n  const typed = String(r.typed || (human.match(/\"([^\"]+)\" is not in the client list/) || [])[1] || formClient() || '').trim();\n  if (reason === 'CLIENT_CHECK') {\n    let sug = [].concat(r.suggestions || []).map(String).filter(Boolean);\n    if (!sug.length) { const m = human.match(/close to (.+?)\\. Ask the requester/); if (m) sug = m[1].split(/,\\s*/).filter(Boolean); }\n    if (!typed || !sug.length) return { warn: (typed ? '\"' + typed + '\"' : 'That client') + ' isn’t in the client list. Check the spelling, or press *Book* again to keep it as a new client.',\n      asked: typed ? 'Is ' + typed + ' a new client?' : undefined };\n    return { warn: '\"' + typed + '\" isn’t in the client list. Did you mean *' + sug.join('* or *') + '*? Change the client, or press *Book* again to keep \"' + typed + '\" as a new client.',\n             asked: 'Did you mean ' + sug.join(' or ') + ', or is ' + typed + ' a new client?' };\n  }\n  if (reason === 'CLIENT_AMBIGUOUS') { const o = [].concat(r.options || []);\n    return { warn: 'More than one client matches that name' + (o.length ? ': ' + o.join(', ') : '') + '. Type the full name.' }; }\n  if (reason === 'AMBIGUOUS_PERSON') return { warn: (typed ? '\"' + typed + '\"' : 'That name') + ' is both a client' + (r.client ? ' (' + r.client + ')' : '') + ' and a staff member' + (r.staff ? ' (' + r.staff + ')' : '') + '. If it is the client, type their full name.' };\n  if (reason === 'NEED_DEPARTMENT') { let o = [].concat(r.options || []).map(String).filter(Boolean);\n    if (!o.length) { const m = human.match(/can be (.+?)\\. Ask the requester/); if (m) o = m[1].split(/\\s+or\\s+/).filter(Boolean); }\n    if (!o.length) o = ['Advertising', 'Entertainment', 'Localization', 'Music', 'Post Production'];\n    return { warn: 'Which department is this session for?', extra: [radioBlock('department', 'Department', o.slice(0, 10))] }; }\n  if (reason === 'NEED_BOOKING_TYPE') return { warn: 'What kind of booking is this?' + (r.askClient ? ' And who’s the client (or leave it empty for none)?' : ''),\n    extra: [radioBlock('kind', 'Kind of booking', [].concat(r.options || []).length ? [].concat(r.options) : ['Advertising', 'Entertainment', 'Internal', 'Personal'])] };\n  if (reason === 'NEED_CLIENT') return { warn: 'Who’s the client? Type the name, or leave it empty for no client.' };\n  if (reason === 'NEED_ARRANGER') return { warn: 'Who’s the arranger? Pick one, or *No arranger*.' };\n  if (reason === 'NEED_MEETING_TITLE') return { warn: 'Give the meeting a title.' };\n  if (reason === 'ROOM_OCCUPIED') return { warn: 'That room was just booked by someone else for that time. Pick another room, or go *Back* to change the time.' };\n  if (reason === 'ROOM_DECLINED' || r.status === 'ROOM_DECLINED') return { warn: 'The room turned the booking down - its own calendar shows it is taken then' + (r.removed === false ? '' : ', so it was taken off the calendar') + '. Pick another room, or go *Back* to change the time.' };\n  if (reason === 'ROOM_UNSUITABLE' || reason === 'ROOM_NOT_PRIORITY' || reason === 'NO_ROOM' || reason === 'UNKNOWN_ROOM') return { warn: 'That room can’t be booked for this session. Pick another room.' };\n  if (reason === 'ENGINEER_UNKNOWN' || reason === 'ENGINEER_UNVERIFIED' || reason === 'AMBIGUOUS_ENGINEER') return { warn: 'The engineer couldn’t be matched in Bookers. Pick the engineer again.' };\n  if (reason === 'DURATION_INVALID') return { warn: 'That time doesn’t work - check the start and end.' };\n  return { warn: 'This couldn’t be booked (' + (reason || 'no answer') + '). Check the details and press *Book* again, or go *Back*.' };\n}\n\n// After Prepare: PREPARED -> Book Session's inputs for the booking, read from what prepare returned (the same fields the\n// chat's card shows - main's Prepared Booking does the same at the yes). Anything else -> the form again, with the question.\nconst r = $input.first().json || {};\nconst R = $('Read Step 2').first().json;\nconst T = $('To Prepare').first().json;\nif (r.status !== 'PREPARED') {\n  const pr = problemFor(r);\n  return [{ json: { go: false, view_id: R.viewId, view: formAgain(pr.warn, pr.extra, pr.asked), reason: r.reason || r.status || '' } }];\n}\nlet F = {}; try { F = (JSON.parse(r.prep_payload || '{}') || {}).F || {}; } catch (e) {}\nconst M = ['january','february','march','april','may','june','july','august','september','october','november','december'];\nconst dm = String(F['Date'] || '').match(/([A-Za-z]+)\\s+(\\d{1,2}),\\s*(\\d{4})/);\nconst mo = dm ? M.indexOf(dm[1].toLowerCase()) : -1;\nconst ymd = mo >= 0 ? dm[3] + '-' + String(mo + 1).padStart(2, '0') + '-' + String(+dm[2]).padStart(2, '0') : '';\nconst hhmm = x => { const m = String(x).match(/(\\d{1,2}):(\\d{2})\\s*(AM|PM)/i); if (!m) return null; return String((+m[1] % 12) + (/pm/i.test(m[3]) ? 12 : 0)).padStart(2, '0') + ':' + m[2]; };\nconst parts = String(F['Time'] || '').split(/\\s*[–—-]\\s*(?=\\d)/);\nconst a = hhmm(parts[0]), b = hhmm(parts[1] || '');\nlet start_iso = r.final_start || T.start_iso, end_iso = r.final_end || T.end_iso;\nif (ymd && a && b) { start_iso = ymd + 'T' + a + ':00+08:00'; end_iso = ymd + 'T' + b + ':00+08:00'; }\nconst engDesc = F['Engineer'] ? 'Engineer: ' + F['Engineer'] + (F['Arranger'] ? ' | Arranger: ' + F['Arranger'] : '') : '';\nconst book = Object.assign({}, T, {\n  mode: '', confirmed: true, summary: F['Title'] || r.title || T.summary, start_iso, end_iso,\n  rooms: F['Room'] || r.final_rooms || T.rooms, session_type: F['Session Type'] || T.session_type,\n  client: /^none$/i.test(F['Client'] || '') ? '' : (F['Client'] || T.client), engineer: F['Engineer'] || T.engineer,\n  department: F['Department'] || T.department, bookingType: F['Booking Type'] || T.bookingType,\n  room_override: T.room_override || F['Override'] === 'yes',\n  description: [engDesc, R.descTail].filter(Boolean).join(' | ')\n});\nreturn [{ json: { go: true, book, F } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24800,
+        -400
+      ],
+      "id": "d40554ed-dc99-4e77-a520-06851bd46bfe",
+      "name": "After Prepare"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2038f18d-a70f-4362-9b94-0b94f9f470c3",
+              "leftValue": "={{ $json.go }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        25040,
+        -400
+      ],
+      "id": "88d007ef-f890-4ce8-955e-dd8ba4372da9",
+      "name": "Prepared?"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('After Prepare').first().json.book }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        25280,
+        -432
+      ],
+      "id": "b5469238-9101-4dc9-b974-1802a3e15e7c",
+      "name": "To Book"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "EUG3sGXkfsJSYIMz",
+          "cachedResultName": "Jessie — Book Session"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        25520,
+        -432
+      ],
+      "id": "10428f8e-f745-4ce4-b63d-bf7aae480a2b",
+      "name": "Book"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The step-2 form again, as it was submitted (values kept), with the problem on top and, when Book Session needs one, an\n// extra field (department, kind of booking). Shown by views.update on the same view.\nfunction formAgain(warn, extra, asked) {\n  const p = $('Read Request').first().json.payload || {};\n  const V = p.view || {};\n  const st = (V.state && V.state.values) || {};\n  let meta = {}; try { meta = JSON.parse(V.private_metadata || '{}'); } catch (e) {}\n  if (asked !== undefined) meta.asked = asked;\n  const extraIds = (extra || []).map(b => b.block_id);\n  const blocks = JSON.parse(JSON.stringify(V.blocks || [])).filter(b => b.block_id !== 'problem' && b.block_id !== 'problem_div' && extraIds.indexOf(b.block_id) === -1);\n  for (const b of blocks) {\n    if (b.type !== 'input' || !b.element) continue;\n    const e = b.element, sv = (st[b.block_id] || {})[e.action_id] || {};\n    if (e.type === 'plain_text_input') { if (sv.value) e.initial_value = sv.value; else delete e.initial_value; }\n    else if (e.type === 'static_select' || e.type === 'radio_buttons') {\n      const want = sv.selected_option && sv.selected_option.value;\n      const all = (e.options || []).concat(...((e.option_groups || []).map(g => g.options || [])));\n      const o = all.find(x => x.value === want);\n      if (o) e.initial_option = o; else delete e.initial_option;\n    }\n  }\n  // v10: the note checkbox keeps its tick\n  for (const b of blocks) if (b.type === 'actions') for (const e of b.elements || []) if (e.type === 'checkboxes') {\n    const sv = (st[b.block_id] || {})[e.action_id] || {};\n    const on = (sv.selected_options || e.initial_options || []).map(o => o.value);\n    const o = (e.options || []).filter(x => on.indexOf(x.value) !== -1);\n    if (o.length) e.initial_options = o; else delete e.initial_options;\n  }\n  let at = blocks.findIndex(b => b.block_id === 'notes');\n  if (at === -1) at = blocks.findIndex(b => b.block_id === 'note_toggle');\n  if (extra && extra.length) blocks.splice(at === -1 ? blocks.length : at, 0, ...extra);\n  blocks.unshift({ type: 'section', block_id: 'problem', text: { type: 'mrkdwn', text: '⚠️ ' + warn } }, { type: 'divider', block_id: 'problem_div' });\n  return { type: 'modal', callback_id: 'book_step2', title: { type: 'plain_text', text: 'Book a room' }, submit: { type: 'plain_text', text: 'Book' },\n           close: { type: 'plain_text', text: 'Back' }, private_metadata: JSON.stringify(meta), blocks };\n}\nconst radioBlock = (bid, label, opts) => { const o = opts.map(x => ({ text: { type: 'plain_text', text: String(x) }, value: String(x) }));\n  return { type: 'input', block_id: bid, label: { type: 'plain_text', text: label }, element: { type: 'radio_buttons', action_id: bid + '_pick', options: o } }; };\n// Book Session's refusal -> words for the form (its own texts are written for the chat's AI, never shown as they are)\n// v8: Book Session v110 passes the question's fields (typed, suggestions, options); before it, only its sentence (human)\n// came through, so they are read from that sentence too, and the typed client from the form - a notice is never blank.\nfunction formClient() { const st = ((($('Read Request').first().json.payload || {}).view || {}).state || {}).values || {};\n  return String((st.client && st.client.client_in && st.client.client_in.value) || '').trim(); }\nfunction problemFor(r) {\n  const reason = r.reason || r.status || '';\n  const human = String(r.human || '');\n  const typed = String(r.typed || (human.match(/\"([^\"]+)\" is not in the client list/) || [])[1] || formClient() || '').trim();\n  if (reason === 'CLIENT_CHECK') {\n    let sug = [].concat(r.suggestions || []).map(String).filter(Boolean);\n    if (!sug.length) { const m = human.match(/close to (.+?)\\. Ask the requester/); if (m) sug = m[1].split(/,\\s*/).filter(Boolean); }\n    if (!typed || !sug.length) return { warn: (typed ? '\"' + typed + '\"' : 'That client') + ' isn’t in the client list. Check the spelling, or press *Book* again to keep it as a new client.',\n      asked: typed ? 'Is ' + typed + ' a new client?' : undefined };\n    return { warn: '\"' + typed + '\" isn’t in the client list. Did you mean *' + sug.join('* or *') + '*? Change the client, or press *Book* again to keep \"' + typed + '\" as a new client.',\n             asked: 'Did you mean ' + sug.join(' or ') + ', or is ' + typed + ' a new client?' };\n  }\n  if (reason === 'CLIENT_AMBIGUOUS') { const o = [].concat(r.options || []);\n    return { warn: 'More than one client matches that name' + (o.length ? ': ' + o.join(', ') : '') + '. Type the full name.' }; }\n  if (reason === 'AMBIGUOUS_PERSON') return { warn: (typed ? '\"' + typed + '\"' : 'That name') + ' is both a client' + (r.client ? ' (' + r.client + ')' : '') + ' and a staff member' + (r.staff ? ' (' + r.staff + ')' : '') + '. If it is the client, type their full name.' };\n  if (reason === 'NEED_DEPARTMENT') { let o = [].concat(r.options || []).map(String).filter(Boolean);\n    if (!o.length) { const m = human.match(/can be (.+?)\\. Ask the requester/); if (m) o = m[1].split(/\\s+or\\s+/).filter(Boolean); }\n    if (!o.length) o = ['Advertising', 'Entertainment', 'Localization', 'Music', 'Post Production'];\n    return { warn: 'Which department is this session for?', extra: [radioBlock('department', 'Department', o.slice(0, 10))] }; }\n  if (reason === 'NEED_BOOKING_TYPE') return { warn: 'What kind of booking is this?' + (r.askClient ? ' And who’s the client (or leave it empty for none)?' : ''),\n    extra: [radioBlock('kind', 'Kind of booking', [].concat(r.options || []).length ? [].concat(r.options) : ['Advertising', 'Entertainment', 'Internal', 'Personal'])] };\n  if (reason === 'NEED_CLIENT') return { warn: 'Who’s the client? Type the name, or leave it empty for no client.' };\n  if (reason === 'NEED_ARRANGER') return { warn: 'Who’s the arranger? Pick one, or *No arranger*.' };\n  if (reason === 'NEED_MEETING_TITLE') return { warn: 'Give the meeting a title.' };\n  if (reason === 'ROOM_OCCUPIED') return { warn: 'That room was just booked by someone else for that time. Pick another room, or go *Back* to change the time.' };\n  if (reason === 'ROOM_DECLINED' || r.status === 'ROOM_DECLINED') return { warn: 'The room turned the booking down - its own calendar shows it is taken then' + (r.removed === false ? '' : ', so it was taken off the calendar') + '. Pick another room, or go *Back* to change the time.' };\n  if (reason === 'ROOM_UNSUITABLE' || reason === 'ROOM_NOT_PRIORITY' || reason === 'NO_ROOM' || reason === 'UNKNOWN_ROOM') return { warn: 'That room can’t be booked for this session. Pick another room.' };\n  if (reason === 'ENGINEER_UNKNOWN' || reason === 'ENGINEER_UNVERIFIED' || reason === 'AMBIGUOUS_ENGINEER') return { warn: 'The engineer couldn’t be matched in Bookers. Pick the engineer again.' };\n  if (reason === 'DURATION_INVALID') return { warn: 'That time doesn’t work - check the start and end.' };\n  return { warn: 'This couldn’t be booked (' + (reason || 'no answer') + '). Check the details and press *Book* again, or go *Back*.' };\n}\n\n// Booking rows (v11): a booking in a message is a section (block_id bk_<id>) and its Change / Cancel buttons (bka_<id>).\n// The buttons carry the booking: {id, d: YYYY-MM-DD, s / e: HH:MM (Manila), r: room, t: title}.\nconst _DS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst _DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], _ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nfunction t12(hm) { if (!hm) return ''; let [h, m] = String(hm).split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; }\nfunction dayShort(d) { const x = new Date(d + 'T12:00:00Z'); return _DS[x.getUTCDay()] + ', ' + _MS[x.getUTCMonth()] + ' ' + x.getUTCDate(); }\nfunction dayLong(d) { const x = new Date(d + 'T12:00:00Z'); return _DL[x.getUTCDay()] + ', ' + _ML[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + x.getUTCFullYear(); }\nfunction addDays(d, n) { return new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10); }\nfunction whenLine(b) { return dayShort(b.d) + ' · ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'all day') + (b.r ? ' · ' + b.r : ''); }\nfunction bkValue(b) { return JSON.stringify({ id: b.id, d: b.d, s: b.s || '', e: b.e || '', r: b.r || '', t: String(b.t || '').slice(0, 150) }); }\nfunction bkButtons(b) {\n  const pt = x => ({ type: 'plain_text', text: x });\n  return { type: 'actions', block_id: 'bka_' + b.id, elements: [\n    { type: 'button', action_id: 'bk_change', value: bkValue(b), text: pt('Change') },\n    { type: 'button', action_id: 'bk_cancel', style: 'danger', value: bkValue(b), text: pt('Cancel'),\n      confirm: { title: pt('Cancel this booking?'), text: { type: 'mrkdwn', text: ('*' + b.t + '*\\n' + whenLine(b)).slice(0, 290) },\n                 confirm: pt('Cancel booking'), deny: pt('Keep it'), style: 'danger' } } ] };\n}\nfunction bkCard(b, head) { return head + '\\n\\n*' + b.t + '*\\n*Date:* ' + dayLong(b.d) + '\\n*Time:* ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'All day') + '\\n*Room:* ' + (b.r || '-'); }\n// a Google event -> a booking (Manila times; the room from its room attendee, else its location)\nfunction evRoom(e) { const r = (e.attendees || []).filter(a => a.resource || /@resource\\.calendar\\.google\\.com$/i.test(String(a.email || '')))\n  .map(a => String(a.displayName || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim()).filter(Boolean);\n  return r.length ? r.join(', ') : String(e.location || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim(); }\nfunction evBooking(e) {\n  const sd = e.start && e.start.dateTime, ed = e.end && e.end.dateTime;\n  const m = x => { const d = new Date(new Date(x).getTime() + 8 * 3600000); return { d: d.toISOString().slice(0, 10), hm: d.toISOString().slice(11, 16) }; };\n  if (sd) { const a = m(sd), b = m(ed); return { id: e.id, d: a.d, s: a.hm, e: b.hm, r: evRoom(e), t: e.summary || '(no title)' }; }\n  return { id: e.id, d: String((e.start && e.start.date) || ''), s: '', e: '', r: evRoom(e), t: e.summary || '(no title)' };\n}\n\n// After Book: CREATED -> the form says Booked (Done closes it) and the DM gets the result; anything else -> the form again.\nconst r = $input.first().json || {};\nconst R = $('Read Step 2').first().json;\nconst A = $('After Prepare').first().json;\nconst F = A.F || {};\nif (r.status !== 'CREATED') {\n  const pr = problemFor(r);\n  return [{ json: { ok: false, view_id: R.viewId, view: formAgain(pr.warn, pr.extra, pr.asked), channel: R.channel, text: '' } }];\n}\nconst title = r.title || F['Title'] || R.calTitle;\n// v8: the card's format - title, then Date, Time and Room (the chat's summary), on the form and in the DM. v10: a blank line after Booked.\nconst when = String((R.s && R.s.when) || '').split(' · ');\nconst card = '✅ *Booked.*\\n\\n*' + title + '*\\n*Date:* ' + (F['Date'] || when[0] || '') + '\\n*Time:* ' + (F['Time'] || when[1] || '')\n  + '\\n*Room:* ' + (F['Room'] || R.room);\nconst view = { type: 'modal', clear_on_close: true, title: { type: 'plain_text', text: 'Book a room' }, close: { type: 'plain_text', text: 'Done' },\n  blocks: [{ type: 'section', text: { type: 'mrkdwn', text: card } }] };\nconst text = card + (r.duration_note ? '\\n' + r.duration_note : '');\n// v11: the DM carries Change / Cancel for this booking\nconst T = A.book || {};\nconst iso = x => String(x || '').match(/^(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2})/) || [];\nconst si = iso(T.start_iso), ei = iso(T.end_iso);\nconst bk = { id: String(r.event_id || ''), d: si[1] || (R.s && R.s.date) || '', s: si[2] || (R.s && R.s.t0) || '', e: ei[2] || (R.s && R.s.t1) || '',\n  r: F['Room'] || R.room || '', t: title };\nconst blocks = [{ type: 'section', block_id: 'bk_' + (bk.id || 'new'), text: { type: 'mrkdwn', text } }].concat(bk.id ? [bkButtons(bk)] : []);\nreturn [{ json: { ok: true, view_id: R.viewId, view, channel: R.channel, text, blocks } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        25760,
+        -432
+      ],
+      "id": "f030021d-780b-4884-bcb7-80a6659013f0",
+      "name": "After Book"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ view_id: $json.view_id, view: $json.view }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        26000,
+        -432
+      ],
+      "id": "88ddd83c-863c-4eed-96cf-b5c33347087d",
+      "name": "Show Result",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a2032a6b-bfd1-47d4-9970-9c11b9bfa0f9",
+              "leftValue": "={{ $('After Book').first().json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        26240,
+        -432
+      ],
+      "id": "611f8f6c-e593-44ac-98e7-12d11c6808b3",
+      "name": "Booked?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $('After Book').first().json.channel, text: $('After Book').first().json.text, blocks: $('After Book').first().json.blocks }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        26480,
+        -464
+      ],
+      "id": "0211b8ce-a368-4334-ab64-818c5e037550",
+      "name": "DM Booked",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ view_id: $json.view_id, view: $json.view }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        25280,
+        -320
+      ],
+      "id": "ab7a48dd-d74e-41a3-9b9e-301bb16db9ce",
+      "name": "Show Question",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        23360,
+        -192
+      ],
+      "id": "af0ab4ed-441b-41c5-912c-3103de24b32c",
+      "name": "Ack My Bookings"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "cachedResultName": "Jessie Reference Cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        23600,
+        -192
+      ],
+      "id": "9eda1557-7cd6-4012-873c-5b690107bdc0",
+      "name": "Read Cache 4",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Booking rows (v11): a booking in a message is a section (block_id bk_<id>) and its Change / Cancel buttons (bka_<id>).\n// The buttons carry the booking: {id, d: YYYY-MM-DD, s / e: HH:MM (Manila), r: room, t: title}.\nconst _DS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst _DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], _ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nfunction t12(hm) { if (!hm) return ''; let [h, m] = String(hm).split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; }\nfunction dayShort(d) { const x = new Date(d + 'T12:00:00Z'); return _DS[x.getUTCDay()] + ', ' + _MS[x.getUTCMonth()] + ' ' + x.getUTCDate(); }\nfunction dayLong(d) { const x = new Date(d + 'T12:00:00Z'); return _DL[x.getUTCDay()] + ', ' + _ML[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + x.getUTCFullYear(); }\nfunction addDays(d, n) { return new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10); }\nfunction whenLine(b) { return dayShort(b.d) + ' · ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'all day') + (b.r ? ' · ' + b.r : ''); }\nfunction bkValue(b) { return JSON.stringify({ id: b.id, d: b.d, s: b.s || '', e: b.e || '', r: b.r || '', t: String(b.t || '').slice(0, 150) }); }\nfunction bkButtons(b) {\n  const pt = x => ({ type: 'plain_text', text: x });\n  return { type: 'actions', block_id: 'bka_' + b.id, elements: [\n    { type: 'button', action_id: 'bk_change', value: bkValue(b), text: pt('Change') },\n    { type: 'button', action_id: 'bk_cancel', style: 'danger', value: bkValue(b), text: pt('Cancel'),\n      confirm: { title: pt('Cancel this booking?'), text: { type: 'mrkdwn', text: ('*' + b.t + '*\\n' + whenLine(b)).slice(0, 290) },\n                 confirm: pt('Cancel booking'), deny: pt('Keep it'), style: 'danger' } } ] };\n}\nfunction bkCard(b, head) { return head + '\\n\\n*' + b.t + '*\\n*Date:* ' + dayLong(b.d) + '\\n*Time:* ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'All day') + '\\n*Room:* ' + (b.r || '-'); }\n// a Google event -> a booking (Manila times; the room from its room attendee, else its location)\nfunction evRoom(e) { const r = (e.attendees || []).filter(a => a.resource || /@resource\\.calendar\\.google\\.com$/i.test(String(a.email || '')))\n  .map(a => String(a.displayName || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim()).filter(Boolean);\n  return r.length ? r.join(', ') : String(e.location || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim(); }\nfunction evBooking(e) {\n  const sd = e.start && e.start.dateTime, ed = e.end && e.end.dateTime;\n  const m = x => { const d = new Date(new Date(x).getTime() + 8 * 3600000); return { d: d.toISOString().slice(0, 10), hm: d.toISOString().slice(11, 16) }; };\n  if (sd) { const a = m(sd), b = m(ed); return { id: e.id, d: a.d, s: a.hm, e: b.hm, r: evRoom(e), t: e.summary || '(no title)' }; }\n  return { id: e.id, d: String((e.start && e.start.date) || ''), s: '', e: '', r: evRoom(e), t: e.summary || '(no title)' };\n}\n\n// My Window (v11): My bookings from the menu (from today, Manila, a year ahead during QA) or a page button (its date).\nconst YEAR_SHIFT = 1;\nconst c = $('Check Signature').first().json;\nconst p = $('Read Request').first().json.payload || {};\nconst a = (p.actions || [])[0] || {};\nconst page = a.action_id === 'my_page' && /^\\d{4}-\\d{2}-\\d{2}$/.test(String(a.value || ''));\nlet start = page ? String(a.value) : '';\nif (!start) { const m = new Date(Date.now() + 8 * 3600 * 1000);\n  start = (m.getUTCFullYear() + YEAR_SHIFT) + '-' + String(m.getUTCMonth() + 1).padStart(2, '0') + '-' + String(m.getUTCDate()).padStart(2, '0'); }\nconst end = addDays(start, 7);\nreturn [{ json: { user: c.user, page, start, end, timeMin: start + 'T00:00:00+08:00', timeMax: end + 'T00:00:00+08:00',\n  channel: (p.container && p.container.channel_id) || (p.channel && p.channel.id) || c.user, ts: (p.container && p.container.message_ts) || '' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23840,
+        -192
+      ],
+      "id": "d14b92c1-3e55-4b5d-ad3f-943e903f8301",
+      "name": "My Window"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent($json.timeMin) }}&timeMax={{ encodeURIComponent($json.timeMax) }}&singleEvents=true&orderBy=startTime&maxResults=2500",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24080,
+        -192
+      ],
+      "id": "1cbb7de7-c8c8-4a03-ab24-034f52d321a1",
+      "name": "List My Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// Booking rows (v11): a booking in a message is a section (block_id bk_<id>) and its Change / Cancel buttons (bka_<id>).\n// The buttons carry the booking: {id, d: YYYY-MM-DD, s / e: HH:MM (Manila), r: room, t: title}.\nconst _DS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst _DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], _ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nfunction t12(hm) { if (!hm) return ''; let [h, m] = String(hm).split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; }\nfunction dayShort(d) { const x = new Date(d + 'T12:00:00Z'); return _DS[x.getUTCDay()] + ', ' + _MS[x.getUTCMonth()] + ' ' + x.getUTCDate(); }\nfunction dayLong(d) { const x = new Date(d + 'T12:00:00Z'); return _DL[x.getUTCDay()] + ', ' + _ML[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + x.getUTCFullYear(); }\nfunction addDays(d, n) { return new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10); }\nfunction whenLine(b) { return dayShort(b.d) + ' · ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'all day') + (b.r ? ' · ' + b.r : ''); }\nfunction bkValue(b) { return JSON.stringify({ id: b.id, d: b.d, s: b.s || '', e: b.e || '', r: b.r || '', t: String(b.t || '').slice(0, 150) }); }\nfunction bkButtons(b) {\n  const pt = x => ({ type: 'plain_text', text: x });\n  return { type: 'actions', block_id: 'bka_' + b.id, elements: [\n    { type: 'button', action_id: 'bk_change', value: bkValue(b), text: pt('Change') },\n    { type: 'button', action_id: 'bk_cancel', style: 'danger', value: bkValue(b), text: pt('Cancel'),\n      confirm: { title: pt('Cancel this booking?'), text: { type: 'mrkdwn', text: ('*' + b.t + '*\\n' + whenLine(b)).slice(0, 290) },\n                 confirm: pt('Cancel booking'), deny: pt('Keep it'), style: 'danger' } } ] };\n}\nfunction bkCard(b, head) { return head + '\\n\\n*' + b.t + '*\\n*Date:* ' + dayLong(b.d) + '\\n*Time:* ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'All day') + '\\n*Room:* ' + (b.r || '-'); }\n// a Google event -> a booking (Manila times; the room from its room attendee, else its location)\nfunction evRoom(e) { const r = (e.attendees || []).filter(a => a.resource || /@resource\\.calendar\\.google\\.com$/i.test(String(a.email || '')))\n  .map(a => String(a.displayName || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim()).filter(Boolean);\n  return r.length ? r.join(', ') : String(e.location || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim(); }\nfunction evBooking(e) {\n  const sd = e.start && e.start.dateTime, ed = e.end && e.end.dateTime;\n  const m = x => { const d = new Date(new Date(x).getTime() + 8 * 3600000); return { d: d.toISOString().slice(0, 10), hm: d.toISOString().slice(11, 16) }; };\n  if (sd) { const a = m(sd), b = m(ed); return { id: e.id, d: a.d, s: a.hm, e: b.hm, r: evRoom(e), t: e.summary || '(no title)' }; }\n  return { id: e.id, d: String((e.start && e.start.date) || ''), s: '', e: '', r: evRoom(e), t: e.summary || '(no title)' };\n}\n\n// Render My Bookings (v11): the week's bookings this person made (ref:) or engineers / arranges (team:), each with Change /\n// Cancel; Previous / Next 7 days update the same message.\nconst W = $('My Window').first().json;\nconst res = $input.first().json || {};\nconst data = readCache($('Read Cache 4').all().map(i => i.json || {})) || { bookers: [] };\nconst meF = (data.bookers || []).map(b => b.fields || {}).find(f => String(f['Slack User ID'] || '').split(/[\\s,]+/).indexOf(W.user) !== -1) || {};\nconst myName = String(meF.Name || '').trim().toLowerCase();\nconst md = t => ({ type: 'mrkdwn', text: t });\nconst blocks = [{ type: 'section', text: md('*Your bookings* · ' + dayShort(W.start) + ' – ' + dayShort(addDays(W.end, -1))) }];\nconst items = Array.isArray(res.items) ? res.items : null;\nif (!items) blocks.push({ type: 'section', text: md('⚠️ The calendar couldn’t be read. Try again.') });\nelse {\n  const rows = [];\n  for (const e of items) {\n    if (!e || e.status === 'cancelled') continue;\n    const desc = String(e.description || '');\n    const ref = (desc.match(/ref:\\s*([A-Za-z0-9]+)/) || [])[1] || '';\n    const team = ((desc.match(/team:\\s*([^|]+)/) || [])[1] || '').split(/[\\s,]+/).filter(Boolean);\n    const mine = ref === W.user, onTeam = team.indexOf(W.user) !== -1;\n    if (!mine && !onTeam) continue;\n    const eng = ((desc.match(/Engineer:\\s*([^(|]+)/) || [])[1] || '').trim().toLowerCase();\n    const arr = ((desc.match(/Arranger:\\s*([^(|]+)/) || [])[1] || '').trim().toLowerCase();\n    const note = mine ? '' : (myName && eng === myName) ? 'You’re engineering' : (myName && arr === myName) ? 'You’re arranging' : 'You’re on the team';\n    rows.push({ b: evBooking(e), note });\n  }\n  rows.sort((x, y) => (x.b.d + (x.b.s || '00:00')).localeCompare(y.b.d + (y.b.s || '00:00')));\n  if (!rows.length) blocks.push({ type: 'section', text: md('Nothing booked these 7 days.') });\n  for (const x of rows.slice(0, 20)) blocks.push({ type: 'section', block_id: 'bk_' + x.b.id, text: md('*' + x.b.t + '*\\n' + whenLine(x.b) + (x.note ? '\\n_' + x.note + '_' : '')) }, bkButtons(x.b));\n  if (rows.length > 20) blocks.push({ type: 'context', elements: [md('Showing the first 20 of ' + rows.length + '.')] });\n  if (res.nextPageToken) blocks.push({ type: 'context', elements: [md('Some bookings may be missing - the calendar sent only part of the week.')] });\n}\nblocks.push({ type: 'actions', block_id: 'my_nav', elements: [\n  { type: 'button', action_id: 'my_page', value: addDays(W.start, -7), text: { type: 'plain_text', text: '← Previous 7 days' } },\n  { type: 'button', action_id: 'my_page', value: addDays(W.start, 7), text: { type: 'plain_text', text: 'Next 7 days →' } } ] });\nblocks.push({ type: 'context', elements: [md('Further ahead? Type it, like _what do I have in November?_')] });\nreturn [{ json: { channel: W.channel, ts: W.ts, page: W.page, blocks, text: 'Your bookings' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24320,
+        -192
+      ],
+      "id": "752b5d68-c416-4069-9364-6a95c7852c77",
+      "name": "Render My Bookings"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "69e3775d-0a5b-43c4-9a6d-8c11f740ffd5",
+              "leftValue": "={{ $json.page === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        24560,
+        -192
+      ],
+      "id": "902593ff-7cf2-4ee8-aec0-efe777dd71d6",
+      "name": "Page?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, ts: $json.ts, text: $json.text, blocks: $json.blocks }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24800,
+        -240
+      ],
+      "id": "28d40699-9151-4a0e-b25a-68abe5f10ff9",
+      "name": "Update List",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text, blocks: $json.blocks }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24800,
+        -144
+      ],
+      "id": "2d1d177b-e2ec-4087-bcc4-3350398bfb2a",
+      "name": "Post List",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        23360,
+        128
+      ],
+      "id": "9dce5199-0b49-41cd-983f-02a10a6bd2a4",
+      "name": "Ack Cancel"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "cachedResultName": "Jessie Reference Cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        23600,
+        128
+      ],
+      "id": "46bdada5-bb2f-4b3a-9084-ecaa950385a3",
+      "name": "Read Cache 5",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// The person pressing the button, from Bookers (authority and department decide who may change someone else's booking)\nfunction booker(data, id) { const f = (data.bookers || []).map(b => b.fields || {}).find(f => String(f['Slack User ID'] || '').split(/[\\s,]+/).indexOf(id) !== -1) || {};\n  const names = x => [].concat(x || []).map(a => (a && a.name) || a).join(', ');\n  return { name: String(f.Name || ''), authority: names(f.Authority), department: names(f.Department) }; }\n\n// To Cancel (v11): the booking on the button, cancelled after Slack's \"Cancel this booking?\" pop-up was confirmed.\nconst c = $('Check Signature').first().json;\nconst p = $('Read Request').first().json.payload || {};\nlet b = {}; try { b = JSON.parse(((p.actions || [])[0] || {}).value || '{}'); } catch (e) { b = {}; }\nconst me = booker(readCache($('Read Cache 5').all().map(i => i.json || {})) || { bookers: [] }, c.user);\nreturn [{ json: { event_id: b.id || '', booking_date: b.d || '', title: b.t || '', confirmed: true, requester: c.user,\n  requester_name: me.name, authority: me.authority, department: me.department, mode: '', check_code: '', card_time: '', card_room: '',\n  booking_time: b.s || '' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23840,
+        128
+      ],
+      "id": "bd276711-3a70-4085-8b88-38abc8b9eb15",
+      "name": "To Cancel"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "bAyDw7udhmY0NL38",
+          "cachedResultName": "Jessie — Cancel Booking"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        24080,
+        128
+      ],
+      "id": "7f43ef04-5747-4f4f-b317-4fd549dbf0e4",
+      "name": "Cancel"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Booking rows (v11): a booking in a message is a section (block_id bk_<id>) and its Change / Cancel buttons (bka_<id>).\n// The buttons carry the booking: {id, d: YYYY-MM-DD, s / e: HH:MM (Manila), r: room, t: title}.\nconst _DS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst _DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], _ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nfunction t12(hm) { if (!hm) return ''; let [h, m] = String(hm).split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; }\nfunction dayShort(d) { const x = new Date(d + 'T12:00:00Z'); return _DS[x.getUTCDay()] + ', ' + _MS[x.getUTCMonth()] + ' ' + x.getUTCDate(); }\nfunction dayLong(d) { const x = new Date(d + 'T12:00:00Z'); return _DL[x.getUTCDay()] + ', ' + _ML[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + x.getUTCFullYear(); }\nfunction addDays(d, n) { return new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10); }\nfunction whenLine(b) { return dayShort(b.d) + ' · ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'all day') + (b.r ? ' · ' + b.r : ''); }\nfunction bkValue(b) { return JSON.stringify({ id: b.id, d: b.d, s: b.s || '', e: b.e || '', r: b.r || '', t: String(b.t || '').slice(0, 150) }); }\nfunction bkButtons(b) {\n  const pt = x => ({ type: 'plain_text', text: x });\n  return { type: 'actions', block_id: 'bka_' + b.id, elements: [\n    { type: 'button', action_id: 'bk_change', value: bkValue(b), text: pt('Change') },\n    { type: 'button', action_id: 'bk_cancel', style: 'danger', value: bkValue(b), text: pt('Cancel'),\n      confirm: { title: pt('Cancel this booking?'), text: { type: 'mrkdwn', text: ('*' + b.t + '*\\n' + whenLine(b)).slice(0, 290) },\n                 confirm: pt('Cancel booking'), deny: pt('Keep it'), style: 'danger' } } ] };\n}\nfunction bkCard(b, head) { return head + '\\n\\n*' + b.t + '*\\n*Date:* ' + dayLong(b.d) + '\\n*Time:* ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'All day') + '\\n*Room:* ' + (b.r || '-'); }\n// a Google event -> a booking (Manila times; the room from its room attendee, else its location)\nfunction evRoom(e) { const r = (e.attendees || []).filter(a => a.resource || /@resource\\.calendar\\.google\\.com$/i.test(String(a.email || '')))\n  .map(a => String(a.displayName || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim()).filter(Boolean);\n  return r.length ? r.join(', ') : String(e.location || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim(); }\nfunction evBooking(e) {\n  const sd = e.start && e.start.dateTime, ed = e.end && e.end.dateTime;\n  const m = x => { const d = new Date(new Date(x).getTime() + 8 * 3600000); return { d: d.toISOString().slice(0, 10), hm: d.toISOString().slice(11, 16) }; };\n  if (sd) { const a = m(sd), b = m(ed); return { id: e.id, d: a.d, s: a.hm, e: b.hm, r: evRoom(e), t: e.summary || '(no title)' }; }\n  return { id: e.id, d: String((e.start && e.start.date) || ''), s: '', e: '', r: evRoom(e), t: e.summary || '(no title)' };\n}\n\n// After Cancel (v11): the message the button was in updates in place - the booking's row says Cancelled (buttons gone), or\n// why it could not be cancelled (row kept).\nconst r = $input.first().json || {};\nconst p = $('Read Request').first().json.payload || {};\nlet b = {}; try { b = JSON.parse(((p.actions || [])[0] || {}).value || '{}'); } catch (e) { b = {}; }\nconst msg = p.message || {};\nconst ok = r.status === 'CANCELLED';\nlet blocks = JSON.parse(JSON.stringify(msg.blocks || [])).filter(x => x.block_id !== 'bkw_' + b.id);\nconst why = { NOT_YOURS: 'You can’t cancel this booking - only the person who booked it, or its engineer or arranger, can.',\n  NOT_ON_CALENDAR: 'This booking isn’t on the calendar any more.', LOOKUP_FAILED: 'The calendar couldn’t be read. Try again.',\n  NO_REFERENCE: 'This booking has no booker on it, so it has to be cancelled by hand.' }[r.reason] || ('It couldn’t be cancelled (' + (r.reason || r.status || 'no answer') + '). Try again.');\nif (ok) {\n  blocks = blocks.filter(x => x.block_id !== 'bka_' + b.id);\n  const row = { type: 'section', block_id: 'bk_' + b.id, text: { type: 'mrkdwn', text: '❌ *Cancelled:* ' + b.t + '\\n' + whenLine(b) } };\n  const i = blocks.findIndex(x => x.block_id === 'bk_' + b.id);\n  if (i !== -1) blocks[i] = row; else blocks.push(row);\n} else {\n  const i = blocks.findIndex(x => x.block_id === 'bka_' + b.id);\n  blocks.splice(i === -1 ? blocks.length : i + 1, 0, { type: 'context', block_id: 'bkw_' + b.id, elements: [{ type: 'mrkdwn', text: '⚠️ ' + why }] });\n}\nreturn [{ json: { ok, channel: (p.container && p.container.channel_id) || (p.channel && p.channel.id) || '', ts: (p.container && p.container.message_ts) || '',\n  blocks, text: msg.text || (ok ? 'Cancelled' : 'Not cancelled') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24320,
+        128
+      ],
+      "id": "2cdc41a3-7a19-4b74-8316-0b4ce01c0055",
+      "name": "After Cancel"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, ts: $json.ts, text: $json.text, blocks: $json.blocks }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24560,
+        128
+      ],
+      "id": "0071abdc-30e5-449d-a366-8d6bb3fc97ad",
+      "name": "Update Cancelled",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        23360,
+        288
+      ],
+      "id": "b61cc394-717f-491f-831f-34ed8795469a",
+      "name": "Ack Change"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "cachedResultName": "Jessie Reference Cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        23600,
+        288
+      ],
+      "id": "799dca36-4185-4e65-a8e5-c07ca1e1ec89",
+      "name": "Read Cache 6",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// Booking rows (v11): a booking in a message is a section (block_id bk_<id>) and its Change / Cancel buttons (bka_<id>).\n// The buttons carry the booking: {id, d: YYYY-MM-DD, s / e: HH:MM (Manila), r: room, t: title}.\nconst _DS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst _DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], _ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nfunction t12(hm) { if (!hm) return ''; let [h, m] = String(hm).split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; }\nfunction dayShort(d) { const x = new Date(d + 'T12:00:00Z'); return _DS[x.getUTCDay()] + ', ' + _MS[x.getUTCMonth()] + ' ' + x.getUTCDate(); }\nfunction dayLong(d) { const x = new Date(d + 'T12:00:00Z'); return _DL[x.getUTCDay()] + ', ' + _ML[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + x.getUTCFullYear(); }\nfunction addDays(d, n) { return new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10); }\nfunction whenLine(b) { return dayShort(b.d) + ' · ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'all day') + (b.r ? ' · ' + b.r : ''); }\nfunction bkValue(b) { return JSON.stringify({ id: b.id, d: b.d, s: b.s || '', e: b.e || '', r: b.r || '', t: String(b.t || '').slice(0, 150) }); }\nfunction bkButtons(b) {\n  const pt = x => ({ type: 'plain_text', text: x });\n  return { type: 'actions', block_id: 'bka_' + b.id, elements: [\n    { type: 'button', action_id: 'bk_change', value: bkValue(b), text: pt('Change') },\n    { type: 'button', action_id: 'bk_cancel', style: 'danger', value: bkValue(b), text: pt('Cancel'),\n      confirm: { title: pt('Cancel this booking?'), text: { type: 'mrkdwn', text: ('*' + b.t + '*\\n' + whenLine(b)).slice(0, 290) },\n                 confirm: pt('Cancel booking'), deny: pt('Keep it'), style: 'danger' } } ] };\n}\nfunction bkCard(b, head) { return head + '\\n\\n*' + b.t + '*\\n*Date:* ' + dayLong(b.d) + '\\n*Time:* ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'All day') + '\\n*Room:* ' + (b.r || '-'); }\n// a Google event -> a booking (Manila times; the room from its room attendee, else its location)\nfunction evRoom(e) { const r = (e.attendees || []).filter(a => a.resource || /@resource\\.calendar\\.google\\.com$/i.test(String(a.email || '')))\n  .map(a => String(a.displayName || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim()).filter(Boolean);\n  return r.length ? r.join(', ') : String(e.location || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim(); }\nfunction evBooking(e) {\n  const sd = e.start && e.start.dateTime, ed = e.end && e.end.dateTime;\n  const m = x => { const d = new Date(new Date(x).getTime() + 8 * 3600000); return { d: d.toISOString().slice(0, 10), hm: d.toISOString().slice(11, 16) }; };\n  if (sd) { const a = m(sd), b = m(ed); return { id: e.id, d: a.d, s: a.hm, e: b.hm, r: evRoom(e), t: e.summary || '(no title)' }; }\n  return { id: e.id, d: String((e.start && e.start.date) || ''), s: '', e: '', r: evRoom(e), t: e.summary || '(no title)' };\n}\n\n// The Change form (v11): the booking's current date, start, end and room to start from; rooms of the same kind (studios,\n// M booths, conference rooms) with the current one first.\nfunction changeView(b, cur, warn, meta, rooms) {\n  const pt = x => ({ type: 'plain_text', text: x });\n  const times = [];\n  for (let i = 0; i < 48; i++) { const mins = (8 * 60 + i * 30) % 1440, h = Math.floor(mins / 60), mm = mins % 60;\n    times.push({ text: pt(((h % 12) || 12) + ':' + String(mm).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM')), value: String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0') }); }\n  const key = v => (Number(v.split(':')[0]) * 60 + Number(v.split(':')[1]) - 480 + 1440) % 1440;\n  const tOpt = v => { if (!/^\\d{2}:\\d{2}$/.test(String(v || ''))) return null; let o = times.find(x => x.value === v); if (o) return o;\n    o = { text: pt(t12(v)), value: v }; const at = times.findIndex(x => key(x.value) > key(v)); times.splice(at === -1 ? times.length : at, 0, o); return o; };\n  [b.s, b.e].forEach(tOpt);\n  const so = tOpt(cur.s), eo = tOpt(cur.e);\n  const kind = n => /^M[1-8]$/.test(n) ? 'booth' : (rooms.common.indexOf(n) !== -1 ? 'common' : 'studio');\n  const same = rooms.all.filter(n => kind(n) === kind(b.r || '')).sort((x, y) => x.localeCompare(y, 'en', { numeric: true }));\n  const rnames = (b.r ? [b.r] : []).concat(same.filter(n => n !== b.r)).slice(0, 100);\n  const ropts = rnames.map(n => ({ text: pt(n), value: n }));\n  const blocks = [{ type: 'section', text: { type: 'mrkdwn', text: '*' + b.t + '*\\nNow: ' + whenLine(b) } }];\n  if (warn) blocks.push({ type: 'section', block_id: 'problem', text: { type: 'mrkdwn', text: '⚠️ ' + warn } });\n  blocks.push({ type: 'input', block_id: 'date', label: pt('Date'), element: Object.assign({ type: 'datepicker', action_id: 'date_pick' }, /^\\d{4}-\\d{2}-\\d{2}$/.test(cur.d || '') ? { initial_date: cur.d } : {}) },\n    { type: 'input', block_id: 'start', label: pt('Start'), element: Object.assign({ type: 'static_select', action_id: 'start_pick', placeholder: pt('Choose a time'), options: times }, so ? { initial_option: so } : {}) },\n    { type: 'input', block_id: 'end', label: pt('End'), element: Object.assign({ type: 'static_select', action_id: 'end_pick', placeholder: pt('Choose a time'), options: times }, eo ? { initial_option: eo } : {}) });\n  if (cur.r && ropts.length && !ropts.some(o => o.value === cur.r)) ropts.splice(1, 0, { text: pt(cur.r), value: cur.r });   // v12: a typed room of another kind\n  if (ropts.length) { const ro = ropts.find(o => o.value === (cur.r || b.r)) || ropts[0];\n    blocks.push({ type: 'input', block_id: 'room', label: pt('Room'), element: { type: 'static_select', action_id: 'room_pick', options: ropts, initial_option: ro } }); }\n  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: 'Change only what moves - the new time is checked before anything changes.' }] });\n  return { type: 'modal', callback_id: 'change_booking', title: pt('Change booking'), submit: pt('Change'), close: pt('Cancel'),\n    private_metadata: JSON.stringify(meta), blocks };\n}\nfunction roomLists(data) {\n  const all = [], common = [];\n  for (const r of (data && data.rooms) || []) { const f = r.fields || {}; const n = String(f['Room Name'] || '').trim(); if (!n) continue; all.push(n);\n    const k = [].concat(f['Room Type'] || []).map(x => String(x).toLowerCase()); if (k.indexOf('conference room') !== -1 || k.indexOf('lobby') !== -1) common.push(n); }\n  return { all, common };\n}\n\n// Build Change (v11): Change was pressed on a booking - the form starts at its current values.\nconst c = $('Check Signature').first().json;\nconst p = $('Read Request').first().json.payload || {};\nlet b = {}; try { b = JSON.parse(((p.actions || [])[0] || {}).value || '{}'); } catch (e) { b = {}; }\n// v12: the new values typed in the chat (main v265) - the form starts there; a start alone keeps the booking's length\nconst nIn = (b.n && typeof b.n === 'object') ? b.n : null; delete b.n;\nconst mins = hm => { const m = String(hm || '').match(/^(\\d{2}):(\\d{2})$/); return m ? +m[1] * 60 + +m[2] : null; };\nconst cur = { d: b.d, s: b.s, e: b.e, r: b.r };\nif (nIn) {\n  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(String(nIn.d || ''))) cur.d = nIn.d;\n  if (nIn.r) cur.r = nIn.r;\n  if (mins(nIn.s) !== null && mins(nIn.e) !== null) { cur.s = nIn.s; cur.e = nIn.e; }\n  else if (mins(nIn.s) !== null && mins(b.s) !== null && mins(b.e) !== null) { const e = mins(nIn.s) + mins(b.e) - mins(b.s); cur.s = nIn.s;\n    cur.e = e < 1440 ? String(Math.floor(e / 60)).padStart(2, '0') + ':' + String(e % 60).padStart(2, '0') : ''; }\n  else if (mins(nIn.e) !== null) cur.e = nIn.e;\n}\nconst data = readCache($('Read Cache 6').all().map(i => i.json || {}));\nconst meta = { b, ch: (p.container && p.container.channel_id) || (p.channel && p.channel.id) || '', ts: (p.container && p.container.message_ts) || '', requester: c.user };\nreturn [{ json: { trigger_id: c.triggerId, view: changeView(b, cur, '', meta, roomLists(data)) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23840,
+        288
+      ],
+      "id": "6aeed8cc-d1a0-4ba7-9e20-7d1c2dff5e70",
+      "name": "Build Change"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.open",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ trigger_id: $json.trigger_id, view: $json.view }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24080,
+        288
+      ],
+      "id": "4dbab511-e2a0-4194-b43d-7749ea9d0f32",
+      "name": "Open Change",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Report Open: say if views.open failed (the trigger_id lasts 3 seconds).\nconst r = $input.first().json;\nif (r.ok === true) return [];\nconst c = $('Check Signature').first().json;\nreturn [{ json: { channel: c.user || 'U08V3CKDGJF', text: '⚠️ The form did not open: ' + JSON.stringify(r).slice(0, 300) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24320,
+        288
+      ],
+      "id": "3a5d6210-0f55-42b3-825f-79c01a8e2cb3",
+      "name": "Report Open Change"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24560,
+        288
+      ],
+      "id": "c2b9ba25-93dc-45bb-ac90-3164024ad369",
+      "name": "DM Change Failed",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Booking rows (v11): a booking in a message is a section (block_id bk_<id>) and its Change / Cancel buttons (bka_<id>).\n// The buttons carry the booking: {id, d: YYYY-MM-DD, s / e: HH:MM (Manila), r: room, t: title}.\nconst _DS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst _DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], _ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nfunction t12(hm) { if (!hm) return ''; let [h, m] = String(hm).split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; }\nfunction dayShort(d) { const x = new Date(d + 'T12:00:00Z'); return _DS[x.getUTCDay()] + ', ' + _MS[x.getUTCMonth()] + ' ' + x.getUTCDate(); }\nfunction dayLong(d) { const x = new Date(d + 'T12:00:00Z'); return _DL[x.getUTCDay()] + ', ' + _ML[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + x.getUTCFullYear(); }\nfunction addDays(d, n) { return new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10); }\nfunction whenLine(b) { return dayShort(b.d) + ' · ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'all day') + (b.r ? ' · ' + b.r : ''); }\nfunction bkValue(b) { return JSON.stringify({ id: b.id, d: b.d, s: b.s || '', e: b.e || '', r: b.r || '', t: String(b.t || '').slice(0, 150) }); }\nfunction bkButtons(b) {\n  const pt = x => ({ type: 'plain_text', text: x });\n  return { type: 'actions', block_id: 'bka_' + b.id, elements: [\n    { type: 'button', action_id: 'bk_change', value: bkValue(b), text: pt('Change') },\n    { type: 'button', action_id: 'bk_cancel', style: 'danger', value: bkValue(b), text: pt('Cancel'),\n      confirm: { title: pt('Cancel this booking?'), text: { type: 'mrkdwn', text: ('*' + b.t + '*\\n' + whenLine(b)).slice(0, 290) },\n                 confirm: pt('Cancel booking'), deny: pt('Keep it'), style: 'danger' } } ] };\n}\nfunction bkCard(b, head) { return head + '\\n\\n*' + b.t + '*\\n*Date:* ' + dayLong(b.d) + '\\n*Time:* ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'All day') + '\\n*Room:* ' + (b.r || '-'); }\n// a Google event -> a booking (Manila times; the room from its room attendee, else its location)\nfunction evRoom(e) { const r = (e.attendees || []).filter(a => a.resource || /@resource\\.calendar\\.google\\.com$/i.test(String(a.email || '')))\n  .map(a => String(a.displayName || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim()).filter(Boolean);\n  return r.length ? r.join(', ') : String(e.location || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim(); }\nfunction evBooking(e) {\n  const sd = e.start && e.start.dateTime, ed = e.end && e.end.dateTime;\n  const m = x => { const d = new Date(new Date(x).getTime() + 8 * 3600000); return { d: d.toISOString().slice(0, 10), hm: d.toISOString().slice(11, 16) }; };\n  if (sd) { const a = m(sd), b = m(ed); return { id: e.id, d: a.d, s: a.hm, e: b.hm, r: evRoom(e), t: e.summary || '(no title)' }; }\n  return { id: e.id, d: String((e.start && e.start.date) || ''), s: '', e: '', r: evRoom(e), t: e.summary || '(no title)' };\n}\n\n// Read Change (v11): the new date / times / room, checked at once. Nothing changed -> said on the form, nothing is moved.\nconst c = $('Check Signature').first().json;\nconst p = $('Read Request').first().json.payload || {};\nconst V = p.view || {};\nconst v = (V.state && V.state.values) || {};\nlet meta = {}; try { meta = JSON.parse(V.private_metadata || '{}'); } catch (e) { meta = {}; }\nconst b = meta.b || {};\nconst sel = (bl, a) => (v[bl] && v[bl][a] && v[bl][a].selected_option && v[bl][a].selected_option.value) || '';\nconst n = { d: (v.date && v.date.date_pick && v.date.date_pick.selected_date) || '', s: sel('start', 'start_pick'), e: sel('end', 'end_pick'), r: sel('room', 'room_pick') || b.r || '' };\nconst errors = {};\nif (!n.d) errors.date = 'Pick a date.';\nif (!n.s) errors.start = 'Pick a start time.';\nif (!n.e) errors.end = 'Pick an end time.';\nif (n.s && n.e && n.e <= n.s) errors.end = 'The end has to be after the start.';\nif (!Object.keys(errors).length && n.d === b.d && n.s === b.s && n.e === b.e && n.r === (b.r || '')) errors.date = 'Nothing changed - pick a new date, time or room.';\nconst valid = Object.keys(errors).length === 0;\nconst working = { type: 'modal', title: { type: 'plain_text', text: 'Change booking' }, close: { type: 'plain_text', text: 'Close' },\n  private_metadata: V.private_metadata || '',\n  blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '⏳ *Changing ' + b.t + '…*\\n' + whenLine(n) } },\n           { type: 'context', elements: [{ type: 'mrkdwn', text: 'This takes a few seconds.' }] }] };\nreturn [{ json: { valid, b, n, meta, viewId: V.id || '', user: c.user,\n  answer: valid ? { response_action: 'update', view: working } : { response_action: 'errors', errors } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23360,
+        448
+      ],
+      "id": "f18c0571-dfae-4e5c-a637-760fca10f025",
+      "name": "Read Change"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.answer) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        23600,
+        448
+      ],
+      "id": "4622991a-92d1-47d6-8375-a6623ed9fa70",
+      "name": "Answer Change"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "44b04869-135e-455f-9a70-52b863f827be",
+              "leftValue": "={{ $('Read Change').first().json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        23840,
+        448
+      ],
+      "id": "01ce6e7e-17fb-44f7-9465-8b0bab219f7c",
+      "name": "Change OK?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "cachedResultName": "Jessie Reference Cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        24080,
+        432
+      ],
+      "id": "eee6d075-fd27-4841-b3dd-ceedb17b0eb6",
+      "name": "Read Cache 7",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// The person pressing the button, from Bookers (authority and department decide who may change someone else's booking)\nfunction booker(data, id) { const f = (data.bookers || []).map(b => b.fields || {}).find(f => String(f['Slack User ID'] || '').split(/[\\s,]+/).indexOf(id) !== -1) || {};\n  const names = x => [].concat(x || []).map(a => (a && a.name) || a).join(', ');\n  return { name: String(f.Name || ''), authority: names(f.Authority), department: names(f.Department) }; }\n\n// To Move (v11): Move Booking's inputs - the booking by its id on its own date, the new window, and a new room only when\n// it changed. Confirmed: pressing Change is the confirmation.\nconst R = $('Read Change').first().json;\nconst me = booker(readCache($('Read Cache 7').all().map(i => i.json || {})) || { bookers: [] }, R.user);\nreturn [{ json: { title: R.b.t || '', event_id: R.b.id || '', booking_date: R.b.d || '',\n  new_start_iso: R.n.d + 'T' + R.n.s + ':00+08:00', new_end_iso: R.n.d + 'T' + R.n.e + ':00+08:00',\n  new_rooms: R.n.r && R.n.r !== R.b.r ? R.n.r : '', requester: R.user, confirmed: true,\n  authority: me.authority, department: me.department, requester_name: me.name, reference_data: '', booking_time: R.b.s || '' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24320,
+        432
+      ],
+      "id": "5df1a6d1-ae93-44e9-a34a-495c408a2596",
+      "name": "To Move"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "t7lwR2km4tfN8DbM",
+          "cachedResultName": "Jessie — Move Booking"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        24560,
+        432
+      ],
+      "id": "15d2b13a-7afd-4d5b-ae7a-60b1bb316cd4",
+      "name": "Move"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// Booking rows (v11): a booking in a message is a section (block_id bk_<id>) and its Change / Cancel buttons (bka_<id>).\n// The buttons carry the booking: {id, d: YYYY-MM-DD, s / e: HH:MM (Manila), r: room, t: title}.\nconst _DS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst _DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], _ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nfunction t12(hm) { if (!hm) return ''; let [h, m] = String(hm).split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; }\nfunction dayShort(d) { const x = new Date(d + 'T12:00:00Z'); return _DS[x.getUTCDay()] + ', ' + _MS[x.getUTCMonth()] + ' ' + x.getUTCDate(); }\nfunction dayLong(d) { const x = new Date(d + 'T12:00:00Z'); return _DL[x.getUTCDay()] + ', ' + _ML[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + x.getUTCFullYear(); }\nfunction addDays(d, n) { return new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10); }\nfunction whenLine(b) { return dayShort(b.d) + ' · ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'all day') + (b.r ? ' · ' + b.r : ''); }\nfunction bkValue(b) { return JSON.stringify({ id: b.id, d: b.d, s: b.s || '', e: b.e || '', r: b.r || '', t: String(b.t || '').slice(0, 150) }); }\nfunction bkButtons(b) {\n  const pt = x => ({ type: 'plain_text', text: x });\n  return { type: 'actions', block_id: 'bka_' + b.id, elements: [\n    { type: 'button', action_id: 'bk_change', value: bkValue(b), text: pt('Change') },\n    { type: 'button', action_id: 'bk_cancel', style: 'danger', value: bkValue(b), text: pt('Cancel'),\n      confirm: { title: pt('Cancel this booking?'), text: { type: 'mrkdwn', text: ('*' + b.t + '*\\n' + whenLine(b)).slice(0, 290) },\n                 confirm: pt('Cancel booking'), deny: pt('Keep it'), style: 'danger' } } ] };\n}\nfunction bkCard(b, head) { return head + '\\n\\n*' + b.t + '*\\n*Date:* ' + dayLong(b.d) + '\\n*Time:* ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'All day') + '\\n*Room:* ' + (b.r || '-'); }\n// a Google event -> a booking (Manila times; the room from its room attendee, else its location)\nfunction evRoom(e) { const r = (e.attendees || []).filter(a => a.resource || /@resource\\.calendar\\.google\\.com$/i.test(String(a.email || '')))\n  .map(a => String(a.displayName || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim()).filter(Boolean);\n  return r.length ? r.join(', ') : String(e.location || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim(); }\nfunction evBooking(e) {\n  const sd = e.start && e.start.dateTime, ed = e.end && e.end.dateTime;\n  const m = x => { const d = new Date(new Date(x).getTime() + 8 * 3600000); return { d: d.toISOString().slice(0, 10), hm: d.toISOString().slice(11, 16) }; };\n  if (sd) { const a = m(sd), b = m(ed); return { id: e.id, d: a.d, s: a.hm, e: b.hm, r: evRoom(e), t: e.summary || '(no title)' }; }\n  return { id: e.id, d: String((e.start && e.start.date) || ''), s: '', e: '', r: evRoom(e), t: e.summary || '(no title)' };\n}\n\n// The Change form (v11): the booking's current date, start, end and room to start from; rooms of the same kind (studios,\n// M booths, conference rooms) with the current one first.\nfunction changeView(b, cur, warn, meta, rooms) {\n  const pt = x => ({ type: 'plain_text', text: x });\n  const times = [];\n  for (let i = 0; i < 48; i++) { const mins = (8 * 60 + i * 30) % 1440, h = Math.floor(mins / 60), mm = mins % 60;\n    times.push({ text: pt(((h % 12) || 12) + ':' + String(mm).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM')), value: String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0') }); }\n  const key = v => (Number(v.split(':')[0]) * 60 + Number(v.split(':')[1]) - 480 + 1440) % 1440;\n  const tOpt = v => { if (!/^\\d{2}:\\d{2}$/.test(String(v || ''))) return null; let o = times.find(x => x.value === v); if (o) return o;\n    o = { text: pt(t12(v)), value: v }; const at = times.findIndex(x => key(x.value) > key(v)); times.splice(at === -1 ? times.length : at, 0, o); return o; };\n  [b.s, b.e].forEach(tOpt);\n  const so = tOpt(cur.s), eo = tOpt(cur.e);\n  const kind = n => /^M[1-8]$/.test(n) ? 'booth' : (rooms.common.indexOf(n) !== -1 ? 'common' : 'studio');\n  const same = rooms.all.filter(n => kind(n) === kind(b.r || '')).sort((x, y) => x.localeCompare(y, 'en', { numeric: true }));\n  const rnames = (b.r ? [b.r] : []).concat(same.filter(n => n !== b.r)).slice(0, 100);\n  const ropts = rnames.map(n => ({ text: pt(n), value: n }));\n  const blocks = [{ type: 'section', text: { type: 'mrkdwn', text: '*' + b.t + '*\\nNow: ' + whenLine(b) } }];\n  if (warn) blocks.push({ type: 'section', block_id: 'problem', text: { type: 'mrkdwn', text: '⚠️ ' + warn } });\n  blocks.push({ type: 'input', block_id: 'date', label: pt('Date'), element: Object.assign({ type: 'datepicker', action_id: 'date_pick' }, /^\\d{4}-\\d{2}-\\d{2}$/.test(cur.d || '') ? { initial_date: cur.d } : {}) },\n    { type: 'input', block_id: 'start', label: pt('Start'), element: Object.assign({ type: 'static_select', action_id: 'start_pick', placeholder: pt('Choose a time'), options: times }, so ? { initial_option: so } : {}) },\n    { type: 'input', block_id: 'end', label: pt('End'), element: Object.assign({ type: 'static_select', action_id: 'end_pick', placeholder: pt('Choose a time'), options: times }, eo ? { initial_option: eo } : {}) });\n  if (cur.r && ropts.length && !ropts.some(o => o.value === cur.r)) ropts.splice(1, 0, { text: pt(cur.r), value: cur.r });   // v12: a typed room of another kind\n  if (ropts.length) { const ro = ropts.find(o => o.value === (cur.r || b.r)) || ropts[0];\n    blocks.push({ type: 'input', block_id: 'room', label: pt('Room'), element: { type: 'static_select', action_id: 'room_pick', options: ropts, initial_option: ro } }); }\n  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: 'Change only what moves - the new time is checked before anything changes.' }] });\n  return { type: 'modal', callback_id: 'change_booking', title: pt('Change booking'), submit: pt('Change'), close: pt('Cancel'),\n    private_metadata: JSON.stringify(meta), blocks };\n}\nfunction roomLists(data) {\n  const all = [], common = [];\n  for (const r of (data && data.rooms) || []) { const f = r.fields || {}; const n = String(f['Room Name'] || '').trim(); if (!n) continue; all.push(n);\n    const k = [].concat(f['Room Type'] || []).map(x => String(x).toLowerCase()); if (k.indexOf('conference room') !== -1 || k.indexOf('lobby') !== -1) common.push(n); }\n  return { all, common };\n}\n\n// After Move (v11): Moved -> the form says Changed (the card) and the message's row is updated next; anything else -> the\n// form again at the new values, with the problem on top (a taken room: its free times that day).\nconst r = $input.first().json || {};\nconst R = $('Read Change').first().json;\nconst b = R.b, n = R.n;\nif (r.status === 'MOVED' || r.status === 'PARTIAL') {\n  const nb = { id: String(r.event_id || b.id), d: n.d, s: n.s, e: n.e, r: n.r || b.r, t: b.t };\n  const card = bkCard(nb, '✅ *Changed.*') + (r.status === 'PARTIAL' ? '\\n⚠️ The old booking could not be removed - delete it from the calendar.' : '');\n  const view = { type: 'modal', clear_on_close: true, title: { type: 'plain_text', text: 'Change booking' }, close: { type: 'plain_text', text: 'Done' },\n    blocks: [{ type: 'section', text: { type: 'mrkdwn', text: card } }] };\n  return [{ json: { ok: true, view_id: R.viewId, view, ch: (R.meta && R.meta.ch) || '', ts: (R.meta && R.meta.ts) || '', oldId: b.id, nb, card } }];\n}\nconst hm = x => (String(x || '').match(/T(\\d{2}:\\d{2})/) || [])[1] || '';\nconst slots = [].concat(r.same_day_slots || []).map(x => t12(hm(x.start)) + ' – ' + t12(hm(x.end))).filter(x => x.length > 5);\nconst why = r.reason === 'ROOM_OCCUPIED' ? (n.r || b.r || 'The room') + ' is taken then' + (slots.length ? '. Free that day: ' + slots.join(', ') : '') + '.'\n  : ({ NOT_YOURS: 'You can’t change this booking - only the person who booked it, or its engineer or arranger, can.',\n       NOT_ON_CALENDAR: 'This booking isn’t on the calendar any more.', LOOKUP_FAILED: 'The calendar couldn’t be read. Try again.',\n       UNKNOWN_ROOM: 'That room couldn’t be found. Pick another.', DURATION_INVALID: 'Check the start and end.', MISSING_TIMES: 'Check the start and end.',\n       NO_REFERENCE: 'This booking has no booker on it, so it has to be changed by hand.' }[r.reason]\n     || ('It couldn’t be changed (' + (r.reason || r.status || 'no answer') + '). Try again.'));\nconst data = readCache($('Read Cache 7').all().map(i => i.json || {}));\nreturn [{ json: { ok: false, view_id: R.viewId, view: changeView(b, n, why, R.meta || {}, roomLists(data)) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24800,
+        432
+      ],
+      "id": "3f8b9cea-0f08-4e29-9d6c-93e34e971037",
+      "name": "After Move"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ view_id: $json.view_id, view: $json.view }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        25040,
+        432
+      ],
+      "id": "742f32da-c2c8-4293-990d-190240938791",
+      "name": "Show Change Result",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f74d40bd-dc92-467a-bb4e-f6cb5b0a0199",
+              "leftValue": "={{ $('After Move').first().json.ok === true && !!$('After Move').first().json.ts }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        25280,
+        432
+      ],
+      "id": "d6b0d672-2278-4fe2-9dcc-93179a7405eb",
+      "name": "Moved?"
+    },
+    {
+      "parameters": {
+        "url": "=https://slack.com/api/conversations.history?channel={{ encodeURIComponent($('After Move').first().json.ch) }}&latest={{ encodeURIComponent($('After Move').first().json.ts) }}&inclusive=true&limit=1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        25520,
+        416
+      ],
+      "id": "260fd802-6fc5-4665-91f1-d4475af21f1f",
+      "name": "Get Message",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Booking rows (v11): a booking in a message is a section (block_id bk_<id>) and its Change / Cancel buttons (bka_<id>).\n// The buttons carry the booking: {id, d: YYYY-MM-DD, s / e: HH:MM (Manila), r: room, t: title}.\nconst _DS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst _DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], _ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nfunction t12(hm) { if (!hm) return ''; let [h, m] = String(hm).split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; }\nfunction dayShort(d) { const x = new Date(d + 'T12:00:00Z'); return _DS[x.getUTCDay()] + ', ' + _MS[x.getUTCMonth()] + ' ' + x.getUTCDate(); }\nfunction dayLong(d) { const x = new Date(d + 'T12:00:00Z'); return _DL[x.getUTCDay()] + ', ' + _ML[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + x.getUTCFullYear(); }\nfunction addDays(d, n) { return new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10); }\nfunction whenLine(b) { return dayShort(b.d) + ' · ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'all day') + (b.r ? ' · ' + b.r : ''); }\nfunction bkValue(b) { return JSON.stringify({ id: b.id, d: b.d, s: b.s || '', e: b.e || '', r: b.r || '', t: String(b.t || '').slice(0, 150) }); }\nfunction bkButtons(b) {\n  const pt = x => ({ type: 'plain_text', text: x });\n  return { type: 'actions', block_id: 'bka_' + b.id, elements: [\n    { type: 'button', action_id: 'bk_change', value: bkValue(b), text: pt('Change') },\n    { type: 'button', action_id: 'bk_cancel', style: 'danger', value: bkValue(b), text: pt('Cancel'),\n      confirm: { title: pt('Cancel this booking?'), text: { type: 'mrkdwn', text: ('*' + b.t + '*\\n' + whenLine(b)).slice(0, 290) },\n                 confirm: pt('Cancel booking'), deny: pt('Keep it'), style: 'danger' } } ] };\n}\nfunction bkCard(b, head) { return head + '\\n\\n*' + b.t + '*\\n*Date:* ' + dayLong(b.d) + '\\n*Time:* ' + (b.s ? t12(b.s) + ' – ' + t12(b.e) : 'All day') + '\\n*Room:* ' + (b.r || '-'); }\n// a Google event -> a booking (Manila times; the room from its room attendee, else its location)\nfunction evRoom(e) { const r = (e.attendees || []).filter(a => a.resource || /@resource\\.calendar\\.google\\.com$/i.test(String(a.email || '')))\n  .map(a => String(a.displayName || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim()).filter(Boolean);\n  return r.length ? r.join(', ') : String(e.location || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim(); }\nfunction evBooking(e) {\n  const sd = e.start && e.start.dateTime, ed = e.end && e.end.dateTime;\n  const m = x => { const d = new Date(new Date(x).getTime() + 8 * 3600000); return { d: d.toISOString().slice(0, 10), hm: d.toISOString().slice(11, 16) }; };\n  if (sd) { const a = m(sd), b = m(ed); return { id: e.id, d: a.d, s: a.hm, e: b.hm, r: evRoom(e), t: e.summary || '(no title)' }; }\n  return { id: e.id, d: String((e.start && e.start.date) || ''), s: '', e: '', r: evRoom(e), t: e.summary || '(no title)' };\n}\n\n// Fix Message (v11): after a change, the message the Change button was in shows the new time (and the new booking id on\n// its buttons - Move Booking makes a new event).\nconst A = $('After Move').first().json;\nconst h = $input.first().json || {};\nconst m = (h.messages || []).find(x => String(x.ts) === String(A.ts));\nif (!m) return [];\nconst nb = A.nb, old = A.oldId;\nconst blocks = JSON.parse(JSON.stringify(m.blocks || [])).filter(x => x.block_id !== 'bkw_' + old);\nconst i = blocks.findIndex(x => x.block_id === 'bk_' + old);\nif (i === -1) return [];\nconst card = /^\\s*(?:✅|:white_check_mark:)/.test(String((blocks[i].text || {}).text || ''));\nblocks[i] = { type: 'section', block_id: 'bk_' + nb.id, text: { type: 'mrkdwn', text: card ? A.card : '*' + nb.t + '*\\n' + whenLine(nb) + '\\n_Changed_' } };\nconst j = blocks.findIndex(x => x.block_id === 'bka_' + old);\nif (j !== -1) blocks[j] = bkButtons(nb); else blocks.splice(i + 1, 0, bkButtons(nb));\nreturn [{ json: { channel: A.ch, ts: A.ts, blocks, text: m.text || 'Changed' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        25760,
+        416
+      ],
+      "id": "d832f953-883c-40d0-8153-a5d220c11047",
+      "name": "Fix Message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, ts: $json.ts, text: $json.text, blocks: $json.blocks }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        26000,
+        416
+      ],
+      "id": "4d2774f0-3f72-4b76-bff8-03cb5856475d",
+      "name": "Update Changed",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        23360,
+        -32
+      ],
+      "id": "471cb7ac-c910-4bc3-817d-b3728c66463d",
+      "name": "Ack Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Note Toggle (v10): \"Add a note\" ticked -> the Notes field appears under it; unticked -> it goes. The form is rebuilt\n// as it stands (entries kept) and replaced by views.update.\nconst p = $('Read Request').first().json.payload || {};\nconst V = p.view || {};\nconst st = (V.state && V.state.values) || {};\nconst a = (p.actions || [])[0] || {};\nconst on = (a.selected_options || []).length > 0;\nconst blocks = JSON.parse(JSON.stringify(V.blocks || [])).filter(b => b.block_id !== 'notes');\nfor (const b of blocks) {\n  if (b.type !== 'input' || !b.element) continue;\n  const e = b.element, sv = (st[b.block_id] || {})[e.action_id] || {};\n  if (e.type === 'plain_text_input') { if (sv.value) e.initial_value = sv.value; else delete e.initial_value; }\n  else if (e.type === 'static_select' || e.type === 'radio_buttons') {\n    const want = sv.selected_option && sv.selected_option.value;\n    const all = (e.options || []).concat(...((e.option_groups || []).map(g => g.options || [])));\n    const o = all.find(x => x.value === want);\n    if (o) e.initial_option = o; else delete e.initial_option;\n  }\n}\nconst at = blocks.findIndex(b => b.block_id === 'note_toggle');\nif (at !== -1) {\n  const cb = blocks[at].elements[0];\n  if (on) cb.initial_options = cb.options; else delete cb.initial_options;\n  if (on) blocks.splice(at + 1, 0, { type: 'input', block_id: 'notes', optional: true, label: { type: 'plain_text', text: 'Note' },\n    element: { type: 'plain_text_input', action_id: 'notes_in', focus_on_load: true, placeholder: { type: 'plain_text', text: 'Anything the session needs' } } });\n}\nconst view = { type: 'modal', callback_id: V.callback_id || 'book_step2', title: V.title, close: V.close, private_metadata: V.private_metadata || '', blocks };\nif (V.submit) view.submit = V.submit;\nreturn [{ json: { view_id: V.id || '', hash: V.hash || '', view, ok: at !== -1 && !!V.id } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23600,
+        -32
+      ],
+      "id": "55b6936e-30b1-4c9b-8464-486e6ca39d0e",
+      "name": "Note Toggle"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ view_id: $json.view_id, hash: $json.hash, view: $json.view }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        23840,
+        -32
+      ],
+      "id": "579f0a88-9f7e-43ac-ac16-fabe02b5ee4b",
+      "name": "Show Note",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Jessie — Slack Interactions\nEvery Slack button click and form submission. The signature comes from **Jessie — Slack Signature** (nothing to paste).\n\n**v11 = slice 1 step C1:** the menu's Book a room opens the two-step booking form; Book books through Book Session. My bookings lists the week with Change / Cancel; Change opens a form (Move Booking), Cancel asks first (Cancel Booking).\n\nRequest URL: `https://signal.hitpromanila.net/webhook/jessie-interactions`",
+        "height": 320,
+        "width": 460
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        22032,
+        -1456
+      ],
+      "id": "fb6f4e38-b88f-41f6-b463-5991b9eda649",
+      "name": "About"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Post Test Button": {
+      "main": [
+        [
+          {
+            "node": "Send Button",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Interactions": {
+      "main": [
+        [
+          {
+            "node": "Read Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Request": {
+      "main": [
+        [
+          {
+            "node": "To Sign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To Sign": {
+      "main": [
+        [
+          {
+            "node": "Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signature": {
+      "main": [
+        [
+          {
+            "node": "Check Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Signature": {
+      "main": [
+        [
+          {
+            "node": "Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route": {
+      "main": [
+        [
+          {
+            "node": "Refuse",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack Click",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Submission",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack Other",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack Book",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Step 1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Cache 3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack My Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack Note",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack Change",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Change",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack My Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refuse": {
+      "main": [
+        [
+          {
+            "node": "Report Refused",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Refused": {
+      "main": [
+        [
+          {
+            "node": "DM Refused",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack Click": {
+      "main": [
+        [
+          {
+            "node": "Build Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Form": {
+      "main": [
+        [
+          {
+            "node": "Open Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open Form": {
+      "main": [
+        [
+          {
+            "node": "Report Open",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Open": {
+      "main": [
+        [
+          {
+            "node": "DM Open Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Submission": {
+      "main": [
+        [
+          {
+            "node": "Answer Working",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Working": {
+      "main": [
+        [
+          {
+            "node": "Pretend Work",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pretend Work": {
+      "main": [
+        [
+          {
+            "node": "Update Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Form": {
+      "main": [
+        [
+          {
+            "node": "Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report": {
+      "main": [
+        [
+          {
+            "node": "DM Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack Book": {
+      "main": [
+        [
+          {
+            "node": "Read Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cache": {
+      "main": [
+        [
+          {
+            "node": "Build Step 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Step 1": {
+      "main": [
+        [
+          {
+            "node": "Open Step 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open Step 1": {
+      "main": [
+        [
+          {
+            "node": "Report Open 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Open 1": {
+      "main": [
+        [
+          {
+            "node": "DM Open 1 Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Step 1": {
+      "main": [
+        [
+          {
+            "node": "Answer Step 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Step 1": {
+      "main": [
+        [
+          {
+            "node": "Step 1 OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 1 OK?": {
+      "main": [
+        [
+          {
+            "node": "Read Cache 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cache 2": {
+      "main": [
+        [
+          {
+            "node": "To Room Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To Room Availability": {
+      "main": [
+        [
+          {
+            "node": "Room Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Room Availability": {
+      "main": [
+        [
+          {
+            "node": "Build Step 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Step 2": {
+      "main": [
+        [
+          {
+            "node": "Show Step 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cache 3": {
+      "main": [
+        [
+          {
+            "node": "Read Step 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Step 2": {
+      "main": [
+        [
+          {
+            "node": "Answer Step 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Step 2": {
+      "main": [
+        [
+          {
+            "node": "Step 2 OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2 OK?": {
+      "main": [
+        [
+          {
+            "node": "To Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To Prepare": {
+      "main": [
+        [
+          {
+            "node": "Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare": {
+      "main": [
+        [
+          {
+            "node": "After Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "After Prepare": {
+      "main": [
+        [
+          {
+            "node": "Prepared?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepared?": {
+      "main": [
+        [
+          {
+            "node": "To Book",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To Book": {
+      "main": [
+        [
+          {
+            "node": "Book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book": {
+      "main": [
+        [
+          {
+            "node": "After Book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "After Book": {
+      "main": [
+        [
+          {
+            "node": "Show Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Show Result": {
+      "main": [
+        [
+          {
+            "node": "Booked?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booked?": {
+      "main": [
+        [
+          {
+            "node": "DM Booked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack My Bookings": {
+      "main": [
+        [
+          {
+            "node": "Read Cache 4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cache 4": {
+      "main": [
+        [
+          {
+            "node": "My Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "My Window": {
+      "main": [
+        [
+          {
+            "node": "List My Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List My Events": {
+      "main": [
+        [
+          {
+            "node": "Render My Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render My Bookings": {
+      "main": [
+        [
+          {
+            "node": "Page?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Page?": {
+      "main": [
+        [
+          {
+            "node": "Update List",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack Cancel": {
+      "main": [
+        [
+          {
+            "node": "Read Cache 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cache 5": {
+      "main": [
+        [
+          {
+            "node": "To Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To Cancel": {
+      "main": [
+        [
+          {
+            "node": "Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel": {
+      "main": [
+        [
+          {
+            "node": "After Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "After Cancel": {
+      "main": [
+        [
+          {
+            "node": "Update Cancelled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack Change": {
+      "main": [
+        [
+          {
+            "node": "Read Cache 6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cache 6": {
+      "main": [
+        [
+          {
+            "node": "Build Change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Change": {
+      "main": [
+        [
+          {
+            "node": "Open Change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open Change": {
+      "main": [
+        [
+          {
+            "node": "Report Open Change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Open Change": {
+      "main": [
+        [
+          {
+            "node": "DM Change Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Change": {
+      "main": [
+        [
+          {
+            "node": "Answer Change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Change": {
+      "main": [
+        [
+          {
+            "node": "Change OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Change OK?": {
+      "main": [
+        [
+          {
+            "node": "Read Cache 7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cache 7": {
+      "main": [
+        [
+          {
+            "node": "To Move",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To Move": {
+      "main": [
+        [
+          {
+            "node": "Move",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move": {
+      "main": [
+        [
+          {
+            "node": "After Move",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "After Move": {
+      "main": [
+        [
+          {
+            "node": "Show Change Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Show Change Result": {
+      "main": [
+        [
+          {
+            "node": "Moved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Moved?": {
+      "main": [
+        [
+          {
+            "node": "Get Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Message": {
+      "main": [
+        [
+          {
+            "node": "Fix Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fix Message": {
+      "main": [
+        [
+          {
+            "node": "Update Changed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack Note": {
+      "main": [
+        [
+          {
+            "node": "Note Toggle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Note Toggle": {
+      "main": [
+        [
+          {
+            "node": "Show Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2a2cf4dd-a910-4624-a06f-ef17a03d27ca",
+  "meta": {
+    "instanceId": "47b8f2db30f5474de1dd72088d2efb6e9f5862c79e8ac68a94619b94d7aeb560"
+  },
+  "nodeGroups": [],
+  "id": "PyxSPoAMtSE1gzaH",
+  "tags": []
+}
