@@ -83,7 +83,9 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   ok(!M.offer && D[0].json.blocks === M.original, '7: the menu -> its buttons back after booking');
   ok((await run(si, 'Source Done', [], { 'Mark Source': [{ json: { ok: false } }] })).length === 0, '7: no source message -> nothing');
   const sq = nx('Series?'), sh = nx('Show Result'), sqq = nx('Show Question');
-  ok(sq === 'To Prepare Series | Get Source' && nx('Get Source') === 'Mark Source' && nx('Source Shown?') === 'Show Source | Prepare' && nx('Show Source') === 'Prepare'
+  ok(sq === 'To Prepare Series | Get Source' && nx('Get Source') === 'Mark Source' && (si.nodes.some(n => n.name === 'Prepare Input')   // v20: v19's wiring here sent Slack's answer to Book Session (MISSING_DETAILS)
+       ? nx('Source Shown?') === 'Show Source | Prepare Input' && nx('Show Source') === 'Prepare Input' && nx('Prepare Input') === 'Prepare'
+       : nx('Source Shown?') === 'Show Source | Prepare' && nx('Show Source') === 'Prepare')
      && /Source Done/.test(sh) && /Source Done/.test(sqq) && nx('Source Done') === 'Update Source', '7 wiring: single booking');
   const MS = await j1(si, 'Mark Source Series', [{ json: { ok: true, messages: [offerMsg] } }], { 'Read Series Confirm': [{ json: { meta: { msg: { ch: 'D1', ts: '50.5' } } } }] });
   ok(MS.ok && MS.blocks[1].elements[0].text === '⏳ Your series is being processed…', '7: a series -> "⏳ Your series is being processed…"');

@@ -834,6 +834,14 @@ the task runner), for whoever has shell access to the box.
     its action_id (main: Menu Check, Form Offer, Change Offer, Build Reply, Mine Reply), and run the sims with fixtures shaped
     like what Slack returns (sim-typed-to-form's offer message had an empty section, so it could not tell the two apart).
 
+45. **An Execute Workflow node with no input mapping passes on whatever item reaches it** (15 Oct). Slack Interactions v19 put
+    the "⏳ processing" steps (a Slack conversations.history read, then chat.update) between To Prepare and the Prepare call, so
+    Book Session got Slack's answer instead of the booking: every single booking from the form came back MISSING_DETAILS ("a
+    title, a start time, an end time, a room") for ~45 minutes. The node sims ran To Prepare's code and passed; even
+    sim-round-2's wiring check asserted the broken wiring. When inserting steps before a call, put a Code node right before it
+    that returns the payload by name (`$('To Prepare').first().json`). `scripts/sim-si-wiring.js` now fails any call fed by
+    something other than a Code node.
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the

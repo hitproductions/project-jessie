@@ -246,3 +246,26 @@ v272) → clear → Import `workflows/project-jessie-v273.json` → Save → **P
 Offline: `node scripts/sim-v273.js` 16 (5 fail on v272); sim-round-3 25, sim-every-message 36, sim-step-c2 59,
 sim-typed-to-form 70 (its offer fixture now has the real first line), sim-typed-series 21, sim-slice1-a 57, sim-round-2 38;
 test-nodes 570, gate 69/69, fromai ok, audit clean.
+
+## Slack Interactions v20 (v19 fixed) - hotfix, 15 Oct
+
+Every single booking from the form failed since v19 (~16:26): "This couldn't be booked. Check the details and press Book
+again". Book Session execution 44331 (17:09, M2) shows why - MISSING_DETAILS, "a title, a start time, an end time, a room":
+it received Slack's answer to the "⏳ Your booking is being processed…" update instead of the booking (v19 put those steps in
+front of the call, gotcha 45). Nothing was booked. Series were not affected. v20 hands the call the booking again.
+
+### Import (Slack Interactions only) - Cmd+A then **Delete** before importing
+
+**Slack Interactions v20** into `PyxSPoAMtSE1gzaH`: download into `workflows/imported/slack-interactions-live-before-v20.json`
+(should MATCH v19) → clear → Import `workflows/slack-interactions-v20.json` → Save → **Publish** "v20 - v19 fixed" → download
+into `workflows/imported/slack-interactions-v20-imported.json`. Independent of main v273 (either order).
+
+### Test
+
+1. Book a room → M booth → M2, Tue Oct 19 2027 1-3 PM → **Book** → ✅ Booked "M2 - Howard". Cancel it from My bookings.
+2. Book a room → VO Recording → a studio → Book → ✅ Booked (the same call - every single booking went through it).
+3. From a typed request ("studio 7 tomorrow 2-4pm" → Book a room): the reply shows "⏳ Your booking is being processed…",
+   then "✅ Booked.".
+
+Offline: `node scripts/sim-si-wiring.js` 10 (fails on v19); sim-round-2 38, sim-slice1-a 57, sim-slice1-b 34, sim-hello-form
+20, sim-step-c1 60, sim-series-form 49, sim-build-b 30; fromai ok, audit clean.
