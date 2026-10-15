@@ -50,9 +50,9 @@ async function run(name, input, outs) {
   let R = outs['Read Step 2'][0].json;
   ok(R.valid && R.answer.response_action === 'update' && /Booking Studio 8/.test(JSON.stringify(R.answer.view)), 'valid -> "Booking Studio 8…" at once');
   const P = R.prep;
-  ok(P.mode === 'prepare' && P.summary === 'QAW1 / jem lim / HL' && P.start_iso === '2027-10-14T14:00:00+08:00' && P.rooms === 'Studio 8', 'prepare: title, window, room');
+  ok(P.mode === 'prepare' && ['QAW1 / jem lim / HL', 'QAW1 / Jem Lim / HL'].indexOf(P.summary) !== -1 && P.start_iso === '2027-10-14T14:00:00+08:00' && P.rooms === 'Studio 8', 'prepare: title, window, room');
   ok(P.description === 'Engineer: Howard Luistro | Booked by: Howard Luistro | ref: U1 | team: U1 | Notes: bring headphones', 'description: engineer, booker, ref, team, notes - ' + P.description);
-  ok(/client jem lim/.test(P.requester_text) && /2:00 pm-4:00 pm/.test(P.requester_text) && /engineer Howard Luistro/.test(P.requester_text), 'what the requester "typed": ' + P.requester_text);
+  ok(/client jem lim/i.test(P.requester_text) && /2:00 pm-4:00 pm/.test(P.requester_text) && /engineer Howard Luistro/.test(P.requester_text), 'what the requester "typed": ' + P.requester_text);
   ok(P.authority === 'HAIST Dev' && P.expected_date === '2027-10-14' && P.confirmed === false && P.require_prepared === false && P.room_override === false, 'flags');
   outs['Read Request'] = [{ json: { payload: payload(state('Studio 4', 'X', '', 'U1')) } }];
   R = (await run('Read Step 2', [], outs))[0].json;

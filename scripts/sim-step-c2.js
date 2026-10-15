@@ -147,7 +147,8 @@ const j1 = async (...a) => (await run(...a))[0].json;
   V = await build(Object.assign({}, B, { n: { r: 'Studio 8' } }));
   ok(el('room').initial_option.value === 'Studio 8' && el('start').initial_option.value === '14:00', 'a new room typed -> chosen');
   V = await build(Object.assign({}, B, { n: { r: 'M4' } }));
-  ok(el('room').initial_option.value === 'M4' && el('room').options[0].value === 'Studio 7', 'a typed room of another kind is offered too');
+  if (si.nodes.some(n => n.name === 'DM Changed')) ok(el('room').initial_option.value === 'Studio 7' && !el('room').options.some(o => o.value === 'M4'), 'v19: a typed room of another kind is not offered (rooms of the same kind only)');
+  else ok(el('room').initial_option.value === 'M4' && el('room').options[0].value === 'Studio 7', 'a typed room of another kind is offered too');
   V = await build(B);
   ok(el('start').initial_option.value === '14:00', 'no typed values: as v11');
 

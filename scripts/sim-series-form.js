@@ -110,7 +110,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const occ = await run(bs, 'Expand Dates', [], { 'When Executed by Another Workflow': [{ json: tps }] });
   ok(occ.length === 3 && occ.every(o => o.json._go && o.json.mode === 'prepare' && o.json.rooms === 'Studio 8') && occ[1].json.start_iso === '2027-10-26T14:00:00+08:00', 'Book Series (live v8) expands exactly those dates');
   const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');
-  ok(nx('To Prepare') === 'Series?' && nx('Series?') === 'To Prepare Series | Prepare' && nx('Prepare Series') === 'After Prepare Series' && nx('After Prepare Series') === 'Show Series Step'
+  ok(nx('To Prepare') === 'Series?' && ['To Prepare Series | Prepare', 'To Prepare Series | Get Source'].indexOf(nx('Series?')) !== -1 && nx('Prepare Series') === 'After Prepare Series' && nx('After Prepare Series') === 'Show Series Step'
      && si.nodes.find(n => n.name === 'Prepare Series').parameters.workflowId.value === 'UAwFoifgkfL1xNP2', 'wiring: a series goes to Book Series');
 
   // prepared -> the confirm screen
@@ -133,7 +133,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const confPay = m => ({ type: 'view_submission', view: { id: 'V3', private_metadata: JSON.stringify(m) } });
   const meta3 = { key: 'prep-sabc', n: 2, title: 'NFX-ABC-01 / HL', requester: 'U1', channel: 'D1', time: '14:00-16:00' };
   const rsc = await j1(si, 'Read Series Confirm', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: confPay(meta3) } }] });
-  ok(rsc.key === 'prep-sabc' && rsc.answer.response_action === 'update' && /Booking 2 dates/.test(JSON.stringify(rsc.answer.view)) && (V17 ? /Processing your series of bookings\. This may take a while, so you can close this window for now\. You will be notified once finished\./.test(JSON.stringify(rsc.answer.view)) : /result comes to your DM/.test(JSON.stringify(rsc.answer.view))), '"Booking 2 dates…" at once');
+  ok(rsc.key === 'prep-sabc' && rsc.answer.response_action === 'update' && /Booking 2 dates/.test(JSON.stringify(rsc.answer.view)) && (V17 ? /Processing your series of bookings\. This may take a while(, so you can close this window for now\. You will be notified once finished\.|\. You may close this window\. You’ll be notified when it’s done\.)/.test(JSON.stringify(rsc.answer.view)) : /result comes to your DM/.test(JSON.stringify(rsc.answer.view))), '"Booking 2 dates…" at once');
   const tbs = async (rows, R) => j1(si, 'To Book Series', V15 ? cache : rows.map(x => ({ json: x })), { 'Read Series Confirm': [{ json: R || rsc }], 'Read Saved Series': rows.map(x => ({ json: x })), 'Read Cache 8': cache });
   let T = await tbs([{ cache_key: 'prep-sabc', payload: JSON.stringify(payload) }]);
   ok(T.go && T.confirmed === true && T.mode === '' && T.dates === '2027-10-19,2027-11-02' && T.rooms === 'Studio 8', 'the stored series, checked, booked as stored');
@@ -153,8 +153,8 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(!T.go && /someone else/.test(T.why), 'someone else\'s -> nothing booked');
   T = await tbs([], Object.assign({}, rsc, { meta: Object.assign({}, meta3, { key: '', inputs }) }));
   ok(T.go && T.dates === inputs.dates, 'carried on the form -> booked from there');
-  ok(nx('Read Series Confirm') === 'Answer Series' && nx('Answer Series') === 'Read Saved Series' && nx('To Book Series') === 'Series Go?' && nx('Series Go?') === 'Book Series | After Book Series'
-     && nx('Book Series') === 'After Book Series' && nx('Show Series Result') === 'DM Series', 'wiring: route 13');
+  ok(nx('Read Series Confirm') === 'Answer Series' && ['Read Saved Series', 'Get Source Series'].indexOf(nx('Answer Series')) !== -1 && nx('To Book Series') === 'Series Go?' && nx('Series Go?') === 'Book Series | After Book Series'
+     && nx('Book Series') === 'After Book Series' && ['DM Series', 'DM Series+Source Done Series'].indexOf(nx('Show Series Result')) !== -1, 'wiring: route 13');
 
   // ---- the result
   const abs = async (res, Tx) => j1(si, 'After Book Series', [{ json: res }], { 'Read Series Confirm': [{ json: Object.assign({}, rsc, { viewId: 'V3' }) }], 'To Book Series': [{ json: Tx || Object.assign({ go: true }, inputs) }] });

@@ -95,3 +95,45 @@ sim-slice1-b 34, hello 20; main v269 test-nodes 657, gate 69/69, fromai + audit 
 Offline: sim-build-b 30 (Move v31's own code on the form's inputs: free stretches, the new title and details on the
 replacement, who is told); sim-step-c1 60, sim-series-form 49, sim-step-c2 59, sim-typed-to-form 70, sim-typed-series 21,
 sim-slice1-a 57, sim-slice1-b 34, hello 20; test-nodes 660 with Cancel v28 + Move v31; no repeated action ids.
+
+## Round 2 - the notes from testing builds A and B (15 Oct): Slack Interactions v19 + main v270
+
+| # | Note | Where |
+|---|---|---|
+| 1 | "You may close this window. You'll be notified when it's done." on Booking… and Changing… (the series screen reworded); a finished change also DMs the ✅ Changed card with its buttons | Slack Interactions |
+| 2 | My bookings' example in quotes | Slack Interactions |
+| 3 | The Changing… screen shows the proposed booking as the card | Slack Interactions |
+| 4 | Clients: a capital first letter on every word ("john smithy" -> John Smithy; ACME stays) | both |
+| 5 | A typed room that is free but on neither of the session type's lists is offered as "not a usual room" (Studio 2 for Music Mixing said "taken"); a "Use another room" box lists the other free rooms of the same kind | Slack Interactions |
+| 6 | Closing the series "Booking N dates…" view closes the whole form | Slack Interactions |
+| 7 | The message a booking started from shows "⏳ Your booking / series is being processed…" with its buttons hidden; then "✅ Booked." (a booking reply) or its buttons back (the menu, or a question on the form) | Slack Interactions |
+| 8 | Room names from the calendar matched to the room list ("Likha (Big Room)" -> Likha); the Change form lists only rooms of the same kind (it listed studios for a meeting) | both |
+| 9 | The engineer / arranger notice has the booking's Change / Cancel | Slack Interactions |
+
+Parked: PENDING 118 - a series shown as a series in My bookings, with Cancel series.
+
+### Import (Slack Interactions first, then main) - Cmd+A then **Delete** before each import
+
+1. **Slack Interactions v19** into `PyxSPoAMtSE1gzaH`: download into `workflows/imported/slack-interactions-live-before-v19.json`
+   (should MATCH v18) → clear → Import `workflows/slack-interactions-v19.json` → Publish "v19 - round 2" → download into
+   `workflows/imported/slack-interactions-v19-imported.json`.
+2. **main v270** into `uVVYVB2M7kxpLleI`: download into `workflows/imported/project-jessie-live-before-v270.json` (should
+   MATCH v269) → clear → Import `workflows/project-jessie-v270.json` → Publish "v270 - round 2: client capitals, room names"
+   → download into `workflows/imported/project-jessie-v270-imported.json`.
+
+### Test (2027 dates)
+
+1. `book studio 2 sat 10-2 music mixing, client john smithy` → the reply says "Client: John Smithy" → Book a room → step 2
+   offers Studio 2 "not a usual room for Music Mixing", chosen → Book → the reply shows "⏳ Your booking is being
+   processed…" with its buttons hidden, then "✅ Booked."; the Booking… screen has the close line.
+2. In step 2, tick **Use another room** → the other free studios.
+3. Change a booking → the Changing… screen shows the new card and the close line → a DM with the ✅ Changed card arrives.
+4. Change a meeting (Likha) → the room list has only conference rooms.
+5. A series through the menu → the menu shows "⏳ Your series is being processed…", then its buttons back; close the
+   "Booking N dates…" view → the whole form closes.
+6. Book with an engineer → their notice (to you) has **Change** / **Cancel** for that booking.
+7. My bookings → the example in quotes.
+
+Offline: `node scripts/sim-round-2.js` 38; sim-build-b 30, sim-step-c1 60, sim-series-form 49, sim-step-c2 59,
+sim-typed-to-form 70, sim-typed-series 21, sim-slice1-a 57, sim-slice1-b 34, hello 20; main v270 test-nodes 660, gate
+69/69, fromai + audit clean; no repeated action ids.

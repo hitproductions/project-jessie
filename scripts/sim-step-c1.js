@@ -39,7 +39,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(nx('To Cancel') === 'Cancel' && nx('Cancel') === 'After Cancel' && nx('After Cancel') === 'Update Cancelled', 'wiring: cancel');
   const V18 = si.nodes.some(n => n.name === 'Change Notices');
   ok(nx('Change OK?') === (V18 ? 'Client Names' : V17 ? 'Get Message Before' : 'Read Cache 7') && nx('After Move') === 'Show Change Result'
-     && nx('Moved?') === (V18 ? 'Get Message+Change Notices | Restore Message' : V17 ? 'Get Message | Restore Message' : 'Get Message') && nx('Fix Message') === 'Update Changed', 'wiring: change');
+     && nx('Moved?') === (si.nodes.some(n => n.name === 'DM Changed') ? 'Get Message+Change Notices+DM Changed | Restore Message' : V18 ? 'Get Message+Change Notices | Restore Message' : V17 ? 'Get Message | Restore Message' : 'Get Message') && nx('Fix Message') === 'Update Changed', 'wiring: change');
   if (V17) ok(nx('Ack Cancel') === 'Mark Cancelling' && nx('Cancelling Shown?') === 'Show Cancelling | Read Cache 5' && nx('Show Cancelling') === 'Read Cache 5'
      && nx('Get Message Before') === 'Mark Changing' && nx('Changing Shown?') === 'Show Changing | Read Cache 7' && nx('Show Changing') === 'Read Cache 7' && nx('Restore Message') === 'Update Restored', 'v17 wiring: processing lines, restore');
   ok(si.nodes.find(n => n.name === 'Cancel').parameters.workflowId.value === 'bAyDw7udhmY0NL38' && si.nodes.find(n => n.name === 'Move').parameters.workflowId.value === 't7lwR2km4tfN8DbM', 'Cancel / Move Booking ids');
@@ -137,7 +137,8 @@ const j1 = async (...a) => (await run(...a))[0].json;
   rc = await readC(sub('2027-10-16', '16:00', '15:00', 'Studio 7'));
   ok(!rc.valid && /after the start/.test(rc.answer.errors.end), 'end before start -> error');
   rc = await readC(sub('2027-10-16', '15:00', '17:00', 'Studio 7'));
-  ok(rc.valid && rc.answer.response_action === 'update' && /Changing ORANGE \/ Jem Lim \/ HL…\*\nSat, Oct 16 · 3:00 PM – 5:00 PM · Studio 7/.test(rc.answer.view.blocks[0].text.text)
+  ok(rc.valid && rc.answer.response_action === 'update' && (/Changing ORANGE \/ Jem Lim \/ HL…\*\nSat, Oct 16 · 3:00 PM – 5:00 PM · Studio 7/.test(rc.answer.view.blocks[0].text.text)
+     || rc.answer.view.blocks[0].text.text === '⏳ *Changing…*\n\n*ORANGE / Jem Lim / HL*\n*Date:* Saturday, October 16, 2027\n*Time:* 3:00 PM – 5:00 PM\n*Room:* Studio 7')
      && /This takes a few seconds\./.test(JSON.stringify(rc.answer.view)), 'valid -> "Changing…" at once');
   const tm = await j1(si, 'To Move', [], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });
   ok(tm.event_id === 'ev1' && tm.booking_date === '2027-10-16' && tm.new_start_iso === '2027-10-16T15:00:00+08:00' && tm.new_end_iso === '2027-10-16T17:00:00+08:00'

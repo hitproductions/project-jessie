@@ -183,13 +183,13 @@ async function run(wf, name, input, outs) {
   ok(b2('room').element.initial_option.value === 'Studio 7' && !/taken/.test(JSON.stringify(v2)), 'step 2: the room asked for, chosen (free)');
   ok(b2('project').element.initial_value === 'ORANGE' && b2('client').element.initial_value === 'Jem Lim' && b2('engineer').element.initial_option.value === 'U2'
      && b2('engineer').hint.text === 'As you typed it.', 'step 2: project, client, engineer filled in');
-  v2 = await step2(r1.s, { status: 'OK', free_priority: ['Studio 8'], free_last_resort: ['Studio 4'], free_rooms: ['Studio 8', 'Studio 4'] });
+  v2 = await step2(r1.s, { status: 'OK', free_priority: ['Studio 8'], free_last_resort: ['Studio 4'], free_rooms: ['Studio 8', 'Studio 4'], busy: ['Studio 7 (GOLDFISH / X / HL)'] });
   ok(v2.blocks.some(b => b.text && b.text.text === '⚠️ Studio 7 is taken then. These are free:') && b2('room').element.initial_option.value === 'Studio 8', 'step 2: taken -> said, the free ones offered');
   v2 = await step2(Object.assign({}, r1.s, { pre: { r: 'Studio 4' } }), { status: 'OK', free_priority: ['Studio 8'], free_last_resort: ['Studio 4'], free_rooms: ['Studio 8', 'Studio 4'] });
   ok(b2('room').element.initial_option.value === 'Studio 4' && /not a usual room/.test(b2('room').element.initial_option.description.text), 'step 2: a free room that is not usual -> offered as such, chosen');
   v2 = await step2(Object.assign({}, r1.s, { pre: { r: 'Likha' } }), { status: 'OK', free_priority: ['Studio 8'], free_last_resort: [], free_rooms: ['Studio 8', 'Likha'] });
   ok(v2.blocks.some(b => b.text && b.text.text === '⚠️ Likha isn’t a room for VO Recording. These are free:'), 'step 2: free but not a room for this -> said');
-  v2 = await step2(r1.s, { status: 'OK', free_priority: [], free_last_resort: [], free_rooms: [] });
+  v2 = await step2(r1.s, { status: 'OK', free_priority: [], free_last_resort: [], free_rooms: [], busy: ['Studio 7 (GOLDFISH / X / HL)', 'Studio 8 (X)'] });
   ok(v2.blocks.some(b => b.text && b.text.text === '⚠️ Studio 7 is taken then.') && !v2.submit, 'step 2: nothing free -> taken said, no Book');
   v2 = await step2(Object.assign({}, r1.s, { purpose: 'Music Mixing', pre: { ar: 'U4', en: 'U9' } }), { status: 'OK', free_priority: ['Studio F'], free_last_resort: [] });
   ok(b2('arranger').element.initial_option.value === 'U4' && b2('engineer').element.initial_option.value === 'U1', 'step 2: arranger filled in; an engineer not on the list falls back to the requester');
