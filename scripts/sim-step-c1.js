@@ -5,7 +5,7 @@
 // the problem with free times, the message's row updated; the team rule in Cancel and Move.
 // Usage: node scripts/sim-step-c1.js [slack interactions v11] [cancel v27] [move v30]
 const fs = require('fs');
-const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v11.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v16.json', 'utf8'));
 const cx = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/cancel-booking-v27.json', 'utf8'));
 const mv = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/move-booking-v30.json', 'utf8'));
 let pass = 0, fail = 0;
@@ -75,6 +75,17 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(L.blocks.filter(b => /^bka_/.test(b.block_id || '')).length === 3 && /\*Your bookings\* · Fri, Oct 22 – Thu, Oct 28/.test(L.blocks[0].text.text), 'each with Change / Cancel; the week in the header');
   const nav = L.blocks.find(b => b.block_id === 'my_nav').elements;
   ok(nav[0].value === '2027-10-15' && nav[1].value === '2027-10-29' && nav[0].text.text === '← Previous 7 days' && L.page && L.ts === '5.5', 'Previous / Next 7 days');
+  // v16 (live: My bookings never showed): Slack refuses a block whose elements repeat an action_id
+  ok(L.blocks.every(b => !b.elements || new Set(b.elements.map(e => e.action_id).filter(Boolean)).size === b.elements.filter(e => e.action_id).length),
+     'every block\'s buttons have their own action_id (Slack refuses repeats) - ' + JSON.stringify(nav.map(e => e.action_id)));
+  if (si.nodes.some(n => n.name === 'Report List')) {
+    ok(await route({ type: 'block_actions', actions: [{ action_id: 'my_page_next' }] }) === 12 && await route({ type: 'block_actions', actions: [{ action_id: 'my_page_prev' }] }) === 12, 'v16: Previous / Next route to the page');
+    const W2 = await win({ action_id: 'my_page_next', value: '2027-10-29' });
+    ok(W2.page && W2.start === '2027-10-29', 'v16: the page button\'s week');
+    const rep = async (res) => run(si, 'Report List', [{ json: res }], { 'Check Signature': chk() });
+    ok((await rep({ ok: true })).length === 0 && /invalid_blocks/.test((await rep({ ok: false, error: 'invalid_blocks' }))[0].json.text), 'v16: Slack refusing the message -> a DM saying why');
+    ok(nx('Post List') === 'Report List' && nx('Update List') === 'Report List' && nx('Report List') === 'DM List Failed', 'v16 wiring');
+  }
   L = await render({ items: [] });
   ok(L.blocks.some(b => b.text && b.text.text === 'Nothing booked these 7 days.'), 'none -> said');
   L = await render({ error: { message: 'boom' } });

@@ -812,6 +812,12 @@ the task runner), for whoever has shell access to the box.
     needs. When a form calls a sub-workflow the chat already calls, diff the inputs against the chat's call (here main's
     Series Direct) and run the sim one step further. And never print a refusal code to a requester - map it to words.
 
+42. **Slack refuses a message whose block repeats an action_id, and an HTTP node with "continue on error" hides it** (15 Oct).
+    My bookings' Previous / Next 7 days buttons shared `my_page`; chat.postMessage answered `invalid_blocks` and the person saw
+    nothing at all - the sims passed because they never send to Slack. Every button in a block needs its own action_id
+    (`sim-step-c1` now checks every rendered block), and every message Slack might refuse should have a report step that tells
+    the person why (Report Open, Report List).
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the

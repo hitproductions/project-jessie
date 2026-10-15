@@ -110,3 +110,13 @@ Import: main - download into `workflows/imported/project-jessie-live-before-v267
 Import `workflows/project-jessie-v267.json` → Save → Publish "v267 - menu after a booking reply" → download into
 `workflows/imported/project-jessie-v267-imported.json`. Test: `book studio 7 tomorrow` → the reply → `lhkjf;kj` → the menu;
 `thanks` → "Anytime! Anything else?".
+
+## Fix (15 Oct afternoon): Slack Interactions v16 - My bookings shows
+
+"Clicking My bookings doesn't do anything": its Previous / Next 7 days buttons shared one action id, which Slack refuses,
+so the message was never posted (and nothing said so). Now my_page_prev / my_page_next, and a refused My bookings message
+DMs Slack's reason. Gotcha 42.
+Import: **Slack Interactions v16** into `PyxSPoAMtSE1gzaH` - download into `workflows/imported/slack-interactions-live-before-v16.json`
+(should MATCH v15) → clear → Import `workflows/slack-interactions-v16.json` → Save → Publish "v16 - my bookings shows" →
+download into `workflows/imported/slack-interactions-v16-imported.json`. Test: `hi` → **My bookings** → the week; Next /
+Previous 7 days.
