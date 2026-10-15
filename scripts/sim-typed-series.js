@@ -4,8 +4,8 @@
 // in; Read Step 1 turns that into the dates.
 // Usage: node scripts/sim-typed-series.js [main v268] [slack interactions v14]
 const fs = require('fs');
-const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v268.json', 'utf8'));
-const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v14.json', 'utf8'));
+const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v269.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v17.json', 'utf8'));
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
@@ -44,6 +44,16 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(F.prefill.rep.days.join() === 'MO' && F.prefill.rep.n === 3, '"mondays" counts as every Monday');
   F = await offer('book studio 7 every friday until friday nov 26', '2027-11-26');
   ok(F.prefill.rep.days.join() === 'FR' && F.prefill.rep.u === '2027-11-26' && F.prefill.d === '2027-10-22', 'a day named after "until" is the end, not another day');
+  if (/v269/.test(main.nodes.find(n => n.name === 'Form Offer').parameters.jsCode)) {
+    // v269 (live 14:55): Gate resolved only "thursday" (Oct 21) - the series starts on the first named day after today
+    F = await offer('book likha every tuesday and thursday 10-11am, 4 times', '2027-10-21', { timeInNewest: true, timeStart: '10:00', timeEnd: '11:00' });
+    ok(F.prefill.d === '2027-10-19' && /from Tuesday, October 19/.test(F.text), 'v269: Tue and Thu -> from Tue Oct 19 (live 14:55 said Thu Oct 21)');
+    F = await offer('book studio 7 every monday starting oct 25 2-4pm, 3 times', '2027-10-25', tm);
+    ok(F.prefill.d === '2027-10-25', 'v269: a typed calendar date is still the start');
+    F = await offer('book studio 7 every friday until friday nov 26', '2027-11-26');
+    ok(F.prefill.d === '2027-10-22' && F.prefill.rep.u === '2027-11-26', 'v269: until a date - from the next Friday');
+    ok(F.blocks[1].elements.map(e => e.action_id).join() === 'open_book,my_bookings', 'v269: My bookings beside Book a room');
+  }
   F = await offer('book studio 7 tomorrow 2-4pm', '2027-10-16', tm);
   ok(!F.prefill.rep && F.prefill.d === '2027-10-16', 'a single booking: no pattern, as before');
   F = await offer('book studio 7 every monday for 40 weeks', '2027-10-18');

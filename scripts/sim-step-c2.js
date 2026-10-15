@@ -4,8 +4,8 @@
 // Change form starting at the time typed (Build Change).
 // Usage: node scripts/sim-step-c2.js [main v265] [slack interactions v12]
 const fs = require('fs');
-const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v267.json', 'utf8'));
-const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v12.json', 'utf8'));
+const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v269.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v17.json', 'utf8'));
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
@@ -52,7 +52,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
     ev('ev4', 'THEIRS / X / DR', '2027-10-16T09:00:00+08:00', '2027-10-16T10:00:00+08:00', 'ref: U9')] };
   const reply = async (co, res) => j1(main, 'Change Reply', [{ json: res || cal }], { 'Change Offer': [{ json: { changeOffer: co } }] });
   let r = await reply(await offerOf('cancel ORANGE saturday', { dates: '2027-10-16' }));
-  ok(r.count === 1 && r.blocks[0].text.text === 'Here it is - press *Cancel* to cancel it.' && r.blocks[1].block_id === 'bk_ev1'
+  ok(r.count === 1 && ['Here it is - press *Cancel* to cancel it.', 'Here’s the booking – press *Cancel* to cancel it.'].indexOf(r.blocks[0].text.text) !== -1 && r.blocks[1].block_id === 'bk_ev1'
      && r.blocks[1].text.text === '*ORANGE / Jem Lim / HL*\nSat, Oct 16 · 2:00 PM – 4:00 PM · Studio 7', 'cancel ORANGE saturday -> that one booking');
   const bt = r.blocks[2].elements;
   ok(bt.map(x => x.action_id).join() === 'bk_change,bk_cancel' && bt[1].confirm && bt[1].confirm.confirm.text === 'Cancel booking' && r.channel === 'D1',
@@ -68,7 +68,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(r.count === 1 && r.blocks[1].block_id === 'bk_ev1', 'by date and time');
   co = await offerOf('make it 3-5pm', { bf: { timeInNewest: true, timeStart: '15:00', timeEnd: '17:00' }, history: [bookedDM] });
   r = await reply(co);
-  ok(r.count === 1 && r.blocks[0].text.text === 'Here it is - press *Change* to check the new time.'
+  ok(r.count === 1 && ['Here it is - press *Change* to check the new time.', 'Here’s your proposed change – press *Change* to check the new time.'].indexOf(r.blocks[0].text.text) !== -1
      && r.blocks[1].text.text === '*ORANGE / Jem Lim / HL*\nNow: Sat, Oct 16 · 2:00 PM – 4:00 PM · Studio 7\nNew: Sat, Oct 16 · 3:00 PM – 5:00 PM · Studio 7', 'make it 3-5pm after Booked -> Now / New');
   const cv = JSON.parse(r.blocks[2].elements[0].value), xv = JSON.parse(r.blocks[2].elements[1].value);
   ok(cv.id === 'ev1' && JSON.stringify(cv.n) === '{"s":"15:00","e":"17:00"}' && !xv.n, 'Change carries the new times; Cancel does not');

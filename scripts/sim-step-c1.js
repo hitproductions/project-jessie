@@ -5,7 +5,8 @@
 // the problem with free times, the message's row updated; the team rule in Cancel and Move.
 // Usage: node scripts/sim-step-c1.js [slack interactions v11] [cancel v27] [move v30]
 const fs = require('fs');
-const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v16.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v17.json', 'utf8'));
+const V17 = si.nodes.some(n => n.name === 'Mark Cancelling');
 const cx = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/cancel-booking-v27.json', 'utf8'));
 const mv = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/move-booking-v30.json', 'utf8'));
 let pass = 0, fail = 0;
@@ -36,7 +37,9 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');
   ok(C.Route.main[7][0].node === 'Ack My Bookings' && C.Route.main[12][0].node === 'Ack My Bookings' && nx('Page?') === 'Update List | Post List', 'wiring: My bookings posts, a page updates');
   ok(nx('To Cancel') === 'Cancel' && nx('Cancel') === 'After Cancel' && nx('After Cancel') === 'Update Cancelled', 'wiring: cancel');
-  ok(nx('Change OK?') === 'Read Cache 7' && nx('After Move') === 'Show Change Result' && nx('Moved?') === 'Get Message' && nx('Fix Message') === 'Update Changed', 'wiring: change');
+  ok(nx('Change OK?') === (V17 ? 'Get Message Before' : 'Read Cache 7') && nx('After Move') === 'Show Change Result' && nx('Moved?') === (V17 ? 'Get Message | Restore Message' : 'Get Message') && nx('Fix Message') === 'Update Changed', 'wiring: change');
+  if (V17) ok(nx('Ack Cancel') === 'Mark Cancelling' && nx('Cancelling Shown?') === 'Show Cancelling | Read Cache 5' && nx('Show Cancelling') === 'Read Cache 5'
+     && nx('Get Message Before') === 'Mark Changing' && nx('Changing Shown?') === 'Show Changing | Read Cache 7' && nx('Show Changing') === 'Read Cache 7' && nx('Restore Message') === 'Update Restored', 'v17 wiring: processing lines, restore');
   ok(si.nodes.find(n => n.name === 'Cancel').parameters.workflowId.value === 'bAyDw7udhmY0NL38' && si.nodes.find(n => n.name === 'Move').parameters.workflowId.value === 't7lwR2km4tfN8DbM', 'Cancel / Move Booking ids');
 
   // ---- the Booked DM carries Change / Cancel
@@ -102,7 +105,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(tc.event_id === 'ev1' && tc.booking_date === '2027-10-16' && tc.title === B.t && tc.confirmed === true && tc.requester === 'U1' && tc.requester_name === 'Howard Luistro'
      && tc.authority === 'HAIST Dev' && tc.department === 'Audio Post' && tc.booking_time === '14:00', 'Cancel Booking inputs: the id on its date, confirmed, who is asking');
   let ac = await j1(si, 'After Cancel', [{ json: { status: 'CANCELLED' } }], { 'Read Request': [{ json: { payload: cpay } }] });
-  ok(ac.ok && ac.channel === 'D1' && ac.ts === '7.7' && ac.blocks.find(b => b.block_id === 'bk_ev1').text.text === '❌ *Cancelled:* ORANGE / Jem Lim / HL\nSat, Oct 16 · 2:00 PM – 4:00 PM · Studio 7'
+  ok(ac.ok && ac.channel === 'D1' && ac.ts === '7.7' && ac.blocks.find(b => b.block_id === 'bk_ev1').text.text === (V17 ? '❌ *Cancelled.*\n\n*ORANGE / Jem Lim / HL*\n*Date:* Saturday, October 16, 2027\n*Time:* 2:00 PM – 4:00 PM\n*Room:* Studio 7' : '❌ *Cancelled:* ORANGE / Jem Lim / HL\nSat, Oct 16 · 2:00 PM – 4:00 PM · Studio 7')
      && !ac.blocks.some(b => b.block_id === 'bka_ev1') && ac.blocks.some(b => b.block_id === 'bka_ev2'), 'cancelled -> the row says so, its buttons go, the others stay');
   ac = await j1(si, 'After Cancel', [{ json: { status: 'REJECTED', reason: 'NOT_YOURS' } }], { 'Read Request': [{ json: { payload: cpay } }] });
   const wi = ac.blocks.findIndex(b => b.block_id === 'bkw_ev1');
@@ -156,12 +159,40 @@ const j1 = async (...a) => (await run(...a))[0].json;
   am = await j1(si, 'After Move', [{ json: { status: 'MOVED', event_id: 'ev9' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache });
   const hist = blocks => ({ ok: true, messages: [{ ts: '7.7', text: 'x', blocks }] });
   let fx = await j1(si, 'Fix Message', [{ json: hist(msg.blocks) }], { 'After Move': [{ json: am }] });
-  ok(fx.channel === 'D1' && fx.ts === '7.7' && fx.blocks.find(b => b.block_id === 'bk_ev9').text.text === '*ORANGE / Jem Lim / HL*\nSat, Oct 16 · 3:00 PM – 5:00 PM · Studio 7\n_Changed_'
+  ok(fx.channel === 'D1' && fx.ts === '7.7' && fx.blocks.find(b => b.block_id === 'bk_ev9').text.text === (V17 ? am.card : '*ORANGE / Jem Lim / HL*\nSat, Oct 16 · 3:00 PM – 5:00 PM · Studio 7\n_Changed_')
      && JSON.parse(fx.blocks.find(b => b.block_id === 'bka_ev9').elements[0].value).id === 'ev9' && !fx.blocks.some(b => b.block_id === 'bk_ev1') && fx.blocks.some(b => b.block_id === 'bk_ev2'),
      'a list row -> the new time, Changed, buttons on the new booking');
   fx = await j1(si, 'Fix Message', [{ json: hist([{ type: 'section', block_id: 'bk_ev1', text: { type: 'mrkdwn', text: ':white_check_mark: *Booked.*\n\n…' } }, { type: 'actions', block_id: 'bka_ev1', elements: [] }]) }], { 'After Move': [{ json: am }] });
   ok(fx.blocks[0].text.text === am.card && fx.blocks[1].block_id === 'bka_ev9', 'the Booked DM -> the Changed card');
   ok((await run(si, 'Fix Message', [{ json: { ok: true, messages: [{ ts: '1.1', blocks: [] }] } }], { 'After Move': [{ json: am }] })).length === 0, 'message not found -> left alone');
+  if (V17) {
+    // v17: a reply about one booking loses its "Here's…" line once done; a list keeps its heading
+    const reply = [{ type: 'section', text: { type: 'mrkdwn', text: 'Here’s your proposed change – press *Change* to check the new time.' } },
+      { type: 'section', block_id: 'bk_ev1', text: { type: 'mrkdwn', text: '*ORANGE*' } }, { type: 'actions', block_id: 'bka_ev1', elements: [] }];
+    fx = await j1(si, 'Fix Message', [{ json: hist(reply) }], { 'After Move': [{ json: am }] });
+    ok(fx.blocks.length === 2 && fx.blocks[0].text.text === am.card && /^✅ \*Changed\.\*\n\n/.test(am.card), 'v17: a one-booking reply -> just the Changed card');
+    const cOne = Object.assign({}, cpay, { message: { blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Here’s the booking – press *Cancel* to cancel it.' } },
+      { type: 'section', block_id: 'bk_ev1', text: { type: 'mrkdwn', text: '*ORANGE*' } }, { type: 'actions', block_id: 'bka_ev1', elements: [] }] } });
+    const ac1 = await j1(si, 'After Cancel', [{ json: { status: 'CANCELLED' } }], { 'Read Request': [{ json: { payload: cOne } }] });
+    ok(ac1.blocks.length === 1 && /^❌ \*Cancelled\.\*/.test(ac1.blocks[0].text.text), 'v17: a one-booking reply -> just the Cancelled card');
+    const which = Object.assign({}, cpay, { message: { blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Which one?' } }].concat(msg.blocks.slice(1)) } });
+    ok((await j1(si, 'After Cancel', [{ json: { status: 'CANCELLED' } }], { 'Read Request': [{ json: { payload: which } }] })).blocks[0].text.text === 'Which one?', 'v17: a list keeps its heading');
+    // the processing lines
+    const mcx = await j1(si, 'Mark Cancelling', [], { 'Read Request': [{ json: { payload: cpay } }] });
+    const wl = mcx.blocks.findIndex(b => b.block_id === 'bkw_ev1');
+    ok(mcx.ok && mcx.ts === '7.7' && wl === mcx.blocks.findIndex(b => b.block_id === 'bk_ev1') + 1 && mcx.blocks[wl].elements[0].text === '⏳ Your cancellation is being processed…'
+       && !mcx.blocks.some(b => b.block_id === 'bka_ev1') && mcx.blocks.some(b => b.block_id === 'bka_ev2'), 'v17: cancelling -> details kept, its buttons hidden, "⏳ Your cancellation is being processed…"');
+    const mch = await j1(si, 'Mark Changing', [{ json: hist(msg.blocks) }], { 'Read Change': [{ json: rc }] });
+    ok(mch.ok && mch.blocks.find(b => b.block_id === 'bkw_ev1').elements[0].text === '⏳ Your change is being processed…' && !mch.blocks.some(b => b.block_id === 'bka_ev1')
+       && mch.original.length === msg.blocks.length, 'v17: changing -> "⏳ Your change is being processed…", the original kept for a failure');
+    ok(!(await j1(si, 'Mark Changing', [{ json: { ok: false } }], { 'Read Change': [{ json: rc }] })).ok, 'v17: message not found -> nothing marked');
+    const failM = await j1(si, 'After Move', [{ json: { status: 'REJECTED', reason: 'ROOM_OCCUPIED' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache });
+    const rs1 = await run(si, 'Restore Message', [], { 'After Move': [{ json: failM }], 'Mark Changing': [{ json: mch }] });
+    ok(rs1.length === 1 && rs1[0].json.blocks === mch.original && rs1[0].json.ts === '7.7', 'v17: a change that fails -> the row back as it was');
+    ok((await run(si, 'Restore Message', [], { 'After Move': [{ json: am }], 'Mark Changing': [{ json: mch }] })).length === 0, 'v17: a change that works -> nothing restored (Fix Message does it)');
+    fx = await j1(si, 'Fix Message', [{ json: hist(mch.blocks) }], { 'After Move': [{ json: am }] });
+    ok(!fx.blocks.some(b => b.block_id === 'bkw_ev1' || b.block_id === 'bkw_ev9') && fx.blocks.some(b => b.block_id === 'bka_ev9'), 'v17: done -> the processing line goes, the new buttons come');
+  }
 
   // ---- the team rule: Cancel Booking v27 / Move Booking v30
   const day = desc => ({ items: [{ id: 'ev1', summary: B.t, start: { dateTime: '2027-10-16T14:00:00+08:00' }, end: { dateTime: '2027-10-16T16:00:00+08:00' }, description: desc }] });
