@@ -139,7 +139,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   rc = await readC(sub('2027-10-16', '15:00', '17:00', 'Studio 7'));
   ok(rc.valid && rc.answer.response_action === 'update' && (/Changing ORANGE \/ Jem Lim \/ HL…\*\nSat, Oct 16 · 3:00 PM – 5:00 PM · Studio 7/.test(rc.answer.view.blocks[0].text.text)
      || rc.answer.view.blocks[0].text.text === '⏳ *Changing…*\n\n*ORANGE / Jem Lim / HL*\n*Date:* Saturday, October 16, 2027\n*Time:* 3:00 PM – 5:00 PM\n*Room:* Studio 7')
-     && /This takes a few seconds\./.test(JSON.stringify(rc.answer.view)), 'valid -> "Changing…" at once');
+     && /This takes a few seconds\.|You may close this window – we’ll notify you/.test(JSON.stringify(rc.answer.view)), 'valid -> "Changing…" at once');
   const tm = await j1(si, 'To Move', [], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });
   ok(tm.event_id === 'ev1' && tm.booking_date === '2027-10-16' && tm.new_start_iso === '2027-10-16T15:00:00+08:00' && tm.new_end_iso === '2027-10-16T17:00:00+08:00'
      && tm.new_rooms === '' && tm.confirmed === true && tm.authority === 'HAIST Dev' && tm.title === B.t, 'Move Booking inputs: same room -> no new room');

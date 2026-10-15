@@ -94,7 +94,7 @@ async function run(wf, name, input, outs) {
   const step2 = async (r1j, ra) => (await run(si, 'Build Step 2', [{ json: ra }], { 'Read Step 1': [{ json: r1j }], 'Read Cache 2': cacheRow }))[0].json;
   let s2 = await step2(r1, { status: 'OK', free_priority: ['Studio 8', 'Studio F'], free_last_resort: ['Studio 4'] });
   const radio = s2.view.blocks.find(b => b.block_id === 'room').element;
-  ok(radio.options.map(o => o.value).join() === 'Studio 8,Studio F' && /Recommended/.test(radio.options[0].description.text), 'step 2: usual free rooms, top recommended');
+  ok(radio.options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio 8,Studio F' && /Recommended/.test(radio.options[0].description.text), 'step 2: usual free rooms, top recommended');
   ok(JSON.stringify(s2.view).indexOf('Not free then: Studio 7, Studio C') !== -1, 'step 2: names the usual rooms not free');
   ok(['project', 'client', 'engineer'].every(b => s2.view.blocks.some(x => x.block_id === b)) && s2.view.blocks.some(x => x.block_id === 'notes' || x.block_id === 'note_toggle') && s2.view.submit && s2.external_id === r1.s.ext, 'step 2: studio fields, Book, same external_id');
   const engEl = s2.view.blocks.find(b => b.block_id === 'engineer').element;
@@ -129,7 +129,7 @@ async function run(wf, name, input, outs) {
   if (arrEl.type === 'static_select') ok(['Peter Legaste', 'No arranger,Peter Legaste'].indexOf(arrEl.options.map(o => o.text.text).join()) !== -1, 'arrangers only, from Bookers (v7: plus No arranger first)');
   const engM = s2.view.blocks.find(b => b.block_id === 'engineer').element;
   if (engM.option_groups) ok(engM.option_groups[0].label.text === 'Music Engineers' && engM.option_groups[0].options.map(o => o.text.text).join() === 'Daryl Reyes,Howard Luistro', 'music: music engineers first');
-  else ok(engM.options.map(o => o.text.text).join() === 'Daryl Reyes,Howard Luistro,Jetrho Ty', 'music: the same A to Z list');
+  else ok(engM.options.filter(o => o.value !== 'none').map(o => o.text.text).join() === 'Daryl Reyes,Howard Luistro,Jetrho Ty', 'music: the same A to Z list (v22: after No engineer)');
 
   // step 2 submit (dry run)
   const meta = Object.assign({}, r1.s, { when: 'Friday, Oct 15 · 2:00 PM–4:00 PM', label: 'VO Recording' });

@@ -317,3 +317,50 @@ post, all day" → download into `workflows/imported/slack-interactions-v21-impo
 Offline: `node scripts/sim-round-4.js` 48 (fails on v20); sim-si-wiring 11, sim-round-2 38, sim-slice1-a 57, sim-slice1-b 34,
 sim-hello-form 20, sim-step-c1 60, sim-series-form 49, sim-build-b 30, sim-typed-to-form 70, sim-typed-series 21, sim-step-c2
 59; fromai ok, audit clean.
+
+## Round 5 - Slack Interactions v22 + Move Booking v32 (15 Oct)
+
+From testing v21:
+
+1. **Booths**: only the usual one has a line ("Studio 1’s usual booth"); no "the engineer patches it (Dante)".
+2. **"_Another room…_"** is the last choice in the Room / Studio list; picking it opens the dropdown right under the list. The
+   "Use another room" row is gone.
+3. **Working lines**: "Your booking is being processed. You may close this window – we’ll notify you once it’s done." (and the
+   same close line when changing or booking a series); the series date check just says "Checking availability for each date."
+4. **Changing an all-day booking** (an M booth all day is 12:00 AM to 12:00 AM the next day): the Change form opens with **All
+   day booking** ticked and no Start / End - a room or date change keeps it all day; untick for times. Rows and cards say
+   "All day".
+5. **No engineer** for Music Mixing and Music Vocal Recording: an engineer, an arranger, or both - never neither ("Pick an
+   engineer or an arranger."). "MUSICMIXTEST / JS". The Change form's details offer No engineer too.
+6. **Rooms in order.** Google lists a booking's rooms in its own order, so the CELEBTEST Change form said "Room: Studio D".
+   New bookings keep a "Rooms: Studio F, Studio D, Likha, Katha" line (Move Booking v32 keeps it up to date); older ones are
+   sorted by Airtable (Vocal Booth = booth, Conference Room = holding). "Likha (Big Room)" reads "Likha". The Change form of a
+   booking with a booth or holding rooms shows **Studio**, **Booth** (or No booth) and **Holding rooms**, like Book.
+
+Still left for main: the chat's own lists ("what do I have", a typed cancel / change) show rooms in Google's order and an
+all-day booking as "12:00 AM – 12:00 AM" (main's row helpers) - the same fix in main when next built.
+
+### Import - Cmd+A then **Delete** before each import
+
+1. **Move Booking v32** into `t7lwR2km4tfN8DbM`: download into `workflows/imported/move-booking-live-before-v32.json` (should
+   MATCH v31) → clear → Import `workflows/move-booking-v32.json` → Save → **Publish** "v32 - rooms line" → download into
+   `workflows/imported/move-booking-v32-imported.json`.
+2. **Slack Interactions v22** into `PyxSPoAMtSE1gzaH`: download into `workflows/imported/slack-interactions-live-before-v22.json`
+   (should MATCH v21) → clear → Import `workflows/slack-interactions-v22.json` → Save → **Publish** "v22 - round 5" → download
+   into `workflows/imported/slack-interactions-v22-imported.json`.
+
+### Test (2027 dates)
+
+1. Localization Dubbing → the booths: only the usual one has a line.
+2. Music Mixing → "_Another room…_" at the bottom of the list → the dropdown opens under it → pick a studio → Book.
+3. Book anything → "Your booking is being processed. You may close this window – we’ll notify you once it’s done."
+4. M booth → All day → Book → Change it → All day ticked, no times → pick another M booth → Change → still all day.
+5. Music Mixing → Engineer "No engineer" + Arranger Joaquin → Book ("… / JS"); both empty -> "Pick an engineer or an arranger."
+6. Celebrity Recording with a booth and two holding rooms → Book → My bookings shows "Studio F + Studio D + Likha, Katha" →
+   Change → Studio F, Booth Studio D, Holding rooms ticked → set No booth, untick one → Change → the calendar event has
+   Studio F and the one holding room; Change again → the form matches.
+7. Change the CELEBTEST booking from earlier (no Rooms line) → Studio F, Booth D, Likha + Katha.
+
+Offline: `node scripts/sim-round-5.js` 40 (fails on v21); sim-round-4 48, sim-si-wiring 11, sim-round-2 38, sim-slice1-a 57,
+sim-slice1-b 34, sim-hello-form 20, sim-step-c1 60, sim-series-form 49, sim-build-b 30 (with Move v32), sim-typed-to-form 70,
+sim-typed-series 21, sim-step-c2 59; test-nodes 570 (Move v32), gate 69/69, fromai ok, audit clean.

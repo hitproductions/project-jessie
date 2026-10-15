@@ -211,7 +211,7 @@ async function run(wf, name, input, outs) {
       state: { values: { room: { room_radio: { selected_option: { value: 'Studio C' } } }, project: { project_in: { value: 'X' } }, engineer: { engineer_pick: { selected_option: { value: 'U1' } } } } } } };
     const rd = (await run(si, 'Read Step 2', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: sub } }], 'Read Cache 3': cache3 }))[0].json;
     ok(rd.prep.room_override === true, 'v10: a not-usual room without a note on it -> booked as asked (room_override)');
-    ok(/This takes a few seconds\./.test(JSON.stringify(rd.answer.view)) && !/writing it to the calendar/.test(JSON.stringify(rd.answer.view)), 'v10: "This takes a few seconds."');
+    ok(/This takes a few seconds\.|Your booking is being processed\. You may close/.test(JSON.stringify(rd.answer.view)) && !/writing it to the calendar/.test(JSON.stringify(rd.answer.view)), 'v10: "This takes a few seconds."');
     // the note checkbox
     v2 = await step2(Object.assign({}, r1.s, { pre: undefined }), { status: 'OK', free_priority: ['Studio 7'], free_last_resort: [] });
     const nt = b2('note_toggle');

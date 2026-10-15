@@ -48,13 +48,14 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   const sNoPre = Object.assign({}, r1.s, { pre: undefined });
   v = await step2({ status: 'OK', free_priority: ['Studio F'], free_last_resort: [], busy: [] }, sNoPre);
   const oth = JSON.parse(v.private_metadata).others;
-  ok(oth.join() === 'Studio 2,Studio 7' && v.blocks.some(b => b.block_id === 'room_toggle'), '5: "Use another room" lists the other free studios (not booths, not conference rooms) - ' + oth.join());
+  ok(oth.join() === 'Studio 2,Studio 7' && (v.blocks.some(b => b.block_id === 'room_toggle') || v.blocks.find(b => b.block_id === 'room').element.options.slice(-1)[0].value === '__other'), '5: "Use another room" lists the other free studios (not booths, not conference rooms) - ' + oth.join());
   // the box opens the list; Read Step 2 takes it, booked as asked
-  const tog = await j1(si, 'Note Toggle', [], { 'Read Cache 9': cache, 'Read Request': [{ json: { payload: { type: 'block_actions', actions: [{ action_id: 'room_toggle', selected_options: [{ value: 'room' }] }],
-    view: { id: 'V2', callback_id: 'book_step2', title: v.title, close: v.close, submit: v.submit, private_metadata: v.private_metadata, blocks: v.blocks, state: { values: {} } } } } }] });
+  const V22 = !v.blocks.some(b => b.block_id === 'room_toggle');   // v22: "Another room…" is a room choice
+  const tog = await j1(si, 'Note Toggle', [], { 'Read Cache 9': cache, 'Read Request': [{ json: { payload: { type: 'block_actions', actions: [V22 ? { action_id: 'room_radio', selected_option: { value: '__other' } } : { action_id: 'room_toggle', selected_options: [{ value: 'room' }] }],
+    view: { id: 'V2', callback_id: 'book_step2', title: v.title, close: v.close, submit: v.submit, private_metadata: v.private_metadata, blocks: v.blocks, state: { values: V22 ? { room: { room_radio: { selected_option: { value: '__other' } } } } : {} } } } } }] });
   const ro = tog.view.blocks.find(b => b.block_id === 'room_other');
   ok(ro && ro.element.options.map(o => o.value).join() === 'Studio 2,Studio 7' && (ro.element.options[0].description ? ro.element.options[0].description.text === 'not a usual room for Music Mixing' : /Not a usual room for Music Mixing/.test(ro.hint.text))   /* v21: a hint - Slack refuses option descriptions in a dropdown */
-     && tog.view.blocks.findIndex(b => b.block_id === 'room_other') === tog.view.blocks.findIndex(b => b.block_id === 'room_toggle') + 1, '5: ticked -> "Another room" with the free ones, each "not a usual room"');
+     && tog.view.blocks.findIndex(b => b.block_id === 'room_other') === tog.view.blocks.findIndex(b => b.block_id === (V22 ? 'room' : 'room_toggle')) + 1, '5: ticked -> "Another room" with the free ones, each "not a usual room"');
   const sub2 = { type: 'view_submission', view: { id: 'V2', private_metadata: v.private_metadata, blocks: v.blocks, state: { values: {
     room: { room_radio: { selected_option: { value: 'Studio F' } } }, room_other: { room_other_pick: { selected_option: { value: 'Studio 7' } } }, project: { project_in: { value: 'mix1' } },
     client: { client_in: { value: 'john mcdonald' } }, engineer: { engineer_pick: { selected_option: { value: 'U3' } } } } } } };
@@ -65,7 +66,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   const cap = async (c) => (await j1(si, 'Read Step 2', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: Object.assign({}, sub2, { view: Object.assign({}, sub2.view, { state: { values: Object.assign({}, sub2.view.state.values, { client: { client_in: { value: c } } }) } }) }) } }], 'Read Cache 3': cache })).prep.client;
   ok(await cap('ACME') === 'ACME' && await cap('mcDonald') === 'McDonald' && await cap("o'brien") === "O'Brien" && await cap('sasa abella') === 'Sasa Abella', '4: ACME stays; mcDonald -> McDonald; o\'brien -> O\'Brien');
   // ---- 1: Booking… says you may close it
-  ok(/Your booking is being processed\. This takes a few seconds\. You may close this window\. You’ll be notified when it’s done\./.test(JSON.stringify(rs2.answer.view)) && rs2.answer.view.clear_on_close, '1: Booking… - "You may close this window…"');
+  ok(/Your booking is being processed\. (?:This takes a few seconds\. )?You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\./.test(JSON.stringify(rs2.answer.view)) && rs2.answer.view.clear_on_close, '1: Booking… - "You may close this window…"');
 
   // ---- 7: the source message while booking, and after
   const offerMsg = { ts: '50.5', text: 'Here’s what I have so far', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Here’s what I have so far:' } },
@@ -99,7 +100,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
 
   // ---- 6 + 1: the series booking view
   const rsc = await j1(si, 'Read Series Confirm', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: { type: 'view_submission', view: { id: 'V3', private_metadata: JSON.stringify({ key: 'k', n: 2, title: 'X' }) } } } }] });
-  ok(rsc.answer.view.clear_on_close === true && /This may take a while\. You may close this window\. You’ll be notified when it’s done\./.test(JSON.stringify(rsc.answer.view)), '6 + 1: closing the series booking view closes the form; the close line');
+  ok(rsc.answer.view.clear_on_close === true && /This may take a while\. You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\./.test(JSON.stringify(rsc.answer.view)), '6 + 1: closing the series booking view closes the form; the close line');
 
   // ---- 8: room names; the Change form lists rooms of the same kind
   const B = { id: 'evL', d: '2027-10-21', s: '10:00', e: '11:00', r: 'Likha (Big Room)', t: 'LIKHA - haist meeting' };
@@ -118,7 +119,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   ok(rc.valid && rc.roomChanged && rc.newTitle === 'SALIN - haist meeting', '8: moved to Salin -> a room change, the title follows');
   // ---- 3 + 1: the Changing… screen shows the proposed booking
   ok(rc.answer.view.blocks[0].text.text === '⏳ *Changing…*\n\n*SALIN - haist meeting*\n*Date:* Thursday, October 21, 2027\n*Time:* 10:00 AM – 11:00 AM\n*Room:* Salin'
-     && rc.answer.view.blocks[1].elements[0].text === 'This takes a few seconds. You may close this window. You’ll be notified when it’s done.', '3 + 1: Changing… shows the proposed card and the close line');
+     && /^(?:This takes a few seconds\. You may close this window\. You’ll be notified when it’s done\.|You may close this window – we’ll notify you once it’s done\.)$/.test(rc.answer.view.blocks[1].elements[0].text), '3 + 1: Changing… shows the proposed card and the close line');
   const tm = await j1(si, 'To Move', [], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'Client Names': [] });
   ok(tm.new_rooms === 'Salin' && tm.new_summary === 'SALIN - haist meeting', '8: To Move passes the new room and title');
   // ---- 1: a finished change DMs the card
