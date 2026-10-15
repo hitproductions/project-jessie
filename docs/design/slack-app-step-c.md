@@ -86,3 +86,17 @@ test-nodes 657 with Cancel v27 + Move v30.
 
 Offline: `node scripts/sim-step-c2.js` 49; sim-step-c1 45, sim-typed-to-form 68, sim-slice1-a 57, sim-slice1-b 34, hello
 20; main v265 test-nodes 657, gate 69/69, check-fromai + audit clean.
+
+## Fix from the C2 test (15 Oct 11:04-11:05): main v266
+
+- "book me a studio" right after a form booking was offered with that booking's room, time, client and engineer: the
+  details reader went past the form's "✅ Booked." DM. Now a request is read only from its own message, and the reader
+  stops at ✅ Booked / ✅ Changed / ❌ Cancelled.
+- "dsfadfsa" after "Hi Howard! What do you need?" went to the chat: a general opener (and the menu) no longer counts as
+  Jessie waiting for an answer, so it gets the menu.
+
+Import: main only - open `uVVYVB2M7kxpLleI`, download into `workflows/imported/project-jessie-live-before-v266.json`
+(should MATCH v265) → clear → Import `workflows/project-jessie-v266.json` → Save → Publish "v266 - only this message;
+menu after openers" → download into `workflows/imported/project-jessie-v266-imported.json`.
+Test: book through the form, then `book me a studio` → "Let's book it with the form." with nothing filled in; then
+`dsfadfsa` → the menu.

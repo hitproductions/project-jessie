@@ -4,7 +4,7 @@
 // Change form starting at the time typed (Build Change).
 // Usage: node scripts/sim-step-c2.js [main v265] [slack interactions v12]
 const fs = require('fs');
-const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v265.json', 'utf8'));
+const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v266.json', 'utf8'));
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v12.json', 'utf8'));
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
@@ -97,6 +97,17 @@ const j1 = async (...a) => (await run(...a))[0].json;
     ['make it 3pm', {}], ['jem lim', { history: [{ ts: '9', bot_id: 'B', text: 'Who’s the client?' }] }], ['client is jem lim', { history: [{ ts: '9', bot_id: 'B', text: 'Here’s what I have so far', blocks: [{ elements: [{ action_id: 'open_book', value: '{"d":"x"}' }] }] }] }],
     ['yes', { gate: { presentedCancel: true } }], ['tomorrow', {}], ['friday', { dates: '2027-10-22' }], ['reset', {}], ['ok', { g: { confirmed: true } }]])
     ok((await menuFor(t, o)).menu === false, 'no menu for ' + JSON.stringify(t) + (o.history ? ' (Jessie is waiting)' : ''));
+  if (/v266/.test(main.nodes.find(n => n.name === 'Menu Check').parameters.jsCode)) {
+    // v266 (live 11:04): "dsfadfsa" after "Hi Howard! What do you need?" went to the agent
+    ok((await menuFor('dsfadfsa', { history: [{ ts: '9', bot_id: 'B', text: 'Hi Howard! What do you need?' }] })).menu === true, 'v266: after a general opener -> the menu (live 11:04)');
+    ok((await menuFor('test', { history: [{ ts: '9', bot_id: 'B', text: 'Hi Howard! What would you like to do?', blocks: [{ elements: [{ action_id: 'open_book', value: 'menu' }] }] }] })).menu === true, 'v266: after the menu -> the menu');
+    ok((await menuFor('jem lim', { history: [{ ts: '9', bot_id: 'B', text: 'Who’s the client?' }] })).menu === false, 'v266: a real question still waits for the answer');
+    // Booked For stops at the form's DM ("✅ *Booked.*", as Slack sends it back) - the 11:05 read-back
+    const bfjs = main.nodes.find(n => n.name === 'Booked For').parameters.jsCode;
+    const stop = new Function('return ' + bfjs.match(/if \((\/\^\\s\*\(\?:\(\?:✅[^\n]*?\/i)\.test\(t\)\)/)[1])();
+    ok([':white_check_mark: *Booked.*\n\n*LEMON ADE*', '✅ *Changed.*', ':x: *Cancelled:* X', '*Booked.*', 'Moved "X" to'].every(x => stop.test(x)) && !stop.test('Here’s what I have so far'),
+       'v266: Booked For stops at Booked / Changed / Cancelled, with the emoji');
+  }
   ok(/\$json\.blocks\[0\]\.text\.text/.test(main.nodes.find(n => n.name === 'Send Menu').parameters.jsonBody), 'Send Menu: the notification text is the menu\'s line');
 
   // ---- wiring + Turn Log

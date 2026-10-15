@@ -3,7 +3,7 @@
 // (routes, step 1 from the cache, step 1 checks, Room Availability input, step 2 for studio / meeting / booth / errors,
 // step 2 checks and the calendar title). Usage: node scripts/sim-slice1-a.js [main v262] [slack interactions v3]
 const fs = require('fs');
-const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v264.json', 'utf8'));
+const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v266.json', 'utf8'));
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v10.json', 'utf8'));
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };

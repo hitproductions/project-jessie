@@ -5,7 +5,7 @@
 // usual / not a room for this) and the details filled in.
 // Usage: node scripts/sim-typed-to-form.js [main v263] [slack interactions v9]
 const fs = require('fs');
-const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v264.json', 'utf8'));
+const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v266.json', 'utf8'));
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v10.json', 'utf8'));
 let pass = 0, fail = 0;
 const M264 = /Project: /.test(main.nodes.find(n => n.name === 'Form Offer').parameters.jsCode), V10 = si.nodes.some(n => n.name === 'Note Toggle');
@@ -43,7 +43,7 @@ async function run(wf, name, input, outs) {
 
   // ---- a typed booking request -> an offer
   let r = await offer('book studio 7 tomorrow 2-4pm, VO recording for ORANGE, client Jem Lim, engineer Howard', { dates: '2027-10-14',
-    bf: { timeStart: '14:00', timeEnd: '16:00', project: 'ORANGE', client: 'Jem Lim', engineer: 'Howard Luistro', engineerResolved: true } });
+    bf: { timeInNewest: true, timeStart: '14:00', timeEnd: '16:00', project: 'ORANGE', client: 'Jem Lim', clientPhrase: 'client Jem Lim', engineer: 'Howard Luistro', engineerResolved: true, engineerPhrase: 'engineer Howard' } });
   let F = r.formOffer;
   ok(r.keep === 1 && F.offer && F.why === 'a booking request', 'a booking request -> an offer (the item passes through)');
   ok(JSON.stringify(F.prefill) === JSON.stringify({ d: '2027-10-14', s: '14:00', e: '16:00', r: 'Studio 7', p: 'VO Recording', pj: 'ORANGE', c: 'Jem Lim', en: 'U1', enN: 'Howard Luistro' }),
@@ -57,9 +57,9 @@ async function run(wf, name, input, outs) {
   if (M264) {
     // v264: "for X" as the project (the live 01:30 message), never a colleague / room / type / date word
     const ask = async (text, bf) => (await offer(text, { dates: '2027-10-16', bf })).formOffer.prefill;
-    let q = await ask('book studio 7 tomorrow 2-4pm VO recording for ORANGE, client Jem Lim', { timeStart: '14:00', timeEnd: '16:00', client: 'Jem Lim' });
+    let q = await ask('book studio 7 tomorrow 2-4pm VO recording for ORANGE, client Jem Lim', { timeInNewest: true, timeStart: '14:00', timeEnd: '16:00', client: 'Jem Lim', clientPhrase: 'client Jem Lim' });
     ok(q.pj === 'ORANGE' && q.c === 'Jem Lim', 'v264: "for ORANGE, client Jem Lim" -> project ORANGE (the live 01:30 message)');
-    q = await ask('book studio 7 tomorrow for orange, client Jem Lim', { client: 'Jem Lim' });
+    q = await ask('book studio 7 tomorrow for orange, client Jem Lim', { client: 'Jem Lim', clientPhrase: 'client Jem Lim' });
     ok(q.pj === 'orange', 'v264: client named separately -> "for orange" is the project as typed');
     q = await ask('book studio 7 tomorrow for BLUE BIRD', {});
     ok(q.pj === 'BLUE BIRD', 'v264: capitals, no client -> the project');
@@ -76,11 +76,20 @@ async function run(wf, name, input, outs) {
     q = await ask('book studio 7 for project KIWI, client Jem Lim', { client: 'Jem Lim', project: 'KIWI' });
     ok(q.pj === 'KIWI', 'v264: Booked For\'s project wins');
   }
+  // v266 (live 15 Oct 11:05): "book me a studio" right after a form booking - Booked For read back into the earlier request
+  if (/v266/.test(main.nodes.find(n => n.name === 'Form Offer').parameters.jsCode)) {
+    r = await offer('book me a studio', { bf: { requesterText: 'book me a studio\nbook studio 8 sat 4-6pm for LEMON ADE, client harold orozcor', timeInNewest: false,
+      timeStart: '16:00', timeEnd: '18:00', client: 'harold orozcor', clientPhrase: 'client harold orozcor', engineer: 'Howard Luistro', engineerResolved: true, engineerPhrase: 'engineer howard', project: 'LEMON ADE' } });
+    ok(r.formOffer.offer && JSON.stringify(r.formOffer.prefill) === '{}' && r.formOffer.text === 'Let’s book it with the form.',
+       'v266: "book me a studio" -> nothing from the earlier booking (live 11:05) - ' + JSON.stringify(r.formOffer.prefill));
+    r = await offer('book a vo session in studio 7', { bf: { requesterText: 'book a vo session in studio 7\nbook studio 8 4-6pm', timeInNewest: false, timeStart: '16:00', timeEnd: '18:00' } });
+    ok(r.formOffer.prefill.r === 'Studio 7' && !r.formOffer.prefill.s && r.formOffer.prefill.p === 'VO Recording', 'v266: only what this message says');
+  }
   r = await offer('book a room', {});
   ok(r.formOffer.offer && r.formOffer.text === 'Let’s book it with the form.' && /Pick the date/.test(r.formOffer.blocks[2].elements[0].text), 'nothing read -> the form, plainly');
-  r = await offer('pls book M4 tomorrow 10-12', { dates: '2027-10-14', bf: { timeStart: '10:00', timeEnd: '12:00' } });
+  r = await offer('pls book M4 tomorrow 10-12', { dates: '2027-10-14', bf: { timeInNewest: true, timeStart: '10:00', timeEnd: '12:00' } });
   ok(r.formOffer.prefill.p === '__booth' && /M booth/.test(r.formOffer.text), 'an M booth -> M booth');
-  r = await offer('book likha friday 3-4pm', { dates: '2027-10-15', bf: { timeStart: '15:00', timeEnd: '16:00' } });
+  r = await offer('book likha friday 3-4pm', { dates: '2027-10-15', bf: { timeInNewest: true, timeStart: '15:00', timeEnd: '16:00' } });
   ok(r.formOffer.prefill.p === 'Meeting' && r.formOffer.prefill.r === 'Likha', 'a conference room, no type -> Meeting');
   r = await offer('book a vo session tomorrow', { dates: '2027-10-14' });
   ok(r.formOffer.prefill.p === 'VO Recording', '"vo" -> VO Recording (the only type with that word)');
@@ -90,7 +99,7 @@ async function run(wf, name, input, outs) {
   ok(r.formOffer.offer && !r.formOffer.prefill.p, '"mixing" fits several -> left for the form');
   r = await offer('book studio 7 or studio 8 tomorrow', { dates: '2027-10-14' });
   ok(!r.formOffer.prefill.r, 'two rooms -> no room chosen');
-  r = await offer('book studio 7 for peter', { bf: { arranger: 'Peter Legaste', arrangerResolved: true, engineer: 'Drey', engineerResolved: false } });
+  r = await offer('book studio 7 for peter', { bf: { arranger: 'Peter Legaste', arrangerResolved: true, arrangerPhrase: 'for peter', engineer: 'Drey', engineerResolved: false } });
   ok(r.formOffer.prefill.ar === 'U4' && !r.formOffer.prefill.en, 'only names Bookers resolved are filled in');
 
   // ---- still the agent's
@@ -108,10 +117,10 @@ async function run(wf, name, input, outs) {
   const prev = { d: '2027-10-14', s: '14:00', e: '16:00', r: 'Studio 7', p: 'VO Recording' };
   const offerMsg = { ts: '99.1', bot_id: 'B1', text: 'Here’s what I have so far', blocks: [{ type: 'section' },
     { type: 'actions', elements: [{ type: 'button', action_id: 'open_book', value: JSON.stringify(prev) }] }] };
-  r = await offer('make it 3-5pm', { history: [{ ts: '100.1', text: 'make it 3-5pm' }, offerMsg], bf: { timeStart: '15:00', timeEnd: '17:00' } });
+  r = await offer('make it 3-5pm', { history: [{ ts: '100.1', text: 'make it 3-5pm' }, offerMsg], bf: { timeInNewest: true, timeStart: '15:00', timeEnd: '17:00' } });
   ok(r.formOffer.offer && r.formOffer.why === 'more details after an offer' && r.formOffer.prefill.s === '15:00' && r.formOffer.prefill.d === '2027-10-14'
      && r.formOffer.prefill.r === 'Studio 7', 'a new time after an offer -> a new offer, the rest kept');
-  r = await offer('client is Jem Lim', { history: [offerMsg], bf: { client: 'Jem Lim' } });
+  r = await offer('client is Jem Lim', { history: [offerMsg], bf: { client: 'Jem Lim', clientPhrase: 'client is Jem Lim' } });
   ok(r.formOffer.offer && r.formOffer.prefill.c === 'Jem Lim' && r.formOffer.prefill.s === '14:00', 'a client after an offer -> added');
   r = await offer('thanks', { history: [offerMsg] });
   ok(!r.formOffer.offer && r.formOffer.why === 'nothing new after an offer', 'nothing new after an offer -> agent');
@@ -119,7 +128,7 @@ async function run(wf, name, input, outs) {
   ok(!r.formOffer.offer, 'a question after an offer -> agent');
   r = await offer('thanks', { history: [{ ts: '99.5', bot_id: 'B1', text: 'Sure!' }, offerMsg] });
   ok(!r.formOffer.offer && r.formOffer.why === 'not a booking request', 'an offer that is not the newest message is not built on');
-  r = await offer('book studio 8 friday 10-11', { dates: '2027-10-15', history: [offerMsg], bf: { timeStart: '10:00', timeEnd: '11:00' } });
+  r = await offer('book studio 8 friday 10-11', { dates: '2027-10-15', history: [offerMsg], bf: { timeInNewest: true, timeStart: '10:00', timeEnd: '11:00' } });
   ok(r.formOffer.prefill.r === 'Studio 8' && r.formOffer.prefill.d === '2027-10-15' && !r.formOffer.prefill.p, 'a new request after an offer starts over');
 
   // never throws
