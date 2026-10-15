@@ -1094,7 +1094,9 @@ suite('Booking tools — engineer and arranger from what the requester typed (v1
 // ── v182: Prepare Booking uses the one date under discussion ────────────────────
 suite('Prepare Booking - the date under discussion wins over a date nobody typed (v182)', ()=>{
   const W=JSON.parse(fs.readFileSync(path.join(T,'main.json'),'utf8'));
-  const v=W.nodes.find(n=>n.name==='Prepare Booking').parameters.workflowInputs.value;
+  const pbN=W.nodes.find(n=>n.name==='Prepare Booking');
+  if(!pbN){ console.log('  skip  not in this build (main v271: the booking tools are off the agent)'); return; }
+  const v=pbN.parameters.workflowInputs.value;
   if(!/datesUnderDiscussion/.test(v.start_iso||'')){ console.log('  skip  not in this build'); return; }
   const mk=key=>{ const e=v[key]; const i=e.indexOf('{{'), j=e.lastIndexOf(' }}'); let x=e.slice(i+2,j).trim();
     const k=x.indexOf("$fromAI("), end=x.indexOf(", 'string', '')",k)+", 'string', '')".length; x=x.slice(0,k)+'__m'+x.slice(end);

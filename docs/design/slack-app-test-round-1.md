@@ -137,3 +137,38 @@ Parked: PENDING 118 - a series shown as a series in My bookings, with Cancel ser
 Offline: `node scripts/sim-round-2.js` 38; sim-build-b 30, sim-step-c1 60, sim-series-form 49, sim-step-c2 59,
 sim-typed-to-form 70, sim-typed-series 21, sim-slice1-a 57, sim-slice1-b 34, hello 20; main v270 test-nodes 660, gate
 69/69, fromai + audit clean; no repeated action ids.
+
+## Every message leads to the buttons - main v271 (15 Oct, from the 16:27 test)
+
+"what can you do for me" got "What would you like to do? What's the project?", and "project orange" then "Who's the
+arranger? (or "none")" - the AI was still the chat booking assistant. Decided: every message leads to the Book a room /
+My bookings buttons; the chat answers questions only.
+
+1. **Every reply carries Book a room / My bookings.** An AI reply that still asks for booking details or for a yes is
+   replaced by "Tap *Book a room* below - the form asks for everything it needs. To change or cancel, open *My bookings*."
+2. **"What can you do?"** ("how does this work", "what are your features", "who are you", "help me") -> one line on what
+   Jessie does, with the menu.
+3. **Booking details without "book"** ("project orange", "studio 7 tomorrow 2-4pm", "I need studio 7 every monday") -> the
+   booking reply and the form (PENDING 116).
+4. **The AI answers questions only** (PENDING 117): its seven booking tools are removed, and its prompt is rewritten - what
+   is free, what is booked, rooms, people, session types, clients; never booking details, cards or yes/no. (33,450
+   characters -> about 3,500.) An old chat card already on screen can still be answered yes.
+
+### Import (main only) - Cmd+A then **Delete** before importing
+
+**main v271** into `uVVYVB2M7kxpLleI`: download into `workflows/imported/project-jessie-live-before-v271.json` (should MATCH
+v270) → clear → Import `workflows/project-jessie-v271.json` → Save → **Publish** "v271 - every message leads to the
+buttons" (Publish reloads the agent's tools) → download into `workflows/imported/project-jessie-v271-imported.json`.
+
+### Test
+
+1. `what can you do for me` -> what Jessie does + the buttons.
+2. `project orange` -> the booking reply with Project: ORANGE.
+3. `is studio 7 free friday?` -> the answer, with Book a room / My bookings under it.
+4. `who engineers music sessions?` -> an answer from Bookers, with the buttons.
+5. `I need studio 7 every monday 2-4pm` -> the booking reply with the repeat.
+6. Try to get it to book in chat ("can you just book it for me here?") -> it points to the buttons.
+
+Offline: `node scripts/sim-every-message.js` 35; sim-step-c2 59, sim-typed-to-form 70, sim-typed-series 21, sim-slice1-a 57,
+sim-round-2 38; test-nodes 570 (the booking tools' input checks no longer apply - 660 before), gate 69/69, fromai ok,
+audit-model-text clean (331 texts).
