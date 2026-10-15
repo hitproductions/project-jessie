@@ -5,7 +5,7 @@
 // the problem with free times, the message's row updated; the team rule in Cancel and Move.
 // Usage: node scripts/sim-step-c1.js [slack interactions v11] [cancel v27] [move v30]
 const fs = require('fs');
-const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v17.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v18.json', 'utf8'));
 const V17 = si.nodes.some(n => n.name === 'Mark Cancelling');
 const cx = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/cancel-booking-v27.json', 'utf8'));
 const mv = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/move-booking-v30.json', 'utf8'));
@@ -37,7 +37,9 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');
   ok(C.Route.main[7][0].node === 'Ack My Bookings' && C.Route.main[12][0].node === 'Ack My Bookings' && nx('Page?') === 'Update List | Post List', 'wiring: My bookings posts, a page updates');
   ok(nx('To Cancel') === 'Cancel' && nx('Cancel') === 'After Cancel' && nx('After Cancel') === 'Update Cancelled', 'wiring: cancel');
-  ok(nx('Change OK?') === (V17 ? 'Get Message Before' : 'Read Cache 7') && nx('After Move') === 'Show Change Result' && nx('Moved?') === (V17 ? 'Get Message | Restore Message' : 'Get Message') && nx('Fix Message') === 'Update Changed', 'wiring: change');
+  const V18 = si.nodes.some(n => n.name === 'Change Notices');
+  ok(nx('Change OK?') === (V18 ? 'Client Names' : V17 ? 'Get Message Before' : 'Read Cache 7') && nx('After Move') === 'Show Change Result'
+     && nx('Moved?') === (V18 ? 'Get Message+Change Notices | Restore Message' : V17 ? 'Get Message | Restore Message' : 'Get Message') && nx('Fix Message') === 'Update Changed', 'wiring: change');
   if (V17) ok(nx('Ack Cancel') === 'Mark Cancelling' && nx('Cancelling Shown?') === 'Show Cancelling | Read Cache 5' && nx('Show Cancelling') === 'Read Cache 5'
      && nx('Get Message Before') === 'Mark Changing' && nx('Changing Shown?') === 'Show Changing | Read Cache 7' && nx('Show Changing') === 'Read Cache 7' && nx('Restore Message') === 'Update Restored', 'v17 wiring: processing lines, restore');
   ok(si.nodes.find(n => n.name === 'Cancel').parameters.workflowId.value === 'bAyDw7udhmY0NL38' && si.nodes.find(n => n.name === 'Move').parameters.workflowId.value === 't7lwR2km4tfN8DbM', 'Cancel / Move Booking ids');
@@ -137,26 +139,26 @@ const j1 = async (...a) => (await run(...a))[0].json;
   rc = await readC(sub('2027-10-16', '15:00', '17:00', 'Studio 7'));
   ok(rc.valid && rc.answer.response_action === 'update' && /Changing ORANGE \/ Jem Lim \/ HL…\*\nSat, Oct 16 · 3:00 PM – 5:00 PM · Studio 7/.test(rc.answer.view.blocks[0].text.text)
      && /This takes a few seconds\./.test(JSON.stringify(rc.answer.view)), 'valid -> "Changing…" at once');
-  const tm = await j1(si, 'To Move', [], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache });
+  const tm = await j1(si, 'To Move', [], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });
   ok(tm.event_id === 'ev1' && tm.booking_date === '2027-10-16' && tm.new_start_iso === '2027-10-16T15:00:00+08:00' && tm.new_end_iso === '2027-10-16T17:00:00+08:00'
      && tm.new_rooms === '' && tm.confirmed === true && tm.authority === 'HAIST Dev' && tm.title === B.t, 'Move Booking inputs: same room -> no new room');
   const rc8 = await readC(sub('2027-10-17', '14:00', '16:00', 'Studio 8'));
   ok((await j1(si, 'To Move', [], { 'Read Change': [{ json: rc8 }], 'Read Cache 7': cache })).new_rooms === 'Studio 8', 'a new room -> passed');
-  let am = await j1(si, 'After Move', [{ json: { status: 'MOVED', event_id: 'ev9' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache });
+  let am = await j1(si, 'After Move', [{ json: { status: 'MOVED', event_id: 'ev9' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });
   ok(am.ok && am.view_id === 'V5' && am.nb.id === 'ev9' && am.card === '✅ *Changed.*\n\n*ORANGE / Jem Lim / HL*\n*Date:* Saturday, October 16, 2027\n*Time:* 3:00 PM – 5:00 PM\n*Room:* Studio 7'
      && am.view.close.text === 'Done' && am.ts === '7.7', 'moved -> Changed (the card), the new id kept for the message');
   am = await j1(si, 'After Move', [{ json: { status: 'REJECTED', reason: 'ROOM_OCCUPIED', same_day_slots: [{ start: '2027-10-16T12:00:00+08:00', end: '2027-10-16T14:00:00+08:00' }, { start: '2027-10-16T17:00:00+08:00', end: '2027-10-16T19:00:00+08:00' }] } }],
-    { 'Read Change': [{ json: rc }], 'Read Cache 7': cache });
+    { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });
   V = am.view;
   ok(!am.ok && V.blocks.find(b => b.block_id === 'problem').text.text === '⚠️ Studio 7 is taken then. Free that day: 12:00 PM – 2:00 PM, 5:00 PM – 7:00 PM.'
      && el('start').initial_option.value === '15:00' && el('end').initial_option.value === '17:00' && V.callback_id === 'change_booking', 'taken -> the form again at the new values, with the room\'s free times');
-  am = await j1(si, 'After Move', [{ json: { status: 'REJECTED', reason: 'NOT_YOURS' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache });
+  am = await j1(si, 'After Move', [{ json: { status: 'REJECTED', reason: 'NOT_YOURS' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });
   ok(/only the person who booked it, or its engineer or arranger/.test(am.view.blocks.find(b => b.block_id === 'problem').text.text), 'not yours -> said');
-  am = await j1(si, 'After Move', [{ json: { status: 'PARTIAL', event_id: 'ev9' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache });
+  am = await j1(si, 'After Move', [{ json: { status: 'PARTIAL', event_id: 'ev9' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });
   ok(am.ok && /could not be removed/.test(am.card), 'partial -> Changed, and the old one to delete');
 
   // the message's row updates
-  am = await j1(si, 'After Move', [{ json: { status: 'MOVED', event_id: 'ev9' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache });
+  am = await j1(si, 'After Move', [{ json: { status: 'MOVED', event_id: 'ev9' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });
   const hist = blocks => ({ ok: true, messages: [{ ts: '7.7', text: 'x', blocks }] });
   let fx = await j1(si, 'Fix Message', [{ json: hist(msg.blocks) }], { 'After Move': [{ json: am }] });
   ok(fx.channel === 'D1' && fx.ts === '7.7' && fx.blocks.find(b => b.block_id === 'bk_ev9').text.text === (V17 ? am.card : '*ORANGE / Jem Lim / HL*\nSat, Oct 16 · 3:00 PM – 5:00 PM · Studio 7\n_Changed_')
@@ -186,7 +188,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
     ok(mch.ok && mch.blocks.find(b => b.block_id === 'bkw_ev1').elements[0].text === '⏳ Your change is being processed…' && !mch.blocks.some(b => b.block_id === 'bka_ev1')
        && mch.original.length === msg.blocks.length, 'v17: changing -> "⏳ Your change is being processed…", the original kept for a failure');
     ok(!(await j1(si, 'Mark Changing', [{ json: { ok: false } }], { 'Read Change': [{ json: rc }] })).ok, 'v17: message not found -> nothing marked');
-    const failM = await j1(si, 'After Move', [{ json: { status: 'REJECTED', reason: 'ROOM_OCCUPIED' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache });
+    const failM = await j1(si, 'After Move', [{ json: { status: 'REJECTED', reason: 'ROOM_OCCUPIED' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });
     const rs1 = await run(si, 'Restore Message', [], { 'After Move': [{ json: failM }], 'Mark Changing': [{ json: mch }] });
     ok(rs1.length === 1 && rs1[0].json.blocks === mch.original && rs1[0].json.ts === '7.7', 'v17: a change that fails -> the row back as it was');
     ok((await run(si, 'Restore Message', [], { 'After Move': [{ json: am }], 'Mark Changing': [{ json: mch }] })).length === 0, 'v17: a change that works -> nothing restored (Fix Message does it)');

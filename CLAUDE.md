@@ -546,6 +546,9 @@ Three switches flip for launch — do them together:
    testers). **Set `DEV_REDIRECT = ''` at launch** and the booker + assigned engineer are DM'd for
    real (the `ALLOW` list then no longer matters). Booker id is the event `ref:`; the engineer is
    resolved from the title initials via `Lookup Engineer`.
+   - **Slack Interactions has its OWN `DEV_REDIRECT`** (v18, 15 Oct) in `Booked Notices`, `Series Notices` and `Change
+     Notices` - the engineer / arranger notices when someone else books them or adds them in a change. One constant in
+     `NOTICE_JS` in the builder: rebuild with `DEV_REDIRECT = ''` at launch (same ALLOW roster as Cancel / Move).
    - **Consent engine has its OWN `DEV_REDIRECT`** in `Open Consent Request` → `Build Request` (added
      2026-09-22). It routes the row's `Approver` and `Requester` — which every consent DM downstream
      (Open, Finalize, main router) reads — to Howard unless the recipient is on `ALLOW` (since

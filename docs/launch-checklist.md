@@ -29,6 +29,7 @@ pinged. Flip one constant per sub-workflow and notifications go to the real book
 | `Cancel Booking` → `Build Recipients` | `const DEV_REDIRECT = '…';` | `'U08V3CKDGJF'` (Howard) | `''` |
 | `Move Booking` → `Build Recipients` | `const DEV_REDIRECT = '…';` | `'U08V3CKDGJF'` (Howard) | `''` |
 | **`Open Consent Request` → `Build Request`** (consent engine) | `const DEV_REDIRECT = '…';` | `'U08V3CKDGJF'` (Howard) | `''` |
+| **`Jessie — Slack Interactions` → `Booked Notices`, `Series Notices`, `Change Notices`** (v18+, engineer / arranger notices) | `const DEV_REDIRECT = '…';` (one constant in `NOTICE_JS`, `scripts/build-slack-interactions-vN.py` - rebuild with `''`) | `'U08V3CKDGJF'` (Howard) | `''` |
 
 **The consent engine has its own switch** (added 2026-09-22; missing from this list until 2026-09-25).
 It routes each consent row's Approver and Requester, which every consent DM downstream reads (Open,

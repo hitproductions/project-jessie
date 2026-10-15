@@ -54,3 +54,44 @@ sim-slice1-b 34, hello 20; main v269 test-nodes 657, gate 69/69, fromai + audit 
 | 3 | Change form, room taken: list every free stretch that day ("Free that day: 8:00 – 10:00 AM, 12:00 – 10:00 PM"), not the two nearest slots - Move Booking v31 returns them |
 | 14 | Tell the engineer / arranger when someone else books them, and when anyone else on the session changes or cancels it (the booker too) - never the person who did it. During QA the same redirect as Cancel / Move (to Howard unless on ALLOW); a new DEV_REDIRECT for the launch checklist |
 | 15 | Change form: "Change other session details" - Project, Client, Engineer (+ Arranger / Project code / Meeting title); checked like a new booking, then the booking updated (Move Booking v31 takes a new title and details) |
+
+## Build B - Move Booking v31 + Cancel Booking v28 + Slack Interactions v18 (built 15 Oct)
+
+- **Change other session details** (note 15): a small checkbox on the Change form shows Project, Client, Engineer and
+  Arranger (Project code for Localization, Meeting title for meetings), filled in from the booking. Change only them, or
+  them and the time / room; "Nothing changed" counts them. A client not in the list: "Did you mean …?" (press Change again
+  to keep the name). The booking is rebuilt with the new title, engineer, arranger and team; the booker, notes, type and
+  department stay. A meeting moved to another room gets that room in its title.
+- **Free stretches** (note 3): a taken room says every free stretch that day - "Studio 7 is taken then. Free that day:
+  8:00 AM – 10:00 AM, 12:00 PM – 10:00 PM."
+- **The engineer and arranger are told** (note 14): when someone else books them (single or series), adds them in a change,
+  or changes or cancels a session they are on - never about their own change. During QA every notice goes to Howard
+  unless the person is on the testing list (a new DEV_REDIRECT, now in the launch checklist).
+- **Arrangers**: anyone whose Bookers Info says "Arranger" (Mike Villegas was missing).
+
+### Import (Cancel, Move, then Slack Interactions) - Cmd+A then **Delete** before each import
+
+1. **Cancel Booking v28** into `bAyDw7udhmY0NL38`: download into `workflows/imported/cancel-booking-live-before-v28.json`
+   (should MATCH v27) → clear → Import `workflows/cancel-booking-v28.json` → Publish "v28 - everyone on it told" → download
+   into `workflows/imported/cancel-booking-v28-imported.json`.
+2. **Move Booking v31** into `t7lwR2km4tfN8DbM`: download into `workflows/imported/move-booking-live-before-v31.json`
+   (should MATCH v30) → clear → Import `workflows/move-booking-v31.json` → Publish "v31 - free stretches, details, everyone
+   told" → download into `workflows/imported/move-booking-v31-imported.json`.
+3. **Slack Interactions v18** into `PyxSPoAMtSE1gzaH`: download into `workflows/imported/slack-interactions-live-before-v18.json`
+   (should MATCH v17) → clear → Import `workflows/slack-interactions-v18.json` → Publish "v18 - build B: details, notices,
+   free stretches" → download into `workflows/imported/slack-interactions-v18-imported.json`.
+
+### Test (2027 dates)
+
+1. Change on a booking → tick **Change other session details** → change only the engineer → Change → Changed, with the
+   new initials in the title; the calendar event shows the new engineer. The new engineer's notice comes to you ("[DEV]
+   would notify …").
+2. Change the client to a near miss ("sasa abela") → "Did you mean Sasa Abella?" → fix it, or press Change again.
+3. Change into a taken time → "Free that day: …" lists every free stretch.
+4. Book with Tara (or another tester) as engineer → she gets "Howard Luistro booked you as the engineer".
+5. Cancel a booking that has an engineer → the engineer's notice comes to you.
+6. A music session → Mike Villegas is in the Arranger list.
+
+Offline: sim-build-b 30 (Move v31's own code on the form's inputs: free stretches, the new title and details on the
+replacement, who is told); sim-step-c1 60, sim-series-form 49, sim-step-c2 59, sim-typed-to-form 70, sim-typed-series 21,
+sim-slice1-a 57, sim-slice1-b 34, hello 20; test-nodes 660 with Cancel v28 + Move v31; no repeated action ids.

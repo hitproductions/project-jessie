@@ -131,6 +131,10 @@ known constraint, not a task.
 
 ### 114. Airtable data check before the Slack-app build (14 Oct)
 
+- **15 Oct:** Mike Villegas was missing from the form's Arranger list - his Info says "Head of Music, Arranger" and the form
+  wanted "Music Arranger". Slack Interactions v18 accepts any "Arranger"; worth checking every arranger's and engineer's Info
+  names the role plainly.
+
 The Slack-app forms (`docs/design/slack-app-v1-scope.md`) decide which fields to show and which rooms to offer from
 Airtable, so these must be right before the first slice is built. Owner: Tel.
 
