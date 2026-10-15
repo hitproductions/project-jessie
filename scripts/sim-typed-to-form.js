@@ -131,7 +131,7 @@ async function run(wf, name, input, outs) {
   ok((await tl({ 'Send Form Offer': [{ json: { ok: true } }] })).Path === 'form offer' && (await tl({ 'Send Menu': [{ json: { ok: true } }] })).Path === 'menu'
      && (await tl({})).Path === 'agent', 'Turn Log: form offer / menu / agent');
   const C = main.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');
-  ok(nx('Already Done?') === 'Already Done Reply | Form Offer' && nx('Form Offer') === 'Form Offer?' && nx('Form Offer?') === 'Send Form Offer | Early Room Plan'
+  ok(nx('Already Done?') === 'Already Done Reply | Form Offer' && nx('Form Offer') === 'Form Offer?' && ['Send Form Offer | Early Room Plan', 'Send Form Offer | Change Offer'].indexOf(nx('Form Offer?')) !== -1
      && nx('Send Form Offer') === 'Turn Log Row+Clear Ack', 'wiring: Already Done? -> Form Offer -> Form Offer? (offer: Send Form Offer; else Early Room Plan)');
   const sfo = main.nodes.find(n => n.name === 'Send Form Offer');
   ok(sfo.credentials.slackApi.id === 'EcX8szEJrOLYLUfl' && /chat\.postMessage/.test(sfo.parameters.url), 'Send Form Offer posts with Jessie\'s Slack credential');

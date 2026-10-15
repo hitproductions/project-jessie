@@ -48,3 +48,41 @@ Not yet: typed cancel / change (C2), moving or cancelling a whole series, a book
 Offline: `node scripts/sim-step-c1.js` 45 (routes, the DM buttons, My bookings, Cancel, the Change form, Move's inputs,
 the row update, the team rule in Cancel / Move); sim-slice1-a 57, sim-slice1-b 34, sim-typed-to-form 68, hello 20;
 test-nodes 657 with Cancel v27 + Move v30.
+
+## C2: typed cancel / change → the buttons; anything else → the menu (main v265 + Slack Interactions v12)
+
+- **main v265 (typed cancel / change, menu otherwise):**
+  - A typed cancel or change - "cancel ORANGE saturday", "cancel my 2pm on saturday", "make it 3-5pm", "move it to friday
+    3pm", "move my studio 7 booking to studio 8", "change my booking" - is answered by code: the requester's bookings
+    (made, or engineered / arranged), from today for 60 days, found by the words typed, the date, the time or the room -
+    or, with nothing to go on, the booking in Jessie's newest message (so "make it 3-5pm" right after Booked is that
+    booking). One: "Here it is - press Cancel / Change …" with *Now:* and *New:* for a change; several: "Which one?";
+    none: "I couldn't find a booking of yours …" with **My bookings**. Each has Change / Cancel (Cancel asks first).
+    No chat card, no typed yes.
+  - **Anything that is not a booking, a question or an answer gets the menu** ("what's up", "test"; thanks → "Anytime!
+    Anything else?"), unless Jessie is waiting for an answer (her newest message asks something, is a chat card, or is a
+    booking-form reply). The agent answers questions and answers.
+  - Still the agent's: questions, a yes / no to a chat card already shown, a series.
+- **Slack Interactions v12 (change at the typed time):** the Change button from that reply opens the form at the new time
+  (a start alone keeps the booking's length; a new date or room too). "Now:" and "Nothing changed" still use the booking
+  as it is.
+
+### Import (Slack Interactions first, then main) - select all and delete before each import
+
+1. **Slack Interactions v12** into `PyxSPoAMtSE1gzaH`: download into `workflows/imported/slack-interactions-live-before-v12.json`
+   (should MATCH v11) → clear → Import `workflows/slack-interactions-v12.json` → Save → Publish "v12 - change at the typed
+   time" → download into `workflows/imported/slack-interactions-v12-imported.json`.
+2. **main v265** into `uVVYVB2M7kxpLleI`: download into `workflows/imported/project-jessie-live-before-v265.json` (should
+   MATCH v264) → clear → Import `workflows/project-jessie-v265.json` → Save → Publish "v265 - typed cancel / change, menu
+   otherwise" → download into `workflows/imported/project-jessie-v265-imported.json`.
+
+### Test (2027 dates)
+
+1. Book something through the form, then type `make it 3-5pm` → the booking with Now / New and **Change** → Change opens
+   at 3-5 PM → Change → Changed.
+2. `cancel <its title> <its day>` → "Here it is" with **Cancel** → the pop-up → Cancelled.
+3. `cancel nothinglikethis` → "I couldn't find a booking of yours called …" with **My bookings**.
+4. `what's up`, `test`, `thanks` → the menu. `is studio 8 free friday?` → answered in the chat as before.
+
+Offline: `node scripts/sim-step-c2.js` 49; sim-step-c1 45, sim-typed-to-form 68, sim-slice1-a 57, sim-slice1-b 34, hello
+20; main v265 test-nodes 657, gate 69/69, check-fromai + audit clean.

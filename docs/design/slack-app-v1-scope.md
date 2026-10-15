@@ -20,7 +20,8 @@ steps 1-2 and After Book (Slack Interactions v3-v10, Book Session v109/v110). Ne
 Cancel, Change / Cancel on the Booked DM, and typed cancel / change leading to them. Then **series** (the Repeats box) -
 to be built soon after step C (decided 15 Oct). **No confirmation is typed** (decided 15 Oct): every yes/no is a button or a
 form; each chat yes/no card comes out when its replacement goes in - the series card's typed yes stays until Repeats.
-Notes sit behind a small "Add a note" checkbox (15 Oct).
+Notes sit behind a small "Add a note" checkbox (15 Oct). Step C1 live (My bookings, Change, Cancel); C2 built (typed cancel / change → the buttons;
+anything that is not a booking, a question or an answer → the menu).
 
 | Feature | Simplest version in slice 1 |
 |---|---|
