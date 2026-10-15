@@ -269,3 +269,51 @@ into `workflows/imported/slack-interactions-v20-imported.json`. Independent of m
 
 Offline: `node scripts/sim-si-wiring.js` 10 (fails on v19); sim-round-2 38, sim-slice1-a 57, sim-slice1-b 34, sim-hello-form
 20, sim-step-c1 60, sim-series-form 49, sim-build-b 30; fromai ok, audit clean.
+
+## Round 4 - Slack Interactions v21 (15 Oct): rooms on top, studio + booth pairs, QC, Post Processing, all-day M booth
+
+From testing v19 / v20 (the prototype screens 36 / 36b, 71-76 are the design):
+
+1. **"Use another room"** now opens its list. It was never routed, and Slack refused its dropdown (option descriptions);
+   now one note under it: "Not a usual room for <type> - booked as asked."
+2. **Holding rooms and vocal booths go on top of the studio.** The Room list holds studios only - Likha, Katha and Salin
+   (Celebrity Recording's ranking) and Studio A, B, D (Localization Dubbing's) are no longer room choices.
+   - *Celebrity Recording*: **+ Holding room** -> "Holding rooms", the conference rooms free then (one or more).
+   - *Recording sessions* (VO, Music Vocal, Celebrity, Band): **+ Vocal booth** -> the free vocal booths. A studio that
+     records vocals in the room (7, 8, C, F) says "Studio F records vocals in the room - add a booth only if the session
+     needs one."
+3. **Localization Dubbing: Studio and Booth.** The booth starts at the studio's usual one ("Set to Studio 1's usual booth.
+   Any free booth works - the engineer patches it."); the others say "the engineer patches it (Dante)"; picking another
+   studio resets it (Studio 6 -> Studio D, Studio 2 -> Studio B); a taken usual booth is said. From Airtable's *Paired with*.
+   Every room goes on the one booking; the card says "Room: Studio F + Studio A" and "Holding room: Likha"; Change keeps them.
+4. **QC** asks for the Localization details: Project code + Engineer, no client ("NET-KUBA / JT").
+5. **Post Processing**: *Booker* Dylan Diaz (set), *Project title*, no client - "BRAND REEL / DD". Anyone can pick it. No
+   engineer notice. (The calendar event still says "Engineer: Dylan Diaz" - Book Session writes that line.)
+6. **M booth: All day booking** appears under "What's it for?" once M booth is picked; ticked, Start and End go. One date
+   only (with Repeats it asks to untick one).
+
+Not in this build: adding or removing a booth / holding room from the Change form (it keeps what the booking has).
+
+### Import (Slack Interactions only) - Cmd+A then **Delete** before importing
+
+**Slack Interactions v21** into `PyxSPoAMtSE1gzaH`: download into `workflows/imported/slack-interactions-live-before-v21.json`
+(should MATCH v20) → clear → Import `workflows/slack-interactions-v21.json` → Save → **Publish** "v21 - round 4: rooms, QC,
+post, all day" → download into `workflows/imported/slack-interactions-v21-imported.json`. No main or Book Session change.
+
+### Test (2027 dates)
+
+1. Book a room → *Celebrity Recording* → step 2: the Room list is studios only (F, C); tick **+ Holding room** → pick Likha;
+   tick **+ Vocal booth** → Studio A (note: Studio F records vocals in the room) → Book → "Room: Studio F + Studio A",
+   "Holding room: Likha". Check the calendar event has all three rooms. Cancel it from My bookings.
+2. *Localization Dubbing* → Studio 1 + Booth Studio A (usual); pick Studio 6 → the booth becomes Studio D; pick Studio B
+   instead → "the engineer patches it (Dante)" → Book.
+3. *QC* → Project code + Engineer only → Book ("CODE / initials").
+4. *Post Processing* → Studio E, Booker Dylan Diaz, Project title → Book ("TITLE / DD").
+5. *M booth* → **All day booking** appears → tick it (Start / End go) → M2 → Book → an all-day event. Untick / change the
+   purpose → the times come back.
+6. *Music Mixing* → **Use another room** → a list of other free studios → pick one → Book.
+7. Change a booking from test 1 to another time → it keeps Studio A and Likha.
+
+Offline: `node scripts/sim-round-4.js` 48 (fails on v20); sim-si-wiring 11, sim-round-2 38, sim-slice1-a 57, sim-slice1-b 34,
+sim-hello-form 20, sim-step-c1 60, sim-series-form 49, sim-build-b 30, sim-typed-to-form 70, sim-typed-series 21, sim-step-c2
+59; fromai ok, audit clean.

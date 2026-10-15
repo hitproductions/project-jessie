@@ -25,5 +25,16 @@ if (by['Prepare Input']) {
   const out = new Function('$', '$input', by['Prepare Input'].parameters.jsCode)($, { first: () => ({ json: { ok: true, channel: 'D1', ts: '1' } }) });
   ok(JSON.stringify(out[0].json) === JSON.stringify(toPrep), 'Prepare gets the booking (title, times, room), not Slack\'s answer');
 }
+// v21: every toggle / button the form draws reaches a handler - v19 drew "Use another room" (room_toggle) and the router sent it
+// to "other", so ticking it did nothing
+{
+  const ids = new Set(); for (const n of si.nodes) { const c = n.parameters.jsCode || ''; let m; const re = /action_id:\s*'([a-z_]+)'/g; while ((m = re.exec(c))) ids.add(m[1]); }
+  const live = [...ids].filter(x => /_toggle$|^add_|^bk_|^my_|^open_|^hello_open$/.test(x));
+  const cs = by['Check Signature'].parameters.jsCode;
+  const route = a => new Function('$', '$input', cs)(n => ({ first: () => ({ json: n === 'Read Request' ? { sig: 'v0=x', ts: String(Math.floor(Date.now() / 1000)), payload: { type: 'block_actions', actions: [{ action_id: a }] } } : {} }) }),
+    { first: () => ({ json: { computed: 'x' } }) })[0].json.route;
+  const lost = live.filter(a => route(a) === 3);
+  ok(live.length >= 8 && !lost.length, 'every toggle / button has a route (' + live.length + ' checked)' + (lost.length ? ' - not routed: ' + lost.join(', ') : ''));
+}
 console.log(pass + ' ok, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

@@ -842,6 +842,12 @@ the task runner), for whoever has shell access to the box.
     that returns the payload by name (`$('To Prepare').first().json`). `scripts/sim-si-wiring.js` now fails any call fed by
     something other than a Code node.
 
+46. **Slack drops a whole view update for one detail it does not allow, and a drawn control needs a route** (15 Oct). "Use
+    another room" did nothing for two reasons at once: the router never sent `room_toggle` to the toggle handler (it went to
+    "other"), and the handler's dropdown gave every option a `description` - Slack allows option descriptions only in radio
+    buttons and checkboxes, so views.update was refused and the HTTP node hid it. `scripts/sim-si-wiring.js` now fails a
+    drawn toggle / button with no route; `scripts/sim-round-4.js` fails a dropdown option with a description.
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the

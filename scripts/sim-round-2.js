@@ -53,7 +53,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   const tog = await j1(si, 'Note Toggle', [], { 'Read Cache 9': cache, 'Read Request': [{ json: { payload: { type: 'block_actions', actions: [{ action_id: 'room_toggle', selected_options: [{ value: 'room' }] }],
     view: { id: 'V2', callback_id: 'book_step2', title: v.title, close: v.close, submit: v.submit, private_metadata: v.private_metadata, blocks: v.blocks, state: { values: {} } } } } }] });
   const ro = tog.view.blocks.find(b => b.block_id === 'room_other');
-  ok(ro && ro.element.options.map(o => o.value).join() === 'Studio 2,Studio 7' && ro.element.options[0].description.text === 'not a usual room for Music Mixing'
+  ok(ro && ro.element.options.map(o => o.value).join() === 'Studio 2,Studio 7' && (ro.element.options[0].description ? ro.element.options[0].description.text === 'not a usual room for Music Mixing' : /Not a usual room for Music Mixing/.test(ro.hint.text))   /* v21: a hint - Slack refuses option descriptions in a dropdown */
      && tog.view.blocks.findIndex(b => b.block_id === 'room_other') === tog.view.blocks.findIndex(b => b.block_id === 'room_toggle') + 1, '5: ticked -> "Another room" with the free ones, each "not a usual room"');
   const sub2 = { type: 'view_submission', view: { id: 'V2', private_metadata: v.private_metadata, blocks: v.blocks, state: { values: {
     room: { room_radio: { selected_option: { value: 'Studio F' } } }, room_other: { room_other_pick: { selected_option: { value: 'Studio 7' } } }, project: { project_in: { value: 'mix1' } },
