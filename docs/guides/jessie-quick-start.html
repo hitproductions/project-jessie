@@ -1,0 +1,137 @@
+<title>Jessie Quick Start</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one sheet - a header strip, then a two-column grid of short blocks (one column on phones), testing notes at the foot. */
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --ink: #1b2330; --muted: #5d6878; --line: #dfe3ea;
+  --accent: #0e6e66; --accent-soft: #e2f1ef; --chip: #eef1f5; --warn-soft: #fbf1df; --warn: #8a5a00;
+  --display: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161d; --surface: #1a2029; --ink: #e6e9ef; --muted: #9aa4b4; --line: #2c3442;
+  --accent: #4fc2b5; --accent-soft: #173431; --chip: #232b37; --warn-soft: #33290f; --warn: #f0c46a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161d; --surface: #1a2029; --ink: #e6e9ef; --muted: #9aa4b4; --line: #2c3442;
+  --accent: #4fc2b5; --accent-soft: #173431; --chip: #232b37; --warn-soft: #33290f; --warn: #f0c46a; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 14.5px; line-height: 1.55; margin: 0; padding-inline: 16px; padding-block: 28px 48px; }
+.sheet { max-width: 880px; margin: 0 auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 28px clamp(18px, 4vw, 36px); display: flex; flex-direction: column; gap: 22px; }
+header { display: flex; flex-wrap: wrap; gap: 6px 20px; align-items: baseline; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+.eyebrow { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+h1 { font-family: var(--display); font-size: clamp(26px, 4.5vw, 34px); line-height: 1.1; margin: 2px 0 0; font-weight: 700; }
+.lede { color: var(--muted); margin: 0; max-width: 46ch; font-size: 14px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 32px; }
+@media (max-width: 640px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.blk { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.blk h2 { font-size: 15.5px; margin: 0; font-weight: 700; display: flex; gap: 8px; align-items: baseline; }
+.blk h2 .n { font-family: var(--mono); font-size: 11.5px; color: var(--accent); font-weight: 500; }
+.blk p, .blk ul, .blk ol { margin: 0; }
+.blk ul, .blk ol { padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.ui { font-weight: 600; white-space: nowrap; }
+code, .msg { font-family: var(--mono); font-size: 12.5px; }
+code { background: var(--chip); border-radius: 4px; padding: 1px 5px; }
+.msg { background: var(--chip); border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; cursor: pointer; color: var(--ink); word-break: break-word; line-height: 1.85; }
+.msg:hover, .msg:focus-visible { border-color: var(--accent); outline: none; }
+.msg.copied { background: var(--accent-soft); border-color: var(--accent); }
+.muted { color: var(--muted); }
+.note { background: var(--warn-soft); border-radius: 10px; padding: 14px 18px; display: flex; flex-direction: column; gap: 6px; }
+.note h2 { font-size: 14.5px; margin: 0; color: var(--warn); }
+.note ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 14px; }
+footer { font-size: 12.5px; color: var(--muted); }
+</style>
+
+<div class="sheet">
+  <header>
+    <div>
+      <div class="eyebrow">Hit Productions · Studio booking</div>
+      <h1>Jessie quick start</h1>
+    </div>
+    <p class="lede">Jessie books studios and rooms for you in Slack. Open your direct message with Jessie and say <span class="msg" tabindex="0">hi</span> to get started.</p>
+  </header>
+
+  <div class="grid">
+    <div class="blk">
+      <h2><span class="n">01</span>Book a room</h2>
+      <ol>
+        <li>Tap <span class="ui">Book a room</span>.</li>
+        <li><b>Step 1:</b> date, start, end, and what it’s for → <span class="ui">Find rooms</span>.</li>
+        <li><b>Step 2:</b> pick a free room (the top one is recommended), add the project, client and engineer → <span class="ui">Book</span>.</li>
+      </ol>
+      <p class="muted">You get <b>✅ Booked.</b> in your DM with the card. You can close the form while it says “being processed”.</p>
+    </div>
+
+    <div class="blk">
+      <h2><span class="n">02</span>See, change or cancel</h2>
+      <ul>
+        <li><span class="ui">My bookings</span> shows your next 7 days, including sessions you engineer or arrange.</li>
+        <li><span class="ui">Change</span> moves the date, time or room. Tick <b>Change other session details</b> for the project, client, engineer or arranger.</li>
+        <li><span class="ui">Cancel</span> asks you to confirm first.</li>
+      </ul>
+    </div>
+
+    <div class="blk">
+      <h2><span class="n">03</span>Type instead</h2>
+      <p>Jessie reads what you type and opens the form filled in, or shows the booking with its buttons.</p>
+      <ul>
+        <li><span class="msg" tabindex="0">book studio 7 next tuesday 2-4pm, project TESTAB</span></li>
+        <li><span class="msg" tabindex="0">make my TESTAB booking 5-6pm</span></li>
+        <li><span class="msg" tabindex="0">cancel my booking next tuesday</span></li>
+      </ul>
+      <p class="muted">Nothing is booked or changed until you press the button in the form.</p>
+    </div>
+
+    <div class="blk">
+      <h2><span class="n">04</span>Ask questions</h2>
+      <ul>
+        <li><span class="msg" tabindex="0">is studio 8 free tomorrow 3-5pm?</span></li>
+        <li><span class="msg" tabindex="0">what's free friday afternoon?</span></li>
+        <li><span class="msg" tabindex="0">what do I have this week?</span></li>
+        <li><span class="msg" tabindex="0">which rooms can do 5.1?</span></li>
+      </ul>
+    </div>
+
+    <div class="blk">
+      <h2><span class="n">05</span>Repeating bookings</h2>
+      <p>In step 1, tick <b>Repeats</b>: every week (pick the days), every weekday or every day, for a number of times or until a date. Every date is checked first, then <span class="ui">Book N dates</span>.</p>
+    </div>
+
+    <div class="blk">
+      <h2><span class="n">06</span>Extra rooms and special cases</h2>
+      <ul>
+        <li><b>+ Vocal booth</b> on recording sessions, <b>+ Holding room</b> on Celebrity Recording - booked together with the studio.</li>
+        <li><b>Localization Dubbing:</b> pick the Studio and the Booth; the booth starts at the studio’s usual one.</li>
+        <li><b>M booth:</b> tick <b>All day booking</b> for the whole day.</li>
+        <li><b>Another room…</b> at the bottom of the list for a room that isn’t a usual one.</li>
+        <li><b>Music sessions:</b> an engineer, an arranger, or both.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <h2>While Jessie is in testing</h2>
+    <ul>
+      <li>Dates run <b>one year ahead</b> (2027). Leave them that way; the calendar events are real.</li>
+      <li>Name test projects <b>TEST + your initials</b> (e.g. <code>TESTAB</code>) and <b>cancel them</b> when you’re done.</li>
+      <li>Messages to engineers and arrangers go to the developer for now.</li>
+      <li>Something looks wrong? Send a screenshot with the time and one line on what you expected.</li>
+    </ul>
+  </div>
+
+  <footer>Click any grey message to copy it. Screens and wording may still change between test rounds.</footer>
+</div>
+
+<script>
+function selectText(el) { const r = document.createRange(); r.selectNodeContents(el); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+document.addEventListener('click', e => {
+  const m = e.target.closest('.msg'); if (!m) return;
+  const done = () => { m.classList.add('copied'); setTimeout(() => m.classList.remove('copied'), 900); };
+  try { navigator.clipboard.writeText(m.textContent).then(done, () => selectText(m)); } catch (err) { selectText(m); }
+});
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('msg')) { e.preventDefault(); e.target.click(); }
+});
+</script>

@@ -1,0 +1,306 @@
+<title>Jessie Test Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column - before you start, a map of the buttons, then numbered walk-throughs, then good-to-know and trouble notes. */
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --ink: #1b2330; --muted: #5d6878; --line: #dfe3ea;
+  --accent: #0e6e66; --accent-soft: #e2f1ef; --chip: #eef1f5; --warn-soft: #fbf1df; --warn: #8a5a00;
+  --display: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161d; --surface: #1a2029; --ink: #e6e9ef; --muted: #9aa4b4; --line: #2c3442;
+  --accent: #4fc2b5; --accent-soft: #173431; --chip: #232b37; --warn-soft: #33290f; --warn: #f0c46a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161d; --surface: #1a2029; --ink: #e6e9ef; --muted: #9aa4b4; --line: #2c3442;
+  --accent: #4fc2b5; --accent-soft: #173431; --chip: #232b37; --warn-soft: #33290f; --warn: #f0c46a; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.6; margin: 0; padding-inline: 16px; padding-block: 0 64px; }
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+header { padding-top: 40px; display: flex; flex-direction: column; gap: 10px; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+h1 { font-family: var(--display); font-size: clamp(28px, 5vw, 38px); line-height: 1.15; margin: 0; font-weight: 700; text-wrap: balance; }
+.lede { color: var(--muted); max-width: 62ch; margin: 0; }
+h2 { font-size: 20px; margin: 0 0 14px; font-weight: 700; text-wrap: balance; }
+section { display: flex; flex-direction: column; }
+p { margin: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+.rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; counter-reset: r; }
+.rules li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: start; counter-increment: r; }
+.rules li::before { content: counter(r); width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700; display: grid; place-items: center; margin-top: 1px; }
+.map { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.feat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.feat b { font-size: 14.5px; }
+.feat span { color: var(--muted); font-size: 14px; }
+code, .msg { font-family: var(--mono); font-size: 13px; }
+code { background: var(--chip); border-radius: 4px; padding: 1px 5px; }
+.msg { background: var(--chip); border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; cursor: pointer; color: var(--ink); word-break: break-word; line-height: 1.9; }
+.msg:hover, .msg:focus-visible { border-color: var(--accent); outline: none; }
+.msg.copied { background: var(--accent-soft); border-color: var(--accent); }
+.ui { font-weight: 600; white-space: nowrap; }
+.toc { display: flex; flex-wrap: wrap; gap: 6px 8px; margin-bottom: 18px; }
+.toc a { font-size: 13px; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; background: var(--surface); }
+.toc a:hover, .toc a:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+.cases { display: flex; flex-direction: column; gap: 16px; }
+.case { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; scroll-margin-top: 16px; }
+.head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.num { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.head h3 { margin: 0; font-size: 17px; font-weight: 700; flex: 1 1 260px; }
+.tag { font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 1px 8px; }
+.why { color: var(--muted); font-size: 14px; }
+.steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+.expect { background: var(--accent-soft); border-radius: 8px; padding: 10px 13px; font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+.expect b.l { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.tip { background: var(--warn-soft); border-radius: 8px; padding: 9px 13px; font-size: 13.5px; }
+.tip b { color: var(--warn); }
+.know { display: grid; grid-template-columns: minmax(0, 190px) minmax(0, 1fr); gap: 10px 18px; margin: 0; }
+.know dt { font-weight: 600; font-size: 14px; }
+.know dd { margin: 0; color: var(--muted); font-size: 14px; }
+@media (max-width: 560px) { .know { grid-template-columns: minmax(0, 1fr); gap: 2px; } .know dd { margin-bottom: 10px; } }
+.small { color: var(--muted); font-size: 13px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Hit Productions · Studio booking</div>
+    <h1>Jessie test guide</h1>
+    <p class="lede">Jessie books studios and rooms from Slack. This guide walks you through everything she does today, one scenario at a time, in about 30 minutes. Follow the steps, compare what you see with “What you should see”, and send a screenshot of anything that looks different.</p>
+  </header>
+
+  <section>
+    <h2>Before you start</h2>
+    <div class="panel">
+      <ol class="rules">
+        <li><span>In Slack, open your <b>direct message with Jessie</b> (search “Jessie” under Apps or Direct messages). Everything in this guide happens in that DM.</span></li>
+        <li><span>Jessie is in testing and works <b>one year ahead</b>: the date picker opens in <b>2027</b>, and “next Tuesday” means next Tuesday in 2027. Leave it that way. The bookings are real calendar events, and 2027 keeps them clear of real sessions.</span></li>
+        <li><span>Name every project <b>TEST plus your initials</b>, for example <code>TESTAB</code>, so test bookings are easy to find. Leave the client empty, or type <code>Test Client</code>.</span></li>
+        <li><span>While testing, messages Jessie would send to engineers and arrangers go to the developer instead. Picking a colleague as engineer will not ping them.</span></li>
+        <li><span><b>Cancel every booking you make</b> before you finish (scenario 14 shows how).</span></li>
+        <li><span>Click any grey message in this guide, like <span class="msg" tabindex="0">hi</span>, to copy it, then paste it in your DM with Jessie.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <h2>The buttons you will use</h2>
+    <div class="map">
+      <div class="feat"><b>Book a room</b><span>Opens a two-step form. Step 1: date, start, end and what it’s for. Step 2: a free room and the session details.</span></div>
+      <div class="feat"><b>My bookings</b><span>Your bookings for the next 7 days, including ones where you are the engineer or arranger.</span></div>
+      <div class="feat"><b>Change</b><span>On every booking. Opens a form at the booking’s current date, time and room.</span></div>
+      <div class="feat"><b>Cancel</b><span>On every booking. Slack asks you to confirm first.</span></div>
+      <div class="feat"><b>Typing</b><span>You can type a request or a question. Jessie answers and offers the buttons; she never books from chat on her own.</span></div>
+      <div class="feat"><b>Repeats</b><span>A small box in step 1 for bookings that repeat every week, every weekday or every day.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Scenarios</h2>
+    <nav class="toc" aria-label="Scenarios">
+      <a href="#s1">1 Hello</a><a href="#s2">2 Book a studio</a><a href="#s3">3 Type a request</a><a href="#s4">4 My bookings</a><a href="#s5">5 Change</a><a href="#s6">6 Change by typing</a><a href="#s7">7 Repeating</a><a href="#s8">8 Celebrity rooms</a><a href="#s9">9 Studio + booth</a><a href="#s10">10 M booth all day</a><a href="#s11">11 Meeting room</a><a href="#s12">12 No engineer</a><a href="#s13">13 Questions</a><a href="#s14">14 Clean up</a>
+    </nav>
+    <div class="cases">
+
+      <article class="case" id="s1">
+        <div class="head"><span class="num">01</span><h3>Say hello</h3><span class="tag">Menu</span></div>
+        <p class="why">Any message that isn’t a booking or a question brings up the menu.</p>
+        <ol class="steps">
+          <li>Send <span class="msg" tabindex="0">hi</span>.</li>
+          <li>Then send <span class="msg" tabindex="0">what can you do?</span>.</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>A short greeting with two buttons, <span class="ui">Book a room</span> and <span class="ui">My bookings</span>, and one line on what Jessie does. Examples of what you can type are shown in quotes.</span></div>
+      </article>
+
+      <article class="case" id="s2">
+        <div class="head"><span class="num">02</span><h3>Book a studio from the menu</h3><span class="tag">Book</span></div>
+        <p class="why">The main way to book. Jessie only offers rooms that are free and suited to the session.</p>
+        <ol class="steps">
+          <li>Tap <span class="ui">Book a room</span>. The form opens at step 1.</li>
+          <li><b>Date:</b> a weekday next week (the picker is already in 2027). <b>Start:</b> 2:00 PM. <b>End:</b> 4:00 PM.</li>
+          <li><b>What’s it for?</b> VO Recording. Tap <span class="ui">Find rooms</span>.</li>
+          <li>Step 2 lists the free studios. The top one says <i>Recommended</i>. Keep it.</li>
+          <li><b>Project:</b> your TEST name. <b>Client:</b> leave empty. <b>Engineer:</b> it is set to you if you are an engineer; otherwise pick one.</li>
+          <li>Optional: tick <b>Add a note</b> and type something. Notes go on the calendar event.</li>
+          <li>Tap <span class="ui">Book</span>.</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>The form says “Your booking is being processed. You may close this window – we’ll notify you once it’s done.” Then <b>✅ Booked.</b> with the title (e.g. <code>TESTAB / HL</code>), date, time and room.</span><span>Your DM with Jessie gets the same card with <span class="ui">Change</span> and <span class="ui">Cancel</span> buttons.</span></div>
+        <div class="tip"><b>Tip:</b> you can close the form while it says “being processed”. The booking still goes through and the result comes to your DM.</div>
+      </article>
+
+      <article class="case" id="s3">
+        <div class="head"><span class="num">03</span><h3>Type a booking request</h3><span class="tag">Book</span></div>
+        <p class="why">Typing is a shortcut: Jessie reads what you wrote and opens the form with it filled in.</p>
+        <ol class="steps">
+          <li>Send <span class="msg" tabindex="0">book studio 7 next tuesday 2-4pm, project TESTGUIDE</span>.</li>
+          <li>Read Jessie’s reply, then tap <span class="ui">Book a room</span> under it.</li>
+          <li>Close the form without booking (this one is just to look).</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>“Here’s what I have so far:” with Studio 7, the date and 2:00–4:00 PM, and the project. The form opens with the date, times and Studio 7 already in.</span></div>
+        <div class="tip"><b>Tip:</b> if the room you typed is taken, step 2 says so and offers the free ones.</div>
+      </article>
+
+      <article class="case" id="s4">
+        <div class="head"><span class="num">04</span><h3>See your bookings</h3><span class="tag">My bookings</span></div>
+        <ol class="steps">
+          <li>Tap <span class="ui">My bookings</span> under any of Jessie’s messages.</li>
+          <li>Tap <span class="ui">Next 7 days</span>, then <span class="ui">Previous 7 days</span>.</li>
+          <li>Also try typing <span class="msg" tabindex="0">what do I have next week?</span>.</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>Each booking with its title, date, time and room, and its own <span class="ui">Change</span> / <span class="ui">Cancel</span>. The typed question gives the same kind of list for the week you asked about.</span></div>
+        <div class="tip"><b>Tip:</b> the booking from scenario 2 is next week, so you may need <span class="ui">Next 7 days</span> to see it.</div>
+      </article>
+
+      <article class="case" id="s5">
+        <div class="head"><span class="num">05</span><h3>Change a booking</h3><span class="tag">Change</span></div>
+        <ol class="steps">
+          <li>On your booking from scenario 2 (in the DM or in My bookings), tap <span class="ui">Change</span>.</li>
+          <li>The form opens at the current date, time and room. Move it one hour later: 3:00–5:00 PM.</li>
+          <li>Tap <span class="ui">Change</span>.</li>
+          <li>Open Change again and tick <b>Change other session details</b>. Change the project name, then tap <span class="ui">Change</span>.</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>“⏳ Changing…” with the new card, then <b>✅ Changed.</b> with the new time (if you can see the studio calendar, only the new time is there). After the second change, the title shows the new project name.</span></div>
+        <div class="tip"><b>Tip:</b> if you press Change without changing anything, the form says “Nothing changed”.</div>
+      </article>
+
+      <article class="case" id="s6">
+        <div class="head"><span class="num">06</span><h3>Change by typing</h3><span class="tag">Change</span></div>
+        <ol class="steps">
+          <li>Send <span class="msg" tabindex="0">make my TEST booking 5-6pm</span>, with your own project name in place of TEST.</li>
+          <li>Tap <span class="ui">Change</span> on the booking Jessie shows, check the form, then close it or press Change.</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>“Here’s your proposed change – press <b>Change</b> to check the new time.” The form opens already at 5:00–6:00 PM. Jessie never asks you to reply yes or no in chat.</span></div>
+      </article>
+
+      <article class="case" id="s7">
+        <div class="head"><span class="num">07</span><h3>Repeating booking</h3><span class="tag">Series</span></div>
+        <ol class="steps">
+          <li>Tap <span class="ui">Book a room</span>. Pick a date next week, 10:00–11:00 AM, VO Recording.</li>
+          <li>Tick <b>Repeats</b>. Set <b>How often:</b> Every week, <b>How many times:</b> 3. Tap <span class="ui">Find rooms</span>.</li>
+          <li>In step 2, each room says on how many of the 3 dates it is free. Pick one that is free on all 3, fill in the project and engineer.</li>
+          <li>Tap <span class="ui">Check 3 dates</span>, then <span class="ui">Book 3 dates</span> on the next screen.</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>A check screen listing the 3 dates before anything is booked. After booking: “Processing your series of bookings. This may take a while…” You can close it. A DM follows: “✅ Booked 3 dates.” with the dates. Each date appears in My bookings.</span></div>
+        <div class="tip"><b>Tip:</b> a series takes about half a minute per date.</div>
+      </article>
+
+      <article class="case" id="s8">
+        <div class="head"><span class="num">08</span><h3>Celebrity Recording with a holding room and a booth</h3><span class="tag">Rooms</span></div>
+        <p class="why">Holding rooms and vocal booths are added on top of the studio, never instead of it.</p>
+        <ol class="steps">
+          <li>Tap <span class="ui">Book a room</span>. Pick a date and time, <b>Celebrity Recording</b>, then <span class="ui">Find rooms</span>.</li>
+          <li>Check that the Room list only has studios (Studio F, Studio C).</li>
+          <li>Tick <b>+ Holding room</b>. Pick <b>Likha</b> (you can pick more than one).</li>
+          <li>Tick <b>+ Vocal booth</b>. Keep the booth it suggests.</li>
+          <li>Fill in the project and engineer, then tap <span class="ui">Book</span>.</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>The card reads <b>Room:</b> Studio F + the booth, and <b>Holding room:</b> Likha. If you can see the studio calendar, one event holds all the rooms.</span><span>Tap <span class="ui">Change</span> on it: the form shows <b>Studio</b>, <b>Booth</b> and <b>Holding rooms</b> separately, set to what you booked.</span></div>
+      </article>
+
+      <article class="case" id="s9">
+        <div class="head"><span class="num">09</span><h3>Localization Dubbing: studio and booth</h3><span class="tag">Rooms</span></div>
+        <ol class="steps">
+          <li>Tap <span class="ui">Book a room</span>. Pick a date and time, <b>Localization Dubbing</b>, then <span class="ui">Find rooms</span>.</li>
+          <li>Step 2 shows <b>Studio</b> and, under it, <b>Booth</b>. The booth starts at the studio’s usual one.</li>
+          <li>Pick a different studio and watch the booth switch to that studio’s usual booth.</li>
+          <li>Type a <b>Project code</b> (e.g. <code>TEST-AB-01</code>), pick an engineer, tap <span class="ui">Book</span>.</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>The title is the project code and the engineer’s initials (e.g. <code>TEST-AB-01 / HL</code>). The card lists the studio and the booth. QC sessions ask for the same details, with no booth.</span></div>
+      </article>
+
+      <article class="case" id="s10">
+        <div class="head"><span class="num">10</span><h3>M booth for the whole day</h3><span class="tag">Rooms</span></div>
+        <ol class="steps">
+          <li>Tap <span class="ui">Book a room</span>. Under <b>What’s it for?</b> pick <b>M booth</b>.</li>
+          <li>An <b>All day booking</b> box appears. Tick it: Start and End disappear.</li>
+          <li>Tap <span class="ui">Find rooms</span>, pick an M booth, tap <span class="ui">Book</span>.</li>
+          <li>Tap <span class="ui">Change</span> on it, pick another M booth, tap <span class="ui">Change</span>.</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>The card says “All day”. The Change form opens with All day already ticked and no times, and the booking stays all day after the change.</span></div>
+      </article>
+
+      <article class="case" id="s11">
+        <div class="head"><span class="num">11</span><h3>Meeting room</h3><span class="tag">Rooms</span></div>
+        <ol class="steps">
+          <li>Tap <span class="ui">Book a room</span>. Pick a date and time, <b>Meeting</b>, then <span class="ui">Find rooms</span>.</li>
+          <li>Pick Likha, Katha or Salin. Type a <b>Meeting title</b>, tap <span class="ui">Book</span>.</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>Only conference rooms are offered. The title reads like <code>LIKHA - your title</code>.</span></div>
+      </article>
+
+      <article class="case" id="s12">
+        <div class="head"><span class="num">12</span><h3>Music session with no engineer</h3><span class="tag">Details</span></div>
+        <ol class="steps">
+          <li>Tap <span class="ui">Book a room</span>. Pick a date and time, <b>Music Mixing</b>, then <span class="ui">Find rooms</span>.</li>
+          <li>Set <b>Engineer</b> to <b>No engineer</b>. Set <b>Arranger</b> to someone. Tap <span class="ui">Book</span>.</li>
+          <li>Try again with both set to none.</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>The first books with the arranger’s initials in the title. With neither, the form says “Pick an engineer or an arranger.” and nothing is booked.</span></div>
+        <div class="tip"><b>Also try:</b> in step 2 of any studio session, pick <b>Another room…</b> at the bottom of the room list. A dropdown opens with the other free rooms; anything you pick there is booked as asked.</div>
+      </article>
+
+      <article class="case" id="s13">
+        <div class="head"><span class="num">13</span><h3>Ask questions</h3><span class="tag">Questions</span></div>
+        <ol class="steps">
+          <li>Send <span class="msg" tabindex="0">is studio 8 free next wednesday 3-5pm?</span> Then tap <span class="ui">Book a room</span> under the answer.</li>
+          <li>Send <span class="msg" tabindex="0">what's free next friday afternoon?</span></li>
+          <li>Send <span class="msg" tabindex="0">which rooms can do 5.1?</span></li>
+          <li>Send <span class="msg" tabindex="0">what sessions can I book?</span></li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>Short, plain answers, each with <span class="ui">Book a room</span> / <span class="ui">My bookings</span> under it. Book a room under the first answer opens with Wednesday, 3–5 PM and Studio 8 filled in.</span></div>
+      </article>
+
+      <article class="case" id="s14">
+        <div class="head"><span class="num">14</span><h3>Clean up</h3><span class="tag">Cancel</span></div>
+        <ol class="steps">
+          <li>Tap <span class="ui">My bookings</span>. Use <span class="ui">Next 7 days</span> to reach every week you booked.</li>
+          <li>Tap <span class="ui">Cancel</span> on each TEST booking and confirm in Slack’s pop-up.</li>
+          <li>Also try typing <span class="msg" tabindex="0">cancel my booking next tuesday</span> and cancel from what Jessie shows.</li>
+        </ol>
+        <div class="expect"><b class="l">What you should see</b><span>“⏳ Your cancellation is being processed…” under the booking, then <b>❌ Cancelled.</b> with the booking’s card. When you are done, My bookings shows none of your TEST bookings.</span></div>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Good to know</h2>
+    <div class="panel">
+      <dl class="know">
+        <dt>Recommended</dt><dd>The usual room for that kind of session that is free then. Other usual rooms are listed under it.</dd>
+        <dt>Not a usual room</dt><dd>A room that can be booked but isn’t one of the usual ones for the session. It books as asked.</dd>
+        <dt>Not free then</dt><dd>Usual rooms that are taken at that time. They are never offered.</dd>
+        <dt>⏳ … being processed</dt><dd>Jessie is writing to the calendar. You can close the window; the result comes to your DM.</dd>
+        <dt>Change other session details</dt><dd>Lets a change edit the project, client, engineer or arranger, not only the time and room.</dd>
+        <dt>Engineer and arranger notices</dt><dd>When you book, change or cancel a session someone else is on, they are told. During testing these go to the developer.</dd>
+        <dt>Who can change a booking</dt><dd>The person who booked it, and the engineer or arranger on it.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section>
+    <h2>If something looks wrong</h2>
+    <div class="panel">
+      <ol class="rules">
+        <li><span>Take a <b>screenshot</b> of the message or form, including the time Slack shows.</span></li>
+        <li><span>Write one line on what you did and what you expected instead.</span></li>
+        <li><span>Send both to the developer in Slack. Then carry on with the next scenario; one problem rarely blocks the rest.</span></li>
+        <li><span>If Jessie doesn’t answer at all for a minute, note the time and tell the developer straight away.</span></li>
+      </ol>
+    </div>
+    <p class="small" style="margin-top:12px">Jessie is still in testing. Wording and screens may change between rounds.</p>
+  </section>
+</div>
+
+<script>
+// click a grey message to copy it
+function selectText(el) { const r = document.createRange(); r.selectNodeContents(el); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+document.addEventListener('click', e => {
+  const m = e.target.closest('.msg'); if (!m) return;
+  const done = () => { m.classList.add('copied'); setTimeout(() => m.classList.remove('copied'), 900); };
+  try { navigator.clipboard.writeText(m.textContent).then(done, () => selectText(m)); } catch (err) { selectText(m); }
+});
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('msg')) { e.preventDefault(); e.target.click(); }
+});
+</script>
