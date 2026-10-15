@@ -5,7 +5,7 @@
 // usual / not a room for this) and the details filled in.
 // Usage: node scripts/sim-typed-to-form.js [main v263] [slack interactions v9]
 const fs = require('fs');
-const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v267.json', 'utf8'));
+const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v268.json', 'utf8'));
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v10.json', 'utf8'));
 let pass = 0, fail = 0;
 const M264 = /Project: /.test(main.nodes.find(n => n.name === 'Form Offer').parameters.jsCode), V10 = si.nodes.some(n => n.name === 'Note Toggle');
@@ -107,7 +107,10 @@ async function run(wf, name, input, outs) {
   await agent('is studio 7 free friday?', { dates: '2027-10-15' }, 'an availability question');
   await agent('cancel ORANGE tomorrow', {}, 'a cancel or move');
   await agent('can you move my booking to 3pm', {}, 'a cancel or move');
-  await agent('book studio 7 every monday 10-12', {}, 'a series');
+  if (/v268/.test(main.nodes.find(n => n.name === 'Form Offer').parameters.jsCode)) {
+    const sr = await offer('book studio 7 every monday 10-12', {});
+    ok(sr.formOffer.offer && sr.formOffer.prefill.rep && sr.formOffer.prefill.rep.days.join() === 'MO', 'v268: a typed series -> the form with Repeats (no chat card)');
+  } else await agent('book studio 7 every monday 10-12', {}, 'a series');
   await agent('what did I book tomorrow?', {}, 'not a booking request');
   await agent('what do i have this week?', {}, 'not a booking request');
   await agent('yes', { g: { confirmed: true } }, 'a yes to a chat card');
