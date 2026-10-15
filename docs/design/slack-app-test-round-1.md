@@ -270,7 +270,7 @@ into `workflows/imported/slack-interactions-v20-imported.json`. Independent of m
 Offline: `node scripts/sim-si-wiring.js` 10 (fails on v19); sim-round-2 38, sim-slice1-a 57, sim-slice1-b 34, sim-hello-form
 20, sim-step-c1 60, sim-series-form 49, sim-build-b 30; fromai ok, audit clean.
 
-## Round 4 - Slack Interactions v21 (15 Oct): rooms on top, studio + booth pairs, QC, Post Processing, all-day M booth
+## Round 4 - Slack Interactions v21 (15 Oct): rooms on top, studio + booth pairs, QC, Post Processing, all-day M booth - LIVE ~18:45 (before MATCH v20, after MATCH)
 
 From testing v19 / v20 (the prototype screens 36 / 36b, 71-76 are the design):
 
