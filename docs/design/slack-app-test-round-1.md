@@ -175,3 +175,45 @@ buttons" (Publish reloads the agent's tools) → download into `workflows/import
 Offline: `node scripts/sim-every-message.js` 35; sim-step-c2 59, sim-typed-to-form 70, sim-typed-series 21, sim-slice1-a 57,
 sim-round-2 38; test-nodes 570 (the booking tools' input checks no longer apply - 660 before), gate 69/69, fromai ok,
 audit-model-text clean (331 texts).
+
+## Round 3 - questions answered cleanly: main v272 (15 Oct, from the v271 test)
+
+Three replies from testing v271, all on the question side:
+
+- "what's free friday afternoon?" checked 2-4 PM - the times came from an earlier message.
+- "is studio 8 free tomorrow 3-5?" -> the answer, but Book a room under it opened an empty form.
+- "what do I have this week?" -> a list the AI wrote itself: Engineer / Arranger on every row, "Filtering for Howard…"
+  first, loose formatting (PENDING 100: booking lists were the last facts the model still wrote).
+
+1. **Each question uses its own times.** Room Availability's window comes from the AI's reading of *this* message; times
+   from earlier messages correct it only when they were typed in this one. List Events no longer offers cancel / move.
+2. **Book a room under an answer is filled in from that message** - its date, its times, a single room named - and
+   nothing from earlier messages. Nothing named -> the empty form, as before.
+3. **"What do I have …" is answered in code, like My bookings** (PENDING 100): "what do I have this week / tomorrow / in
+   November / next week", "my bookings", "what's on my schedule", "am I engineering anything friday". The reply is
+   *Your bookings* · the range, then title / date · time · room per booking (the ones you booked or are on), each with
+   Change / Cancel, Previous / Next 7 days for a week, and Book a room. No engineer, arranger or preamble. Up to 20 rows.
+4. **The question rules from the old prompt are back** (8,127 characters; v271 7,149): each question stands alone; relay
+   what the tools said, never invent a reason or say how you searched; a booking shown is title, date with weekday, time,
+   room only, unless more is asked for; the old *Style* section (timezone, Slack formatting, tone, with a good and a bad
+   example). The bad example is the old 10 PM one, not the "Filtering for…" reply - a prompt that shows a habit teaches it
+   (gotcha 6). Nothing about booking came back.
+
+### Import (main only) - Cmd+A then **Delete** before importing
+
+**main v272** into `uVVYVB2M7kxpLleI`: download into `workflows/imported/project-jessie-live-before-v272.json` (should MATCH
+v271) → clear → Import `workflows/project-jessie-v272.json` → Save → **Publish** "v272 - questions answered cleanly" →
+download into `workflows/imported/project-jessie-v272-imported.json`.
+
+### Test (2027 dates)
+
+1. `is studio 7 free tomorrow 2-4pm?`, then `what's free friday afternoon?` -> the whole afternoon, not 2-4.
+2. `is studio 8 free tomorrow 3-5?` -> answer; **Book a room** under it opens with tomorrow, 3-5 PM, Studio 8.
+3. `what do I have this week?` -> *Your bookings* with title / date · time · room, Change / Cancel per row, Previous / Next
+   7 days. Then `what do I have tomorrow?` and `what do I have in November?`.
+4. `what's in studio 4 on thursday?` -> the AI's answer: title, date, time, room only, no "Filtering for…".
+5. The v271 questions again: `which rooms can do 5.1?`, `who's Drey?`, `who engineers music sessions?`.
+6. `cancel my booking tomorrow` -> not the bookings list (the change / cancel route as before).
+
+Offline: `node scripts/sim-round-3.js` 25; sim-every-message 36, sim-step-c2 59, sim-typed-to-form 70, sim-typed-series 21,
+sim-slice1-a 57, sim-round-2 38 (with SI v19); test-nodes 570, gate 69/69, fromai ok, audit-model-text clean.

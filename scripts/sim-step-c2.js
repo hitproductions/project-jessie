@@ -120,7 +120,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
     ok(!(await late('which studio is bigger?', { why: 'nothing new after an offer' })).menu, 'v267: a question after a booking reply -> the agent');
     ok(!(await late('lhkjf;kj', { why: 'not a booking request' })).menu, 'v267: only after a booking reply');
     const nx7 = n => (main.connections[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');
-    ok(nx7('Change Offer?') === 'List Mine | Late Menu?' && nx7('Late Menu?') === 'Send Late Menu | Early Room Plan' && nx7('Send Late Menu') === 'Turn Log Row+Clear Ack', 'v267 wiring');
+    ok(nx7('Change Offer?') === 'List Mine | Late Menu?' && ['Send Late Menu | Early Room Plan', 'Send Late Menu | Mine Check'].indexOf(nx7('Late Menu?')) !== -1 && nx7('Send Late Menu') === 'Turn Log Row+Clear Ack', 'v267 wiring');
     ok((await j1(main, 'Turn Log Row', [{ json: {} }], { 'Slack Trigger': [{ json: { text: 'x', ts: '1' } }], 'Send Late Menu': [{ json: { ok: true } }] })).Path === 'menu', 'v267: Turn Log "menu"');
   }
   ok(/\$json\.blocks\[0\]\.text\.text/.test(main.nodes.find(n => n.name === 'Send Menu').parameters.jsonBody), 'Send Menu: the notification text is the menu\'s line');
