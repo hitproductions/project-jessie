@@ -5,7 +5,8 @@
 // on what the form passes, and the result on the form / in the DM.
 // Usage: node scripts/sim-series-form.js [slack interactions v13] [book series]
 const fs = require('fs');
-const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v13.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v15.json', 'utf8'));
+const V15 = si.nodes.some(n => n.name === 'Read Cache 8');
 const bs = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/imported/book-series-v8-imported.json', 'utf8'));
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
@@ -61,6 +62,15 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok((await read1(F('weekdays', null, null, '2027-10-25'))).s.series.dates.join() === '2027-10-19,2027-10-20,2027-10-21,2027-10-22,2027-10-25', 'every weekday until Mon Oct 25');
   ok((await read1(F('daily', null, 3))).s.series.dates.join() === '2027-10-19,2027-10-20,2027-10-21', 'every day, 3 times');
   ok(!(await read1()).s.series, 'Repeats not ticked -> one booking, as before');
+  if (V15) {
+    ok((await read1(F('weekly', ['TU'], 3, '2027-12-31'))).s.series.dates.length === 3, 'v15: both set -> How many times wins');
+    ok((await read1(F('weekly', ['TU'], 3, '2027-10-10'))).valid, 'v15: an end date before the start is ignored when How many times is set');
+    const tgu = await tog(true, s1.blocks, vals1);
+    ok(tgu.view.blocks.find(b => b.block_id === 'rep_until').element.initial_date === '2027-11-16' && /How many times is empty/.test(tgu.view.blocks.find(b => b.block_id === 'rep_until').hint.text),
+       'v15: Or until starts 4 weeks after the first date (2027, not the real year), and says when it is used');
+    const pur = s1.blocks.find(b => b.block_id === 'purpose');
+    ok(pur.hint.text === 'A room will be recommended to you based on your session details.' && pur.element.option_groups.map(g => g.label.text).join() === 'Sessions,Other bookings', 'v15: step 1 wording');
+  }
   const err = async (rep, bid, re) => { const x = await read1(rep); ok(!x.valid && x.answer.response_action === 'errors' && re.test(x.answer.errors[bid] || ''), bid + ': ' + JSON.stringify(x.answer.errors)); };
   await err(F('weekly', [], 4), 'rep_days', /at least one day/);
   await err(F('weekly', ['TU']), 'rep_count', /How many times/);
@@ -82,7 +92,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(/🗓️ \*3 dates · 2:00 PM–4:00 PM · Localization Dubbing\*/.test(JSON.stringify(s2.view.blocks[1])) && s2.view.blocks[2].elements[0].text === 'Tue Oct 19 · Tue Oct 26 · Tue Nov 2'
      && s2.view.submit.text === 'Check 3 dates', 'header, the dates, "Check 3 dates"');
   s2 = await step2([{ status: 'OK', free_priority: ['Studio 7'] }, { status: 'CALENDAR_ERROR' }, { status: 'OK', free_priority: ['Studio 7'] }]);
-  ok(!s2.view.submit && /could not be checked/.test(JSON.stringify(s2.view)), 'a date not checked -> no button');
+  ok(!s2.view.submit && /could(?: not|n’t) be checked/.test(JSON.stringify(s2.view)) && !/CALENDAR_ERROR/.test(JSON.stringify(s2.view)), 'a date not checked -> no button, no code');
   s2 = await step2([{ status: 'OK', free_priority: ['Studio 7', 'Studio 8'] }], { date: '2027-10-19', t0: '14:00', t1: '16:00', purpose: 'Localization Dubbing', kind: 'loc', requester: 'U1', ext: 'x' });
   ok(s2.view.submit.text === 'Book' && !s2.view.blocks.find(b => b.block_id === 'room').element.options[1].description, 'a single booking: as v12');
 
@@ -124,11 +134,17 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const meta3 = { key: 'prep-sabc', n: 2, title: 'NFX-ABC-01 / HL', requester: 'U1', channel: 'D1', time: '14:00-16:00' };
   const rsc = await j1(si, 'Read Series Confirm', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: confPay(meta3) } }] });
   ok(rsc.key === 'prep-sabc' && rsc.answer.response_action === 'update' && /Booking 2 dates/.test(JSON.stringify(rsc.answer.view)) && /result comes to your DM/.test(JSON.stringify(rsc.answer.view)), '"Booking 2 dates…" at once');
-  const tbs = async (rows, R) => j1(si, 'To Book Series', rows.map(x => ({ json: x })), { 'Read Series Confirm': [{ json: R || rsc }] });
+  const tbs = async (rows, R) => j1(si, 'To Book Series', V15 ? cache : rows.map(x => ({ json: x })), { 'Read Series Confirm': [{ json: R || rsc }], 'Read Saved Series': rows.map(x => ({ json: x })), 'Read Cache 8': cache });
   let T = await tbs([{ cache_key: 'prep-sabc', payload: JSON.stringify(payload) }]);
   ok(T.go && T.confirmed === true && T.mode === '' && T.dates === '2027-10-19,2027-11-02' && T.rooms === 'Studio 8', 'the stored series, checked, booked as stored');
   const occB = await run(bs, 'Expand Dates', [], { 'When Executed by Another Workflow': [{ json: T }] });
   ok(occB.length === 2 && occB.every(o => o.json.confirmed === true && o.json.series === true && o.json.mode === ''), 'Book Series (live v8) books exactly those 2 dates, confirmed');
+  if (V15) {
+    // v15 (Slack test): every date was refused NO_REFERENCE_DATA - Book Session must get the room list through Book Series
+    const ref = (() => { try { return JSON.parse(occB[0].json.reference_data || 'null'); } catch (e) { return null; } })();
+    ok(ref && ref.rooms.length === 4 && ref.types[0].type === 'Localization Dubbing' && ref.types[0].priority.join() === 'r7,r8,rf', 'v15: each date reaches Book Session with the room list (the NO_REFERENCE_DATA bug)');
+    ok(JSON.parse(occB[0].json.staff_data)[0].Name === 'Howard Luistro' && occB[0].json.authority === 'HAIST Dev', 'v15: and the staff list and who is booking');
+  }
   T = await tbs([{ cache_key: 'prep-sabc', payload: JSON.stringify(Object.assign({}, payload, { inputs: Object.assign({}, inputs, { dates: '2027-10-19,2027-10-26,2027-11-02' }) })) }]);
   ok(!T.go && /did not check out/.test(T.why), 'changed after it was shown -> nothing booked');
   T = await tbs([]);
@@ -149,6 +165,11 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(/Booked 1 of 2 dates/.test(X.text) && /Not booked - the room was taken: Tue, Nov 2/.test(X.text), 'part booked -> says which were not');
   X = await abs({ status: 'NONE_BOOKED', booked: [], skipped: ['2027-10-19', '2027-11-02'] });
   ok(/^❌ \*Nothing was booked\.\*/.test(X.text) && !/My bookings/.test(JSON.stringify(X.blocks)), 'none booked -> said');
+  if (V15) {
+    X = await abs({ status: 'NONE_BOOKED', booked: [], skipped: [], failed: [{ date: '2027-10-19', why: 'NO_REFERENCE_DATA' }, { date: '2027-10-26', why: 'NO_REFERENCE_DATA' }, { date: '2027-11-02', why: 'SOMETHING_ODD' }] });
+    ok(!/[A-Z]{2,}_[A-Z]{2,}/.test(X.text) && /Tue, Oct 19, Tue, Oct 26 - the room list couldn’t be read/.test(X.text) && /Tue, Nov 2 - it couldn’t be booked/.test(X.text),
+       'v15: the reason in words, never the code (live: NO_REFERENCE_DATA shown) - ' + X.text.replace(/\n/g, ' | '));
+  }
   X = await abs({}, { go: false, why: 'the saved series was not found' });
   ok(/Nothing was booked\* - the saved series was not found/.test(X.text), 'not read back -> said, nothing booked');
 

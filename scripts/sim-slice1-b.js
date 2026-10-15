@@ -107,7 +107,7 @@ async function run(name, input, outs) {
   A = (await run('After Prepare', [{ json: { status: 'REJECTED', reason: 'NEED_ARRANGER' } }], outs))[0].json;
   ok(/No arranger/.test(A.view.blocks[0].text.text), 'NEED_ARRANGER -> pick one or No arranger');
   A = (await run('After Prepare', [{ json: { status: 'REJECTED', reason: 'SOMETHING_NEW', human: 'Ask the requester to …' } }], outs))[0].json;
-  ok(!/Ask the requester/.test(JSON.stringify(A.view)) && /SOMETHING_NEW/.test(A.view.blocks[0].text.text), "Book Session's own (chat) texts are never shown");
+  ok(!/Ask the requester/.test(JSON.stringify(A.view)) && (/SOMETHING_NEW/.test(A.view.blocks[0].text.text) || /^⚠️ This couldn’t be booked\. Check the details/.test(A.view.blocks[0].text.text)), "Book Session's own (chat) texts are never shown (v15: nor its code)");
 
   // a second problem replaces the first, never stacks
   outs['Read Request'] = [{ json: { payload: Object.assign(payload(state('Studio 8', 'p', 'c', 'U1')), {}) } }];

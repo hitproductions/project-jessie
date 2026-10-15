@@ -114,7 +114,7 @@ async function run(wf, name, input, outs) {
   s2 = await step2(r1, { status: 'OK', free_priority: [], free_last_resort: [] });
   ok(!s2.view.submit && /Nothing that does VO Recording is free/.test(JSON.stringify(s2.view)), 'step 2: nothing free -> no Book, go Back');
   s2 = await step2(r1, { status: 'CALENDAR_ERROR' });
-  ok(!s2.view.submit && /could not be checked/.test(JSON.stringify(s2.view)), 'step 2: calendar error -> no Book');
+  ok(!s2.view.submit && /could(?: not|n’t) be checked/.test(JSON.stringify(s2.view)), 'step 2: calendar error -> no Book');
   const rMeet = await read1(sub1(vals('2027-10-15', '15:00', '16:00', 'Meeting')));
   s2 = await step2(rMeet, { status: 'OK', free_priority: ['Likha'], free_last_resort: [] });
   ok(rMeet.s.kind === 'meeting' && s2.view.blocks.some(b => b.block_id === 'title') && !s2.view.blocks.some(b => b.block_id === 'engineer'), 'meeting: title, no engineer');

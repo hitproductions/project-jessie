@@ -76,3 +76,21 @@ A typed repeating booking no longer goes to the chat's series card and its typed
 
 Offline: `node scripts/sim-typed-series.js` 17; sim-series-form 41, sim-typed-to-form 70, sim-step-c2 59, sim-step-c1 45,
 sim-slice1-a 57, sim-slice1-b 34, hello 20; main v268 test-nodes 657, gate 69/69, check-fromai + audit clean.
+
+## Fixes from the series test (15 Oct afternoon): Slack Interactions v15
+
+- **Booking the confirmed series failed on every date** ("Could not book … (NO_REFERENCE_DATA)"): the form passed Book
+  Series an empty room list when booking (the check step had it). It now passes the room list, the staff list and who is
+  booking - the same inputs the chat's Series Direct passes.
+- **No code reaches the requester**: the series result says why in words ("the room list couldn't be read", "the room
+  was taken"), and the single-booking, Change and Cancel messages never show a code either.
+- **How many times wins** when it is set; **Or until** is used only when it is empty (Slack cannot clear a picked date).
+  Or until starts four weeks after the first date, so its picker opens in the right year during QA.
+- Step 1: "A room will be recommended to you based on your session details."; the purpose groups are **Sessions** and
+  **Other bookings**.
+
+Import: **Slack Interactions v15** into `PyxSPoAMtSE1gzaH` - download into `workflows/imported/slack-interactions-live-before-v15.json`
+(should MATCH v14) → clear → Import `workflows/slack-interactions-v15.json` → Save → Publish "v15 - series fixes" →
+download into `workflows/imported/slack-interactions-v15-imported.json`.
+Test: a 3-week series → Book 3 dates → three events on the calendar; How many times 3 with an end date set → 3 dates;
+Or until opens in 2027.

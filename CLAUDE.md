@@ -806,6 +806,12 @@ the task runner), for whoever has shell access to the box.
     `check-import after` caught it ("nodes only in the download: …1"). Before Import from File: download, then select all
     (Cmd+A) and delete, then import. A download with "…1" node names is this, not a build problem.
 
+41. **A sim that stops at the call misses what the called workflow needs** (15 Oct). Slack Interactions v13 booked a confirmed
+    series with `reference_data: ''` - Book Session refused every date (NO_REFERENCE_DATA) and the code reached the form. The
+    sim checked To Book Series' output and ran Book Series' Expand Dates, but never asked whether Book Session gets what it
+    needs. When a form calls a sub-workflow the chat already calls, diff the inputs against the chat's call (here main's
+    Series Direct) and run the sim one step further. And never print a refusal code to a requester - map it to words.
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the
