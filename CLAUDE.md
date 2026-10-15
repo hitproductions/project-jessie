@@ -818,6 +818,12 @@ the task runner), for whoever has shell access to the box.
     (`sim-step-c1` now checks every rendered block), and every message Slack might refuse should have a report step that tells
     the person why (Report Open, Report List).
 
+43. **Cmd+A then D deactivates every node** (15 Oct). n8n's D shortcut toggles "Deactivate" on the selection; clearing the canvas
+    before an import needs Delete / Backspace. Slack Interactions v16's download came back with all 105 nodes deactivated - the
+    workflow still shows Active, but a deactivated Webhook trigger answers nothing, so every button and form goes dead.
+    `check-import after` says "DEACTIVATED in the download"; read its last line before recording an import as MATCH (it was
+    first recorded as a match here by mistake).
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the
