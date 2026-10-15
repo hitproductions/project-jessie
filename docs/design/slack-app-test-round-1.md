@@ -218,7 +218,7 @@ download into `workflows/imported/project-jessie-v272-imported.json`.
 Offline: `node scripts/sim-round-3.js` 25; sim-every-message 36, sim-step-c2 59, sim-typed-to-form 70, sim-typed-series 21,
 sim-slice1-a 57, sim-round-2 38 (with SI v19); test-nodes 570, gate 69/69, fromai ok, audit-model-text clean.
 
-## main v273 (v272 fixed) - 15 Oct, from testing v272
+## main v273 (v272 fixed) - 15 Oct, from testing v272 - LIVE ~17:45 (before MATCH v272, after MATCH)
 
 - "what do I have this week?" right after "is studio 8 free tomorrow 3-5?" -> "Here's what I have so far: Studio 8 · 3-5 PM",
   then "what's in studio 4 on thursday?" -> an offer for Studio 4 on Thursday. v272 put the answer's date / time / room on
@@ -247,7 +247,7 @@ Offline: `node scripts/sim-v273.js` 16 (5 fail on v272); sim-round-3 25, sim-eve
 sim-typed-to-form 70 (its offer fixture now has the real first line), sim-typed-series 21, sim-slice1-a 57, sim-round-2 38;
 test-nodes 570, gate 69/69, fromai ok, audit clean.
 
-## Slack Interactions v20 (v19 fixed) - hotfix, 15 Oct
+## Slack Interactions v20 (v19 fixed) - hotfix, 15 Oct - LIVE ~17:45 (before MATCH v19, after MATCH)
 
 Every single booking from the form failed since v19 (~16:26): "This couldn't be booked. Check the details and press Book
 again". Book Session execution 44331 (17:09, M2) shows why - MISSING_DETAILS, "a title, a start time, an end time, a room":
