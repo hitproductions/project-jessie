@@ -827,6 +827,13 @@ the task runner), for whoever has shell access to the box.
     `check-import after` says "DEACTIVATED in the download"; read its last line before recording an import as MATCH (it was
     first recorded as a match here by mistake).
 
+44. **A button's value is read by more than the button** (15 Oct). main v272 gave Book a room under an answer a JSON value (the
+    message's date / time / room). Form Offer and Menu Check had always read "Jessie's last message has an open_book with a JSON
+    value" as "a booking offer is waiting for details", so the next question was added to it as details - "what do I have this
+    week?" came back as "Here's what I have so far: Studio 8 · 3-5 PM". Before changing a button's value, search every node for
+    its action_id (main: Menu Check, Form Offer, Change Offer, Build Reply, Mine Reply), and run the sims with fixtures shaped
+    like what Slack returns (sim-typed-to-form's offer message had an empty section, so it could not tell the two apart).
+
 ## Not done
 
 - Titles are still composed by the model, but since v167 the project and client segments are put back to what the

@@ -217,3 +217,32 @@ download into `workflows/imported/project-jessie-v272-imported.json`.
 
 Offline: `node scripts/sim-round-3.js` 25; sim-every-message 36, sim-step-c2 59, sim-typed-to-form 70, sim-typed-series 21,
 sim-slice1-a 57, sim-round-2 38 (with SI v19); test-nodes 570, gate 69/69, fromai ok, audit-model-text clean.
+
+## main v273 (v272 fixed) - 15 Oct, from testing v272
+
+- "what do I have this week?" right after "is studio 8 free tomorrow 3-5?" -> "Here's what I have so far: Studio 8 · 3-5 PM",
+  then "what's in studio 4 on thursday?" -> an offer for Studio 4 on Thursday. v272 put the answer's date / time / room on
+  its Book a room button, and Form Offer read any such button as its own offer and the next message as more details for it.
+  Nothing was booked - an offer only fills the form. Fixed: only Form Offer's own message ("Here's what I have so far:")
+  counts as an offer, and a question after an offer is never more details (Menu Check likewise).
+- "cancel a booking i have next friday" -> 'couldn't find a booking of yours called "have"' ("cancel a booking for next
+  friday" worked). Change Offer now drops more everyday words (have, booked, scheduled, upcoming, naman, yung, pa-cancel …).
+
+### Import (main only) - Cmd+A then **Delete** before importing
+
+**main v273** into `uVVYVB2M7kxpLleI`: download into `workflows/imported/project-jessie-live-before-v273.json` (should MATCH
+v272) → clear → Import `workflows/project-jessie-v273.json` → Save → **Publish** "v273 - v272 fixed" → download into
+`workflows/imported/project-jessie-v273-imported.json`.
+
+### Test
+
+1. `is studio 8 free tomorrow 3-5?` → `what do I have this week?` → *Your bookings* (the list, not "Here's what I have so far").
+2. `what's in studio 4 on thursday?` → an answer about Studio 4, not an offer.
+3. `cancel a booking i have next friday` → "Which one?" with the bookings that day.
+4. Still working: `studio 7 tomorrow 2-4pm` → the offer, then `project orange` → the offer with Project: ORANGE added; and
+   **Book a room** under the Studio 8 answer still opens filled in.
+5. The rest of round 3: `what's free friday afternoon?`, `what do I have tomorrow?`, `which rooms can do 5.1?`.
+
+Offline: `node scripts/sim-v273.js` 16 (5 fail on v272); sim-round-3 25, sim-every-message 36, sim-step-c2 59,
+sim-typed-to-form 70 (its offer fixture now has the real first line), sim-typed-series 21, sim-slice1-a 57, sim-round-2 38;
+test-nodes 570, gate 69/69, fromai ok, audit clean.

@@ -118,7 +118,7 @@ async function run(wf, name, input, outs) {
 
   // ---- after an offer
   const prev = { d: '2027-10-14', s: '14:00', e: '16:00', r: 'Studio 7', p: 'VO Recording' };
-  const offerMsg = { ts: '99.1', bot_id: 'B1', text: 'Here’s what I have so far', blocks: [{ type: 'section' },
+  const offerMsg = { ts: '99.1', bot_id: 'B1', text: 'Here’s what I have so far', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Here’s what I have so far:\n🗓️ *Studio 7 · Thursday, October 14 · 2:00 PM – 4:00 PM*' } },   // as Slack returns it (v273 reads it)
     { type: 'actions', elements: [{ type: 'button', action_id: 'open_book', value: JSON.stringify(prev) }] }] };
   r = await offer('make it 3-5pm', { history: [{ ts: '100.1', text: 'make it 3-5pm' }, offerMsg], bf: { timeInNewest: true, timeStart: '15:00', timeEnd: '17:00' } });
   ok(r.formOffer.offer && r.formOffer.why === 'more details after an offer' && r.formOffer.prefill.s === '15:00' && r.formOffer.prefill.d === '2027-10-14'
