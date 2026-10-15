@@ -176,7 +176,7 @@ Offline: `node scripts/sim-every-message.js` 35; sim-step-c2 59, sim-typed-to-fo
 sim-round-2 38; test-nodes 570 (the booking tools' input checks no longer apply - 660 before), gate 69/69, fromai ok,
 audit-model-text clean (331 texts).
 
-## Round 3 - questions answered cleanly: main v272 (15 Oct, from the v271 test)
+## Round 3 - questions answered cleanly: main v272 (15 Oct, from the v271 test) - LIVE ~16:55 (before MATCH v271, after MATCH)
 
 Three replies from testing v271, all on the question side:
 
