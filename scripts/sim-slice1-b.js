@@ -125,7 +125,8 @@ async function run(name, input, outs) {
   ok(B.view.blocks[0].text.text === CARD, 'v8 form: the same card');
   if (V10) ok(B.view.blocks.length === 1, 'v10: no "A copy is in your DM" line');
   B = (await run('After Book', [{ json: { status: 'CREATED', event_id: 'E1', title: 'QAW1 / Jem Lim / HL', duration_note: 'Heads up: 9 hours is longer than usual.' } }], outs))[0].json;
-  ok(B.text === CARD + '\nHeads up: 9 hours is longer than usual.', 'v8 DM: an unusual length still says so, under the card');
+  ok(B.text === CARD + '\nHeads up: 9 hours is longer than usual.' || (B.text === CARD && (B.blocks || []).some(x => x.type === 'context' && /^bkn_/.test(x.block_id || '') && x.elements[0].text === 'Heads up: 9 hours is longer than usual.')),
+     'v8 DM: an unusual length still says so, under the card (v23: as a small line)');
   B = (await run('After Book', [{ json: { status: 'ROOM_DECLINED', removed: true } }], outs))[0].json;
   ok(!B.ok && /turned the booking down/.test(B.view.blocks[0].text.text) && /taken off the calendar/.test(B.view.blocks[0].text.text), 'ROOM_DECLINED -> the form again: declined, removed');
   B = (await run('After Book', [{ json: reject({ verdict: 'REJECTED', reason: 'ROOM_OCCUPIED', human: 'x' }) }], outs))[0].json;

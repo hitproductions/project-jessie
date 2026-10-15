@@ -364,3 +364,32 @@ all-day booking as "12:00 AM – 12:00 AM" (main's row helpers) - the same fix i
 Offline: `node scripts/sim-round-5.js` 40 (fails on v21); sim-round-4 48, sim-si-wiring 11, sim-round-2 38, sim-slice1-a 57,
 sim-slice1-b 34, sim-hello-form 20, sim-step-c1 60, sim-series-form 49, sim-build-b 30 (with Move v32), sim-typed-to-form 70,
 sim-typed-series 21, sim-step-c2 59; test-nodes 570 (Move v32), gate 69/69, fromai ok, audit clean.
+
+## Round 6 - Slack Interactions v23 + Book Session v111 (15 Oct)
+
+From testing v22: the note on a booking longer or shorter than usual ran on at the end of the Booked card, full size, in
+minutes ("(240-600 minutes is typical)").
+
+1. The note is a **small line under the card** (like My bookings' "Further ahead? …"), on the form's result and in the DM,
+   above Change / Cancel. A change or cancel that goes through removes it.
+2. It says **hours**: "That is a bit shorter than Localization Dubbing sessions usually run (4–10 hours is typical)."
+
+### Import - Cmd+A then **Delete** before each import
+
+1. **Book Session v111** into `EUG3sGXkfsJSYIMz`: download into `workflows/imported/book-session-live-before-v111.json` (should
+   MATCH v110) → clear → Import `workflows/book-session-v111.json` → Save → **Publish** "v111 - lengths in hours" → download into
+   `workflows/imported/book-session-v111-imported.json`.
+2. **Slack Interactions v23** into `PyxSPoAMtSE1gzaH`: download into `workflows/imported/slack-interactions-live-before-v23.json`
+   (should MATCH v22) → clear → Import `workflows/slack-interactions-v23.json` → Save → **Publish** "v23 - round 6" → download
+   into `workflows/imported/slack-interactions-v23-imported.json`.
+
+### Test (2027 dates)
+
+1. Book a Localization Dubbing for 2 hours → the Booked card ends at Room; under it, small: "That is a bit shorter than
+   Localization Dubbing sessions usually run (4–10 hours is typical)." - on the form and in the DM.
+2. A VO Recording for 5 hours → "(1–3 hours is typical)".
+3. Change the first one to another time → ✅ Changed, the old note gone. Cancel the second → ❌ Cancelled, no note.
+4. A booking inside the usual length → no note.
+
+Offline: `node scripts/sim-round-6.js` 12 (fails on v22 / v110); sim-round-5 40, sim-round-4 48, sim-si-wiring 11, sim-slice1-b
+34 (version-aware), every other SI sim green; test-nodes 570 with Book Session v111; fromai ok, audit clean.
