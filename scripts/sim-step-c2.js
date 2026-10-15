@@ -4,7 +4,7 @@
 // Change form starting at the time typed (Build Change).
 // Usage: node scripts/sim-step-c2.js [main v265] [slack interactions v12]
 const fs = require('fs');
-const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v266.json', 'utf8'));
+const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v267.json', 'utf8'));
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v12.json', 'utf8'));
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
@@ -108,11 +108,26 @@ const j1 = async (...a) => (await run(...a))[0].json;
     ok([':white_check_mark: *Booked.*\n\n*LEMON ADE*', '✅ *Changed.*', ':x: *Cancelled:* X', '*Booked.*', 'Moved "X" to'].every(x => stop.test(x)) && !stop.test('Here’s what I have so far'),
        'v266: Booked For stops at Booked / Changed / Cancelled, with the emoji');
   }
+  if (main.nodes.some(n => n.name === 'Late Menu?')) {
+    // v267 (live 11:11): "lhkjf;kj" right after a booking reply went to the agent
+    const late = async (text, fo, o) => (await offerOf(text, o)) && (await j1(main, 'Change Offer', [{ json: { formOffer: fo } }], {
+      'Slack Trigger': [{ json: { text, channel: 'D1', user: 'U1', ts: '100.1' } }], 'Gate Context': [{ json: { datesInMessage: '', todayIso: '2027-10-15', gate: {} } }],
+      'Booked For': [{ json: {} }], 'Get Recent Messages': [] })).changeOffer;
+    let lm = await late('lhkjf;kj', { why: 'nothing new after an offer' });
+    ok(lm.menu === true && !lm.go && /I can help with bookings/.test(lm.menuBlocks[0].text.text) && lm.menuBlocks[1].elements[0].action_id === 'open_book', 'v267: nothing new after a booking reply -> the menu (live 11:11)');
+    lm = await late('thanks', { why: 'nothing new after an offer' });
+    ok(lm.menu && lm.menuBlocks[0].text.text === 'Anytime! Anything else?', 'v267: thanks after a booking reply -> "Anytime!"');
+    ok(!(await late('which studio is bigger?', { why: 'nothing new after an offer' })).menu, 'v267: a question after a booking reply -> the agent');
+    ok(!(await late('lhkjf;kj', { why: 'not a booking request' })).menu, 'v267: only after a booking reply');
+    const nx7 = n => (main.connections[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');
+    ok(nx7('Change Offer?') === 'List Mine | Late Menu?' && nx7('Late Menu?') === 'Send Late Menu | Early Room Plan' && nx7('Send Late Menu') === 'Turn Log Row+Clear Ack', 'v267 wiring');
+    ok((await j1(main, 'Turn Log Row', [{ json: {} }], { 'Slack Trigger': [{ json: { text: 'x', ts: '1' } }], 'Send Late Menu': [{ json: { ok: true } }] })).Path === 'menu', 'v267: Turn Log "menu"');
+  }
   ok(/\$json\.blocks\[0\]\.text\.text/.test(main.nodes.find(n => n.name === 'Send Menu').parameters.jsonBody), 'Send Menu: the notification text is the menu\'s line');
 
   // ---- wiring + Turn Log
   const C = main.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');
-  ok(nx('Form Offer?') === 'Send Form Offer | Change Offer' && nx('Change Offer?') === 'List Mine | Early Room Plan' && nx('List Mine') === 'Change Reply'
+  ok(nx('Form Offer?') === 'Send Form Offer | Change Offer' && ['List Mine | Early Room Plan', 'List Mine | Late Menu?'].indexOf(nx('Change Offer?')) !== -1 && nx('List Mine') === 'Change Reply'
      && nx('Change Reply') === 'Send Change Reply' && nx('Send Change Reply') === 'Turn Log Row+Clear Ack', 'wiring: Form Offer? -> Change Offer -> Change Offer? (List Mine -> Change Reply -> Send; else Early Room Plan)');
   const tl = await j1(main, 'Turn Log Row', [{ json: {} }], { 'Slack Trigger': [{ json: { text: 'x', ts: '1' } }], 'Send Change Reply': [{ json: { ok: true } }] });
   ok(tl.Path === 'change offer', 'Turn Log: change offer');

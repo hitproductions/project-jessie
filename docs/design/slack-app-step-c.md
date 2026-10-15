@@ -100,3 +100,13 @@ Import: main only - open `uVVYVB2M7kxpLleI`, download into `workflows/imported/p
 menu after openers" → download into `workflows/imported/project-jessie-v266-imported.json`.
 Test: book through the form, then `book me a studio` → "Let's book it with the form." with nothing filled in; then
 `dsfadfsa` → the menu.
+
+## main v266 live (11:08); main v267 (menu after a booking reply)
+
+"lhkjf;kj" right after a booking reply (the one with Book a room) went to the chat on v266 (11:11): after that reply every
+message is read as a possible detail first. v267: when it adds nothing new, asks nothing and is not a cancel / change, it
+gets the menu ("Anytime! Anything else?" for thanks).
+Import: main - download into `workflows/imported/project-jessie-live-before-v267.json` (should MATCH v266) → clear →
+Import `workflows/project-jessie-v267.json` → Save → Publish "v267 - menu after a booking reply" → download into
+`workflows/imported/project-jessie-v267-imported.json`. Test: `book studio 7 tomorrow` → the reply → `lhkjf;kj` → the menu;
+`thanks` → "Anytime! Anything else?".
