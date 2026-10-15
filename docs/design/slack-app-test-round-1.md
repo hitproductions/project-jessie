@@ -318,7 +318,7 @@ Offline: `node scripts/sim-round-4.js` 48 (fails on v20); sim-si-wiring 11, sim-
 sim-hello-form 20, sim-step-c1 60, sim-series-form 49, sim-build-b 30, sim-typed-to-form 70, sim-typed-series 21, sim-step-c2
 59; fromai ok, audit clean.
 
-## Round 5 - Slack Interactions v22 + Move Booking v32 (15 Oct)
+## Round 5 - Slack Interactions v22 + Move Booking v32 (15 Oct) - LIVE ~19:55 (before MATCH v21 / v31, after MATCH)
 
 From testing v21:
 
