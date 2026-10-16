@@ -1,0 +1,22 @@
+{
+  "v": 4,
+  "createdOnFiles": { "v": 1, "at": "2026-10-16T01:30:00Z" },
+  "lists": "css",
+  "title": "Jessie Build Update",
+  "cover": "cover",
+  "order": ["cover", "status", "why", "pattern", "decision", "rules", "ux", "shift", "features", "next", "demo"],
+  "sections": {
+    "s1": { "description": "Where the Jessie build stands today.", "start": "cover" },
+    "s2": { "description": "Why we moved from a chatbot to forms.", "start": "why" },
+    "s3": { "description": "What we decided, and what it means.", "start": "decision" },
+    "s4": { "description": "What Jessie does today, before the live demo.", "start": "features" },
+    "s5": { "description": "What’s next, then the live demo.", "start": "next" }
+  },
+  "faces": {
+    "avenir-lt-std": { "family": "Avenir LT Std", "src": "project/ds/hit-productions/fonts/AvenirLTStd-Roman.otf" },
+    "avenir-black": { "family": "Avenir Black", "src": "project/ds/hit-productions/fonts/AvenirLTStd-Black.otf" }
+  },
+  "designSystems": [
+    { "title": "Hit Productions Design System", "namespace": "hit-productions", "artifact": "https://claude.ai/artifact/BySgkYph7F8QdSiFqvdLJL", "version": "1792119596-5877", "copiedAt": "2026-10-16T01:30:00Z" }
+  ]
+}
