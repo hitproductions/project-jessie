@@ -17,6 +17,7 @@ async function run(wf, name, input, outs) {
 }
 const j1 = async (...a) => (await run(...a))[0].json;
 
+const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: details shown at once, no box (sim-round-7)
 (async () => {
   const S7 = 'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com';
   // ---- Move v31: free stretches (the live case: ORANGE 12-2 PM, GOLDFISH 10-12 in Studio 7, asked 11-1)
@@ -65,13 +66,14 @@ const j1 = async (...a) => (await run(...a))[0].json;
   // the form: a details checkbox, and its fields filled in from the booking
   const bc = await j1(si, 'Build Change', [], { 'Check Signature': chk, 'Read Cache 6': cache, 'Read Request': [{ json: { payload: { actions: [{ action_id: 'bk_change', value: JSON.stringify(B) }], container: { channel_id: 'D1', message_ts: '7.7' } } } }] });
   const dt = bc.view.blocks.find(b => b.block_id === 'details_toggle');
-  ok(dt && dt.elements[0].options[0].text.text === 'Change other session details' && !bc.view.blocks.some(b => /^det_/.test(b.block_id || '')) && !bc.view.blocks.some(b => b.type === 'context' && /checked before/.test(JSON.stringify(b))),
+  if (V24) ok(!dt && bc.view.blocks.some(b => b.block_id === 'det_project'), 'v24: the details shown at once - no box');
+  else ok(dt && dt.elements[0].options[0].text.text === 'Change other session details' && !bc.view.blocks.some(b => /^det_/.test(b.block_id || '')) && !bc.view.blocks.some(b => b.type === 'context' && /checked before/.test(JSON.stringify(b))),
      'v18: "Change other session details" box, fields hidden; no bottom note');
   const route = async (payload) => (await j1(si, 'Check Signature', [{ json: { computed: 'abc' } }], { 'Read Request': [{ json: { sig: 'v0=abc', ts: String(Math.floor(Date.now() / 1000)), payload } }] })).route;
-  ok(await route({ type: 'block_actions', actions: [{ action_id: 'details_toggle' }] }) === 8 && nx('Ack Note') === 'Read Cache 9' && nx('Read Cache 9') === 'Note Toggle', 'v18: the box goes to route 8, which reads Bookers');
+  ok(await route({ type: 'block_actions', actions: [{ action_id: 'details_toggle' }] }) === 8 && nx('Ack Note') === 'Read Cache 9' && (nx('Read Cache 9') === 'Note Toggle' || (nx('Read Cache 9') === 'Loc Projects 9' && nx('Loc Projects 9') === 'Note Toggle')), 'v18: the box goes to route 8, which reads Bookers');
   const tog = await j1(si, 'Note Toggle', [], { 'Read Cache 9': cache, 'Read Request': [{ json: { payload: { type: 'block_actions', actions: [{ action_id: 'details_toggle', selected_options: [{ value: 'det' }] }],
     view: { id: 'V5', callback_id: 'change_booking', title: bc.view.title, close: bc.view.close, submit: bc.view.submit, private_metadata: bc.view.private_metadata, blocks: bc.view.blocks, state: { values: {} } } } } }] });
-  const T = id => tog.view.blocks.find(b => b.block_id === id);
+  const T = id => (V24 ? bc : tog).view.blocks.find(b => b.block_id === id);   // v24: already on the form
   ok(T('det_project').element.initial_value === 'ORANGE' && T('det_client').element.initial_value === 'Jem Lim' && T('det_engineer').element.initial_option.value === 'U1' && T('det_arranger').element.initial_option.value === 'U4',
      'v18: ticked -> Project, Client, Engineer, Arranger filled in from the title and Bookers');
   ok(T('det_arranger').element.options.map(o => o.text.text).join() === 'No arranger,Mike Villegas,Peter Legaste', 'v18: arrangers include "Head of Music, Arranger" (Mike Villegas)');

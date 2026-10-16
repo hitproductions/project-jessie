@@ -36,14 +36,14 @@ async function run(wf, name, input, outs) {
   ok((await check({ type: 'view_submission', view: { callback_id: 'book_step1' } })).route === 5, 'step 1 submit -> 5');
   ok((await check({ type: 'view_submission', view: { callback_id: 'book_step2' } })).route === 6, 'step 2 submit -> 6');
   ok((await check({ type: 'block_actions', actions: [{ action_id: 'my_bookings' }] })).route === 7, 'My bookings -> 7');
-  ok((await check({ type: 'block_actions', actions: [{ action_id: 'room_radio' }] })).route === (/'room_radio'\]\.indexOf\(action\)/.test(JSON.stringify(si)) ? 8 : 3), 'a radio change -> just acknowledged (v21: a studio change redraws the booth, route 8)');
+  ok((await check({ type: 'block_actions', actions: [{ action_id: 'room_radio' }] })).route === (/'room_radio'[^\]]*\]\.indexOf\(action\)/.test(JSON.stringify(si)) ? 8 : 3), 'a radio change -> just acknowledged (v21: a studio change redraws the booth, route 8)');
 
   // fake cache
   const R = (id, name, extra) => ({ id, fields: Object.assign({ 'Room Name': name }, extra || {}) });
   const rooms = [R('r7', 'Studio 7'), R('r8', 'Studio 8'), R('rf', 'Studio F'), R('rc', 'Studio C'), R('r4', 'Studio 4'),
     R('rl', 'Likha', { 'Room Type': ['Conference Room'] }), R('m4', 'M4', { 'Room Type': ['M Booth'] }), R('ra', 'Studio A', { 'Vocal Booth': true })];
-  const ST = (t, pri, last, role) => ({ id: 'st-' + t, fields: { Type: t, Priority: pri, 'Last Resort': last || [], 'Engineer Role Required': role ? [role] : [] } });
-  const sessionTypes = [ST('VO Recording', ['r7', 'r8', 'rf', 'rc'], ['r4'], 'Post Engineer'), ST('Meeting', ['rl']), ST('Event', ['rl']), ST('Music Mixing', ['rf'], ['rc'], 'Music Engineer')];
+  const ST = (t, pri, last, role) => ({ id: 'st-' + t, fields: { Type: t, Priority: pri, 'Last Resort': last || [], 'Engineer Role Required': [].concat(role || []) } });
+  const sessionTypes = [ST('VO Recording', ['r7', 'r8', 'rf', 'rc'], ['r4'], 'Post Engineer'), ST('Meeting', ['rl']), ST('Event', ['rl']), ST('Music Mixing', ['rf'], ['rc'], ['Music Engineer', 'Music Arranger'])]   /* as in Airtable */;
   const bookers = [{ id: 'b1', fields: { Name: 'Howard Luistro', Initials: 'HL', 'Slack User ID': 'U1', Info: 'Post Engineer, Secondary Music Engineer, Goes by Howard.' } },
                    { id: 'b2', fields: { Name: 'Daryl Reyes', Initials: 'DR', 'Slack User ID': 'U2\n', Info: 'Music Engineer, Post Engineer. Goes by Daryl.' } },
                    { id: 'b3', fields: { Name: 'Jetrho Ty', Initials: 'JT', 'Slack User ID': 'U3', Info: 'Loc Engineer, Goes by Jetrho.' } },
@@ -55,7 +55,8 @@ async function run(wf, name, input, outs) {
 
   // step 1
   const s1 = (await run(si, 'Build Step 1', [], { 'Check Signature': [chk], 'Read Cache': cacheRow }))[0].json;
-  const grp = s1.view.blocks[4].element.option_groups;
+  { const B = s1.view.blocks, pi = B.findIndex(b => b.block_id === 'purpose'); if (pi === 1) { const [pb] = B.splice(1, 1); B.splice(4, 0, pb); } }   // v24 moved it first: the old index checks below read the old order
+  const grp = s1.view.blocks.find(b => b.block_id === 'purpose').element.option_groups;   // v24: it moved first
   ok(s1.cacheOk && grp[0].options.map(o => o.value).join() === 'Music Mixing,VO Recording', 'step 1: sessions from the cache, sorted');
   ok(grp[1].options.map(o => o.value).join() === 'Meeting,Event,__booth', 'step 1: not-a-session group');
   if (JSON.stringify(s1.view).indexOf("'M booth'") !== -1 || s1.view.blocks[4].element.option_groups[1].options.some(o => o.text.text === 'M booth')) {

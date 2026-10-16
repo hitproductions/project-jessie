@@ -27,6 +27,7 @@ const toggle = async (view, action, extra, state) => j1('Note Toggle', [], { 'Re
 const read2 = async (vv, meta) => j1('Read Step 2', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { type: 'view_submission', view: { id: 'V1', private_metadata: JSON.stringify(meta), state: { values: vv } } } } }], 'Read Cache 3': cacheRow });
 const M = (purpose, kind, extra) => Object.assign(S(purpose, kind), { when: 'Tuesday, Oct 19 · 1:00 PM–3:00 PM', label: purpose }, extra || {});
 
+const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: No engineer superseded by "pick one or both" (sim-round-7)
 (async () => {
   // ---- 1: booths
   let v = await step2(S('Localization Dubbing', 'loc'), { free_priority: ['Studio 1', 'Studio 2', 'Studio A', 'Studio B', 'Studio D'] });
@@ -84,19 +85,19 @@ const M = (purpose, kind, extra) => Object.assign(S(purpose, kind), { when: 'Tue
 
   // ---- 5: No engineer
   v = await step2(S('Music Mixing', 'studio'), { free_priority: ['Studio F'] });
-  ok(v.blocks.find(b => b.block_id === 'engineer').element.options[0].value === 'none', '5: Music Mixing - "No engineer" first');
-  ok((await step2(S('Music Vocal Recording', 'studio'), { free_priority: ['Studio F'] })).blocks.find(b => b.block_id === 'engineer').element.options[0].value === 'none', '5: Music Vocal Recording too');
+  if (!V24) ok(v.blocks.find(b => b.block_id === 'engineer').element.options[0].value === 'none', '5: Music Mixing - "No engineer" first');
+  if (!V24) ok((await step2(S('Music Vocal Recording', 'studio'), { free_priority: ['Studio F'] })).blocks.find(b => b.block_id === 'engineer').element.options[0].value === 'none', '5: Music Vocal Recording too');
   ok((await step2(S('VO Recording', 'studio'), { free_priority: ['Studio 7'] })).blocks.find(b => b.block_id === 'engineer').element.options[0].value !== 'none', '5: not for VO Recording');
   const mm = Object.assign(M('Music Mixing', 'studio'), {});
   r2 = await read2({ room: { room_radio: tv('Studio F') }, project: { project_in: { value: 'musicmixtest' } }, engineer: { engineer_pick: tv('none') }, arranger: { arranger_pick: tv('U9') } }, mm);
-  ok(r2.valid && r2.calTitle === 'MUSICMIXTEST / JS' && /no engineer/.test(r2.prep.requester_text) && r2.prep.engineer === '' && r2.team === 'U9' && !/Engineer:/.test(r2.prep.description),
+  if (!V24) ok(r2.valid && r2.calTitle === 'MUSICMIXTEST / JS' && /no engineer/.test(r2.prep.requester_text) && r2.prep.engineer === '' && r2.team === 'U9' && !/Engineer:/.test(r2.prep.description),
      '5: No engineer + Joaquin -> MUSICMIXTEST / JS, Book Session told "no engineer"');
   r2 = await read2({ room: { room_radio: tv('Studio F') }, project: { project_in: { value: 'x' } }, engineer: { engineer_pick: tv('U1') }, arranger: { arranger_pick: tv('none') } }, mm);
   ok(r2.valid && r2.calTitle === 'X / HL', '5: an engineer and no arranger -> as before');
   r2 = await read2({ room: { room_radio: tv('Studio F') }, project: { project_in: { value: 'x' } }, engineer: { engineer_pick: tv('U1') }, arranger: { arranger_pick: tv('U9') } }, mm);
   ok(r2.valid && r2.calTitle === 'X / HL x JS', '5: both -> HL x JS');
   r2 = await read2({ room: { room_radio: tv('Studio F') }, project: { project_in: { value: 'x' } }, engineer: { engineer_pick: tv('none') }, arranger: { arranger_pick: tv('none') } }, mm);
-  ok(!r2.valid && r2.answer.errors.engineer === 'Pick an engineer or an arranger.', '5: neither -> "Pick an engineer or an arranger."');
+  if (!V24) ok(!r2.valid && r2.answer.errors.engineer === 'Pick an engineer or an arranger.', '5: neither -> "Pick an engineer or an arranger."');
 
   // ---- 6: rooms in order, and the Change form like Book
   r2 = await read2({ room: { room_radio: tv('Studio F') }, booth: { booth_pick: tv('Studio D') }, holding: { holding_pick: { selected_options: [{ value: 'Likha' }, { value: 'Katha' }] } },
@@ -138,8 +139,8 @@ const M = (purpose, kind, extra) => Object.assign(S(purpose, kind), { when: 'Tue
   cv = (await buildChange({ id: 'ev1', d: '2027-10-19', s: '13:00', e: '15:00', r: 'Studio 7', t: 'X / HL' })).view;
   ok(!cv.blocks.some(b => b.block_id === 'booth_c' || b.block_id === 'holding_c') && cv.blocks.find(b => b.block_id === 'room').label.text === 'Room', '6: a one-room booking unchanged');
   // Change details: No engineer
-  const dt = await toggle(cv, 'details_toggle', { selected_options: [{ value: 'det' }] }, {});
-  ok(dt.view.blocks.find(b => b.block_id === 'det_engineer').element.options[0].value === 'none', '5: the Change form\'s details offer No engineer');
+  const dt = V24 ? { view: cv } : await toggle(cv, 'details_toggle', { selected_options: [{ value: 'det' }] }, {});
+  if (!V24) ok(dt.view.blocks.find(b => b.block_id === 'det_engineer').element.options[0].value === 'none', '5: the Change form\'s details offer No engineer');
   // Move Booking v32 keeps the Rooms line
   const rbm = mv.nodes.find(n => n.name === 'Resolve Booking').parameters.jsCode;
   ok(/if \('Rooms' in nd\) put\('Rooms', nd\.Rooms, false\);/.test(rbm), '6: Move Booking v32 writes the Rooms line');

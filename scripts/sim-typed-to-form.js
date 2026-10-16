@@ -215,7 +215,8 @@ async function run(wf, name, input, outs) {
     // the note checkbox
     v2 = await step2(Object.assign({}, r1.s, { pre: undefined }), { status: 'OK', free_priority: ['Studio 7'], free_last_resort: [] });
     const nt = b2('note_toggle');
-    ok(nt && nt.type === 'actions' && nt.elements[0].type === 'checkboxes' && nt.elements[0].options[0].text.text === 'Add a note' && !b2('notes'), 'v10: "Add a note" checkbox, no Notes field');
+    if (JSON.stringify(si).indexOf('function typeRoles(') !== -1) ok(!nt && b2('notes') && b2('notes').optional, 'v24: the Note shown, no box');   // v24 (sim-round-7)
+    else { ok(nt && nt.type === 'actions' && nt.elements[0].type === 'checkboxes' && nt.elements[0].options[0].text.text === 'Add a note' && !b2('notes'), 'v10: "Add a note" checkbox, no Notes field');
     const tog = async (checked, blocks, values) => (await run(si, 'Note Toggle', [], { 'Read Request': [{ json: { payload: { type: 'block_actions',
       actions: [{ action_id: 'note_toggle', selected_options: checked ? [{ value: 'note' }] : [] }],
       view: { id: 'V9', hash: 'h1', callback_id: 'book_step2', title: v2.title, close: v2.close, submit: v2.submit, private_metadata: v2.private_metadata, blocks, state: { values } } } } }] }))[0].json;
@@ -226,7 +227,7 @@ async function run(wf, name, input, outs) {
     ok(tg.view.blocks.find(b => b.block_id === 'project').element.initial_value === 'KIWI' && tg.view.private_metadata === v2.private_metadata && tg.view.submit.text === 'Book',
        'v10: entries, metadata and Book kept');
     tg = await tog(false, tg.view.blocks, {});
-    ok(!tg.view.blocks.some(b => b.block_id === 'notes') && !tg.view.blocks.find(b => b.block_id === 'note_toggle').elements[0].initial_options, 'v10: unticked -> the field goes');
+    ok(!tg.view.blocks.some(b => b.block_id === 'notes') && !tg.view.blocks.find(b => b.block_id === 'note_toggle').elements[0].initial_options, 'v10: unticked -> the field goes'); }
     const ck = await run(si, 'Check Signature', [{ json: { computed: 'abc' } }], { 'Read Request': [{ json: { sig: 'v0=abc', ts: String(Math.floor(Date.now() / 1000)),
       payload: { type: 'block_actions', actions: [{ action_id: 'note_toggle' }] } } }] });
     ok(ck[0].json.route === 8 && si.connections['Route'].main[8][0].node === 'Ack Note' && si.connections['Note Toggle'].main[0][0].node === 'Show Note', 'v10: route 8 -> Ack Note -> Note Toggle -> Show Note');

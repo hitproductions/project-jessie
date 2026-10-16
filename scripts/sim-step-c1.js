@@ -51,7 +51,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
     'After Prepare': [{ json: { F, book: { start_iso: '2027-10-16T14:00:00+08:00', end_iso: '2027-10-16T16:00:00+08:00' } } }], 'Read Request': [{ json: { payload: {} } }] });
   ok(ab.blocks[0].block_id === 'bk_ev1' && ab.blocks[0].text.text === ab.text && ab.blocks[1].block_id === 'bka_ev1', 'Booked DM: the card, then its buttons');
   const btns = ab.blocks[1].elements;
-  ok(btns.map(x => x.action_id).join() === 'bk_change,bk_cancel' && JSON.stringify(JSON.parse(btns[0].value)) === JSON.stringify(B), 'buttons carry the booking - ' + btns[0].value);
+  ok(btns.map(x => x.action_id).join() === 'bk_change,bk_cancel' && JSON.stringify((v => { delete v.st; return v; })(JSON.parse(btns[0].value))) === JSON.stringify(B)   /* v24: + the session type */, 'buttons carry the booking - ' + btns[0].value);
   ok(btns[1].style === 'danger' && btns[1].confirm.title.text === 'Cancel this booking?' && btns[1].confirm.confirm.text === 'Cancel booking' && btns[1].confirm.deny.text === 'Keep it'
      && /ORANGE \/ Jem Lim \/ HL\*\nSat, Oct 16 · 2:00 PM – 4:00 PM · Studio 7/.test(btns[1].confirm.text.text), 'Cancel asks first (Slack pop-up)');
   ok(/"blocks: \$\('After Book'\)/.test(JSON.stringify(si.nodes.find(n => n.name === 'DM Booked').parameters.jsonBody)) || /blocks/.test(si.nodes.find(n => n.name === 'DM Booked').parameters.jsonBody), 'DM Booked sends the blocks');

@@ -393,3 +393,49 @@ minutes ("(240-600 minutes is typical)").
 
 Offline: `node scripts/sim-round-6.js` 12 (fails on v22 / v110); sim-round-5 40, sim-round-4 48, sim-si-wiring 11, sim-slice1-b
 34 (version-aware), every other SI sim green; test-nodes 570 with Book Session v111; fromai ok, audit clean.
+
+## Round 7 - Slack Interactions v24 + Move Booking v33 + main v274 (16 Oct)
+
+From testing rounds 5 and 6 (decided with Howard 16 Oct):
+
+1. **"What's it for?" first** in step 1 - it decides every other field.
+2. **The Change form follows the booking's session type**, read from the calendar event (a VO Recording shows no Arranger).
+3. **The session type can be changed** - "What's it for?" at the top of the Change form; the details below follow it.
+4. **Fields shown up front** - no "Change other session details" box; the details are on the Change form at once, filled in.
+5. **Fields per session type from Airtable** (Session Types: Engineer Role Required) - an engineer, an arranger, or both.
+6. **"Engineer and arranger: pick one or both."** where both roles apply (Music Mixing / Vocal / Band / Celebrity per
+   Airtable) - both optional; "No engineer" / "No arranger" stay only to clear a pick (Slack cannot empty a dropdown).
+7. **"Booking this for someone else?"** on meetings, events and M booths - anyone in Bookers; "Booked by: X (for Y)"; they
+   can see / change it and are told; an M booth is titled with their name.
+8. **Department on meetings**, set to the booker's (not on events).
+9. **The Note shown** (no box), on Book and Change. 10. Repeats stays behind its box.
+11. **Localization project code: type or pick** - a search list of Localization Projects (Slack's Options Load URL, set 16
+    Oct) that also takes a new code ("Use … as a new code"); picking one shows the title, client and Recordist / Editor /
+    Mixer, and sets the Engineer from the project (Dubbing: Recordist, Editing: Editor, Mixing: Mixer; QC: anyone).
+
+Also: Jessie's chat lists (main v274) show rooms in order and "all day", like the form, and carry the session type.
+
+### Import - Cmd+A then **Delete** before each import (three workflows)
+
+1. **Move Booking v33** into `t7lwR2km4tfN8DbM`: before download `workflows/imported/move-booking-live-before-v33.json` (MATCH v32)
+   → Import `workflows/move-booking-v33.json` → Publish "v33 - note + session type" → after download `…/move-booking-v33-imported.json`.
+2. **Slack Interactions v24** into `PyxSPoAMtSE1gzaH`: before `…/slack-interactions-live-before-v24.json` (MATCH v23) → Import
+   `workflows/slack-interactions-v24.json` → Publish "v24 - round 7" → after `…/slack-interactions-v24-imported.json`.
+3. **main v274** into `uVVYVB2M7kxpLleI`: before `…/project-jessie-live-before-v274.json` (MATCH v273) → Import
+   `workflows/project-jessie-v274.json` → Publish "v274 - rows: rooms, all day, session type" → after `…/project-jessie-v274-imported.json`.
+
+### Test (2027 dates)
+
+1. Book a room → step 1 starts with "What's it for?".
+2. VO Recording → step 2: Engineer (set to you), no Arranger, a Note field. Music Mixing → "pick one or both", both optional.
+3. Localization Dubbing → Project code: type "net" → the projects + "Use “NET” as a new code" → pick NET-MALAS → "BAD DAY ·
+   NETFLIX", Recordist / Editor / Mixer, Engineer set to the Recordist → Book. QC → nobody preset.
+4. Meeting → Department set to yours; tick "Booking this for someone else?" → pick someone → Book → "Booked by: you (for them)";
+   they get a DM. M booth for someone → "M2 - Name".
+5. Change a VO Recording booking → "What's it for?" VO Recording at the top, the details shown, no Arranger → switch to Music
+   Mixing → Arranger appears → pick one → Change → the title gets "x initials", the event's session type changes.
+6. Change with only a Note typed → Change → the event's note updated.
+7. In chat, "what do I have this week?" → rooms in order, all-day bookings say "all day"; Change from there → the form knows the type.
+
+Offline: `node scripts/sim-round-7.js` 52 (fails on v23); every earlier SI and main sim green (version-aware for the intended
+changes); test-nodes 570 with Move v33 + Book Session v111; gate 69/69; fromai ok, audit clean.
