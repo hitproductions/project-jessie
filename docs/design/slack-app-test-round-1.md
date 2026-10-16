@@ -394,7 +394,7 @@ minutes ("(240-600 minutes is typical)").
 Offline: `node scripts/sim-round-6.js` 12 (fails on v22 / v110); sim-round-5 40, sim-round-4 48, sim-si-wiring 11, sim-slice1-b
 34 (version-aware), every other SI sim green; test-nodes 570 with Book Session v111; fromai ok, audit clean.
 
-## Round 7 - Slack Interactions v24 + Move Booking v33 + main v274 (16 Oct)
+## Round 7 - Slack Interactions v24 + Move Booking v33 + main v274 (16 Oct) - LIVE ~18:15, Slack test owed
 
 From testing rounds 5 and 6 (decided with Howard 16 Oct):
 
