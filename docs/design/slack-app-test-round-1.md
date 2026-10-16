@@ -365,7 +365,7 @@ Offline: `node scripts/sim-round-5.js` 40 (fails on v21); sim-round-4 48, sim-si
 sim-slice1-b 34, sim-hello-form 20, sim-step-c1 60, sim-series-form 49, sim-build-b 30 (with Move v32), sim-typed-to-form 70,
 sim-typed-series 21, sim-step-c2 59; test-nodes 570 (Move v32), gate 69/69, fromai ok, audit clean.
 
-## Round 6 - Slack Interactions v23 + Book Session v111 (15 Oct)
+## Round 6 - Slack Interactions v23 + Book Session v111 (15 Oct) - LIVE 16 Oct ~17:15 (before MATCH v22 / v110, after MATCH; Book Session needed a second import on a cleared canvas, gotcha 40)
 
 From testing v22: the note on a booking longer or shorter than usual ran on at the end of the Booked card, full size, in
 minutes ("(240-600 minutes is typical)").
