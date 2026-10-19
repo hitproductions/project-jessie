@@ -542,7 +542,7 @@ Test: Celebrity Recording → step 2 shows Department (Audio Post for you) → B
 after Book (e.g. a client spelled close to a real one, "jem lin") → press Book and **close the window at once** → the DM says
 "Not booked yet: Did you mean *Jem Lim*? …" with Book a room → it opens the form filled in. Tara: Band Recording again.
 
-### Round 10b - Slack Interactions v28 (19 Oct): the details stay when not booked
+### Round 10b - Slack Interactions v28 (19 Oct): the details stay when not booked - LIVE ~18:37, Slack test owed
 
 When a booking comes back unbooked and the window is gone, the message it started from keeps "Your booking details:" and the
 room · date · time, with "⚠️ Not booked yet – see below" (the question is in the DM). Import into `PyxSPoAMtSE1gzaH`: before
