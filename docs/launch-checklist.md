@@ -45,7 +45,7 @@ notice honors `ALLOW` too (it used to always redirect). All of that is moot once
 ## 3. `HAIST Dev` god-mode — decide (keep or pull)
 
 `HAIST Dev` (Bookers `Authority` tag) bypasses the owner check **and** the department scope — a
-holder can move/cancel **any** booking in **any** department. Currently on **Howard, Tel, Genzo**.
+holder can move/cancel **any** booking in **any** department. Currently on **Howard, Genzo** (Tel left the dev team 19 Oct - remove her tag).
 Not a code flip — a decision:
 
 - **Keep** (devs retain god-mode after launch): do nothing.

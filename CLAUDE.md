@@ -417,8 +417,8 @@ enforced in `Check Conflicts`. Since Book v49 a booking with **no client at all*
 still always asks for a client, but a booking can go ahead without one, and a client who is not in the
 Clients table is booked as typed — for every department, Advertising and Localization included. Book Session
 then writes the client to the **`New Clients` tab of the Jessie Log spreadsheet** (`New Client?` → `New
-Client Row` → `Log New Client`, one row per client, `appendOrUpdate` on `Client`, Status `For Review`) for Tel
-to add to Airtable: only Tel can write Airtable, and the service account behind `Log to Sheet` already
+Client Row` → `Log New Client`, one row per client, `appendOrUpdate` on `Client`, Status `For Review`) for Howard
+to add to Airtable: Howard owns Airtable changes (since 19 Oct; it was Tel until she left the dev team), and the service account behind `Log to Sheet` already
 writes that spreadsheet. A lookup that errored, and a Localization Project Code in the client slot, are not
 logged. The sheet write can never fail a booking (`continueRegularOutput`).
 
@@ -560,7 +560,7 @@ Three switches flip for launch — do them together:
    the `HAIST Dev` Airtable tag is live on Howard (it's strictly broader). Weekend hard-code only.
 4. **`HAIST Dev`** authority (Bookers `Authority` tag) — **god-mode**: bypasses the owner check and
    the department scope, so a holder can move/cancel *any* booking in *any* department. Dev team
-   only: **Howard, Tel, Genzo**. Before/after launch, **decide: keep for devs or pull.** Enforced in
+   only: **Howard, Genzo** (Tel left the dev team 19 Oct - remove her `HAIST Dev` tag in Bookers). Before/after launch, **decide: keep for devs or pull.** Enforced in
    `Check Ownership` / `Resolve Booking` via `isHaistDev`. (Tara, the strategic lead rather than a
    dev, is set up QA-style: on the notification ALLOW list with her real Standard authority.)
 5. **The model (since 8 Oct).** Check the Gemini fallback once since memory was removed (PENDING 101), raise the Console
