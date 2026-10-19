@@ -285,6 +285,7 @@ only script that writes to n8n.
 | `node scripts/sim-availability-reads.js [ra]` | Room Availability's answers (v20/v21): a room asked about always with its booked times and free gaps, never "taken all day" for a part-day booking; the not-usual-room question |
 | `./scripts/test-forms` · `[si] [main] [book] [move] [cancel]` | **every Slack-app sim in one command** (forms, buttons, main's offers, Book Session round 8) on one set of builds - defaults to the newest file of each; one line per sim, then the totals. Run it on every SI / main / Book Session build (since 19 Oct) |
 | `node scripts/sim-round-8.js` · `sim-round-8-book.js` | round 8: the either / or room picker, booth and holding dropdowns, Atmos -> Studio C, Van Recording -> Studio M, the typed project code, the M booth name, placeholders, "Your booking details:"; Book Session v112's polled room answer, Client Cache, Log Booking, single-room refusals |
+| `node scripts/sim-round-10.js` | round 10: the department asked in step 2 for multi-department types; a question / problem whose window is gone reaches the DM with Book a room filled in |
 | `node scripts/sim-round-9.js` | round 9: the year on long dates, "Available rooms:" + why, Studio E only for Post Processing, optional dropdowns reading "No booth / engineer / arranger", "Recommended rooms:" / "Choose a different room", 6 rooms at most |
 | `./scripts/set-log-booking-id.py <id>` | puts Jessie — Log Booking's new workflow id into the newest Book Session build's Log Booking node (after Log Booking is imported, before Book Session is) |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
@@ -867,6 +868,12 @@ the task runner), for whoever has shell access to the box.
     sheets after "Booked.", Book Session v112 calls a separate workflow (Jessie — Log Booking) with Execute Workflow's
     `options.waitForSubWorkflow: false`; the call returns at once and the writes happen on their own. A new workflow has no id
     until imported - import it first, then `scripts/set-log-booking-id.py <id>`, then the caller.
+
+49. **A form's answer can only reach a window that is still open** (19 Oct, Tara). The working view says "You can close this window",
+    so anything Book Session asks after Book (NEED_DEPARTMENT, a client check, a taken room) hit views.update `not_found` and
+    vanished - n8n showed the run as Succeeded (the HTTP node continues on error). Since SI v27 every views.update on that path
+    has a DM fallback (DM Not Shown), and what can be asked up front is asked in step 2 (the department). When a run "succeeds"
+    but the person saw nothing, open the Logs panel and read the views.update node's output for `ok: false`.
 
 ## Not done
 

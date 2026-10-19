@@ -68,7 +68,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   const cap = async (c) => (await j1(si, 'Read Step 2', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: Object.assign({}, sub2, { view: Object.assign({}, sub2.view, { state: { values: Object.assign({}, sub2.view.state.values, { client: { client_in: { value: c } } }) } }) }) } }], 'Read Cache 3': cache })).prep.client;
   ok(await cap('ACME') === 'ACME' && await cap('mcDonald') === 'McDonald' && await cap("o'brien") === "O'Brien" && await cap('sasa abella') === 'Sasa Abella', '4: ACME stays; mcDonald -> McDonald; o\'brien -> O\'Brien');
   // ---- 1: Booking… says you may close it
-  ok(V25 ? /You can close this window – we’ll let you know once it’s done\./.test(JSON.stringify(rs2.answer.view)) && /Saturday, October 16(?:, 2027)?\\n10:00 AM – 2:00 PM/.test(JSON.stringify(rs2.answer.view)) && rs2.answer.view.clear_on_close :
+  ok(V25 ? /You can close this window – we’ll let you know (?:in your DM )?once it’s done\./.test(JSON.stringify(rs2.answer.view)) && /Saturday, October 16(?:, 2027)?\\n10:00 AM – 2:00 PM/.test(JSON.stringify(rs2.answer.view)) && rs2.answer.view.clear_on_close :
      /Your booking is being processed\. (?:This takes a few seconds\. )?You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\./.test(JSON.stringify(rs2.answer.view)) && rs2.answer.view.clear_on_close, '1: Booking… - "You may close this window…"');
 
   // ---- 7: the source message while booking, and after
@@ -104,7 +104,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
 
   // ---- 6 + 1: the series booking view
   const rsc = await j1(si, 'Read Series Confirm', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: { type: 'view_submission', view: { id: 'V3', private_metadata: JSON.stringify({ key: 'k', n: 2, title: 'X' }) } } } }] });
-  ok(rsc.answer.view.clear_on_close === true && V25 ? /Multiple bookings may take longer to process\. You can close this window – we’ll let you know once it’s done\./.test(JSON.stringify(rsc.answer.view)) : rsc.answer.view.clear_on_close === true && /This may take a while\. You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\./.test(JSON.stringify(rsc.answer.view)), '6 + 1: closing the series booking view closes the form; the close line');
+  ok(rsc.answer.view.clear_on_close === true && V25 ? /Multiple bookings may take longer to process\. You can close this window – we’ll let you know (?:in your DM )?once it’s done\./.test(JSON.stringify(rsc.answer.view)) : rsc.answer.view.clear_on_close === true && /This may take a while\. You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\./.test(JSON.stringify(rsc.answer.view)), '6 + 1: closing the series booking view closes the form; the close line');
 
   // ---- 8: room names; the Change form lists rooms of the same kind
   const B = { id: 'evL', d: '2027-10-21', s: '10:00', e: '11:00', r: 'Likha (Big Room)', t: 'LIKHA - haist meeting' };
@@ -123,7 +123,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   ok(rc.valid && rc.roomChanged && rc.newTitle === 'SALIN - haist meeting', '8: moved to Salin -> a room change, the title follows');
   // ---- 3 + 1: the Changing… screen shows the proposed booking
   ok(rc.answer.view.blocks[0].text.text === '⏳ *Changing…*\n\n*SALIN - haist meeting*\n*Date:* Thursday, October 21, 2027\n*Time:* 10:00 AM – 11:00 AM\n*Room:* Salin'
-     && /^(?:This takes a few seconds\. You may close this window\. You’ll be notified when it’s done\.|You may close this window – we’ll notify you once it’s done\.|You can close this window – we’ll let you know once it’s done\.)$/.test(rc.answer.view.blocks[1].elements[0].text), '3 + 1: Changing… shows the proposed card and the close line');
+     && /^(?:This takes a few seconds\. You may close this window\. You’ll be notified when it’s done\.|You may close this window – we’ll notify you once it’s done\.|You can close this window – we’ll let you know (?:in your DM )?once it’s done\.)$/.test(rc.answer.view.blocks[1].elements[0].text), '3 + 1: Changing… shows the proposed card and the close line');
   const tm = await j1(si, 'To Move', [], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'Client Names': [] });
   ok(tm.new_rooms === 'Salin' && tm.new_summary === 'SALIN - haist meeting', '8: To Move passes the new room and title');
   // ---- 1: a finished change DMs the card

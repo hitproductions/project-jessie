@@ -524,3 +524,20 @@ Not changeable (Slack's own): the "Are you sure you want to leave?" box and its 
 8. Type "book studio 7 tomorrow 2-4pm" → "Your booking details so far:" with the year.
 
 Offline: `./scripts/test-forms` (21 sims; sim-round-9 40); test-nodes 570 + gate 69/69 with Book Session v113; fromai ok, audit clean.
+
+## Round 10 - Slack Interactions v27 (19 Oct): questions after Book reach the DM
+
+Tara's Celebrity Recording (16:07): Book -> "You can close this window" -> closed -> Book Session asked "Is this a Music or an
+Audio Post session?" -> the window was gone (views.update `not_found`) -> nothing reached her.
+
+1. Step 2 asks **Department** for types whose roles span departments (Celebrity Recording, Van Recording), set to the booker's.
+2. A question / problem that comes back after the window closed goes to the **DM** ("Not booked yet: …" + Book a room, filled in);
+   a series checked but never confirmed, and a refused change, too.
+3. The working lines: "You can close this window – we’ll let you know in your DM once it’s done."
+
+Import: **Slack Interactions v27** into `PyxSPoAMtSE1gzaH`: before `…/slack-interactions-live-before-v27.json` (MATCH v26) → Cmd+A,
+Delete → Import `workflows/slack-interactions-v27.json` → Publish "v27 - questions reach the DM" → after `…/slack-interactions-v27-imported.json`.
+
+Test: Celebrity Recording → step 2 shows Department (Audio Post for you) → Book → booked, no question. Then something that asks
+after Book (e.g. a client spelled close to a real one, "jem lin") → press Book and **close the window at once** → the DM says
+"Not booked yet: Did you mean *Jem Lim*? …" with Book a room → it opens the form filled in. Tara: Band Recording again.

@@ -195,7 +195,7 @@ const views = [];
 
   console.log('Working lines and the message (2, 6, 17)');
   r = await read2({ room: { room_radio: tv('Studio 6') }, project: { project_in: { value: 'x' } }, engineer: { engineer_pick: tv('U1') } }, M('VO Recording', 'studio', { msg: { ch: 'D1', ts: '50.5' } }));
-  ok(r.answer.view.blocks[0].text.text === '⏳ *Booking Studio 6…*\nWednesday, October 20' + (V26 ? ', 2027' : '') + '\n4:00 PM – 6:00 PM' && r.answer.view.blocks[1].elements[0].text === 'You can close this window – we’ll let you know once it’s done.',
+  ok(r.answer.view.blocks[0].text.text === '⏳ *Booking Studio 6…*\nWednesday, October 20' + (V26 ? ', 2027' : '') + '\n4:00 PM – 6:00 PM' && r.answer.view.blocks[1].elements[0].text === ('You can close this window – we’ll let you know ' + (/in your DM once/.test(JSON.stringify(si.nodes)) ? 'in your DM ' : '') + 'once it’s done.'),
      '6 / 2: Booking… - the date, then the time; the close line, no "being processed"');
   const menuMsg = { ts: '50.5', text: 'Hi', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Hi, I’m Jessie!' } }, { type: 'actions', elements: [{ action_id: 'open_book', value: 'menu' }, { action_id: 'my_bookings', value: 'menu' }] }] };
   const offerMsg = { ts: '50.5', text: 'so far', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Your booking details so far:\n🗓️ *Studio 7 · Wednesday, October 20 · 4:00 PM – 6:00 PM*' } },
