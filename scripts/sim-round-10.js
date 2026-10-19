@@ -71,6 +71,17 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   x = await run('Change DM', [{ json: { ok: false } }], { 'After Move': [{ json: { ok: true } }], 'Read Change': [{ json: { user: 'U1', b: {} } }] });
   ok(x.length === 0, 'changed, window gone -> nothing extra (DM Changed)');
 
+  if (/v28: not booked and the window/.test(JSON.stringify(si.nodes))) {   // v28: the message keeps the details when not booked
+    const head = { type: 'section', block_id: 'src_head', text: { type: 'mrkdwn', text: 'Your booking details:\n🗓️ *Studio F · Tuesday, October 19, 2027 · 11:30 AM – 12:30 PM*' } };
+    const orig = [{ type: 'section', text: { type: 'mrkdwn', text: 'Hi, I’m Jessie!' } }, { type: 'actions', elements: [{ action_id: 'open_book', value: 'menu' }] }];
+    const MS = { ok: true, channel: 'D1', ts: '1.1', blocks: [head], text: 'x', original: orig, offer: false, head };
+    let sd = await run('Source Done', [{ json: { ok: false, error: 'not_found' } }], { 'Mark Source': [{ json: MS }], 'After Prepare': [{ json: AP }] });
+    ok(sd[0].json.blocks[0].text.text === head.text.text && sd[0].json.blocks[1].elements[0].text === '⚠️ Not booked yet – see below', 'v28: not booked, window gone -> the message keeps the details, "⚠️ Not booked yet – see below"');
+    sd = await run('Source Done', [{ json: { ok: true } }], { 'Mark Source': [{ json: MS }], 'After Prepare': [{ json: AP }] });
+    ok(sd[0].json.blocks === orig, 'v28: the question shown in the window -> the message back as it was (as before)');
+    sd = await run('Source Done', [{ json: { ok: false, error: 'not_found' } }], { 'Mark Source': [{ json: Object.assign({}, MS, { offer: true }) }], 'After Book': [{ json: { ok: true } }] });
+    ok(sd[0].json.blocks[1].elements[0].text === '✅ Booked.', 'v28: booked (window gone) -> "✅ Booked." as before');
+  }
   console.log('wiring and wording');
   const C = si.connections, outs = n => [].concat(...((C[n] || {}).main || []).map(o => (o || []).map(c => c.node)));
   ok(['Show Question', 'Show Result', 'Show Series Step', 'Show Change Result'].every((n, i) => outs(n).indexOf(['Question DM', 'Result DM', 'Series DM', 'Change DM'][i]) !== -1)

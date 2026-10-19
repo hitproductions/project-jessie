@@ -541,3 +541,12 @@ Delete → Import `workflows/slack-interactions-v27.json` → Publish "v27 - que
 Test: Celebrity Recording → step 2 shows Department (Audio Post for you) → Book → booked, no question. Then something that asks
 after Book (e.g. a client spelled close to a real one, "jem lin") → press Book and **close the window at once** → the DM says
 "Not booked yet: Did you mean *Jem Lim*? …" with Book a room → it opens the form filled in. Tara: Band Recording again.
+
+### Round 10b - Slack Interactions v28 (19 Oct): the details stay when not booked
+
+When a booking comes back unbooked and the window is gone, the message it started from keeps "Your booking details:" and the
+room · date · time, with "⚠️ Not booked yet – see below" (the question is in the DM). Import into `PyxSPoAMtSE1gzaH`: before
+`…/slack-interactions-live-before-v28.json` (MATCH v27) → Cmd+A, Delete → `workflows/slack-interactions-v28.json` → Publish
+"v28 - details kept when not booked" → after `…/slack-interactions-v28-imported.json`.
+Test: Book from the menu something that asks after Book ("jem lin"), close the window at once → the menu message shows your
+details with "⚠️ Not booked yet – see below", and the DM below it asks the question.
