@@ -485,7 +485,7 @@ form did not open" in the DM, that is Slack refusing it - say so, and the placeh
 Offline: `./scripts/test-forms` (20 sims: sim-round-8 86, sim-round-8-book 47, every earlier sim green on both the candidates
 and the live builds); test-nodes 570 + gate 69/69 with Book Session v112; fromai ok, audit clean, test-dates 17.
 
-## Round 9 - Slack Interactions v26 + Book Session v113 + main v276 (19 Oct)
+## Round 9 - Slack Interactions v26 + Book Session v113 + main v276 (19 Oct) - LIVE ~15:44, Slack test owed
 
 From testing round 8 (Howard, 19 Oct afternoon):
 1. The year on long dates - the Booking… window, "Your booking details:", step 2's header, the chat's "Your booking details so far:".
