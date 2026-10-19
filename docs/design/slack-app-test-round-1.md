@@ -525,7 +525,7 @@ Not changeable (Slack's own): the "Are you sure you want to leave?" box and its 
 
 Offline: `./scripts/test-forms` (21 sims; sim-round-9 40); test-nodes 570 + gate 69/69 with Book Session v113; fromai ok, audit clean.
 
-## Round 10 - Slack Interactions v27 (19 Oct): questions after Book reach the DM
+## Round 10 - Slack Interactions v27 (19 Oct): questions after Book reach the DM - LIVE ~16:24, Slack test owed
 
 Tara's Celebrity Recording (16:07): Book -> "You can close this window" -> closed -> Book Session asked "Is this a Music or an
 Audio Post session?" -> the window was gone (views.update `not_found`) -> nothing reached her.
