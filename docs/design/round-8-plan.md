@@ -58,11 +58,11 @@ Rule: shortest wording, nothing that says what the form already shows, "booking"
 |---|---|
 | *Step 1 of 2* · when, and what for | *Step 1 of 2* |
 | *Step 2 of 2* · room and details | *Step 2 of 2* |
-| A room will be recommended to you based on your session details. | You'll get a room recommendation based on the booking details. |
+| A room will be recommended to you based on your session details. | You'll get a recommendation based on the booking details. |
 | Leave empty if there's no client. A new name is fine. | *(removed)* |
 | Set to you. Change it if someone else is engineering. | *(removed)* |
 | As you typed it. / Only engineers are listed (from Bookers). | *(removed)* |
-| From the project. Change it if someone else is engineering. | From the project. |
+| From the project. Change it if someone else is engineering. *(under Engineer on a Localization booking, after a project code from Airtable filled it in from the project's Recordist / Editor / Mixer)* | *(removed - the project line above already lists the people)* |
 | Set to yours. Change it if the meeting is for another team. / Which team is the meeting for? | *(removed)* |
 | Engineer and arranger: pick one or both. | *(kept - Howard asked for it)* |
 | Change it and the details below follow. / Leave it empty to keep the session as it is. | *(removed)* |
@@ -75,15 +75,15 @@ Rule: shortest wording, nothing that says what the form already shows, "booking"
 | Not a usual room for Meeting - booked as asked. | Not a usual room for meetings. |
 | *Studio 7* records vocals in the room - add a booth only if the session needs one. | *(removed - the booth is optional)* |
 | Type to search Localization Projects. A new code is fine. | *(removed - a text box now)* |
-| New project code - it is booked as typed. | New project code. |
+| New project code - it is booked as typed. *(under Project code, only when the code is not in Localization Projects)* | *(removed - a code missing from Airtable may be an old one; nothing is shown, it is booked as typed)* |
 | Your booking is being processed. You may close this window – we'll notify you once it's done. | You can close this window – we'll let you know once it's done. |
-| Processing your series of bookings. This may take a while. You may close… | This may take a while. You can close this window – we'll let you know once it's done. |
+| Processing your series of bookings. This may take a while. You may close… | Multiple bookings may take longer to process. You can close this window – we'll let you know once it's done. |
 | ⏳ Your booking is being processed… | ⏳ Booking… |
-| ⏳ Your series is being processed… | ⏳ Booking the series… |
+| ⏳ Your series is being processed… | ⏳ Booking… |
 | ⏳ Your cancellation is being processed… | ⏳ Cancelling… |
 | ⏳ Your change is being processed… | ⏳ Changing… |
 | Which department is this session for? | Which department is this booking for? |
-| Who's the arranger? Pick one, or *No arranger*. | Pick an arranger, or *No arranger*. |
+| Who's the arranger? Pick one, or *No arranger*. *(shown after Book when Book Session asks for an arranger)* | *(removed - the form sends "no arranger" when the optional field is empty, so it is never asked)* |
 | "X" isn't in the client list. Did you mean *Y*? Change the client, or press *Book* again to keep "X" as a new client. | Did you mean *Y*? Or press *Book* again to keep "X" as a new client. |
 | "X" isn't in the client list. Check the spelling, or press *Book* again to keep it as a new client. | "X" is a new client. Press *Book* again to keep it. |
 | This couldn't be booked. Check the details and press *Book* again, or go *Back*. | Couldn't book this. Check the details and press *Book* again. |
@@ -128,4 +128,4 @@ date, or a number.").
 ## 5. Open questions
 
 Answered 19 Oct: events lose "for someone else" (9); studios under Another room for events, Lobby recommended (22).
-Still open: the wording table - as written, or strike lines to keep.
+Wording reviewed 19 Oct (Howard): six lines changed, the rest as written.
