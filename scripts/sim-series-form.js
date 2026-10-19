@@ -6,6 +6,7 @@
 // Usage: node scripts/sim-series-form.js [slack interactions v13] [book series]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v17.json', 'utf8'));
+const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: room labels, no descriptions, no "No …" options (sim-round-9)
 const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: step 1 / room wording, the list an actions block
 const V15 = si.nodes.some(n => n.name === 'Read Cache 8'), V17 = si.nodes.some(n => n.name === 'Mark Cancelling');
 const bs = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/imported/book-series-v8-imported.json', 'utf8'));
@@ -89,7 +90,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const roomEl = v => { const b = v.blocks.find(b => b.block_id === 'room'); return b.element || b.elements[0]; };
   const radio = roomEl(s2.view);
   ok(radio.options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio 8,Studio 7,Studio F', 'rooms free on more dates first: ' + radio.options.map(o => o.value).join());
-  ok(radio.options[0].description.text === (V25 ? 'Recommended · free on all 3 dates' : 'Recommended · usual for Localization Dubbing · free on all 3 dates') && radio.options[1].description.text === 'free on 2 of 3 dates'
+  ok((V26 ? !radio.options[0].description : radio.options[0].description.text === (V25 ? 'Recommended · free on all 3 dates' : 'Recommended · usual for Localization Dubbing · free on all 3 dates')) && radio.options[1].description.text === 'free on 2 of 3 dates'
      && radio.options[2].description.text === 'free on 1 of 3 dates', 'each says on how many dates it is free');
   ok(/🗓️ \*3 dates · 2:00 PM–4:00 PM · Localization Dubbing\*/.test(JSON.stringify(s2.view.blocks[1])) && s2.view.blocks[2].elements[0].text === 'Tue Oct 19 · Tue Oct 26 · Tue Nov 2'
      && s2.view.submit.text === 'Check 3 dates', 'header, the dates, "Check 3 dates"');

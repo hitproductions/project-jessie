@@ -4,6 +4,7 @@
 // Usage: node scripts/sim-round-7.js [slack-interactions v24] [move-booking v33] [main v274]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v24.json', 'utf8'));
+const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: no "No …" options, no "pick one or both", room labels (sim-round-9)
 const mv = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/move-booking-v33.json', 'utf8'));
 const main = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/project-jessie-v274.json', 'utf8'));
 const FX = require('./sim-fixture-rooms.js');
@@ -51,9 +52,10 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
      '5: VO Recording - Engineer (required, set to you), no Arranger (Airtable: Post Engineer only)');
   ok(blk(v, 'notes') && blk(v, 'notes').type === 'input' && blk(v, 'notes').optional && !blk(v, 'note_toggle'), '9: the Note is shown - no "Add a note" box');
   v = await step2(S('Music Mixing', 'studio'), { free_priority: ['Studio F'] });
-  ok(blk(v, 'team_note') && blk(v, 'engineer').optional && blk(v, 'arranger').optional && ids(v).indexOf('team_note') < ids(v).indexOf('engineer')
-     && /pick one or both/.test(blk(v, 'team_note').elements[0].text), '6: Music Mixing - "Engineer and arranger: pick one or both.", both optional');
-  ok(blk(v, 'engineer').element.options[0].value === 'none' && blk(v, 'arranger').element.options[0].value === 'none', '6: "No engineer" / "No arranger" first - a picked Slack dropdown cannot be emptied otherwise');
+  ok((V26 ? !blk(v, 'team_note') : blk(v, 'team_note') && ids(v).indexOf('team_note') < ids(v).indexOf('engineer') && /pick one or both/.test(blk(v, 'team_note').elements[0].text))
+     && blk(v, 'engineer').optional && blk(v, 'arranger').optional, '6: Music Mixing - "Engineer and arranger: pick one or both.", both optional');
+  ok(V26 ? !blk(v, 'engineer').element.options.some(o => o.value === 'none') && !blk(v, 'arranger').element.options.some(o => o.value === 'none') && blk(v, 'engineer').element.placeholder.text === 'No engineer' && blk(v, 'arranger').element.placeholder.text === 'No arranger'
+     : blk(v, 'engineer').element.options[0].value === 'none' && blk(v, 'arranger').element.options[0].value === 'none', '6: "No engineer" / "No arranger" first - a picked Slack dropdown cannot be emptied otherwise');
   ok(!(await step2(S('VO Recording', 'studio'))).blocks.find(b => b.block_id === 'engineer').element.options.some(o => o.value === 'none'), '5: VO Recording - no "No engineer"');
   v = await step2(S('Music Mixing', 'studio', { requester: 'U9' }), { free_priority: ['Studio F'] });
   ok(!blk(v, 'engineer').element.initial_option && blk(v, 'arranger').element.initial_option.value === 'U9', '6: an arranger booking - Arranger set to them, Engineer empty');
@@ -147,7 +149,7 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
      '2/4: the VO Recording details shown at once - no Arranger (Slack 16 Oct showed one), no tick box, a Note');
   const meta = JSON.parse(cv.private_metadata);
   t = await toggle(cv, 'purpose_c', { selected_option: { value: 'Music Mixing' } }, { purpose_c: { purpose_c: tv('Music Mixing') }, det_project: { det_project_in: { value: 'PURPLE YAM' } } });
-  ok(blk(t.view, 'team_note') && blk(t.view, 'det_arranger') && blk(t.view, 'det_project').element.initial_value === 'PURPLE YAM', '3: changed to Music Mixing - the details follow (arranger, pick one or both), the project kept');
+  ok((V26 || blk(t.view, 'team_note')) && blk(t.view, 'det_arranger') && blk(t.view, 'det_project').element.initial_value === 'PURPLE YAM', '3: changed to Music Mixing - the details follow (arranger, pick one or both), the project kept');
   t = await toggle(cv, 'purpose_c', { selected_option: { value: 'QC' } }, { purpose_c: { purpose_c: tv('QC') } });
   ok(blk(t.view, 'det_code') && blk(t.view, 'det_code').element.type === (V25 ? 'plain_text_input' : 'external_select') && !blk(t.view, 'det_client'), '3: changed to QC - a project code instead of project / client');
   cv = await buildChange(Object.assign({}, yam, { st: '' }));

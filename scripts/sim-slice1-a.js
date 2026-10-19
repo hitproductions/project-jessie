@@ -6,6 +6,8 @@ const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v267.json', 'utf8'));
 const V275 = /Hi, I’m Jessie!/.test(JSON.stringify(main.nodes));   // main v275: short menu lines, "Your booking details so far:"
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v10.json', 'utf8'));
+const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9 (SI v26)
+const V276 = /v276: the year/.test(JSON.stringify(main ? main.nodes : []));   // round 9 (main v276): the offer's date with its year
 const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: no field hints
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
@@ -97,7 +99,7 @@ async function run(wf, name, input, outs) {
   const step2 = async (r1j, ra) => (await run(si, 'Build Step 2', [{ json: ra }], { 'Read Step 1': [{ json: r1j }], 'Read Cache 2': cacheRow }))[0].json;
   let s2 = await step2(r1, { status: 'OK', free_priority: ['Studio 8', 'Studio F'], free_last_resort: ['Studio 4'] });
   const radio = (x => x.element || x.elements[0])(s2.view.blocks.find(b => b.block_id === 'room'));
-  ok(radio.options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio 8,Studio F' && /Recommended/.test(radio.options[0].description.text), 'step 2: usual free rooms, top recommended');
+  ok(radio.options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio 8,Studio F' && (V26 ? !radio.options[0].description && radio.initial_option.value === 'Studio 8' : /Recommended/.test(radio.options[0].description.text)), 'step 2: usual free rooms, top recommended');
   ok(JSON.stringify(s2.view).indexOf('Not free then: Studio 7, Studio C') !== -1, 'step 2: names the usual rooms not free');
   ok(['project', 'client', 'engineer'].every(b => s2.view.blocks.some(x => x.block_id === b)) && s2.view.blocks.some(x => x.block_id === 'notes' || x.block_id === 'note_toggle') && s2.view.submit && s2.external_id === r1.s.ext, 'step 2: studio fields, Book, same external_id');
   const engEl = s2.view.blocks.find(b => b.block_id === 'engineer').element;
@@ -113,7 +115,7 @@ async function run(wf, name, input, outs) {
     ok(!eLea.initial_option && (V25 ? !sLea.view.blocks.find(b => b.block_id === 'engineer').hint : /Only engineers/.test(sLea.view.blocks.find(b => b.block_id === 'engineer').hint.text)), 'a non-engineer requester: no default, must pick');
   }
   s2 = await step2(r1, { status: 'OK', free_priority: [], free_last_resort: ['Studio 4'] });
-  ok(/not a usual room/i.test(JSON.stringify(s2.view)), 'step 2: last resort only when no usual room is free');
+  ok((V26 ? /Available rooms:/.test(JSON.stringify(s2.view)) && /The usual rooms for this type of booking are not available in your chosen schedule/.test(JSON.stringify(s2.view)) : /not a usual room/i.test(JSON.stringify(s2.view))), 'step 2: last resort only when no usual room is free');
   s2 = await step2(r1, { status: 'OK', free_priority: [], free_last_resort: [] });
   ok(!s2.view.submit && /Nothing that does VO Recording is free/.test(JSON.stringify(s2.view)), 'step 2: nothing free -> no Book, go Back');
   s2 = await step2(r1, { status: 'CALENDAR_ERROR' });

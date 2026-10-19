@@ -285,6 +285,7 @@ only script that writes to n8n.
 | `node scripts/sim-availability-reads.js [ra]` | Room Availability's answers (v20/v21): a room asked about always with its booked times and free gaps, never "taken all day" for a part-day booking; the not-usual-room question |
 | `./scripts/test-forms` · `[si] [main] [book] [move] [cancel]` | **every Slack-app sim in one command** (forms, buttons, main's offers, Book Session round 8) on one set of builds - defaults to the newest file of each; one line per sim, then the totals. Run it on every SI / main / Book Session build (since 19 Oct) |
 | `node scripts/sim-round-8.js` · `sim-round-8-book.js` | round 8: the either / or room picker, booth and holding dropdowns, Atmos -> Studio C, Van Recording -> Studio M, the typed project code, the M booth name, placeholders, "Your booking details:"; Book Session v112's polled room answer, Client Cache, Log Booking, single-room refusals |
+| `node scripts/sim-round-9.js` | round 9: the year on long dates, "Available rooms:" + why, Studio E only for Post Processing, optional dropdowns reading "No booth / engineer / arranger", "Recommended rooms:" / "Choose a different room", 6 rooms at most |
 | `./scripts/set-log-booking-id.py <id>` | puts Jessie — Log Booking's new workflow id into the newest Book Session build's Log Booking node (after Log Booking is imported, before Book Session is) |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
 | `./scripts/audit-model-text` · `<file>...` | every text the model reads (prompt, tool descriptions, `$fromAI`, every string a Code node returns or puts in the prompt) checked for instructions that contradict how Jessie works - above all "end with the line Confirm to ..." / "present the summary": cards come only from tools, and main v238 withdraws one the model wrote. Run on every build (since 2026-10-08) |
@@ -531,6 +532,9 @@ Known contradictions in Rooms & Studios, and which field Jessie trusts:
   Airtable view does not hide it from Jessie**: the API returns every field, which is how a hidden preference and
   Jem Lim's hidden Technical Requirements kept reaching replies. Book Session v50 no longer writes "Tech
   requirements" into event descriptions; main v162's prompt no longer mentions any of these fields.
+- **Rooms that belong to one booking type are a code rule, not Airtable** (19 Oct, round 8-9): Studio M (the van) only for Van
+  Recording, Studio E only for Post Processing, and any type with "Atmos" in its name only in Studio C. Slack Interactions'
+  `roomAllowed` / `onlyRoom` and Book Session's Check Conflicts (the backstop). Change them there, not in Airtable.
 - **Client room preferences are not used** (dropped 2026-09-28). Rooms come from the session-type
   ranking only. The Clients table's `Preferred Rooms` / `Preferred Room Name` / `Preferred Room Names` fields
   (the last is a *link*, so it returned record ids) are being removed by Tel; nothing in the workflows reads
@@ -856,7 +860,9 @@ the task runner), for whoever has shell access to the box.
     when another is picked (the room list vs Another room), redraw it under a **new block_id** ("room~123") with no initial value,
     and read it back by its action_id, not its block_id (Read Step 2's `valA`). A radio list in an *actions* block is never
     "(optional)" and always sends block_actions, but Slack's `errors` response only takes input block ids - put a "Pick a room"
-    error on a nearby input. A picked single-select still cannot be emptied by the person (hence "No booth" / "No engineer").
+    error on a nearby input. An *optional* single-select can be emptied by the person - Slack adds its own line, "Clear selection" or
+    the placeholder as "--Select …--" (which one depends on how Slack draws it); a required one cannot. Since v26 the optional
+    ones carry no "No …" options; their placeholder says it ("No booth") so Slack's clearing line reads "--No booth--" (19 Oct).
 48. **A sub-workflow hands back its last node's output, so it cannot reply first and work after** (19 Oct). To write the log
     sheets after "Booked.", Book Session v112 calls a separate workflow (Jessie — Log Booking) with Execute Workflow's
     `options.waitForSubWorkflow: false`; the call returns at once and the writes happen on their own. A new workflow has no id

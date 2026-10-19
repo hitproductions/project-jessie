@@ -484,3 +484,43 @@ form did not open" in the DM, that is Slack refusing it - say so, and the placeh
 
 Offline: `./scripts/test-forms` (20 sims: sim-round-8 86, sim-round-8-book 47, every earlier sim green on both the candidates
 and the live builds); test-nodes 570 + gate 69/69 with Book Session v112; fromai ok, audit clean, test-dates 17.
+
+## Round 9 - Slack Interactions v26 + Book Session v113 + main v276 (19 Oct)
+
+From testing round 8 (Howard, 19 Oct afternoon):
+1. The year on long dates - the Booking… window, "Your booking details:", step 2's header, the chat's "Your booking details so far:".
+2. No "Not a usual room …" anywhere in the forms.
+3. No usual room free -> "Available rooms:" and "The usual rooms for this type of booking are not available in your chosen schedule" under it.
+4. Studio E only for Post Processing (like Studio M for Van Recording) - forms and Book Session.
+5. Vocal booth / Engineer (where an arranger also counts) / Arranger: optional, no "No …" options; empty reads "No booth" / "No
+   engineer" / "No arranger" - Slack's own clearing line then says the same. Book and Change.
+6. No "Engineer and arranger: pick one or both." (neither picked still says "Pick an engineer or an arranger.").
+7. "Recommended rooms:" (Localization Dubbing: "Recommended studios:"), no "Recommended" line, the top one ticked; "Choose a different room".
+8. At most 6 rooms in the list; the rest under Choose a different room. (Airtable: Event's usual rooms trimmed - PENDING 120.)
+
+Not changeable (Slack's own): the "Are you sure you want to leave?" box and its Keep Editing / Continue buttons.
+
+### Import (Cmd+A then **Delete** before each)
+
+1. **Book Session v113** into `EUG3sGXkfsJSYIMz`: before `…/book-session-live-before-v113.json` (MATCH v112) → Import
+   `workflows/book-session-v113.json` → Publish "v113 - Studio E for Post Processing" → after `…/book-session-v113-imported.json`.
+2. **Slack Interactions v26** into `PyxSPoAMtSE1gzaH`: before `…/slack-interactions-live-before-v26.json` (MATCH v25) → Import
+   `workflows/slack-interactions-v26.json` → Publish "v26 - round 9" → after `…/slack-interactions-v26-imported.json`.
+3. **main v276** into `uVVYVB2M7kxpLleI`: before `…/project-jessie-live-before-v276.json` (MATCH v275) → Import
+   `workflows/project-jessie-v276.json` → Publish "v276 - the year on the offer" → after `…/project-jessie-v276-imported.json`.
+
+### Test (2027 dates)
+
+1. Book an M booth all day → the Booking… window says "Tuesday, October 19, 2027" then "All day"; the message the same.
+2. VO Recording → "Recommended rooms:", no "Recommended" under Studio 7 (it is ticked); "Choose a different room", no line under
+   it, no Studio E / Studio M in it. Vocal booth reads "No booth"; open it - the clearing line should read "--No booth--" (or
+   "Clear selection"), and there is no separate "No booth".
+3. Music Vocal Recording → Engineer "No engineer" / Arranger "No arranger" when empty, no "pick one or both"; book with only
+   an arranger; then with neither → "Pick an engineer or an arranger.".
+4. A time when the usual rooms are all taken → "Available rooms:" and the line under it; book one - it goes through.
+5. Event → at most 6 rooms in the list (after the Airtable trim: Lobby, Katha, Likha, Salin, Studio F, Studio C).
+6. Meeting → no Studio E under Choose a different room. Post Processing → Studio E.
+7. Change a booking with a booth → Vocal booth can be emptied ("No booth"); an arranger can be added or cleared.
+8. Type "book studio 7 tomorrow 2-4pm" → "Your booking details so far:" with the year.
+
+Offline: `./scripts/test-forms` (21 sims; sim-round-9 40); test-nodes 570 + gate 69/69 with Book Session v113; fromai ok, audit clean.

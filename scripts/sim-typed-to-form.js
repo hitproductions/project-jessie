@@ -8,6 +8,8 @@ const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v268.json', 'utf8'));
 const V275 = /Hi, I’m Jessie!/.test(JSON.stringify(main.nodes));   // main v275: short menu lines, "Your booking details so far:"
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v10.json', 'utf8'));
+const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9 (SI v26)
+const V276 = /v276: the year/.test(JSON.stringify(main ? main.nodes : []));   // round 9 (main v276): the offer's date with its year
 const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: no field hints
 let pass = 0, fail = 0;
 const M264 = /Project: /.test(main.nodes.find(n => n.name === 'Form Offer').parameters.jsCode), V10 = si.nodes.some(n => n.name === 'Note Toggle');
@@ -50,7 +52,7 @@ async function run(wf, name, input, outs) {
   ok(r.keep === 1 && F.offer && F.why === 'a booking request', 'a booking request -> an offer (the item passes through)');
   ok(JSON.stringify(F.prefill) === JSON.stringify({ d: '2027-10-14', s: '14:00', e: '16:00', r: 'Studio 7', p: 'VO Recording', pj: 'ORANGE', c: 'Jem Lim', en: 'U1', enN: 'Howard Luistro' }),
      'read by code: date, times, room, type, project, client, engineer - ' + JSON.stringify(F.prefill));
-  ok(F.text === (V275 ? 'Your booking details so far:' : 'Here’s what I have so far:') + '\n🗓️ *Studio 7 · Thursday, October 14 · 2:00 PM – 4:00 PM*\nVO Recording · Project' + (M264 ? ': ' : ' ') + 'ORANGE · Client' + (M264 ? ': ' : ' ') + 'Jem Lim · Engineer' + (M264 ? ': ' : ' ') + 'Howard Luistro',
+  ok(F.text === (V275 ? 'Your booking details so far:' : 'Here’s what I have so far:') + '\n🗓️ *Studio 7 · Thursday, October 14' + (V276 ? ', 2027' : '') + ' · 2:00 PM – 4:00 PM*\nVO Recording · Project' + (M264 ? ': ' : ' ') + 'ORANGE · Client' + (M264 ? ': ' : ' ') + 'Jem Lim · Engineer' + (M264 ? ': ' : ' ') + 'Howard Luistro',
      'the reply, written by code - ' + F.text.replace(/\n/g, ' | '));
   const btn = F.blocks[1].elements[0];
   ok(btn.action_id === 'open_book' && JSON.parse(btn.value).r === 'Studio 7' && btn.value.length < 1900 && F.blocks[0].text.text === F.text, 'Book a room button carries the prefill');
@@ -188,7 +190,7 @@ async function run(wf, name, input, outs) {
   v2 = await step2(r1.s, { status: 'OK', free_priority: ['Studio 8'], free_last_resort: ['Studio 4'], free_rooms: ['Studio 8', 'Studio 4'], busy: ['Studio 7 (GOLDFISH / X / HL)'] });
   ok(v2.blocks.some(b => b.text && b.text.text === '⚠️ Studio 7 is taken then. These are free:') && (x => x.element || x.elements[0])(b2('room')).initial_option.value === 'Studio 8', 'step 2: taken -> said, the free ones offered');
   v2 = await step2(Object.assign({}, r1.s, { pre: { r: 'Studio 4' } }), { status: 'OK', free_priority: ['Studio 8'], free_last_resort: ['Studio 4'], free_rooms: ['Studio 8', 'Studio 4'] });
-  ok((x => x.element || x.elements[0])(b2('room')).initial_option.value === 'Studio 4' && /not a usual room/i.test((x => x.element || x.elements[0])(b2('room')).initial_option.description.text), 'step 2: a free room that is not usual -> offered as such, chosen');
+  ok((x => x.element || x.elements[0])(b2('room')).initial_option.value === 'Studio 4' && (V26 ? !(x => x.element || x.elements[0])(b2('room')).initial_option.description : /not a usual room/i.test((x => x.element || x.elements[0])(b2('room')).initial_option.description.text)), 'step 2: a free room that is not usual -> offered as such, chosen');
   v2 = await step2(Object.assign({}, r1.s, { pre: { r: 'Likha' } }), { status: 'OK', free_priority: ['Studio 8'], free_last_resort: [], free_rooms: ['Studio 8', 'Likha'] });
   ok(v2.blocks.some(b => b.text && b.text.text === '⚠️ Likha isn’t a room for VO Recording. These are free:'), 'step 2: free but not a room for this -> said');
   v2 = await step2(r1.s, { status: 'OK', free_priority: [], free_last_resort: [], free_rooms: [], busy: ['Studio 7 (GOLDFISH / X / HL)', 'Studio 8 (X)'] });
@@ -199,10 +201,10 @@ async function run(wf, name, input, outs) {
     // v10: the note on the top room only; not-usual rooms remembered in the form
     v2 = await step2(Object.assign({}, r1.s, { pre: undefined }), { status: 'OK', free_priority: ['Studio 7', 'Studio 8', 'Studio F', 'Studio C'], free_last_resort: [] });
     const ro = (x => x.element || x.elements[0])(b2('room')).options;
-    ok(ro[0].description.text === (V25 ? 'Recommended' : 'Recommended · usual for VO Recording') && ro.slice(1).every(o => !o.description), 'v10: only the top room has a note');
+    ok((V26 ? !ro[0].description : ro[0].description.text === (V25 ? 'Recommended' : 'Recommended · usual for VO Recording')) && ro.slice(1).every(o => !o.description), 'v10: only the top room has a note');
     ok(!JSON.parse(v2.private_metadata).nu, 'v10: usual rooms -> nothing remembered as not usual');
     v2 = await step2(Object.assign({}, r1.s, { pre: undefined }), { status: 'OK', free_priority: [], free_last_resort: ['Studio 4', 'Studio C'] });
-    ok(/not a usual room/i.test((x => x.element || x.elements[0])(b2('room')).options[0].description.text) && !(x => x.element || x.elements[0])(b2('room')).options[1].description
+    ok((V26 ? !(x => x.element || x.elements[0])(b2('room')).options[0].description && /Available rooms:/.test(JSON.stringify(v2)) : /not a usual room/i.test((x => x.element || x.elements[0])(b2('room')).options[0].description.text)) && !(x => x.element || x.elements[0])(b2('room')).options[1].description
        && JSON.parse(v2.private_metadata).nu.join() === 'Studio 4,Studio C', 'v10: not-usual rooms -> one note, all remembered');
     v2 = await step2(Object.assign({}, r1.s, { pre: { r: 'Studio 4' } }), { status: 'OK', free_priority: ['Studio 8'], free_last_resort: ['Studio 4'], free_rooms: ['Studio 8', 'Studio 4'] });
     ok(JSON.parse(v2.private_metadata).nu.join() === 'Studio 4', 'v10: the typed not-usual room remembered');

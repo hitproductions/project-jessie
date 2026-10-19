@@ -6,6 +6,7 @@
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v25.json', 'utf8'));
 const main = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/project-jessie-v275.json', 'utf8'));
+const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: labels, no descriptions / hints, no "No …" options (sim-round-9)
 const FX = require('./sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('FAIL ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
@@ -63,11 +64,11 @@ const views = [];
   let v = await step2(S('VO Recording', 'studio'), { free_priority: ['Studio 7', 'Studio 8'], busy: [] });
   views.push(v);
   ok(v.blocks[0].elements[0].text === '*Step 2 of 2*', '5: "Step 2 of 2" alone');
-  ok(blk(v, 'room').type === 'actions' && blk(v, 'room_label').text.text === '*Room*' && radioOf(v).options.map(o => o.value).join() === 'Studio 7,Studio 8' && radioOf(v).initial_option.value === 'Studio 7',
+  ok(blk(v, 'room').type === 'actions' && blk(v, 'room_label').text.text === (V26 ? '*Recommended rooms:*' : '*Room*') && radioOf(v).options.map(o => o.value).join() === 'Studio 7,Studio 8' && radioOf(v).initial_option.value === 'Studio 7',
      '10: the recommended rooms (no "Another room…" choice), the first ticked');
-  ok(radioOf(v).options[0].description.text === 'Recommended' && !radioOf(v).options[1].description, '8: "Recommended" (was "Recommended · usual for VO Recording")');
+  ok((V26 ? !radioOf(v).options[0].description : radioOf(v).options[0].description.text === 'Recommended') && !radioOf(v).options[1].description, '8: "Recommended" (was "Recommended · usual for VO Recording")');
   const ro = blk(v, 'room_other');
-  ok(ro && ro.type === 'input' && ro.optional && ro.dispatch_action && ro.element.placeholder.text === 'Select a room' && ro.hint.text === 'Not a usual room for VO Recording.'
+  ok(ro && ro.type === 'input' && ro.optional && ro.dispatch_action && ro.element.placeholder.text === 'Select a room' && (V26 ? !ro.hint && ro.label.text === 'Choose a different room' : ro.hint.text === 'Not a usual room for VO Recording.')
      && ids(v).indexOf('room_other') > ids(v).indexOf('room') && !ro.element.options.some(o => /^(Studio M|Studio [ABD]|M\d|Likha|Lobby)$/.test(o.value)), '10: Another room right under them, at once; studios only, never Studio M');
   // pick from Another room -> the ticked room is cleared; pick a room -> Another room is cleared
   let t = await toggle(v, 'room_other_pick', { selected_option: { value: 'Studio 5' } }, { room: { room_radio: tv('Studio 7') }, room_other: { room_other_pick: tv('Studio 5') } });
@@ -93,8 +94,7 @@ const views = [];
   v = await step2(S('Celebrity Recording', 'studio'), { free_priority: ['Studio F', 'Likha', 'Katha', 'Salin', 'Studio C'], busy: ['Salin (TEAM)'] });
   views.push(v);
   let bt = blkRe(v, /^booth~\d+$/), hb = blk(v, 'holding');
-  ok(bt && bt.label.text === 'Vocal booth' && bt.optional && bt.element.type === 'static_select' && bt.element.options[0].value === 'none' && !bt.element.initial_option && !bt.hint
-     && bt.element.placeholder.text === 'Select a booth', '21: Celebrity Recording (records in the room) - Vocal booth, optional, "No booth", nothing picked, no hint');
+  ok(bt && bt.label.text === 'Vocal booth' && bt.optional && bt.element.type === 'static_select' && (V26 ? !bt.element.options.some(o => o.value === 'none') && bt.element.placeholder.text === 'No booth' : bt.element.options[0].value === 'none' && bt.element.placeholder.text === 'Select a booth') && !bt.element.initial_option && !bt.hint, '21: Celebrity Recording (records in the room) - Vocal booth, optional, "No booth", nothing picked, no hint');
   ok(hb && hb.element.type === 'multi_static_select' && hb.optional && hb.element.options.map(o => o.value).join() === 'Katha,Likha' && hb.element.placeholder.text === 'Select holding rooms',
      '21: Holding rooms - a dropdown, several can be picked (Salin taken)');
   ok(!blk(v, 'add_booth') && !blk(v, 'add_holding'), '21: no tick boxes');
@@ -118,7 +118,7 @@ const views = [];
   ok(!blk(v, 'forwho_toggle') && blk(v, 'department') && !blk(v, 'department').hint && blk(v, 'department').element.placeholder.text === 'Select a department', '9 / 4: Meeting - no "for someone else", Department without a hint');
   const mo = blk(v, 'room_other').element.options.map(o => o.value);
   ok(mo.indexOf('Studio F') !== -1 && mo.indexOf('Studio C') !== -1 && mo.indexOf('Katha') !== -1 && mo.indexOf('Studio M') === -1 && mo.indexOf('M1') === -1 && mo.indexOf('Studio A') === -1
-     && blk(v, 'room_other').hint.text === 'Not a usual room for meetings.', '22: a meeting\'s Another room lists the free studios too (never Studio M, booths) - "Not a usual room for meetings."');
+     && (V26 ? !blk(v, 'room_other').hint : blk(v, 'room_other').hint.text === 'Not a usual room for meetings.'), '22: a meeting\'s Another room lists the free studios too (never Studio M, booths) - "Not a usual room for meetings."');
   v = await step2(S('Event', 'meeting'), { free_priority: ['Lobby'] });
   views.push(v);
   ok(!blk(v, 'forwho_toggle') && !blk(v, 'department') && radioOf(v).initial_option.value === 'Lobby' && blk(v, 'room_other').element.options.some(o => o.value === 'Studio 7'), '9 / 22: Event - title only, Lobby recommended, studios under Another room');
@@ -153,7 +153,7 @@ const views = [];
   v = await step2(S('Van Recording', 'studio'), { free_priority: ['Studio M'] });
   views.push(v);
   ok(radioOf(v).options.map(o => o.value).join() === 'Studio M' && !blk(v, 'room_other') && blk(v, 'project').label.text === 'Project title' && blk(v, 'client') && blk(v, 'client').optional
-     && /pick one or both/.test(blk(v, 'team_note').elements[0].text) && blk(v, 'engineer').optional && blk(v, 'arranger').optional && !blkRe(v, /^booth/), '23: Van Recording - Studio M only; Project title, Client (optional), engineer and / or arranger');
+     && (V26 ? !blk(v, 'team_note') : /pick one or both/.test(blk(v, 'team_note').elements[0].text)) && blk(v, 'engineer').optional && blk(v, 'arranger').optional && !blkRe(v, /^booth/), '23: Van Recording - Studio M only; Project title, Client (optional), engineer and / or arranger');
   v = await step2(S('Van Recording', 'studio'), { free_priority: [], busy: ['Studio M (X)'] });
   ok(!v.submit && /Studio M is taken then - pick another date or time\./.test(JSON.stringify(v.blocks)), '23: Studio M taken -> "pick another date or time"');
   v = await step2(S('VO Recording', 'studio'), { free_priority: ['Studio 7'], free_last_resort: ['Studio M'], busy: [] });
@@ -181,7 +181,7 @@ const views = [];
   const allViews = views.concat([await step2(S('Music Mixing', 'studio'), { free_priority: ['Studio F'] })]);
   let selects = 0, badPh = [], inputs = 0, badIn = [], descs = 0;
   const walk = x => { if (!x || typeof x !== 'object') return;
-    if (/^(static_select|multi_static_select|external_select)$/.test(x.type)) { selects++; if (!x.placeholder || !/^(Select|Type or select)/.test(x.placeholder.text)) badPh.push(x.action_id + ':' + (x.placeholder && x.placeholder.text));
+    if (/^(static_select|multi_static_select|external_select)$/.test(x.type)) { selects++; if (!x.placeholder || !(V26 ? /^(Select|Type or select|No (?:booth|engineer|arranger)$)/ : /^(Select|Type or select)/).test(x.placeholder.text)) badPh.push(x.action_id + ':' + (x.placeholder && x.placeholder.text));
       for (const o of [].concat(x.options || [], ...((x.option_groups || []).map(g => g.options || [])))) if (o.description) descs++; }
     if (x.type === 'plain_text_input') { inputs++; if (!x.placeholder || x.placeholder.text !== '⠀') badIn.push(x.action_id); }
     for (const k of Object.keys(x)) walk(x[k]); };
@@ -195,13 +195,13 @@ const views = [];
 
   console.log('Working lines and the message (2, 6, 17)');
   r = await read2({ room: { room_radio: tv('Studio 6') }, project: { project_in: { value: 'x' } }, engineer: { engineer_pick: tv('U1') } }, M('VO Recording', 'studio', { msg: { ch: 'D1', ts: '50.5' } }));
-  ok(r.answer.view.blocks[0].text.text === '⏳ *Booking Studio 6…*\nWednesday, October 20\n4:00 PM – 6:00 PM' && r.answer.view.blocks[1].elements[0].text === 'You can close this window – we’ll let you know once it’s done.',
+  ok(r.answer.view.blocks[0].text.text === '⏳ *Booking Studio 6…*\nWednesday, October 20' + (V26 ? ', 2027' : '') + '\n4:00 PM – 6:00 PM' && r.answer.view.blocks[1].elements[0].text === 'You can close this window – we’ll let you know once it’s done.',
      '6 / 2: Booking… - the date, then the time; the close line, no "being processed"');
   const menuMsg = { ts: '50.5', text: 'Hi', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Hi, I’m Jessie!' } }, { type: 'actions', elements: [{ action_id: 'open_book', value: 'menu' }, { action_id: 'my_bookings', value: 'menu' }] }] };
   const offerMsg = { ts: '50.5', text: 'so far', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Your booking details so far:\n🗓️ *Studio 7 · Wednesday, October 20 · 4:00 PM – 6:00 PM*' } },
     { type: 'actions', elements: [{ action_id: 'open_book', value: '{"r":"Studio 7"}' }, { action_id: 'my_bookings', value: 'menu' }] }] };
   let MS = await j1('Mark Source', [{ json: { ok: true, messages: [menuMsg] } }], { 'Read Step 2': [{ json: r }] });
-  ok(MS.ok && MS.blocks[0].text.text === 'Your booking details:\n🗓️ *Studio 6 · Wednesday, October 20 · 4:00 PM – 6:00 PM*' && MS.blocks[1].elements[0].text === '⏳ Booking…' && MS.blocks.length === 2,
+  ok(MS.ok && MS.blocks[0].text.text === 'Your booking details:\n🗓️ *Studio 6 · Wednesday, October 20' + (V26 ? ', 2027' : '') + ' · 4:00 PM – 6:00 PM*' && MS.blocks[1].elements[0].text === '⏳ Booking…' && MS.blocks.length === 2,
      '17: opened from the menu -> "Your booking details:" and the form\'s room · date · time, "⏳ Booking…"');
   let SD = await runIn(si, 'Source Done', [], { 'Mark Source': [{ json: MS }], 'After Book': [{ json: { ok: true } }] });
   ok(SD[0].json.blocks === MS.original, '17: the menu gets its buttons back after booking (the Booked card is its own message)');

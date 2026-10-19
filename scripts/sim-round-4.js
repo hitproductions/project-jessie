@@ -6,6 +6,7 @@
 // Usage: node scripts/sim-round-4.js [slack-interactions v21]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v21.json', 'utf8'));
+const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: room labels, no descriptions, no "No …" options (sim-round-9)
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = n => si.nodes.find(x => x.name === n).parameters.jsCode;
@@ -87,7 +88,7 @@ const tv = v => ({ selected_option: { value: v } });
   const ids = v.blocks.map(b => b.block_id).filter(Boolean);
   if (V25) { const hb = v.blocks.find(b => b.block_id === 'holding'), bb = boothOf(v);
     ok(ids.indexOf('add_holding') === -1 && ids.indexOf('add_booth') === -1 && hb && hb.element.type === 'multi_static_select' && hb.element.options.map(o => o.value).join() === 'Katha,Likha'
-       && bb && bb.optional && bb.element.options.map(o => o.value).join() === 'none,Studio A,Studio B,Studio D' && !bb.element.initial_option, '2 (v25): Holding rooms (Katha, Likha - Salin taken) and the Vocal booth as dropdowns, shown at once');
+       && bb && bb.optional && bb.element.options.map(o => o.value).join() === (V26 ? 'Studio A,Studio B,Studio D' : 'none,Studio A,Studio B,Studio D') && !bb.element.initial_option, '2 (v25): Holding rooms (Katha, Likha - Salin taken) and the Vocal booth as dropdowns, shown at once');
     ok(v.blocks.find(b => b.block_id === 'room').type === 'actions', '3 (v25): the list is an actions block - every pick redraws');
   } else {
   ok(ids.indexOf('add_holding') !== -1 && ids.indexOf('add_booth') > ids.indexOf('add_holding') && ids.indexOf('booth') === -1, '2: + Holding room, then + Vocal booth (unticked)');
@@ -97,7 +98,7 @@ const tv = v => ({ selected_option: { value: v } });
   // Localization Dubbing: Studio + Booth, the usual pair first
   v = (await step2(S('Localization Dubbing', 'loc'), { free_priority: ['Studio 1', 'Studio A', 'Studio B', 'Studio 2', 'Studio D', 'Studio 6'] })).view;
   const rb = v.blocks.find(b => b.block_id === 'room');
-  ok((V25 ? v.blocks.find(b => b.block_id === 'room_label').text.text === '*Studio*' : rb.label.text === 'Studio') && radio(v).options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio 1,Studio 2,Studio 6', '3: Localization Dubbing - Studio lists control rooms only (live: Studio A, B, D mixed in) - ' + radio(v).options.map(o => o.value));
+  ok((V25 ? v.blocks.find(b => b.block_id === 'room_label').text.text === (V26 ? '*Recommended studios:*' : '*Studio*') : rb.label.text === 'Studio') && radio(v).options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio 1,Studio 2,Studio 6', '3: Localization Dubbing - Studio lists control rooms only (live: Studio A, B, D mixed in) - ' + radio(v).options.map(o => o.value));
   let bt = boothOf(v);
   if (V25) ok(bt && bt.element.initial_option.value === 'Studio A' && bt.element.options[0].text.text === 'Studio A (usual)' && !bt.hint && !bt.optional, '3 (v25): Vocal booth set to Studio 1\'s usual (Studio A), "(usual)", required');
   else ok(bt && bt.element.initial_option.value === 'Studio A' && /Studio 1’s usual booth/.test(bt.element.options[0].description.text) && /^Set to Studio 1’s usual booth/.test(bt.hint.text)
@@ -158,7 +159,7 @@ const tv = v => ({ selected_option: { value: v } });
   const V22 = !mm.blocks.some(b => b.block_id === 'room_toggle');   // v22: Another room… is a room choice
   t = V25 ? { view: mm } : V22 ? await toggle(mm, 'room_radio', { selected_option: { value: '__other' } }, { room: { room_radio: tv('__other') } }) : await toggle(mm, 'room_toggle', { selected_options: [{ value: 'room' }] });
   const ro = t.view.blocks.find(b => b.block_id === 'room_other');
-  ok(ro && ro.element.type === 'static_select' && ro.element.options.length > 0 && ro.element.options.every(o => !o.description) && /Not a usual room for Music Mixing/.test(ro.hint.text) && (!V25 || ro.optional),
+  ok(ro && ro.element.type === 'static_select' && ro.element.options.length > 0 && ro.element.options.every(o => !o.description) && (V26 ? !ro.hint : /Not a usual room for Music Mixing/.test(ro.hint.text)) && (!V25 || ro.optional),
      '1: Use another room -> a dropdown Slack accepts (no option descriptions; v19 had them on every option)');
   // M booth all day in step 1
   t = await toggle(s1.view, 'purpose_pick', { selected_option: { value: '__booth' } }, { purpose: { purpose_pick: tv('__booth') } });
