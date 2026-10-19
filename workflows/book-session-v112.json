@@ -950,7 +950,7 @@
       "parameters": {
         "jsCode": "// Client Cache (v112, round 8): a booking run right after its prepare run (the form) carries what the prepare run's\n// client lookups found (client_cache, from Prepared Out). Same client and under 3 minutes old -> use: the three Airtable\n// reads are skipped and Check Conflicts reads these rows. Anything else -> use false, the lookups run as before.\nconst REQ = $('When Executed by Another Workflow').first().json || {};\nconst norm = s => String(s || '').replace(/\\s*\\([^()]*\\)\\s*$/, '').trim().toLowerCase().replace(/^none$/, '');\nlet c = null; try { c = JSON.parse(String(REQ.client_cache || '')); } catch (e) { c = null; }\nconst prep = String(REQ.mode || '').trim().toLowerCase() === 'prepare';\nconst fresh = c && c.v === 1 && c.at && (Date.now() - new Date(c.at).getTime()) < 3 * 60 * 1000;\nconst use = !!(c && !prep && fresh && norm(c.client) === norm(REQ.client) && Array.isArray(c.gc));\nreturn [{ json: use ? { use: true, gc: c.gc, al: c.al || [], an: c.an || null } : { use: false } }];"
       },
-      "id": "b39cf907-3fd6-4314-82a7-a117423f9d5e",
+      "id": "75752583-695f-47e5-bf3b-258c4939b76c",
       "name": "Client Cache",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -971,7 +971,7 @@
           "combinator": "and",
           "conditions": [
             {
-              "id": "5e38027c-237f-4666-9e9c-9de821441af4",
+              "id": "d21f274e-a3f7-4daf-ada4-9abaec0eb159",
               "leftValue": "={{ $('Client Cache').first().json.use === true }}",
               "rightValue": true,
               "operator": {
@@ -984,7 +984,7 @@
         },
         "options": {}
       },
-      "id": "dfcda766-0572-4468-9a9c-ac55598be15e",
+      "id": "e7e29cfe-a89c-4abe-8d87-f713c1d3b7a2",
       "name": "Cached?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
@@ -1005,7 +1005,7 @@
           "combinator": "and",
           "conditions": [
             {
-              "id": "950977c0-fe69-4ae0-9dc5-50635458f8b1",
+              "id": "3cf872ee-b84e-4e7e-9376-c27a8c7b071d",
               "leftValue": "={{ (function(){ try { const e = $json || {}; if (!e.id) return true; const rs = (e.attendees || []).filter(a => a.resource); return !rs.length || rs.every(a => a.responseStatus && a.responseStatus !== 'needsAction'); } catch (x) { return true; } })() }}",
               "rightValue": true,
               "operator": {
@@ -1018,7 +1018,7 @@
         },
         "options": {}
       },
-      "id": "91003839-fb6e-440e-9758-7e55f55868e6",
+      "id": "75f85715-3aa6-49a2-8819-0d189ae0e9c2",
       "name": "Room Answered?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
@@ -1031,7 +1031,7 @@
       "parameters": {
         "amount": 1.5
       },
-      "id": "55fed57e-c25b-4671-bda9-d1ffa5678b9a",
+      "id": "7f225e65-b2c1-4ca6-b352-b84b8768aa95",
       "name": "Wait for Room 2",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -1039,7 +1039,7 @@
         -6544,
         -11128
       ],
-      "webhookId": "622040c7-85e0-457a-a71b-ed5dfe99681a"
+      "webhookId": "ebcf5a59-749b-4cc1-81ac-27a00d72d038"
     },
     {
       "parameters": {
@@ -1048,7 +1048,7 @@
         "nodeCredentialType": "googleCalendarOAuth2Api",
         "options": {}
       },
-      "id": "95d47bce-5fb4-411f-a77b-55c929677e73",
+      "id": "7b32a1a8-4ed8-4eff-9055-128f8ce75c39",
       "name": "Reread Event 2",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1077,7 +1077,7 @@
           "combinator": "and",
           "conditions": [
             {
-              "id": "5569a661-224a-4621-add1-3906352f7a21",
+              "id": "2b42a167-1d11-40bb-8645-21b5466042e6",
               "leftValue": "={{ (function(){ try { const e = $json || {}; if (!e.id) return true; const rs = (e.attendees || []).filter(a => a.resource); return !rs.length || rs.every(a => a.responseStatus && a.responseStatus !== 'needsAction'); } catch (x) { return true; } })() }}",
               "rightValue": true,
               "operator": {
@@ -1090,7 +1090,7 @@
         },
         "options": {}
       },
-      "id": "af87837c-8f1f-4ba0-86dc-d29e7223ce65",
+      "id": "367a179d-db80-43d1-a41c-ed1d926e34e4",
       "name": "Room Answered 2?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
@@ -1103,7 +1103,7 @@
       "parameters": {
         "amount": 3
       },
-      "id": "c7b9d00e-a8f9-4289-b233-b4f5314735ee",
+      "id": "b53eca1d-1a85-4c4d-bf34-e8d5137c1feb",
       "name": "Wait for Room 3",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -1111,7 +1111,7 @@
         -6064,
         -11128
       ],
-      "webhookId": "cb8c7b40-103d-4b25-9b32-ad2ac534b4de"
+      "webhookId": "3e081e4f-f169-4204-84f6-d69e508cb8ea"
     },
     {
       "parameters": {
@@ -1120,7 +1120,7 @@
         "nodeCredentialType": "googleCalendarOAuth2Api",
         "options": {}
       },
-      "id": "a3b59a4d-1d19-47fe-bad3-75b9ecf5b3fa",
+      "id": "42acc2bf-6218-4f53-ab73-39aadbd70736",
       "name": "Reread Event 3",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1142,7 +1142,7 @@
         "workflowId": {
           "__rl": true,
           "mode": "id",
-          "value": "LOG_BOOKING_ID",
+          "value": "vmmb0fDD0PXd9443",
           "cachedResultName": "Jessie — Log Booking"
         },
         "workflowInputs": {
@@ -1160,7 +1160,7 @@
           "waitForSubWorkflow": false
         }
       },
-      "id": "5c81ff0b-337e-4b69-88b6-6cb28c9cdad1",
+      "id": "d520793f-0665-4a42-acde-dfe6d845de9a",
       "name": "Log Booking",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,

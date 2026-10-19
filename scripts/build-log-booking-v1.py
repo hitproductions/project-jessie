@@ -44,7 +44,7 @@ client_row = node("Client Row", "n8n-nodes-base.code", 2, {"jsCode": (
 new_client = copy("Log New Client", [896, 0])
 sticky = node("Note", "n8n-nodes-base.stickyNote", 1, {"content": (
     "## Jessie — Log Booking\nWrites a booking's rows to the Jessie Log spreadsheet after the reply has gone. Called by Book "
-    "Session (v112+) without waiting. A failed write never touches the booking."), "height": 160, "width": 420}, [0, -240])
+    "Session (v112+) without waiting. A failed write never touches the booking."), "width": 420}, [0, -240])
 wf = {
     "name": "Jessie — Log Booking — v1 (log after the reply)",
     "nodes": [trigger, log_row, log_sheet, client_row, new_client, sticky],

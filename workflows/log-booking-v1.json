@@ -14,7 +14,7 @@
           ]
         }
       },
-      "id": "51375682-2652-4f00-b908-be1fb19faee0",
+      "id": "0284685c-2137-4ff8-a079-784e672d6695",
       "name": "When Executed by Another Workflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -27,7 +27,7 @@
       "parameters": {
         "jsCode": "// Log Row: the Jessie Log row Book Session made (Build Log Row), as one item for Log to Sheet.\nlet r = null; try { r = JSON.parse(String($('When Executed by Another Workflow').first().json.log || '')); } catch (e) { r = null; }\nreturn r && typeof r === 'object' ? [{ json: r }] : [];"
       },
-      "id": "cb21b444-177d-4a50-a59a-04497fec801d",
+      "id": "26f9b8cd-1209-40ec-80d0-3a64b01ad3d8",
       "name": "Log Row",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -61,7 +61,7 @@
         "options": {}
       },
       "alwaysOutputData": true,
-      "id": "95cba500-d563-4d27-8e2d-64a109bcb40a",
+      "id": "68147456-caa8-4a53-8266-0b4507bce41b",
       "name": "Log to Sheet",
       "position": [
         448,
@@ -81,7 +81,7 @@
       "parameters": {
         "jsCode": "// Client Row: the New Clients row, only for a client the Clients table did not know - none, no item, nothing written.\nlet r = null; try { r = JSON.parse(String($('When Executed by Another Workflow').first().json.client || '')); } catch (e) { r = null; }\nreturn r && typeof r === 'object' && r['Client'] ? [{ json: r }] : [];"
       },
-      "id": "12ea33fc-7d12-4e88-8b61-fe00ca705f30",
+      "id": "5672f514-c2e4-44d0-ba71-e4ad3df7a341",
       "name": "Client Row",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -116,7 +116,7 @@
         },
         "options": {}
       },
-      "id": "d02f7e7d-9c64-4491-9875-153f3cc86e10",
+      "id": "a1a91ae2-a0dd-49b6-98b0-2ee7cad90c0b",
       "name": "Log New Client",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
@@ -136,10 +136,9 @@
     {
       "parameters": {
         "content": "## Jessie — Log Booking\nWrites a booking's rows to the Jessie Log spreadsheet after the reply has gone. Called by Book Session (v112+) without waiting. A failed write never touches the booking.",
-        "height": 160,
         "width": 420
       },
-      "id": "e10715d7-a081-476b-bea3-0567d696d1c0",
+      "id": "741dca15-2ca8-4c6c-80b9-1c652a9bb412",
       "name": "Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
