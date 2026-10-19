@@ -440,7 +440,7 @@ Also: Jessie's chat lists (main v274) show rooms in order and "all day", like th
 Offline: `node scripts/sim-round-7.js` 52 (fails on v23); every earlier SI and main sim green (version-aware for the intended
 changes); test-nodes 570 with Move v33 + Book Session v111; gate 69/69; fromai ok, audit clean.
 
-## Round 8 - Log Booking v1 + Book Session v112 + Slack Interactions v25 + main v275 (19 Oct)
+## Round 8 - Log Booking v1 + Book Session v112 + Slack Interactions v25 + main v275 (19 Oct) - LIVE ~14:30, Slack test owed
 
 What and why: `docs/design/round-8-plan.md` (Tara's three speed fixes, the forms, the wording table, Atmos / Van Recording).
 
