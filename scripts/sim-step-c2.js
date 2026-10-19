@@ -6,6 +6,7 @@
 const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v269.json', 'utf8'));
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v17.json', 'utf8'));
+const V275 = /Hi, I’m Jessie!/.test(JSON.stringify(main.nodes));   // main v275: short menu lines, reset answered by the menu, shorter change / cancel lead
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
@@ -52,7 +53,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
     ev('ev4', 'THEIRS / X / DR', '2027-10-16T09:00:00+08:00', '2027-10-16T10:00:00+08:00', 'ref: U9')] };
   const reply = async (co, res) => j1(main, 'Change Reply', [{ json: res || cal }], { 'Change Offer': [{ json: { changeOffer: co } }] });
   let r = await reply(await offerOf('cancel ORANGE saturday', { dates: '2027-10-16' }));
-  ok(r.count === 1 && ['Here it is - press *Cancel* to cancel it.', 'Here’s the booking – press *Cancel* to cancel it.'].indexOf(r.blocks[0].text.text) !== -1 && r.blocks[1].block_id === 'bk_ev1'
+  ok(r.count === 1 && ['Here it is - press *Cancel* to cancel it.', 'Here’s the booking – press *Cancel* to cancel it.', 'Here’s the booking:'].indexOf(r.blocks[0].text.text) !== -1 && r.blocks[1].block_id === 'bk_ev1'
      && r.blocks[1].text.text === '*ORANGE / Jem Lim / HL*\nSat, Oct 16 · 2:00 PM – 4:00 PM · Studio 7', 'cancel ORANGE saturday -> that one booking');
   const bt = r.blocks[2].elements;
   ok(bt.map(x => x.action_id).join() === 'bk_change,bk_cancel' && bt[1].confirm && bt[1].confirm.confirm.text === 'Cancel booking' && r.channel === 'D1',
@@ -68,7 +69,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(r.count === 1 && r.blocks[1].block_id === 'bk_ev1', 'by date and time');
   co = await offerOf('make it 3-5pm', { bf: { timeInNewest: true, timeStart: '15:00', timeEnd: '17:00' }, history: [bookedDM] });
   r = await reply(co);
-  ok(r.count === 1 && ['Here it is - press *Change* to check the new time.', 'Here’s your proposed change – press *Change* to check the new time.'].indexOf(r.blocks[0].text.text) !== -1
+  ok(r.count === 1 && ['Here it is - press *Change* to check the new time.', 'Here’s your proposed change – press *Change* to check the new time.', 'Your change so far:'].indexOf(r.blocks[0].text.text) !== -1
      && r.blocks[1].text.text === '*ORANGE / Jem Lim / HL*\nNow: Sat, Oct 16 · 2:00 PM – 4:00 PM · Studio 7\nNew: Sat, Oct 16 · 3:00 PM – 5:00 PM · Studio 7', 'make it 3-5pm after Booked -> Now / New');
   const cv = JSON.parse(r.blocks[2].elements[0].value), xv = JSON.parse(r.blocks[2].elements[1].value);
   ok(cv.id === 'ev1' && JSON.stringify(cv.n) === '{"s":"15:00","e":"17:00"}' && !xv.n, 'Change carries the new times; Cancel does not');
@@ -90,13 +91,14 @@ const j1 = async (...a) => (await run(...a))[0].json;
   for (const t of ["what's up", 'whats up', 'how are you?', 'Sup Jessie'])
     ok((await menuFor(t)).menu === true, 'menu for ' + JSON.stringify(t));
   let mc = await menuFor('thanks!');
-  ok(mc.menu && mc.blocks[0].text.text === 'Anytime! Anything else?', 'thanks -> "Anytime! Anything else?" + the menu');
+  ok(mc.menu && mc.blocks[0].text.text === (V275 ? 'Anytime!' : 'Anytime! Anything else?'), 'thanks -> "Anytime! Anything else?" + the menu (v275: "Anytime!")');
   mc = await menuFor('test');
-  ok(mc.menu && mc.why === 'not a booking or a question' && /I can help with bookings/.test(mc.blocks[0].text.text), 'a short message about nothing -> the menu');
+  ok(mc.menu && mc.why === 'not a booking or a question' && /I can help with bookings|I can only help with bookings/.test(mc.blocks[0].text.text), 'a short message about nothing -> the menu');
   for (const [t, o] of [['what studios do we have?', {}], ['who is engineering orange', {}], ['book studio 7 tomorrow', {}], ['cancel orange', {}],
     ['make it 3pm', {}], ['jem lim', { history: [{ ts: '9', bot_id: 'B', text: 'Who’s the client?' }] }], ['client is jem lim', { history: [{ ts: '9', bot_id: 'B', text: 'Here’s what I have so far', blocks: [{ elements: [{ action_id: 'open_book', value: '{"d":"x"}' }] }] }] }],
-    ['yes', { gate: { presentedCancel: true } }], ['tomorrow', {}], ['friday', { dates: '2027-10-22' }], ['reset', {}], ['ok', { g: { confirmed: true } }]])
+    ['yes', { gate: { presentedCancel: true } }], ['tomorrow', {}], ['friday', { dates: '2027-10-22' }]].concat(V275 ? [] : [['reset', {}]]).concat([['ok', { g: { confirmed: true } }]]))
     ok((await menuFor(t, o)).menu === false, 'no menu for ' + JSON.stringify(t) + (o.history ? ' (Jessie is waiting)' : ''));
+  if (V275) { const rs = await menuFor('reset'); ok(rs.menu && rs.why === 'reset' && rs.blocks[0].text.text === 'Hi, I’m Jessie!', 'v275: "reset" -> "Hi, I’m Jessie!" and the buttons, by code'); }
   if (/v266/.test(main.nodes.find(n => n.name === 'Menu Check').parameters.jsCode)) {
     // v266 (live 11:04): "dsfadfsa" after "Hi Howard! What do you need?" went to the agent
     ok((await menuFor('dsfadfsa', { history: [{ ts: '9', bot_id: 'B', text: 'Hi Howard! What do you need?' }] })).menu === true, 'v266: after a general opener -> the menu (live 11:04)');
@@ -114,9 +116,9 @@ const j1 = async (...a) => (await run(...a))[0].json;
       'Slack Trigger': [{ json: { text, channel: 'D1', user: 'U1', ts: '100.1' } }], 'Gate Context': [{ json: { datesInMessage: '', todayIso: '2027-10-15', gate: {} } }],
       'Booked For': [{ json: {} }], 'Get Recent Messages': [] })).changeOffer;
     let lm = await late('lhkjf;kj', { why: 'nothing new after an offer' });
-    ok(lm.menu === true && !lm.go && /I can help with bookings/.test(lm.menuBlocks[0].text.text) && lm.menuBlocks[1].elements[0].action_id === 'open_book', 'v267: nothing new after a booking reply -> the menu (live 11:11)');
+    ok(lm.menu === true && !lm.go && /I can help with bookings|I can only help with bookings/.test(lm.menuBlocks[0].text.text) && lm.menuBlocks[1].elements[0].action_id === 'open_book', 'v267: nothing new after a booking reply -> the menu (live 11:11)');
     lm = await late('thanks', { why: 'nothing new after an offer' });
-    ok(lm.menu && lm.menuBlocks[0].text.text === 'Anytime! Anything else?', 'v267: thanks after a booking reply -> "Anytime!"');
+    ok(lm.menu && lm.menuBlocks[0].text.text === (V275 ? 'Anytime!' : 'Anytime! Anything else?'), 'v267: thanks after a booking reply -> "Anytime!"');
     ok(!(await late('which studio is bigger?', { why: 'nothing new after an offer' })).menu, 'v267: a question after a booking reply -> the agent');
     ok(!(await late('lhkjf;kj', { why: 'not a booking request' })).menu, 'v267: only after a booking reply');
     const nx7 = n => (main.connections[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');

@@ -73,6 +73,10 @@ for f,names in want.items():
             if n["name"]=="New Client?":
                 e=n["parameters"]["conditions"]["conditions"][0]["leftValue"].strip()
                 open(os.path.join(t,"New_Client_expr.js"),"w").write(e[3:-2] if e.startswith("={{") else e)
+            # Book Session v112: the test moved into Build Log Row (rows go to Log Booking after the reply)
+            if n["name"]=="Build Log Row" and "const isNew = " in n["parameters"].get("jsCode",""):
+                js=n["parameters"]["jsCode"]; i=js.index("const isNew = ")+len("const isNew = "); j=js.index(";\nlet client = null;",i)
+                open(os.path.join(t,"New_Client_expr.js"),"w").write(js[i:j])
 PY
 
 node - "$tmp" <<'JS'

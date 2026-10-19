@@ -5,6 +5,7 @@
 // Usage: node scripts/sim-every-message.js [main v271]
 const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v271.json', 'utf8'));
+const V275 = /Hi, I’m Jessie!/.test(JSON.stringify(main.nodes));   // main v275: short menu lines, "Your booking details so far:"
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = n => main.nodes.find(x => x.name === n).parameters.jsCode;
@@ -23,7 +24,7 @@ const C = main.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.no
   ok(r.reply.blocks[0].text.text === 'Studio 7 is free 2:00 – 6:00 PM.' && acts.elements.map(e => e.action_id + ':' + e.value).join() === 'open_book:menu,my_bookings:menu' && acts.elements[0].style === 'primary',
      '1: an answer -> the text, then Book a room / My bookings');
   r = await j1('Build Reply', [{ json: { output: 'What would you like to do? What’s the project?' } }], { 'Guard Probe': [{ json: {} }] });
-  ok(r.reply.blocks[0].text.text === 'Tap *Book a room* below - the form asks for everything it needs. To change or cancel, open *My bookings*.', '1: the agent asking for booking details (live 16:27) -> a pointer to the buttons');
+  ok(r.reply.blocks[0].text.text === (V275 ? 'Use *Book a room* or *My bookings* below.' : 'Tap *Book a room* below - the form asks for everything it needs. To change or cancel, open *My bookings*.'), '1: the agent asking for booking details (live 16:27) -> a pointer to the buttons');
   for (const t of ['Who’s the arranger? (or "none")', "Who's the client?", 'Which room?', 'Confirm to book. (yes/no)', 'Cancel it? Reply yes or no.'])
     ok((await j1('Build Reply', [{ json: { output: t } }], { 'Guard Probe': [{ json: {} }] })).output.indexOf('Book a room') !== -1, '1: replaced - ' + t);
   r = await j1('Build Reply', [{ json: { output: 'Booked "X" - Confirm to book. (yes/no)' } }], {});
@@ -43,7 +44,7 @@ const C = main.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.no
   const menuFor = async (text, o) => j1('Menu Check', [], { 'Slack Trigger': [{ json: { text, channel: 'D1', ts: '9' } }], 'Get Booker': [{ json: { fields: { Name: 'Howard Luistro' } } }],
     'Gate Context': [{ json: Object.assign({ datesInMessage: '', gate: {} }, (o || {}).g || {}) }], 'Get Recent Messages': [] });
   for (const t of ['what can you do for me', 'What can you do?', 'how does this work', 'what are your features', 'who are you', 'help me'])
-    ok((await menuFor(t)).menu === true && /^I book studios and rooms at Hit Productions/.test((await menuFor(t)).blocks[0].text.text), '2: ' + JSON.stringify(t) + ' -> what Jessie does, with the menu (live: "What’s the project?")');
+    ok((await menuFor(t)).menu === true && (V275 ? (await menuFor(t)).blocks[0].text.text === 'Hi, I’m Jessie!' : /^I book studios and rooms at Hit Productions/.test((await menuFor(t)).blocks[0].text.text)), '2: ' + JSON.stringify(t) + ' -> what Jessie does, with the menu (live: "What’s the project?")');
   ok((await menuFor('what studios do we have?')).menu === false, '2: a real question still goes to the agent');
 
   // ---- 3: booking details without "book"

@@ -28,25 +28,33 @@ const read2 = async (vv, meta) => j1('Read Step 2', [], { 'Check Signature': [ch
 const M = (purpose, kind, extra) => Object.assign(S(purpose, kind), { when: 'Tuesday, Oct 19 · 1:00 PM–3:00 PM', label: purpose }, extra || {});
 
 const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: No engineer superseded by "pick one or both" (sim-round-7)
+const V25 = JSON.stringify(si).indexOf('function onlyRoom(') !== -1;   // v25: booth / Another room as dropdowns, shorter working lines (sim-round-8)
 (async () => {
   // ---- 1: booths
   let v = await step2(S('Localization Dubbing', 'loc'), { free_priority: ['Studio 1', 'Studio 2', 'Studio A', 'Studio B', 'Studio D'] });
-  let bt = v.blocks.find(b => b.block_id === 'booth');
+  let bt = v.blocks.find(b => /^booth(~\d+)?$/.test(b.block_id || ''));
+  if (V25) ok(bt.element.type === 'static_select' && bt.element.options[0].text.text === 'Studio A (usual)' && bt.element.initial_option.value === 'Studio A' && !bt.hint && !/engineer patches/.test(JSON.stringify(v)),
+    '1 (v25): the booth a dropdown, the usual one first and set, "(usual)", no hint - ' + bt.element.options[0].text.text);
+  else {
   ok(bt.element.options[0].description.text === 'Studio 1’s usual booth' && bt.element.options.slice(1).every(o => !o.description) && !/engineer patches/.test(JSON.stringify(v)),
      '1: booths - only the usual one has a line; no "the engineer patches it (Dante)" anywhere (Slack 18:50)');
   ok(bt.hint.text === 'Set to Studio 1’s usual booth. Any free booth works.', '1: hint - ' + bt.hint.text);
+  }
 
   // ---- 2: Another room…
   v = await step2(S('Music Mixing', 'studio'), { free_priority: ['Studio F'] });
   const rb = v.blocks.find(b => b.block_id === 'room');
+  let t;
+  if (!V25) {
   ok(!v.blocks.some(b => b.block_id === 'room_toggle') && rb.element.options.slice(-1)[0].value === '__other' && rb.element.options.slice(-1)[0].text.text === '_Another room…_'
      && rb.dispatch_action === true, '2: "Another room…" is the last choice; no "Use another room" row');
-  let t = await toggle(v, 'room_radio', { selected_option: { value: '__other' } }, { room: { room_radio: tv('__other') } });
+  t = await toggle(v, 'room_radio', { selected_option: { value: '__other' } }, { room: { room_radio: tv('__other') } });
   let ix = t.view.blocks.map(b => b.block_id);
   const ro = t.view.blocks.find(b => b.block_id === 'room_other');
   ok(ix.indexOf('room_other') === ix.indexOf('room') + 1 && ro.element.options.length > 3 && ro.element.options.every(o => !o.description), '2: picking it opens the dropdown right under the list');
   t = await toggle(t.view, 'room_radio', { selected_option: { value: 'Studio F' } }, { room: { room_radio: tv('Studio F') } });
   ok(!t.view.blocks.some(b => b.block_id === 'room_other'), '2: back to a listed room -> the dropdown goes');
+  }
   const meta2 = JSON.parse(v.private_metadata);
   let r2 = await read2({ room: { room_radio: tv('__other') }, room_other: { room_other_pick: tv('Studio 2') }, project: { project_in: { value: 'x' } }, engineer: { engineer_pick: tv('U1') } }, meta2);
   ok(r2.valid && r2.prep.rooms === 'Studio 2' && r2.prep.room_override === true, '2: Another room -> Studio 2, booked as asked');
@@ -56,7 +64,11 @@ const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: 
   // ---- 3: the working lines
   const allCode = si.nodes.map(n => n.parameters.jsCode || '').join('\n');
   ok(!/This takes a few seconds/.test(allCode) && !/You’ll be notified when it’s done/.test(allCode), '3: no "This takes a few seconds." / old close line anywhere');
-  ok(/Your booking is being processed\. You may close this window – we’ll notify you once it’s done\./.test(jsOf('Read Step 2'))
+  if (V25) ok(/You can close this window – we’ll let you know once it’s done\./.test(jsOf('Read Step 2')) && !/Your booking is being processed/.test(jsOf('Read Step 2'))
+     && /'You can close this window – we’ll let you know once it’s done\.'/.test(jsOf('Read Change'))
+     && /Multiple bookings may take longer to process\. You can close this window – we’ll let you know once it’s done\./.test(jsOf('Read Series Confirm'))
+     && /'Checking availability for each date\.'/.test(jsOf('Read Step 2')), '3 (v25): the working lines in fewer words');
+  else ok(/Your booking is being processed\. You may close this window – we’ll notify you once it’s done\./.test(jsOf('Read Step 2'))
      && /'You may close this window – we’ll notify you once it’s done\.'/.test(jsOf('Read Change'))
      && /This may take a while\. You may close this window – we’ll notify you once it’s done\./.test(jsOf('Read Series Confirm'))
      && /'Checking availability for each date\.'/.test(jsOf('Read Step 2')), '3: the four working lines');

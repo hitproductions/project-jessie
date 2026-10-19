@@ -5,6 +5,7 @@
 // Usage: node scripts/sim-build-b.js [slack interactions v18] [move v31] [cancel v28]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v18.json', 'utf8'));
+const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: fewer words (round 8)
 const mv = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/move-booking-v31.json', 'utf8'));
 const cx = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/cancel-booking-v28.json', 'utf8'));
 let pass = 0, fail = 0;
@@ -85,7 +86,7 @@ const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: 
   const det = (p, c, en, ar) => ({ det_project: { det_project_in: { value: p } }, det_client: { det_client_in: { value: c } }, det_engineer: { det_engineer_pick: { selected_option: en ? { value: en } : null } }, det_arranger: { det_arranger_pick: { selected_option: ar ? { value: ar } : null } } });
   const readC = async (pl) => j1(si, 'Read Change', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: pl } }], 'Read Cache 10': cache });
   let rc = await readC(sub({ v: det('ORANGE', 'Jem Lim', 'U1', 'U4') }));
-  ok(!rc.valid && /Nothing changed - change the date, time, room or a detail/.test(rc.answer.errors.date), 'v18: details open but unchanged -> "Nothing changed"');
+  ok(!rc.valid && (V25 ? /^Nothing changed\.$/ : /Nothing changed - change the date, time, room or a detail/).test(rc.answer.errors.date), 'v18: details open but unchanged -> "Nothing changed"');
   rc = await readC(sub({ v: det('ORANGE', 'Jem Lim', 'U2', 'none') }));
   ok(rc.valid && rc.newTitle === 'ORANGE / Jem Lim / DR' && JSON.stringify(rc.newDetails) === '{"Engineer":"Daryl Reyes","Arranger":"","team":"U2"}' && rc.oldTeam.join() === 'U1,U4' && !rc.clientTyped,
      'v18: a new engineer, no arranger -> the new title, Engineer / Arranger / team');
@@ -97,7 +98,7 @@ const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: 
   const toMove = async (r, names) => j1(si, 'To Move', [], { 'Read Change': [{ json: r }], 'Read Cache 7': cache, 'Client Names': (names || ['Jem Lim', 'Sasa Abella', 'Harold Orozco']).map(n => ({ json: { fields: { Name: n } } })) });
   rc = await readC(sub({ v: det('ORANGE', 'sasa abela', 'U1', 'U4') }));
   let tm = await toMove(rc);
-  ok(tm.go === false && /"sasa abela" isn’t in the client list\. Did you mean \*Sasa Abella\*\?/i.test(tm.view.blocks.find(b => b.block_id === 'problem').text.text)
+  ok(tm.go === false && (V25 ? /Did you mean \*Sasa Abella\*\? Or press \*Change\* again to keep "sasa abela" as a new client\./i : /"sasa abela" isn’t in the client list\. Did you mean \*Sasa Abella\*\?/i).test(tm.view.blocks.find(b => b.block_id === 'problem').text.text)
      && /^sasa abela$/i.test(tm.view.blocks.find(b => b.block_id === 'det_client').element.initial_value) && /^sasa abela$/i.test(JSON.parse(tm.view.private_metadata).askedClient), 'v18: a near-miss client -> "Did you mean Sasa Abella?" on the form, entries kept');
   rc = await readC(sub({ v: det('ORANGE', 'sasa abela', 'U1', 'U4'), meta: { askedClient: si.nodes.some(n => n.name === 'DM Changed') ? 'Sasa Abela' : 'sasa abela' } }));
   tm = await toMove(rc);

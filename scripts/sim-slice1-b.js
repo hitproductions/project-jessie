@@ -7,6 +7,7 @@
 // Usage: node scripts/sim-slice1-b.js [slack interactions] [book session]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v10.json', 'utf8'));
+const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: the form's problems in fewer words
 const V10 = si.nodes.some(n => n.name === 'Note Toggle');   // v10: a blank line after Booked.
 const bs = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/book-session-v110.json', 'utf8'));
 const bs109 = JSON.parse(fs.readFileSync('workflows/imported/book-session-v109-imported.json', 'utf8'));
@@ -83,11 +84,11 @@ async function run(name, input, outs) {
   ok(!/""|\*\*/.test(V.blocks[0].text.text), 'never blank quotes or ** - ' + V.blocks[0].text.text);
   // the same refusal through v109's Return Rejection (fields dropped): read back from Book Session's sentence
   let A9 = (await run('After Prepare', [{ json: rejectVia(bs109, CC) }], outs))[0].json;
-  ok(/"jem lin" isn’t in the client list\. Did you mean \*Jem Lim\*/.test(A9.view.blocks[0].text.text)
+  ok((V25 ? /Did you mean \*Jem Lim\*\? Or press \*Book\* again to keep "jem lin" as a new client\./ : /"jem lin" isn’t in the client list\. Did you mean \*Jem Lim\*/).test(A9.view.blocks[0].text.text)
      && JSON.parse(A9.view.private_metadata).asked === 'Did you mean Jem Lim, or is jem lin a new client?', 'v109 shape (fields dropped) -> still "Did you mean Jem Lim?", read from the sentence');
   ok(rejectVia(bs109, CC).typed === undefined && reject(CC).typed === 'jem lin' && reject(CC).suggestions[0] === 'Jem Lim', 'Book Session v110 passes typed and suggestions; v109 did not');
   A9 = (await run('After Prepare', [{ json: rejectVia(bs109, { verdict: 'REJECTED', reason: 'CLIENT_CHECK', human: 'something else' }) }], outs))[0].json;
-  ok(/"jem lim" isn’t in the client list\. Check the spelling/.test(A9.view.blocks[0].text.text) && !/""|\*\*/.test(A9.view.blocks[0].text.text),
+  ok((V25 ? /"jem lim" is a new client\. Press \*Book\* again to keep it\./ : /"jem lim" isn’t in the client list\. Check the spelling/).test(A9.view.blocks[0].text.text) && !/""|\*\*/.test(A9.view.blocks[0].text.text),
      'nothing to read -> the client from the form, plain words, never blank');
   ok(reject({ verdict: 'REJECTED', reason: 'ROOM_OCCUPIED', human: 'x' }).typed === undefined
      && !('typed' in JSON.parse(JSON.stringify(reject({ verdict: 'REJECTED', reason: 'ROOM_OCCUPIED', human: 'x' })))), 'v110: no empty fields added to other refusals');
@@ -105,15 +106,15 @@ async function run(name, input, outs) {
   A = (await run('After Prepare', [{ json: reject({ verdict: 'REJECTED', reason: 'NEED_BOOKING_TYPE', options: ['Advertising', 'Personal'], askClient: true, human: 'x' }) }], outs))[0].json;
   ok(A.view.blocks.some(b => b.block_id === 'kind') && /client/.test(A.view.blocks[0].text.text), 'NEED_BOOKING_TYPE -> Kind of booking, and asks the client');
   A = (await run('After Prepare', [{ json: { status: 'REJECTED', reason: 'NEED_ARRANGER' } }], outs))[0].json;
-  ok(/No arranger/.test(A.view.blocks[0].text.text), 'NEED_ARRANGER -> pick one or No arranger');
+  ok((V25 ? /Pick an arranger\./ : /No arranger/).test(A.view.blocks[0].text.text), 'NEED_ARRANGER -> pick one or No arranger (v25: "Pick an arranger." - the form says no arranger for an empty field)');
   A = (await run('After Prepare', [{ json: { status: 'REJECTED', reason: 'SOMETHING_NEW', human: 'Ask the requester to …' } }], outs))[0].json;
-  ok(!/Ask the requester/.test(JSON.stringify(A.view)) && (/SOMETHING_NEW/.test(A.view.blocks[0].text.text) || /^⚠️ This couldn’t be booked\. Check the details/.test(A.view.blocks[0].text.text)), "Book Session's own (chat) texts are never shown (v15: nor its code)");
+  ok(!/Ask the requester/.test(JSON.stringify(A.view)) && (/SOMETHING_NEW/.test(A.view.blocks[0].text.text) || /^⚠️ (?:This couldn’t be booked|Couldn’t book this)\. Check the details/.test(A.view.blocks[0].text.text)), "Book Session's own (chat) texts are never shown (v15: nor its code)");
 
   // a second problem replaces the first, never stacks
   outs['Read Request'] = [{ json: { payload: Object.assign(payload(state('Studio 8', 'p', 'c', 'U1')), {}) } }];
   outs['Read Request'][0].json.payload.view.blocks = [{ type: 'section', block_id: 'problem', text: { type: 'mrkdwn', text: 'old' } }, { type: 'divider', block_id: 'problem_div' }].concat(blocks);
   A = (await run('After Prepare', [{ json: { status: 'REJECTED', reason: 'ROOM_OCCUPIED' } }], outs))[0].json;
-  ok(A.view.blocks.filter(b => b.block_id === 'problem').length === 1 && /just booked/.test(A.view.blocks[0].text.text), 'one problem line at a time');
+  ok(A.view.blocks.filter(b => b.block_id === 'problem').length === 1 && /just booked|just taken/.test(A.view.blocks[0].text.text), 'one problem line at a time');
 
   // ---- After Book
   outs['Read Request'] = [{ json: { payload: payload(state('Studio 8', 'project qaw1', 'jem lim', 'U1')) } }];
@@ -128,9 +129,9 @@ async function run(name, input, outs) {
   ok(B.text === CARD + '\nHeads up: 9 hours is longer than usual.' || (B.text === CARD && (B.blocks || []).some(x => x.type === 'context' && /^bkn_/.test(x.block_id || '') && x.elements[0].text === 'Heads up: 9 hours is longer than usual.')),
      'v8 DM: an unusual length still says so, under the card (v23: as a small line)');
   B = (await run('After Book', [{ json: { status: 'ROOM_DECLINED', removed: true } }], outs))[0].json;
-  ok(!B.ok && /turned the booking down/.test(B.view.blocks[0].text.text) && /taken off the calendar/.test(B.view.blocks[0].text.text), 'ROOM_DECLINED -> the form again: declined, removed');
+  ok(!B.ok && (V25 ? /is already taken then - nothing was booked\.$/.test(B.view.blocks[0].text.text) : /turned the booking down/.test(B.view.blocks[0].text.text) && /taken off the calendar/.test(B.view.blocks[0].text.text)), 'ROOM_DECLINED -> the form again: declined, removed - ' + B.view.blocks[0].text.text);
   B = (await run('After Book', [{ json: reject({ verdict: 'REJECTED', reason: 'ROOM_OCCUPIED', human: 'x' }) }], outs))[0].json;
-  ok(!B.ok && /just booked/.test(B.view.blocks[0].text.text), 'taken at the last second -> the form again');
+  ok(!B.ok && /just booked|just taken/.test(B.view.blocks[0].text.text), 'taken at the last second -> the form again');
 
   // ---- wiring
   const C = si.connections;

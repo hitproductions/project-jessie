@@ -1,7 +1,8 @@
 # Round 8 - plan before building (19 Oct)
 
 Howard's notes from 19 Oct (with Tara's suggestions), reviewed against the live builds (Slack Interactions v24, main v274,
-Book Session v111). Nothing here is built yet. Item numbers match the queue.
+Book Session v111). **Built 19 Oct** as Jessie — Log Booking v1, Book Session v112, Slack Interactions v25 and main v275
+(candidates; import steps and the Slack test in `docs/design/slack-app-test-round-1.md`, Round 8). Item numbers match the queue.
 
 ## What gets built, and where
 

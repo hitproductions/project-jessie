@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# test-forms: every Slack-app sim (forms, buttons, main's offers) on one set of builds, one line each, then the totals.
+#   ./scripts/test-forms [slack-interactions] [main] [book-session] [move] [cancel]
+# Defaults: the newest build of each in workflows/. Offline only - reads files, never talks to n8n.
+set -u
+cd "$(dirname "$0")/.."
+newest() { ls workflows/$1-v*.json 2>/dev/null | sed -E 's/.*-v([0-9]+)\.json/\1 &/' | sort -n | tail -1 | cut -d' ' -f2; }
+SI=${1:-$(newest slack-interactions)}
+MAIN=${2:-$(newest project-jessie)}
+BOOK=${3:-$(newest book-session)}
+MOVE=${4:-$(newest move-booking)}
+CANCEL=${5:-$(newest cancel-booking)}
+echo "SI $SI · main $MAIN · Book Session $BOOK · Move $MOVE · Cancel $CANCEL"
+fails=0
+run() { local name=$1; shift; local out; out=$(node "scripts/sim-$name.js" "$@" 2>&1); local code=$?
+  local last; last=$(printf '%s\n' "$out" | grep -E '[0-9]+ (ok|passed)' | tail -1)
+  if [ $code -ne 0 ]; then fails=$((fails+1)); printf '  FAIL  %-15s %s\n' "$name" "${last:-crashed}"; printf '%s\n' "$out" | grep -E 'FAIL|Error' | head -6 | sed 's/^/          /';
+  else printf '  ok    %-15s %s\n' "$name" "$last"; fi; }
+run round-8        "$SI" "$MAIN" "$BOOK"
+run round-7        "$SI" "$MOVE" "$MAIN"
+run round-6        "$SI" "$BOOK"
+run round-5        "$SI" "$MOVE"
+run round-4        "$SI"
+run si-wiring      "$SI"
+run slice1-b       "$SI" "$BOOK"
+run hello-form     "$SI"
+run series-form    "$SI"
+run build-b        "$SI" "$MOVE" "$CANCEL"
+run step-c1        "$SI"
+run round-2        "$SI" "$MAIN"
+run slice1-a       "$MAIN" "$SI"
+run typed-to-form  "$MAIN" "$SI"
+run typed-series   "$MAIN" "$SI"
+run step-c2        "$MAIN" "$SI"
+run round-3        "$MAIN"
+run v273           "$MAIN"
+run every-message  "$MAIN"
+run round-8-book   "$BOOK"
+echo; [ $fails -eq 0 ] && echo "all sims pass" || echo "$fails sim(s) failing"
+exit $fails

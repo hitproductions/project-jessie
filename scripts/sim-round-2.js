@@ -7,6 +7,7 @@
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v19.json', 'utf8'));
 const main = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/project-jessie-v270.json', 'utf8'));
+const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: Another room always shown, the form's details on the source message
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
@@ -37,8 +38,8 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   // ---- 5: Studio 2 (on neither Music Mixing list) free -> offered as not a usual room; "Use another room"
   const step2 = async (ra, s) => (await j1(si, 'Build Step 2', [].concat(ra).map(x => ({ json: x })), { 'Read Step 1': [{ json: { s: s || r1.s } }], 'Read Cache 2': cache })).view;
   let v = await step2({ status: 'OK', free_priority: ['Studio F'], free_last_resort: [], busy: ['Studio 7 (BREAD STICKS / Jem Lim / HL)'] });
-  const room = v.blocks.find(b => b.block_id === 'room').element;
-  ok(room.initial_option.value === 'Studio 2' && room.initial_option.description.text === 'not a usual room for Music Mixing' && !v.blocks.some(b => b.text && /taken/.test(b.text.text || '')),
+  const room = (b => b.element || b.elements[0])(v.blocks.find(b => b.block_id === 'room'));
+  ok(room.initial_option.value === 'Studio 2' && room.initial_option.description.text === (V25 ? 'Not a usual room for Music Mixing' : 'not a usual room for Music Mixing') && !v.blocks.some(b => b.text && /taken/.test(b.text.text || '')),
      '5: Studio 2 free, on neither list -> offered and chosen as "not a usual room" (live: "taken")');
   ok(JSON.parse(v.private_metadata).nu.indexOf('Studio 2') !== -1, '5: remembered as not usual (booked as asked)');
   const others = JSON.parse(v.private_metadata).others;
@@ -48,14 +49,14 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   const sNoPre = Object.assign({}, r1.s, { pre: undefined });
   v = await step2({ status: 'OK', free_priority: ['Studio F'], free_last_resort: [], busy: [] }, sNoPre);
   const oth = JSON.parse(v.private_metadata).others;
-  ok(oth.join() === 'Studio 2,Studio 7' && (v.blocks.some(b => b.block_id === 'room_toggle') || v.blocks.find(b => b.block_id === 'room').element.options.slice(-1)[0].value === '__other'), '5: "Use another room" lists the other free studios (not booths, not conference rooms) - ' + oth.join());
+  ok(oth.join() === 'Studio 2,Studio 7' && (V25 ? v.blocks.some(b => b.block_id === 'room_other') : (v.blocks.some(b => b.block_id === 'room_toggle') || v.blocks.find(b => b.block_id === 'room').element.options.slice(-1)[0].value === '__other')), '5: "Use another room" lists the other free studios (not booths, not conference rooms) - ' + oth.join());
   // the box opens the list; Read Step 2 takes it, booked as asked
   const V22 = !v.blocks.some(b => b.block_id === 'room_toggle');   // v22: "Another room…" is a room choice
-  const tog = await j1(si, 'Note Toggle', [], { 'Read Cache 9': cache, 'Read Request': [{ json: { payload: { type: 'block_actions', actions: [V22 ? { action_id: 'room_radio', selected_option: { value: '__other' } } : { action_id: 'room_toggle', selected_options: [{ value: 'room' }] }],
+  const tog = V25 ? { view: v } : await j1(si, 'Note Toggle', [], { 'Read Cache 9': cache, 'Read Request': [{ json: { payload: { type: 'block_actions', actions: [V22 ? { action_id: 'room_radio', selected_option: { value: '__other' } } : { action_id: 'room_toggle', selected_options: [{ value: 'room' }] }],
     view: { id: 'V2', callback_id: 'book_step2', title: v.title, close: v.close, submit: v.submit, private_metadata: v.private_metadata, blocks: v.blocks, state: { values: V22 ? { room: { room_radio: { selected_option: { value: '__other' } } } } : {} } } } } }] });
   const ro = tog.view.blocks.find(b => b.block_id === 'room_other');
   ok(ro && ro.element.options.map(o => o.value).join() === 'Studio 2,Studio 7' && (ro.element.options[0].description ? ro.element.options[0].description.text === 'not a usual room for Music Mixing' : /Not a usual room for Music Mixing/.test(ro.hint.text))   /* v21: a hint - Slack refuses option descriptions in a dropdown */
-     && tog.view.blocks.findIndex(b => b.block_id === 'room_other') === tog.view.blocks.findIndex(b => b.block_id === (V22 ? 'room' : 'room_toggle')) + 1, '5: ticked -> "Another room" with the free ones, each "not a usual room"');
+     && tog.view.blocks.findIndex(b => b.block_id === 'room_other') === tog.view.blocks.findIndex(b => b.block_id === (V22 ? 'room' : 'room_toggle')) + 1, '5: ticked -> "Another room" with the free ones, each "not a usual room" (v25: shown at once under the list)');
   const sub2 = { type: 'view_submission', view: { id: 'V2', private_metadata: v.private_metadata, blocks: v.blocks, state: { values: {
     room: { room_radio: { selected_option: { value: 'Studio F' } } }, room_other: { room_other_pick: { selected_option: { value: 'Studio 7' } } }, project: { project_in: { value: 'mix1' } },
     client: { client_in: { value: 'john mcdonald' } }, engineer: { engineer_pick: { selected_option: { value: 'U3' } } } } } } };
@@ -66,7 +67,8 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   const cap = async (c) => (await j1(si, 'Read Step 2', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: Object.assign({}, sub2, { view: Object.assign({}, sub2.view, { state: { values: Object.assign({}, sub2.view.state.values, { client: { client_in: { value: c } } }) } }) }) } }], 'Read Cache 3': cache })).prep.client;
   ok(await cap('ACME') === 'ACME' && await cap('mcDonald') === 'McDonald' && await cap("o'brien") === "O'Brien" && await cap('sasa abella') === 'Sasa Abella', '4: ACME stays; mcDonald -> McDonald; o\'brien -> O\'Brien');
   // ---- 1: Booking… says you may close it
-  ok(/Your booking is being processed\. (?:This takes a few seconds\. )?You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\./.test(JSON.stringify(rs2.answer.view)) && rs2.answer.view.clear_on_close, '1: Booking… - "You may close this window…"');
+  ok(V25 ? /You can close this window – we’ll let you know once it’s done\./.test(JSON.stringify(rs2.answer.view)) && /Saturday, October 16\\n10:00 AM – 2:00 PM/.test(JSON.stringify(rs2.answer.view)) && rs2.answer.view.clear_on_close :
+     /Your booking is being processed\. (?:This takes a few seconds\. )?You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\./.test(JSON.stringify(rs2.answer.view)) && rs2.answer.view.clear_on_close, '1: Booking… - "You may close this window…"');
 
   // ---- 7: the source message while booking, and after
   const offerMsg = { ts: '50.5', text: 'Here’s what I have so far', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Here’s what I have so far:' } },
@@ -74,9 +76,10 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   const menuMsg = { ts: '50.5', text: 'What would you like to do?', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Hi!' } }, { type: 'actions', elements: [{ action_id: 'open_book', value: 'menu' }, { action_id: 'my_bookings', value: 'menu' }] }] };
   const mark = async (m) => j1(si, 'Mark Source', [{ json: { ok: true, messages: [m] } }], { 'Read Step 2': [{ json: rs2 }] });
   let M = await mark(offerMsg);
-  ok(M.ok && M.offer && M.blocks.length === 2 && M.blocks[1].elements[0].text === '⏳ Your booking is being processed…' && !M.blocks.some(b => b.type === 'actions'), '7: a booking reply -> buttons hidden, "⏳ Your booking is being processed…"');
+  ok(M.ok && M.offer && M.blocks.length === 2 && M.blocks[1].elements[0].text === (V25 ? '⏳ Booking…' : '⏳ Your booking is being processed…') && !M.blocks.some(b => b.type === 'actions')
+     && (!V25 || M.blocks[0].text.text === 'Your booking details:\n🗓️ *Studio 7 · Saturday, October 16 · 10:00 AM – 2:00 PM*'), '7: a booking reply -> buttons hidden, "⏳ Your booking is being processed…" (v25: "Your booking details:" from the form, "⏳ Booking…") - ' + JSON.stringify(M.blocks[0].text));
   let D = await run(si, 'Source Done', [], { 'Mark Source': [{ json: M }], 'After Book': [{ json: { ok: true } }] });
-  ok(D[0].json.blocks[1].elements[0].text === '✅ Booked.' && !D[0].json.blocks.some(b => b.type === 'actions'), '7: booked -> "✅ Booked." and the buttons stay hidden');
+  ok(D[0].json.blocks[1].elements[0].text === '✅ Booked.' && !D[0].json.blocks.some(b => b.type === 'actions') && (!V25 || /^Your booking details:/.test(D[0].json.blocks[0].text.text)), '7: booked -> "✅ Booked." and the buttons stay hidden');
   D = await run(si, 'Source Done', [], { 'Mark Source': [{ json: M }] });
   ok(D[0].json.blocks === M.original, '7: a question on the form (no After Book) -> the reply back as it was');
   M = await mark(menuMsg);
@@ -89,7 +92,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
        : nx('Source Shown?') === 'Show Source | Prepare' && nx('Show Source') === 'Prepare')
      && /Source Done/.test(sh) && /Source Done/.test(sqq) && nx('Source Done') === 'Update Source', '7 wiring: single booking');
   const MS = await j1(si, 'Mark Source Series', [{ json: { ok: true, messages: [offerMsg] } }], { 'Read Series Confirm': [{ json: { meta: { msg: { ch: 'D1', ts: '50.5' } } } }] });
-  ok(MS.ok && MS.blocks[1].elements[0].text === '⏳ Your series is being processed…', '7: a series -> "⏳ Your series is being processed…"');
+  ok(MS.ok && MS.blocks[1].elements[0].text === (V25 ? '⏳ Booking…' : '⏳ Your series is being processed…'), '7: a series -> "⏳ Your series is being processed…" (v25: "⏳ Booking…")');
   const DS = await run(si, 'Source Done Series', [], { 'Mark Source Series': [{ json: MS }], 'After Book Series': [{ json: { text: '✅ *Booked 4 dates.*' } }] });
   ok(DS[0].json.blocks[1].elements[0].text === '✅ Booked.', '7: the series booked -> "✅ Booked."');
   ok(nx('Answer Series') === 'Get Source Series' && nx('Series Source Shown?') === 'Show Source Series | Read Saved Series' && /Source Done Series/.test(nx('Show Series Result')), '7 wiring: series');
@@ -100,13 +103,13 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
 
   // ---- 6 + 1: the series booking view
   const rsc = await j1(si, 'Read Series Confirm', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: { type: 'view_submission', view: { id: 'V3', private_metadata: JSON.stringify({ key: 'k', n: 2, title: 'X' }) } } } }] });
-  ok(rsc.answer.view.clear_on_close === true && /This may take a while\. You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\./.test(JSON.stringify(rsc.answer.view)), '6 + 1: closing the series booking view closes the form; the close line');
+  ok(rsc.answer.view.clear_on_close === true && V25 ? /Multiple bookings may take longer to process\. You can close this window – we’ll let you know once it’s done\./.test(JSON.stringify(rsc.answer.view)) : rsc.answer.view.clear_on_close === true && /This may take a while\. You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\./.test(JSON.stringify(rsc.answer.view)), '6 + 1: closing the series booking view closes the form; the close line');
 
   // ---- 8: room names; the Change form lists rooms of the same kind
   const B = { id: 'evL', d: '2027-10-21', s: '10:00', e: '11:00', r: 'Likha (Big Room)', t: 'LIKHA - haist meeting' };
   const bc = await j1(si, 'Build Change', [], { 'Check Signature': chk, 'Read Cache 6': cache, 'Read Request': [{ json: { payload: { actions: [{ action_id: 'bk_change', value: JSON.stringify(B) }], container: { channel_id: 'D1', message_ts: '7.7' } } } }] });
   const rp = bc.view.blocks.find(b => b.block_id === 'room').element;
-  ok(rp.options.map(o => o.value).join() === 'Likha,Katha,Salin' && rp.initial_option.value === 'Likha', '8: a meeting in "Likha (Big Room)" -> conference rooms only, Likha chosen (live: studios) - ' + rp.options.map(o => o.value).join());
+  ok((V25 ? /^Likha,Katha,Salin,Studio /.test(rp.options.map(o => o.value).join()) && !rp.options.some(o => /^(M\d|Studio [ABD]|Studio M|Lobby)$/.test(o.value) && o.value !== 'Lobby') : rp.options.map(o => o.value).join() === 'Likha,Katha,Salin') && rp.initial_option.value === 'Likha', '8: a meeting in "Likha (Big Room)" -> conference rooms only, Likha chosen (live: studios) - ' + rp.options.map(o => o.value).join());
   const bcM = await j1(si, 'Build Change', [], { 'Check Signature': chk, 'Read Cache 6': cache, 'Read Request': [{ json: { payload: { actions: [{ action_id: 'bk_change', value: JSON.stringify({ id: 'evM', d: '2027-10-21', s: '10:00', e: '11:00', r: 'M4', t: 'M4 - Howard' }) }], container: { channel_id: 'D1', message_ts: '7.7' } } } }] });
   ok(bcM.view.blocks.find(b => b.block_id === 'room').element.options.map(o => o.value).join() === 'M4,M1', '8: an M booth -> M booths only');
   const bcU = await j1(si, 'Build Change', [], { 'Check Signature': chk, 'Read Cache 6': cache, 'Read Request': [{ json: { payload: { actions: [{ action_id: 'bk_change', value: JSON.stringify(Object.assign({}, B, { r: 'Somewhere Else' })) }], container: { channel_id: 'D1', message_ts: '7.7' } } } }] });
@@ -119,7 +122,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   ok(rc.valid && rc.roomChanged && rc.newTitle === 'SALIN - haist meeting', '8: moved to Salin -> a room change, the title follows');
   // ---- 3 + 1: the Changing… screen shows the proposed booking
   ok(rc.answer.view.blocks[0].text.text === '⏳ *Changing…*\n\n*SALIN - haist meeting*\n*Date:* Thursday, October 21, 2027\n*Time:* 10:00 AM – 11:00 AM\n*Room:* Salin'
-     && /^(?:This takes a few seconds\. You may close this window\. You’ll be notified when it’s done\.|You may close this window – we’ll notify you once it’s done\.)$/.test(rc.answer.view.blocks[1].elements[0].text), '3 + 1: Changing… shows the proposed card and the close line');
+     && /^(?:This takes a few seconds\. You may close this window\. You’ll be notified when it’s done\.|You may close this window – we’ll notify you once it’s done\.|You can close this window – we’ll let you know once it’s done\.)$/.test(rc.answer.view.blocks[1].elements[0].text), '3 + 1: Changing… shows the proposed card and the close line');
   const tm = await j1(si, 'To Move', [], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'Client Names': [] });
   ok(tm.new_rooms === 'Salin' && tm.new_summary === 'SALIN - haist meeting', '8: To Move passes the new room and title');
   // ---- 1: a finished change DMs the card

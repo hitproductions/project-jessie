@@ -242,6 +242,7 @@ because it read like a build number.
 | `Jessie — Finalize Consent` | `TO1UnZTZ2LhtE9J3` | consent engine — on approval, places the requester: **M-booth** = cancel the holder's hold instance then book (resource transfer); **preempt** = place-only after the incumbent has moved |
 | `Jessie — Consent Sweep` | `QHHDevaWhMk8gSBX` | consent engine — **scheduled ~10 min**; on a PENDING row past its `Deadline`: M-booth → book (timeout=book), preempt → mark EXPIRED. Fires even during a Cloudflare edge outage |
 | `Jessie — Slack Interactions` | `PyxSPoAMtSE1gzaH` | the Slack-app pivot: every button click and form submission (Slack Interactivity → `/webhook/jessie-interactions`), signature-checked. v1 is the hello-form test (passed 14 Oct); slice 1 builds on it. From v2 the signature comes from `Jessie — Slack Signature` - nothing to paste on import |
+| `Jessie — Log Booking` | *(new in round 8 - id set on import)* | writes a booking's Jessie Log row and New Clients row **after** the reply; Book Session (v112+) calls it without waiting. Inputs `log`, `client` (each a row as JSON text) |
 | `Jessie — Slack Signature` | `R06CBQNhFK0x4ZuO` | holds the Slack signing secret (pasted once into its **Sign** node) and returns only the HMAC of what it is given; saves no executions. **Never re-import it** - that erases the secret |
 
 The **consent engine** (the three workflows above) handles two callers that both need someone's OK before
@@ -282,6 +283,9 @@ only script that writes to n8n.
 | `node scripts/sim-next-day.js <main>` | Gate Context's "next <day>" rule (decided 9 Oct, PENDING 107) from several weekdays |
 | `node scripts/sim-v249.js <main-execution.json>` | main v249 / Book Session v101 / Room Availability v22 (PENDING 102-106): the live 8 Oct 23:35-23:39 exchange through Booked For, Early Room Plan, Room Availability, Early Room Result and Guard Probe; Book Session's same-day times and conference-room titles |
 | `node scripts/sim-availability-reads.js [ra]` | Room Availability's answers (v20/v21): a room asked about always with its booked times and free gaps, never "taken all day" for a part-day booking; the not-usual-room question |
+| `./scripts/test-forms` · `[si] [main] [book] [move] [cancel]` | **every Slack-app sim in one command** (forms, buttons, main's offers, Book Session round 8) on one set of builds - defaults to the newest file of each; one line per sim, then the totals. Run it on every SI / main / Book Session build (since 19 Oct) |
+| `node scripts/sim-round-8.js` · `sim-round-8-book.js` | round 8: the either / or room picker, booth and holding dropdowns, Atmos -> Studio C, Van Recording -> Studio M, the typed project code, the M booth name, placeholders, "Your booking details:"; Book Session v112's polled room answer, Client Cache, Log Booking, single-room refusals |
+| `./scripts/set-log-booking-id.py <id>` | puts Jessie — Log Booking's new workflow id into the newest Book Session build's Log Booking node (after Log Booking is imported, before Book Session is) |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
 | `./scripts/audit-model-text` · `<file>...` | every text the model reads (prompt, tool descriptions, `$fromAI`, every string a Code node returns or puts in the prompt) checked for instructions that contradict how Jessie works - above all "end with the line Confirm to ..." / "present the summary": cards come only from tools, and main v238 withdraws one the model wrote. Run on every build (since 2026-10-08) |
 | `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
@@ -847,6 +851,16 @@ the task runner), for whoever has shell access to the box.
     "other"), and the handler's dropdown gave every option a `description` - Slack allows option descriptions only in radio
     buttons and checkboxes, so views.update was refused and the HTTP node hid it. `scripts/sim-si-wiring.js` now fails a
     drawn toggle / button with no route; `scripts/sim-round-4.js` fails a dropdown option with a description.
+
+47. **Slack keeps a control's pick across views.update while its block_id stays the same** (19 Oct, round 8). To clear one control
+    when another is picked (the room list vs Another room), redraw it under a **new block_id** ("room~123") with no initial value,
+    and read it back by its action_id, not its block_id (Read Step 2's `valA`). A radio list in an *actions* block is never
+    "(optional)" and always sends block_actions, but Slack's `errors` response only takes input block ids - put a "Pick a room"
+    error on a nearby input. A picked single-select still cannot be emptied by the person (hence "No booth" / "No engineer").
+48. **A sub-workflow hands back its last node's output, so it cannot reply first and work after** (19 Oct). To write the log
+    sheets after "Booked.", Book Session v112 calls a separate workflow (Jessie — Log Booking) with Execute Workflow's
+    `options.waitForSubWorkflow: false`; the call returns at once and the writes happen on their own. A new workflow has no id
+    until imported - import it first, then `scripts/set-log-booking-id.py <id>`, then the caller.
 
 ## Not done
 

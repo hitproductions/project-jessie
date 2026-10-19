@@ -5,6 +5,7 @@
 // Usage: node scripts/sim-typed-series.js [main v268] [slack interactions v14]
 const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v269.json', 'utf8'));
+const V275 = /Hi, I’m Jessie!/.test(JSON.stringify(main.nodes));   // main v275: short menu lines, "Your booking details so far:"
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v17.json', 'utf8'));
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
@@ -29,7 +30,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   let F = await offer('book studio 7 every monday 2-4pm for 4 weeks', '2027-10-18', tm);
   ok(F.offer && JSON.stringify(F.prefill.rep) === '{"f":"weekly","days":["MO"],"n":4}' && F.prefill.d === '2027-10-18' && F.prefill.r === 'Studio 7',
      'every Monday, 4 weeks: weekly MO, 4 times, from Mon Oct 18 - ' + JSON.stringify(F.prefill));
-  ok(F.text === 'Here’s what I have so far:\n🗓️ *Studio 7 · from Monday, October 18 · 2:00 PM – 4:00 PM*\n🔁 Every Monday · 4 times', 'the reply shows the pattern - ' + F.text.replace(/\n/g, ' | '));
+  ok(F.text === (V275 ? 'Your booking details so far:' : 'Here’s what I have so far:') + '\n🗓️ *Studio 7 · from Monday, October 18 · 2:00 PM – 4:00 PM*\n🔁 Every Monday · 4 times', 'the reply shows the pattern - ' + F.text.replace(/\n/g, ' | '));
   ok(JSON.parse(F.blocks[1].elements[0].value).rep.n === 4, 'the button carries it');
   F = await offer('book studio 7 every monday 2-4pm for 4 weeks', '', tm);
   ok(F.prefill.d === '2027-10-18', 'no date named: the next Monday after today');

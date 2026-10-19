@@ -7,6 +7,7 @@ const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-intera
 const mv = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/move-booking-v33.json', 'utf8'));
 const main = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/project-jessie-v274.json', 'utf8'));
 const FX = require('./sim-fixture-rooms.js');
+const V25 = /function onlyRoom\(/.test(JSON.stringify(si.nodes));   // round 8: no "for someone else", a typed project code, an M booth name
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 async function runIn(wf, name, input, outs) {
@@ -59,25 +60,27 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
 
   // ---- 7-8: meetings, events, M booths
   v = await step2(S('Meeting', 'meeting'), { free_priority: ['Likha'] });
-  ok(blk(v, 'title').label.text === 'Meeting title' && blk(v, 'department').element.initial_option.value === 'Audio Post' && blk(v, 'forwho_toggle') && blk(v, 'notes'),
+  ok(blk(v, 'title').label.text === 'Meeting title' && blk(v, 'department').element.initial_option.value === 'Audio Post' && (V25 ? !blk(v, 'forwho_toggle') : blk(v, 'forwho_toggle')) && blk(v, 'notes'),
      '8: Meeting - title, Department set to yours (Audio Post), "Booking this for someone else?", Note');
   v = await step2(S('Event', 'meeting'), { free_priority: ['Lobby'] });
-  ok(blk(v, 'title').label.text === 'Event title' && !blk(v, 'department') && blk(v, 'forwho_toggle'), '8: Event - no department');
+  ok(blk(v, 'title').label.text === 'Event title' && !blk(v, 'department') && (V25 ? !blk(v, 'forwho_toggle') : blk(v, 'forwho_toggle')), '8: Event - no department');
   v = await step2(S('', 'booth'), { free_rooms: ['M1', 'M2'] });
-  ok(blk(v, 'forwho_toggle') && blk(v, 'notes') && !blk(v, 'engineer'), '7: M booth - "for someone else" and a note');
+  ok((V25 ? blk(v, 'forname') && blk(v, 'forname').element.initial_value === 'Howard' : blk(v, 'forwho_toggle')) && blk(v, 'notes') && !blk(v, 'engineer'), '7: M booth - "for someone else" (v25: "Who is it for?" typed) and a note');
 
   // ---- 11: Localization - the project code search
   v = await step2(S('Localization Dubbing', 'loc', { pre: { cd: 'net-malas' } }), { free_priority: ['Studio 1'] });
   const code = blk(v, 'code');
-  ok(code.element.type === 'external_select' && code.element.action_id === 'code_pick' && code.dispatch_action === true && code.element.min_query_length === 0
-     && code.element.initial_option.value === 'NET-MALAS', '11: Project code - a type-to-search list, the typed code picked');
+  ok(V25 ? (code.element.type === 'plain_text_input' && code.element.action_id === 'code_in' && code.dispatch_action === true && code.element.initial_value === 'NET-MALAS')
+     : (code.element.type === 'external_select' && code.element.action_id === 'code_pick' && code.dispatch_action === true && code.element.min_query_length === 0
+     && code.element.initial_option.value === 'NET-MALAS'), '11: Project code - a type-to-search list, the typed code picked (v25: typed)');
   ok(/\*BAD DAY\* · NETFLIX\nRecordist: Jetrho · Editor: - · Mixer: Via/.test(blk(v, 'code_info').elements[0].text), '11: the project shown under it - ' + JSON.stringify(blk(v, 'code_info').elements[0].text));
-  ok(blk(v, 'engineer').element.initial_option.value === 'U3' && blk(v, 'engineer').element.options[0].value === 'U3' && /From the project/.test(blk(v, 'engineer').hint.text),
+  ok(blk(v, 'engineer').element.initial_option.value === 'U3' && blk(v, 'engineer').element.options[0].value === 'U3' && (V25 ? !blk(v, 'engineer').hint : /From the project/.test(blk(v, 'engineer').hint.text)),
      '11: Dubbing - the Recordist (Jetrho) set as the engineer, first in the list');
   v = await step2(S('QC', 'loc', { pre: { cd: 'NET-MALAS' } }), { free_priority: ['Studio 3'] });
   ok(blk(v, 'engineer').element.initial_option.value === 'U1', '11: QC - nobody from the project preset (anyone; you as before)');
   v = await step2(S('Localization Dubbing', 'loc', { pre: { cd: 'NET-NEWSHOW' } }), { free_priority: ['Studio 1'] });
-  ok(blk(v, 'code').element.initial_option.value === 'new:NET-NEWSHOW' && /New project code/.test(blk(v, 'code_info').elements[0].text), '11: a code not in Airtable - kept, "New project code"');
+  ok(V25 ? (blk(v, 'code').element.initial_value === 'NET-NEWSHOW' && !blk(v, 'code_info'))
+     : (blk(v, 'code').element.initial_option.value === 'new:NET-NEWSHOW' && /New project code/.test(blk(v, 'code_info').elements[0].text)), '11: a code not in Airtable - kept, "New project code" (v25: nothing shown)');
 
   const suggest = async (q) => (await j1('Suggest Codes', LOC, { 'Read Request': [{ json: { payload: { type: 'block_suggestion', action_id: 'code_pick', value: q } } }] })).answer.options;
   let o = await suggest('net');
@@ -103,10 +106,11 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   const toggle = async (view, action, extra, state) => j1('Note Toggle', [], { 'Read Request': [{ json: { payload: { view: Object.assign({ id: 'V1', hash: 'h' }, view, { state: { values: state || {} } }),
     actions: [Object.assign({ action_id: action }, extra || {})] } } }], 'Read Cache 9': cacheRow, 'Loc Projects 9': LOC });
   v = await step2(S('Localization Mixing', 'loc'), { free_priority: ['Studio 3'] });
-  let t = await toggle(v, 'code_pick', { selected_option: { value: 'NET-CAM' } }, { code: { code_pick: tv('NET-CAM') } });
-  ok(blk(t.view, 'code').element.initial_option.value === 'NET-CAM' && /\*CAMPIONI\*/.test(blk(t.view, 'code_info').elements[0].text)
+  let t = V25 ? await toggle(v, 'code_in', { value: 'net-cam' }, { code: { code_in: { value: 'net-cam' } } }) : await toggle(v, 'code_pick', { selected_option: { value: 'NET-CAM' } }, { code: { code_pick: tv('NET-CAM') } });
+  ok((V25 ? blk(t.view, 'code').element.initial_value === 'net-cam' : blk(t.view, 'code').element.initial_option.value === 'NET-CAM') && /\*CAMPIONI\*/.test(blk(t.view, 'code_info').elements[0].text)
      && blk(t.view, 'engineer').element.initial_option.value === 'U4', '11: a code picked (Mixing) - the project shown, the Mixer (Via) set, the pick kept');
   v = await step2(S('Meeting', 'meeting'), { free_priority: ['Likha'] });
+  if (V25) v = { blocks: v.blocks.concat([{ type: 'actions', block_id: 'forwho_toggle', elements: [{ type: 'checkboxes', action_id: 'forwho_toggle', options: [{ text: { type: 'plain_text', text: 'x' }, value: 'for' }] }] }]) };   // a v24 form still open
   t = await toggle(v, 'forwho_toggle', { selected_options: [{ value: 'for' }] });
   ok(ids(t.view).indexOf('forwho') === ids(t.view).indexOf('forwho_toggle') + 1 && blk(t.view, 'forwho').element.options.length === 7
      && blk(t.view, 'forwho').element.options.some(o => o.value === 'U7'), '7: ticked -> "Who is it for?" with everyone in Bookers (Letty too)');
@@ -122,7 +126,8 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   ok(!r.valid && r.answer.errors.engineer === 'Pick an engineer or an arranger.', '6: neither -> "Pick an engineer or an arranger."');
   r = await read2({ room: { room_radio: tv('Studio 7') }, project: { project_in: { value: 'x' } } }, M('VO Recording', 'studio'));
   ok(!r.valid && r.answer.errors.engineer === 'Pick the engineer.', '5: VO Recording without an engineer -> "Pick the engineer."');
-  r = await read2({ room: { room_radio: tv('M2') }, forwho: { forwho_pick: tv('U2') }, notes: { notes_in: { value: 'warm-up' } } }, M('', 'booth', { label: 'M booth' }));
+  r = await read2(V25 ? { room: { room_radio: tv('M2') }, forname: { forname_in: { value: 'Daryl' } }, notes: { notes_in: { value: 'warm-up' } } }
+    : { room: { room_radio: tv('M2') }, forwho: { forwho_pick: tv('U2') }, notes: { notes_in: { value: 'warm-up' } } }, M('', 'booth', { label: 'M booth' }));
   ok(r.valid && r.calTitle === 'M2 - Daryl' && /Booked by: Howard Luistro \(for Daryl Reyes\)/.test(r.prep.description) && r.team === 'U2' && r.forId === 'U2' && /Notes: warm-up/.test(r.prep.description),
      '7: an M booth for Daryl - "M2 - Daryl", "Booked by: Howard Luistro (for Daryl Reyes)", Daryl on the booking');
   r = await read2({ room: { room_radio: tv('Likha') }, title: { title_in: { value: 'Sync' } }, department: { department_pick: tv('Music') } }, M('Meeting', 'meeting'));
@@ -144,7 +149,7 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   t = await toggle(cv, 'purpose_c', { selected_option: { value: 'Music Mixing' } }, { purpose_c: { purpose_c: tv('Music Mixing') }, det_project: { det_project_in: { value: 'PURPLE YAM' } } });
   ok(blk(t.view, 'team_note') && blk(t.view, 'det_arranger') && blk(t.view, 'det_project').element.initial_value === 'PURPLE YAM', '3: changed to Music Mixing - the details follow (arranger, pick one or both), the project kept');
   t = await toggle(cv, 'purpose_c', { selected_option: { value: 'QC' } }, { purpose_c: { purpose_c: tv('QC') } });
-  ok(blk(t.view, 'det_code') && blk(t.view, 'det_code').element.type === 'external_select' && !blk(t.view, 'det_client'), '3: changed to QC - a project code instead of project / client');
+  ok(blk(t.view, 'det_code') && blk(t.view, 'det_code').element.type === (V25 ? 'plain_text_input' : 'external_select') && !blk(t.view, 'det_client'), '3: changed to QC - a project code instead of project / client');
   cv = await buildChange(Object.assign({}, yam, { st: '' }));
   ok(blk(cv, 'purpose_c').optional && !blk(cv, 'purpose_c').element.initial_option && blk(cv, 'det_project'), '2: an older booking (no SType) - What\'s it for? optional, the details from its title');
   cv = await buildChange({ id: 'ev5', d: '2027-10-15', s: '00:00', e: '00:00', r: 'M5', t: 'M5 - Howard' });

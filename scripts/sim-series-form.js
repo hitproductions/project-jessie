@@ -6,6 +6,7 @@
 // Usage: node scripts/sim-series-form.js [slack interactions v13] [book series]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v17.json', 'utf8'));
+const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: step 1 / room wording, the list an actions block
 const V15 = si.nodes.some(n => n.name === 'Read Cache 8'), V17 = si.nodes.some(n => n.name === 'Mark Cancelling');
 const bs = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/imported/book-series-v8-imported.json', 'utf8'));
 let pass = 0, fail = 0;
@@ -69,7 +70,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
     ok(tgu.view.blocks.find(b => b.block_id === 'rep_until').element.initial_date === '2027-11-16' && (V17 ? tgu.view.blocks.find(b => b.block_id === 'rep_until').hint.text === 'Only applies if "How many times" is empty.' : /How many times is empty/.test(tgu.view.blocks.find(b => b.block_id === 'rep_until').hint.text)),
        'v15: Or until starts 4 weeks after the first date (2027, not the real year), and says when it is used');
     const pur = s1.blocks.find(b => b.block_id === 'purpose');
-    ok(pur.hint.text === 'A room will be recommended to you based on your session details.' && pur.element.option_groups.map(g => g.label.text).join() === 'Sessions,Other bookings', 'v15: step 1 wording');
+    ok((V25 ? pur.hint.text === 'You’ll get a recommendation based on the booking details.' : pur.hint.text === 'A room will be recommended to you based on your session details.') && pur.element.option_groups.map(g => g.label.text).join() === 'Sessions,Other bookings', 'v15: step 1 wording');
   }
   const err = async (rep, bid, re) => { const x = await read1(rep); ok(!x.valid && x.answer.response_action === 'errors' && re.test(x.answer.errors[bid] || ''), bid + ': ' + JSON.stringify(x.answer.errors)); };
   await err(F('weekly', [], 4), 'rep_days', /at least one day/);
@@ -85,16 +86,17 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const step2 = async (answers, s) => j1(si, 'Build Step 2', answers.map(a => ({ json: a })), { 'Read Step 1': [{ json: { s: s || r1.s } }], 'Read Cache 2': cache });
   let s2 = await step2([{ status: 'OK', free_priority: ['Studio 7', 'Studio 8'], free_last_resort: ['Studio 4'] }, { status: 'OK', free_priority: ['Studio 8'], free_last_resort: ['Studio 4'] },
     { status: 'OK', free_priority: ['Studio 7', 'Studio 8', 'Studio F'], free_last_resort: ['Studio 4'] }]);
-  const radio = s2.view.blocks.find(b => b.block_id === 'room').element;
+  const roomEl = v => { const b = v.blocks.find(b => b.block_id === 'room'); return b.element || b.elements[0]; };
+  const radio = roomEl(s2.view);
   ok(radio.options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio 8,Studio 7,Studio F', 'rooms free on more dates first: ' + radio.options.map(o => o.value).join());
-  ok(radio.options[0].description.text === 'Recommended · usual for Localization Dubbing · free on all 3 dates' && radio.options[1].description.text === 'free on 2 of 3 dates'
+  ok(radio.options[0].description.text === (V25 ? 'Recommended · free on all 3 dates' : 'Recommended · usual for Localization Dubbing · free on all 3 dates') && radio.options[1].description.text === 'free on 2 of 3 dates'
      && radio.options[2].description.text === 'free on 1 of 3 dates', 'each says on how many dates it is free');
   ok(/🗓️ \*3 dates · 2:00 PM–4:00 PM · Localization Dubbing\*/.test(JSON.stringify(s2.view.blocks[1])) && s2.view.blocks[2].elements[0].text === 'Tue Oct 19 · Tue Oct 26 · Tue Nov 2'
      && s2.view.submit.text === 'Check 3 dates', 'header, the dates, "Check 3 dates"');
   s2 = await step2([{ status: 'OK', free_priority: ['Studio 7'] }, { status: 'CALENDAR_ERROR' }, { status: 'OK', free_priority: ['Studio 7'] }]);
-  ok(!s2.view.submit && /could(?: not|n’t) be checked/.test(JSON.stringify(s2.view)) && !/CALENDAR_ERROR/.test(JSON.stringify(s2.view)), 'a date not checked -> no button, no code');
+  ok(!s2.view.submit && /could(?: not|n’t) be checked|Couldn’t check the calendar/.test(JSON.stringify(s2.view)) && !/CALENDAR_ERROR/.test(JSON.stringify(s2.view)), 'a date not checked -> no button, no code');
   s2 = await step2([{ status: 'OK', free_priority: ['Studio 7', 'Studio 8'] }], { date: '2027-10-19', t0: '14:00', t1: '16:00', purpose: 'Localization Dubbing', kind: 'loc', requester: 'U1', ext: 'x' });
-  ok(s2.view.submit.text === 'Book' && !s2.view.blocks.find(b => b.block_id === 'room').element.options[1].description, 'a single booking: as v12');
+  ok(s2.view.submit.text === 'Book' && !roomEl(s2.view).options[1].description, 'a single booking: as v12');
 
   // ---- step 2 submitted: Book Series prepare
   const meta2 = Object.assign({}, r1.s, { when: 'x', label: 'Localization Dubbing' });
@@ -133,7 +135,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const confPay = m => ({ type: 'view_submission', view: { id: 'V3', private_metadata: JSON.stringify(m) } });
   const meta3 = { key: 'prep-sabc', n: 2, title: 'NFX-ABC-01 / HL', requester: 'U1', channel: 'D1', time: '14:00-16:00' };
   const rsc = await j1(si, 'Read Series Confirm', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: confPay(meta3) } }] });
-  ok(rsc.key === 'prep-sabc' && rsc.answer.response_action === 'update' && /Booking 2 dates/.test(JSON.stringify(rsc.answer.view)) && (V17 ? /Processing your series of bookings\. This may take a while(, so you can close this window for now\. You will be notified once finished\.|\. You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\.)/.test(JSON.stringify(rsc.answer.view)) : /result comes to your DM/.test(JSON.stringify(rsc.answer.view))), '"Booking 2 dates…" at once');
+  ok(rsc.key === 'prep-sabc' && rsc.answer.response_action === 'update' && /Booking 2 dates/.test(JSON.stringify(rsc.answer.view)) && (V25 ? /Multiple bookings may take longer to process\. You can close this window – we’ll let you know once it’s done\./.test(JSON.stringify(rsc.answer.view)) : V17 ? /Processing your series of bookings\. This may take a while(, so you can close this window for now\. You will be notified once finished\.|\. You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\.)/.test(JSON.stringify(rsc.answer.view)) : /result comes to your DM/.test(JSON.stringify(rsc.answer.view))), '"Booking 2 dates…" at once');
   const tbs = async (rows, R) => j1(si, 'To Book Series', V15 ? cache : rows.map(x => ({ json: x })), { 'Read Series Confirm': [{ json: R || rsc }], 'Read Saved Series': rows.map(x => ({ json: x })), 'Read Cache 8': cache });
   let T = await tbs([{ cache_key: 'prep-sabc', payload: JSON.stringify(payload) }]);
   ok(T.go && T.confirmed === true && T.mode === '' && T.dates === '2027-10-19,2027-11-02' && T.rooms === 'Studio 8', 'the stored series, checked, booked as stored');

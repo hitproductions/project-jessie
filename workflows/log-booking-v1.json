@@ -1,0 +1,205 @@
+{
+  "name": "Jessie — Log Booking — v1 (log after the reply)",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "log"
+            },
+            {
+              "name": "client"
+            }
+          ]
+        }
+      },
+      "id": "51375682-2652-4f00-b908-be1fb19faee0",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log Row: the Jessie Log row Book Session made (Build Log Row), as one item for Log to Sheet.\nlet r = null; try { r = JSON.parse(String($('When Executed by Another Workflow').first().json.log || '')); } catch (e) { r = null; }\nreturn r && typeof r === 'object' ? [{ json: r }] : [];"
+      },
+      "id": "cb21b444-177d-4a50-a59a-04497fec801d",
+      "name": "Log Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "cachedResultName": "Log",
+          "mode": "list",
+          "value": "gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [],
+          "schema": [],
+          "value": {}
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true,
+      "id": "95cba500-d563-4d27-8e2d-64a109bcb40a",
+      "name": "Log to Sheet",
+      "position": [
+        448,
+        0
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Client Row: the New Clients row, only for a client the Clients table did not know - none, no item, nothing written.\nlet r = null; try { r = JSON.parse(String($('When Executed by Another Workflow').first().json.client || '')); } catch (e) { r = null; }\nreturn r && typeof r === 'object' && r['Client'] ? [{ json: r }] : [];"
+      },
+      "id": "12ea33fc-7d12-4e88-8b61-fe00ca705f30",
+      "name": "Client Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "New Clients"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "Client"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "d02f7e7d-9c64-4491-9875-153f3cc86e10",
+      "name": "Log New Client",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Jessie — Log Booking\nWrites a booking's rows to the Jessie Log spreadsheet after the reply has gone. Called by Book Session (v112+) without waiting. A failed write never touches the booking.",
+        "height": 160,
+        "width": 420
+      },
+      "id": "e10715d7-a081-476b-bea3-0567d696d1c0",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -240
+      ]
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Log Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Row": {
+      "main": [
+        [
+          {
+            "node": "Log to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Client Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client Row": {
+      "main": [
+        [
+          {
+            "node": "Log New Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {},
+  "tags": []
+}

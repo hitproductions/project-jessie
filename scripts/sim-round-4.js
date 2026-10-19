@@ -76,29 +76,37 @@ const tv = v => ({ selected_option: { value: v } });
   // ---- step 2 (Room Availability answers as RA v22 does: free_priority / free_last_resort / free_rooms / busy)
   const step2 = async (s, ra) => j1('Build Step 2', [{ json: Object.assign({ status: 'OK', busy: [] }, ra) }], { 'Read Step 1': [{ json: { s } }], 'Read Cache 2': cacheRow });
   const S = (purpose, kind, extra) => Object.assign({ date: '2027-10-19', t0: '13:00', t1: '15:00', purpose, kind, requester: 'U1', channel: 'D1', ext: 'x' }, extra || {});
-  const radio = v => (v.blocks.find(b => b.block_id === 'room') || {}).element;
+  const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: the room list an actions block; booth / holding dropdowns
+  const radio = v => { const b = v.blocks.find(b => b.block_id === 'room') || {}; return b.element || (b.elements || [])[0]; };
+  const boothOf = v => v.blocks.find(b => /^booth(~\d+)?$/.test(b.block_id || ''));
   const metaOf = v => JSON.parse(v.private_metadata);
 
   // Celebrity Recording: studios only, + Holding room, + Vocal booth
   let v = (await step2(S('Celebrity Recording', 'studio'), { free_priority: ['Studio F', 'Likha', 'Katha', 'Salin', 'Studio C'], free_last_resort: ['Studio 7'], busy: ['Salin (TEAM SYNC)'] })).view;
   ok(radio(v).options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio F,Studio C', '2: Celebrity Recording - the Room list is studios only (live: Likha, Katha, Salin as choices) - ' + radio(v).options.map(o => o.value));
   const ids = v.blocks.map(b => b.block_id).filter(Boolean);
+  if (V25) { const hb = v.blocks.find(b => b.block_id === 'holding'), bb = boothOf(v);
+    ok(ids.indexOf('add_holding') === -1 && ids.indexOf('add_booth') === -1 && hb && hb.element.type === 'multi_static_select' && hb.element.options.map(o => o.value).join() === 'Katha,Likha'
+       && bb && bb.optional && bb.element.options.map(o => o.value).join() === 'none,Studio A,Studio B,Studio D' && !bb.element.initial_option, '2 (v25): Holding rooms (Katha, Likha - Salin taken) and the Vocal booth as dropdowns, shown at once');
+    ok(v.blocks.find(b => b.block_id === 'room').type === 'actions', '3 (v25): the list is an actions block - every pick redraws');
+  } else {
   ok(ids.indexOf('add_holding') !== -1 && ids.indexOf('add_booth') > ids.indexOf('add_holding') && ids.indexOf('booth') === -1, '2: + Holding room, then + Vocal booth (unticked)');
   ok(metaOf(v).holds.join() === 'Katha,Likha' && metaOf(v).bx.pair['Studio F'].list.join() === 'Studio A,Studio B,Studio D', '2: free holding rooms (Salin taken) and booths in the form');
-  ok(v.blocks.find(b => b.block_id === 'room').dispatch_action === true, '3: a studio change redraws (booth reset)');
+  ok(v.blocks.find(b => b.block_id === 'room').dispatch_action === true, '3: a studio change redraws (booth reset)'); }
 
   // Localization Dubbing: Studio + Booth, the usual pair first
   v = (await step2(S('Localization Dubbing', 'loc'), { free_priority: ['Studio 1', 'Studio A', 'Studio B', 'Studio 2', 'Studio D', 'Studio 6'] })).view;
   const rb = v.blocks.find(b => b.block_id === 'room');
-  ok(rb.label.text === 'Studio' && rb.element.options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio 1,Studio 2,Studio 6', '3: Localization Dubbing - Studio lists control rooms only (live: Studio A, B, D mixed in) - ' + rb.element.options.map(o => o.value));
-  let bt = v.blocks.find(b => b.block_id === 'booth');
-  ok(bt && bt.element.initial_option.value === 'Studio A' && /Studio 1’s usual booth/.test(bt.element.options[0].description.text) && /^Set to Studio 1’s usual booth/.test(bt.hint.text)
+  ok((V25 ? v.blocks.find(b => b.block_id === 'room_label').text.text === '*Studio*' : rb.label.text === 'Studio') && radio(v).options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio 1,Studio 2,Studio 6', '3: Localization Dubbing - Studio lists control rooms only (live: Studio A, B, D mixed in) - ' + radio(v).options.map(o => o.value));
+  let bt = boothOf(v);
+  if (V25) ok(bt && bt.element.initial_option.value === 'Studio A' && bt.element.options[0].text.text === 'Studio A (usual)' && !bt.hint && !bt.optional, '3 (v25): Vocal booth set to Studio 1\'s usual (Studio A), "(usual)", required');
+  else ok(bt && bt.element.initial_option.value === 'Studio A' && /Studio 1’s usual booth/.test(bt.element.options[0].description.text) && /^Set to Studio 1’s usual booth/.test(bt.hint.text)
      && bt.element.options.slice(1).every(o => !o.description || /engineer patches it \(Dante\)/.test(o.description.text))   /* v22: no line */, '3: Booth set to Studio 1\'s usual (Studio A), the others "the engineer patches it (Dante)"');
   ok(!v.blocks.some(b => b.block_id === 'add_booth' || b.block_id === 'add_holding'), '3: no + Vocal booth when the booth is part of the session');
   // the usual booth taken
   v = (await step2(S('Localization Dubbing', 'loc'), { free_priority: ['Studio 1', 'Studio B', 'Studio 2'], busy: ['Studio A (X)', 'Studio D (Y)'] })).view;
-  bt = v.blocks.find(b => b.block_id === 'booth');
-  ok(bt.element.options.map(o => o.value).join() === 'Studio B' && /Studio 1’s usual booth \(Studio A\) is taken then/.test(bt.hint.text), '3: usual booth taken -> said, the free one offered');
+  bt = boothOf(v);
+  ok(bt.element.options.map(o => o.value).join() === 'Studio B' && (V25 || /Studio 1’s usual booth \(Studio A\) is taken then/.test(bt.hint.text)), '3: usual booth taken -> said, the free one offered (v25: just the free one)');
 
   // QC: Localization details, M1 (an M booth in its ranking) never a Room choice
   v = (await step2(S('QC', 'loc'), { free_priority: ['Studio 3', 'Studio 5', 'Studio 7', 'M1'] })).view;
@@ -113,10 +121,10 @@ const tv = v => ({ selected_option: { value: v } });
 
   // VO Recording: + Vocal booth; Music Mixing: neither
   v = (await step2(S('VO Recording', 'studio'), { free_priority: ['Studio 7', 'Studio F'] })).view;
-  ok(v.blocks.some(b => b.block_id === 'add_booth') && !v.blocks.some(b => b.block_id === 'add_holding'), '2: VO Recording - + Vocal booth only');
+  ok((V25 ? !!boothOf(v) && boothOf(v).optional : v.blocks.some(b => b.block_id === 'add_booth')) && !v.blocks.some(b => b.block_id === 'add_holding' || b.block_id === 'holding'), '2: VO Recording - + Vocal booth only');
   const voMeta = v.private_metadata;
   v = (await step2(S('Music Mixing', 'studio'), { free_priority: ['Studio F'] })).view;
-  ok(!v.blocks.some(b => b.block_id === 'add_booth' || b.block_id === 'add_holding') && (v.blocks.find(b => b.block_id === 'room').dispatch_action === undefined || radio(v).options.slice(-1)[0].value === '__other'), '2: Music Mixing - no extras (v22: the list redraws only for Another room…)');
+  ok(!v.blocks.some(b => b.block_id === 'add_booth' || b.block_id === 'add_holding' || b.block_id === 'holding' || /^booth/.test(b.block_id || '')) && (V25 || v.blocks.find(b => b.block_id === 'room').dispatch_action === undefined || radio(v).options.slice(-1)[0].value === '__other'), '2: Music Mixing - no extras (v22: the list redraws only for Another room…)');
   // M booth all day
   v = (await step2(S('', 'booth', { allDay: true, t0: '00:00', t1: '23:59' }), { free_rooms: ['M1', 'M2'] })).view;
   ok(/All day · M booth/.test(v.blocks[1].text.text), '6: step 2 says All day');
@@ -125,7 +133,9 @@ const tv = v => ({ selected_option: { value: v } });
   const toggle = async (view, action, extra, state) => j1('Note Toggle', [], { 'Read Request': [{ json: { payload: { view: Object.assign({ id: 'V1', hash: 'h' }, view, { state: { values: state || {} } }),
     actions: [Object.assign({ action_id: action }, extra || {})] } } }], 'Read Cache 9': cacheRow });
   const celeb = (await step2(S('Celebrity Recording', 'studio'), { free_priority: ['Studio F', 'Likha', 'Katha', 'Salin', 'Studio C'] })).view;
-  let t = await toggle(celeb, 'add_booth', { selected_options: [{ value: 'booth' }] });
+  let t;
+  if (!V25) {   // v25: no + Vocal booth / + Holding room boxes (sim-round-8)
+  t = await toggle(celeb, 'add_booth', { selected_options: [{ value: 'booth' }] });
   let ix = t.view.blocks.map(b => b.block_id);
   bt = t.view.blocks.find(b => b.block_id === 'booth');
   ok(ix.indexOf('booth') === ix.indexOf('add_booth') + 1 && bt.element.initial_option.value === 'Studio A' && /Studio F records vocals in the room - add a booth only if the session needs one\./.test(bt.hint.text),
@@ -135,19 +145,20 @@ const tv = v => ({ selected_option: { value: v } });
   ok(hb && hb.optional && hb.element.type === 'checkboxes' && hb.element.options.map(o => o.value).join() === 'Katha,Likha,Salin', '2: + Holding room ticked -> Holding rooms checklist (one or more)');
   t = await toggle(t.view, 'add_holding', { selected_options: [] });
   ok(!t.view.blocks.some(b => b.block_id === 'holding'), '2: unticked -> gone');
+  }
   // a studio change resets the booth (Localization)
   const loc = (await step2(S('Localization Dubbing', 'loc'), { free_priority: ['Studio 1', 'Studio 2', 'Studio 6', 'Studio A', 'Studio B', 'Studio D'] })).view;
   t = await toggle(loc, 'room_radio', { selected_option: { value: 'Studio 6' } }, { room: { room_radio: tv('Studio 6') }, booth: { booth_pick: tv('Studio A') } });
-  bt = t.view.blocks.find(b => b.block_id === 'booth');
-  ok(bt.element.initial_option.value === 'Studio D' && /Set to Studio 6’s usual booth/.test(bt.hint.text), '3: Studio 6 picked -> the booth resets to Studio D (D is paired with Studio 6)');
+  bt = boothOf(t.view);
+  ok(bt.element.initial_option.value === 'Studio D' && (V25 ? bt.element.options[0].text.text === 'Studio D (usual)' : /Set to Studio 6’s usual booth/.test(bt.hint.text)), '3: Studio 6 picked -> the booth resets to Studio D (D is paired with Studio 6)');
   t = await toggle(loc, 'room_radio', { selected_option: { value: 'Studio 2' } }, { room: { room_radio: tv('Studio 2') } });
-  ok(t.view.blocks.find(b => b.block_id === 'booth').element.initial_option.value === 'Studio B', '3: Studio 2 -> Studio B');
+  ok(boothOf(t.view).element.initial_option.value === 'Studio B', '3: Studio 2 -> Studio B');
   // Use another room: a dropdown with no option descriptions
   const mm = (await step2(S('Music Mixing', 'studio'), { free_priority: ['Studio F'] })).view;
   const V22 = !mm.blocks.some(b => b.block_id === 'room_toggle');   // v22: Another room… is a room choice
-  t = V22 ? await toggle(mm, 'room_radio', { selected_option: { value: '__other' } }, { room: { room_radio: tv('__other') } }) : await toggle(mm, 'room_toggle', { selected_options: [{ value: 'room' }] });
+  t = V25 ? { view: mm } : V22 ? await toggle(mm, 'room_radio', { selected_option: { value: '__other' } }, { room: { room_radio: tv('__other') } }) : await toggle(mm, 'room_toggle', { selected_options: [{ value: 'room' }] });
   const ro = t.view.blocks.find(b => b.block_id === 'room_other');
-  ok(ro && ro.element.type === 'static_select' && ro.element.options.length > 0 && ro.element.options.every(o => !o.description) && /Not a usual room for Music Mixing/.test(ro.hint.text),
+  ok(ro && ro.element.type === 'static_select' && ro.element.options.length > 0 && ro.element.options.every(o => !o.description) && /Not a usual room for Music Mixing/.test(ro.hint.text) && (!V25 || ro.optional),
      '1: Use another room -> a dropdown Slack accepts (no option descriptions; v19 had them on every option)');
   // M booth all day in step 1
   t = await toggle(s1.view, 'purpose_pick', { selected_option: { value: '__booth' } }, { purpose: { purpose_pick: tv('__booth') } });
@@ -173,7 +184,7 @@ const tv = v => ({ selected_option: { value: v } });
   ok(r2.valid && r2.calTitle === 'NET-KUBA / JT' && r2.prep.client === '', '4: QC -> NET-KUBA / JT, no client');
   r2 = await read2({ room: { room_radio: tv('Studio E') }, project: { project_in: { value: 'brand reel' } } }, M('Post Processing', 'post'));
   ok(r2.valid && r2.calTitle === 'BRAND REEL / DD' && r2.prep.engineer === 'Dylan Diaz' && r2.team === '' && /no client/.test(r2.prep.requester_text), '5: Post Processing -> BRAND REEL / DD, booked under Dylan Diaz, no notice - ' + r2.calTitle);
-  r2 = await read2({ room: { room_radio: tv('M2') } }, M('', 'booth', { allDay: true, t0: '00:00', t1: '23:59', when: 'Tuesday, Oct 19 · All day', label: 'M booth' }));
+  r2 = await read2({ room: { room_radio: tv('M2') }, forname: { forname_in: { value: 'Howard' } } }, M('', 'booth', { allDay: true, t0: '00:00', t1: '23:59', when: 'Tuesday, Oct 19 · All day', label: 'M booth' }));
   ok(r2.valid && r2.prep.all_day === true && r2.prep.start_iso === '2027-10-19T00:00:00+08:00' && r2.prep.end_iso === '2027-10-20T00:00:00+08:00' && /all day/.test(r2.prep.requester_text), '6: M2 all day -> 00:00 to the next 00:00, all_day');
   r2 = await read2({ room: { room_radio: tv('Studio 7') }, project: { project_in: { value: 'x' } }, engineer: { engineer_pick: tv('U1') } }, M('VO Recording', 'studio'));
   ok(r2.prep.rooms === 'Studio 7' && r2.prep.all_day === false, 'a plain booking unchanged');

@@ -6,6 +6,7 @@
 // Usage: node scripts/sim-step-c1.js [slack interactions v11] [cancel v27] [move v30]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v18.json', 'utf8'));
+const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: fewer words (round 8)
 const V17 = si.nodes.some(n => n.name === 'Mark Cancelling');
 const cx = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/cancel-booking-v27.json', 'utf8'));
 const mv = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/move-booking-v30.json', 'utf8'));
@@ -111,7 +112,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
      && !ac.blocks.some(b => b.block_id === 'bka_ev1') && ac.blocks.some(b => b.block_id === 'bka_ev2'), 'cancelled -> the row says so, its buttons go, the others stay');
   ac = await j1(si, 'After Cancel', [{ json: { status: 'REJECTED', reason: 'NOT_YOURS' } }], { 'Read Request': [{ json: { payload: cpay } }] });
   const wi = ac.blocks.findIndex(b => b.block_id === 'bkw_ev1');
-  ok(!ac.ok && wi === ac.blocks.findIndex(b => b.block_id === 'bka_ev1') + 1 && /only the person who booked it, or its engineer or arranger/.test(ac.blocks[wi].elements[0].text), 'refused -> why, under the row; the row stays');
+  ok(!ac.ok && wi === ac.blocks.findIndex(b => b.block_id === 'bka_ev1') + 1 && /only the person who booked it, or its engineer or arranger|Only the booker, engineer or arranger can cancel this/.test(ac.blocks[wi].elements[0].text), 'refused -> why, under the row; the row stays');
   const again = Object.assign({}, cpay, { message: { blocks: ac.blocks } });
   ac = await j1(si, 'After Cancel', [{ json: { status: 'REJECTED', reason: 'LOOKUP_FAILED' } }], { 'Read Request': [{ json: { payload: again } }] });
   ok(ac.blocks.filter(b => b.block_id === 'bkw_ev1').length === 1 && /couldn’t be read/.test(ac.blocks.find(b => b.block_id === 'bkw_ev1').elements[0].text), 'a second problem replaces the first');
@@ -133,13 +134,13 @@ const j1 = async (...a) => (await run(...a))[0].json;
     date: { date_pick: { selected_date: d } }, start: { start_pick: { selected_option: { value: s } } }, end: { end_pick: { selected_option: { value: e } } }, room: { room_pick: { selected_option: { value: r } } } } } } });
   const readC = async (pl) => j1(si, 'Read Change', [], { 'Check Signature': chk(), 'Read Request': [{ json: { payload: pl } }] });
   let rc = await readC(sub('2027-10-16', '14:00', '16:00', 'Studio 7'));
-  ok(!rc.valid && rc.answer.response_action === 'errors' && rc.answer.errors.date === 'Nothing changed - pick a new date, time or room.', 'nothing changed -> said on the form, nothing moved');
+  ok(!rc.valid && rc.answer.response_action === 'errors' && rc.answer.errors.date === (V25 ? 'Nothing changed.' : 'Nothing changed - pick a new date, time or room.'), 'nothing changed -> said on the form, nothing moved');
   rc = await readC(sub('2027-10-16', '16:00', '15:00', 'Studio 7'));
   ok(!rc.valid && /after the start/.test(rc.answer.errors.end), 'end before start -> error');
   rc = await readC(sub('2027-10-16', '15:00', '17:00', 'Studio 7'));
   ok(rc.valid && rc.answer.response_action === 'update' && (/Changing ORANGE \/ Jem Lim \/ HL…\*\nSat, Oct 16 · 3:00 PM – 5:00 PM · Studio 7/.test(rc.answer.view.blocks[0].text.text)
      || rc.answer.view.blocks[0].text.text === '⏳ *Changing…*\n\n*ORANGE / Jem Lim / HL*\n*Date:* Saturday, October 16, 2027\n*Time:* 3:00 PM – 5:00 PM\n*Room:* Studio 7')
-     && /This takes a few seconds\.|You may close this window – we’ll notify you/.test(JSON.stringify(rc.answer.view)), 'valid -> "Changing…" at once');
+     && /This takes a few seconds\.|You may close this window – we’ll notify you|You can close this window – we’ll let you know/.test(JSON.stringify(rc.answer.view)), 'valid -> "Changing…" at once');
   const tm = await j1(si, 'To Move', [], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });
   ok(tm.event_id === 'ev1' && tm.booking_date === '2027-10-16' && tm.new_start_iso === '2027-10-16T15:00:00+08:00' && tm.new_end_iso === '2027-10-16T17:00:00+08:00'
      && tm.new_rooms === '' && tm.confirmed === true && tm.authority === 'HAIST Dev' && tm.title === B.t, 'Move Booking inputs: same room -> no new room');
@@ -154,7 +155,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(!am.ok && V.blocks.find(b => b.block_id === 'problem').text.text === '⚠️ Studio 7 is taken then. Free that day: 12:00 PM – 2:00 PM, 5:00 PM – 7:00 PM.'
      && el('start').initial_option.value === '15:00' && el('end').initial_option.value === '17:00' && V.callback_id === 'change_booking', 'taken -> the form again at the new values, with the room\'s free times');
   am = await j1(si, 'After Move', [{ json: { status: 'REJECTED', reason: 'NOT_YOURS' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });
-  ok(/only the person who booked it, or its engineer or arranger/.test(am.view.blocks.find(b => b.block_id === 'problem').text.text), 'not yours -> said');
+  ok(/only the person who booked it, or its engineer or arranger|Only the booker, engineer or arranger can change this/.test(am.view.blocks.find(b => b.block_id === 'problem').text.text), 'not yours -> said');
   am = await j1(si, 'After Move', [{ json: { status: 'PARTIAL', event_id: 'ev9' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });
   ok(am.ok && /could not be removed/.test(am.card), 'partial -> Changed, and the old one to delete');
 
@@ -183,10 +184,10 @@ const j1 = async (...a) => (await run(...a))[0].json;
     // the processing lines
     const mcx = await j1(si, 'Mark Cancelling', [], { 'Read Request': [{ json: { payload: cpay } }] });
     const wl = mcx.blocks.findIndex(b => b.block_id === 'bkw_ev1');
-    ok(mcx.ok && mcx.ts === '7.7' && wl === mcx.blocks.findIndex(b => b.block_id === 'bk_ev1') + 1 && mcx.blocks[wl].elements[0].text === '⏳ Your cancellation is being processed…'
+    ok(mcx.ok && mcx.ts === '7.7' && wl === mcx.blocks.findIndex(b => b.block_id === 'bk_ev1') + 1 && mcx.blocks[wl].elements[0].text === (V25 ? '⏳ Cancelling…' : '⏳ Your cancellation is being processed…')
        && !mcx.blocks.some(b => b.block_id === 'bka_ev1') && mcx.blocks.some(b => b.block_id === 'bka_ev2'), 'v17: cancelling -> details kept, its buttons hidden, "⏳ Your cancellation is being processed…"');
     const mch = await j1(si, 'Mark Changing', [{ json: hist(msg.blocks) }], { 'Read Change': [{ json: rc }] });
-    ok(mch.ok && mch.blocks.find(b => b.block_id === 'bkw_ev1').elements[0].text === '⏳ Your change is being processed…' && !mch.blocks.some(b => b.block_id === 'bka_ev1')
+    ok(mch.ok && mch.blocks.find(b => b.block_id === 'bkw_ev1').elements[0].text === (V25 ? '⏳ Changing…' : '⏳ Your change is being processed…') && !mch.blocks.some(b => b.block_id === 'bka_ev1')
        && mch.original.length === msg.blocks.length, 'v17: changing -> "⏳ Your change is being processed…", the original kept for a failure');
     ok(!(await j1(si, 'Mark Changing', [{ json: { ok: false } }], { 'Read Change': [{ json: rc }] })).ok, 'v17: message not found -> nothing marked');
     const failM = await j1(si, 'After Move', [{ json: { status: 'REJECTED', reason: 'ROOM_OCCUPIED' } }], { 'Read Change': [{ json: rc }], 'Read Cache 7': cache, 'To Move': [{ json: { new_summary: '' } }] });

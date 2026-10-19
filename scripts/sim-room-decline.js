@@ -17,9 +17,20 @@ ok(r.status === 'CREATED' && r.human === 'Booked.', 'accepted -> Booked.', r.sta
 r = verify({ error: { message: 'boom' } });
 ok(r.status === 'CREATED', 'the read back failed -> the create response stands (still needsAction -> Booked.)', r.status);
 const con = B.connections;
-ok(con['Create Event'].main[0][0].node === 'Wait for Room' && con['Wait for Room'].main[0][0].node === 'Reread Event' && con['Reread Event'].main[0][0].node === 'Verify', 'Create Event -> Wait for Room -> Reread Event -> Verify');
 const w = B.nodes.find(x => x.name === 'Wait for Room'), rr = B.nodes.find(x => x.name === 'Reread Event');
-ok(w.parameters.amount === 6 && (w.parameters.unit || 'seconds') === 'seconds' && rr.onError === 'continueRegularOutput', '6 seconds; a failed read never stops the booking');
+if (B.nodes.some(x => x.name === 'Room Answered?')) {   // v112: read back at ~1.5 / 3 / 6 s, on as soon as the rooms answered
+  const to = (n, i = 0) => ((con[n] || {}).main || [])[i] && con[n].main[i][0] && con[n].main[i][0].node;
+  ok(to('Create Event') === 'Wait for Room' && to('Wait for Room') === 'Reread Event' && to('Reread Event') === 'Room Answered?'
+    && to('Room Answered?', 0) === 'Verify' && to('Room Answered?', 1) === 'Wait for Room 2' && to('Reread Event 2') === 'Room Answered 2?'
+    && to('Room Answered 2?', 0) === 'Verify' && to('Room Answered 2?', 1) === 'Wait for Room 3' && to('Reread Event 3') === 'Verify',
+    'v112: Create Event -> 1.5 s -> read -> answered? Verify : 1.5 s -> read -> answered? Verify : 3 s -> read -> Verify');
+  const amt = ['Wait for Room', 'Wait for Room 2', 'Wait for Room 3'].map(n => B.nodes.find(x => x.name === n).parameters.amount);
+  ok(amt.join() === '1.5,1.5,3' && ['Reread Event', 'Reread Event 2', 'Reread Event 3'].every(n => B.nodes.find(x => x.name === n).onError === 'continueRegularOutput'),
+    'v112: 6 seconds at most; a failed read never stops the booking', amt);
+} else {
+  ok(con['Create Event'].main[0][0].node === 'Wait for Room' && con['Wait for Room'].main[0][0].node === 'Reread Event' && con['Reread Event'].main[0][0].node === 'Verify', 'Create Event -> Wait for Room -> Reread Event -> Verify');
+  ok(w.parameters.amount === 6 && (w.parameters.unit || 'seconds') === 'seconds' && rr.onError === 'continueRegularOutput', '6 seconds; a failed read never stops the booking');
+}
 const cc = code('Check Conflicts');
 ok(/v106 \(12 Oct/.test(cc), 'internal rooms: no Engineer line (Check Conflicts)');
 console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

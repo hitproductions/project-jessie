@@ -439,3 +439,48 @@ Also: Jessie's chat lists (main v274) show rooms in order and "all day", like th
 
 Offline: `node scripts/sim-round-7.js` 52 (fails on v23); every earlier SI and main sim green (version-aware for the intended
 changes); test-nodes 570 with Move v33 + Book Session v111; gate 69/69; fromai ok, audit clean.
+
+## Round 8 - Log Booking v1 + Book Session v112 + Slack Interactions v25 + main v275 (19 Oct)
+
+What and why: `docs/design/round-8-plan.md` (Tara's three speed fixes, the forms, the wording table, Atmos / Van Recording).
+
+### Import - four workflows, in this order (Cmd+A then **Delete** before each import into an existing workflow)
+
+1. **Jessie — Log Booking v1 - a NEW workflow.** In n8n: create a new workflow → ⋯ → Import from File →
+   `workflows/log-booking-v1.json` → Save → Publish "v1 - log after the reply". Copy its id from the URL (`/workflow/<id>`) and
+   send it to Claude: `scripts/set-log-booking-id.py <id>` puts it into Book Session v112 (and is committed) - **Book Session
+   cannot be imported before this.** Download → `workflows/imported/log-booking-v1-imported.json`.
+2. **Book Session v112** into `EUG3sGXkfsJSYIMz`: before `…/book-session-live-before-v112.json` (MATCH v111) → Import
+   `workflows/book-session-v112.json` (with the id set) → Publish "v112 - faster booking + single rooms" → after `…/book-session-v112-imported.json`.
+3. **Slack Interactions v25** into `PyxSPoAMtSE1gzaH`: before `…/slack-interactions-live-before-v25.json` (MATCH v24) → Import
+   `workflows/slack-interactions-v25.json` → Publish "v25 - round 8" → after `…/slack-interactions-v25-imported.json`.
+4. **main v275** into `uVVYVB2M7kxpLleI`: before `…/project-jessie-live-before-v275.json` (MATCH v274) → Import
+   `workflows/project-jessie-v275.json` → Publish "v275 - greeting + fewer words" → after `…/project-jessie-v275-imported.json`.
+
+### Test (2027 dates)
+
+First: **does the form open at all?** The blank text boxes use an invisible placeholder (U+2800). If Book a room shows "The
+form did not open" in the DM, that is Slack refusing it - say so, and the placeholders come out.
+
+1. "hi", then "reset" → "Hi, I'm Jessie!" and the two buttons only. "thanks" → "Anytime!".
+2. Book a room → "Step 1 of 2", "Select a booking type", "You'll get a recommendation based on the booking details.".
+3. VO Recording → Step 2: the rooms ticked list, **Another room** under it at once. Pick Another room → the tick clears; tick a
+   room → Another room clears. Vocal booth dropdown (No booth, nothing picked). Text boxes empty-looking; no hints.
+4. Celebrity Recording → Holding rooms: pick two → both on the Booked card.
+5. Localization Dubbing → Vocal booth set to the usual one "(usual)"; Project code: type "net-malas" + Enter → BAD DAY · NETFLIX
+   and the Recordist set; type a code not in Airtable → nothing shown, books as typed.
+6. Meeting → no "for someone else", Department without a hint; type "post weekly meeting" → "LIKHA - Post weekly meeting".
+   Event → Lobby recommended; pick Studio F under Another room → "STUDIO F - …".
+7. M booth → "Who is it for?" says your first name; change to "joaquin" → "M2 - Joaquin" (he is told).
+8. Atmos Mixing (or Localization Atmos Mixing until the rename) → only Studio C; when taken, "Studio C is taken then - pick
+   another date or time.". Van Recording → only Studio M; Studio M nowhere else.
+9. While booking: the message you opened the form from says "Your booking details:" + the form's room · date · time, "⏳
+   Booking…", then "✅ Booked." (from the menu: the greeting comes back). The Booking… window: date, then time on two lines.
+10. **Speed:** Book → "Booked." should take ~12-13 s (was 21.7 s). Book Session's run ~7-8 s; a screenshot of Slack
+    Interactions' and Book Session's execution lists after a booking shows it.
+11. The Jessie Log sheet still gets the row (now written a second or two after "Booked."); a new client still lands in New Clients.
+12. Change: "Select a booking type", no hint, the Note box blank; an M booth shows "Who is it for?"; a meeting can move to a studio.
+13. Cancel / Change from My bookings → "⏳ Cancelling…" / "⏳ Changing…" (the row shows what it becomes).
+
+Offline: `./scripts/test-forms` (20 sims: sim-round-8 86, sim-round-8-book 47, every earlier sim green on both the candidates
+and the live builds); test-nodes 570 + gate 69/69 with Book Session v112; fromai ok, audit clean, test-dates 17.
