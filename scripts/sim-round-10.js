@@ -5,6 +5,7 @@
 // Usage: node scripts/sim-round-10.js [slack-interactions v27]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v27.json', 'utf8'));
+const V29 = /v29: no Department field/.test(JSON.stringify(si.nodes));   // round 11: the department from the people picked (sim-round-11)
 const FX = require('./sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('FAIL ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
@@ -30,8 +31,10 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
 
 (async () => {
   console.log('1: the department in step 2');
-  let v = await step2(S('Celebrity Recording', 'studio'), { free_priority: ['Studio F'] });
-  let d = blk(v, 'department');
+  let v, d;
+  if (!V29) {
+  v = await step2(S('Celebrity Recording', 'studio'), { free_priority: ['Studio F'] });
+  d = blk(v, 'department');
   ok(d && !d.optional && d.element.options.map(o => o.value).join() === 'Music,Audio Post' && d.element.initial_option.value === 'Audio Post', 'Celebrity Recording - Department (Music, Audio Post), set to Tara\'s (Audio Post)');
   const ids = v.blocks.map(b => b.block_id);
   ok(ids.indexOf('department') > ids.indexOf('client') && ids.indexOf('department') < ids.indexOf('engineer'), 'under Client, above the engineer');
@@ -39,6 +42,7 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   ok(blk(v, 'department') && !blk(v, 'department').element.initial_option && blk(v, 'department').element.placeholder.text === 'Select a department', 'a booker from another department (Marketing) - asked, nothing set');
   v = await step2(S('Van Recording', 'studio'), { free_priority: ['Studio M'] });
   ok(blk(v, 'department') && blk(v, 'department').element.options.map(o => o.value).join() === 'Audio Post,Music', 'Van Recording - Audio Post or Music');
+  }
   for (const t of ['VO Recording', 'Band Recording']) { v = await step2(S(t, 'studio'), { free_priority: ['Studio 7', 'Studio F'] }); ok(!blk(v, 'department'), t + ' - one department, not asked'); }
   const read2 = async (vv, meta) => j1('Read Step 2', [], { 'Check Signature': [{ json: { user: 'U026N6E1R' } }], 'Read Request': [{ json: { payload: { type: 'view_submission', view: { id: 'V1', private_metadata: JSON.stringify(meta), blocks: [], state: { values: vv } } } } }], 'Read Cache 3': cacheRow });
   const M = Object.assign(S('Celebrity Recording', 'studio'), { label: 'Celebrity Recording' });

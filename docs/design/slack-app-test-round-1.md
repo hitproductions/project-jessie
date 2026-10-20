@@ -550,3 +550,27 @@ room · date · time, with "⚠️ Not booked yet – see below" (the question i
 "v28 - details kept when not booked" → after `…/slack-interactions-v28-imported.json`.
 Test: Book from the menu something that asks after Book ("jem lin"), close the window at once → the menu message shows your
 details with "⚠️ Not booked yet – see below", and the DM below it asks the question.
+
+## Round 11 - Slack Interactions v29 (20 Oct): faster redraws + clean-up - candidate
+
+From the 20 Oct review ("anything more efficient / debug / optimize / faster") and Howard's 19 Oct note on Celebrity Recording.
+
+1. The Localization Projects table (Airtable) is read only when it is used: Find rooms for a Localization booking, a redraw for a
+   typed project code. Before, every step 1 and every redraw (each room tick, Repeats, What's it for?) read it.
+2. A room ticked on a form with nothing to change (no room picked under *Choose a different room*, no booth - meetings, events)
+   sends nothing to Slack. Studio forms still redraw: the booth follows the room.
+3. No Department field. For a booking type that spans departments (Celebrity Recording, Van Recording) the department comes from
+   the people picked: an arranger -> Music; else the engineer's role (Post Engineer -> Audio Post, Music Engineer -> Music);
+   an engineer with both roles, or nobody -> the booker's own department when it is one of the type's, else the type's first.
+4. The project-code search (unused since the text box, v25) is gone.
+5. A request that does not look like Slack (no Slack timestamp - curl, a link preview) is refused without a DM.
+
+Test in Slack after import:
+- Book a Meeting: tick one room, then another - the form stays as it is, no flicker; pick from *Choose a different room*, then
+  tick a room - the dropdown clears.
+- Book a studio session (VO Recording): tick another studio - the booth follows, as before.
+- Celebrity Recording with only an engineer who is a Post Engineer - no Department question; the Booked card / calendar show
+  Audio Post. With an arranger - Music.
+- A Localization booking: the project code still finds the project (title, client).
+- Timings (Logs panel): step 1 -> step 2 and a room tick, against the 20 Oct baseline.
+

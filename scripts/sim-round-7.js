@@ -7,6 +7,7 @@ const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-intera
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: no "No …" options, no "pick one or both", room labels (sim-round-9)
 const mv = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/move-booking-v33.json', 'utf8'));
 const main = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/project-jessie-v274.json', 'utf8'));
+const V29 = !si.nodes.some(n => n.name === 'Suggest Codes');   // v29: the project-code search route removed (a text box since v25)
 const FX = require('./sim-fixture-rooms.js');
 const V25 = /function onlyRoom\(/.test(JSON.stringify(si.nodes));   // round 8: no "for someone else", a typed project code, an M booth name
 let pass = 0, fail = 0;
@@ -84,6 +85,7 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   ok(V25 ? (blk(v, 'code').element.initial_value === 'NET-NEWSHOW' && !blk(v, 'code_info'))
      : (blk(v, 'code').element.initial_option.value === 'new:NET-NEWSHOW' && /New project code/.test(blk(v, 'code_info').elements[0].text)), '11: a code not in Airtable - kept, "New project code" (v25: nothing shown)');
 
+  if (!V29) {
   const suggest = async (q) => (await j1('Suggest Codes', LOC, { 'Read Request': [{ json: { payload: { type: 'block_suggestion', action_id: 'code_pick', value: q } } }] })).answer.options;
   let o = await suggest('net');
   ok(o.map(x => x.value).join() === 'NET-CAM,NET-MALAS,new:NET' && o[0].text.text === 'NET-CAM · CAMPIONI' && o[2].text.text === 'Use “NET” as a new code', '11: typing "net" - the matches, then "Use “NET” as a new code"');
@@ -94,15 +96,18 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   o = await suggest('laugh');
   ok(o[0].value === 'LOPH S2', '11: a title matches too');
   ok(o.every(x => !x.description), 'no dropdown option carries a description');
+  }
   // routes
   const route = async (payload) => (await j1('Check Signature', [{ json: { computed: 'abc' } }], { 'Read Request': [{ json: { sig: 'v0=abc', ts: String(Math.floor(Date.now() / 1000)), payload } }] })).route;
-  ok(await route({ type: 'block_suggestion', action_id: 'code_pick', value: 'n' }) === 14, 'route: block_suggestion -> the project search');
+  ok(await route({ type: 'block_suggestion', action_id: 'code_pick', value: 'n' }) === (V29 ? 3 : 14), 'route: block_suggestion -> the project search (v29: "other")');
   for (const a of ['code_pick', 'forwho_toggle', 'purpose_c']) ok(await route({ type: 'block_actions', actions: [{ action_id: a }] }) === 8, 'route: ' + a + ' -> the redraw');
   const C = si.connections, nx = n => (C[n].main || []).map(x => x.map(c => c.node).join('+')).join(' | ');
-  ok(C.Route.main[14][0].node === 'Loc Projects S' && nx('Loc Projects S') === 'Suggest Codes' && nx('Suggest Codes') === 'Answer Suggest'
+  ok(V29 ? nx('Read Cache 2') === 'Loc Needed?' && nx('Loc Needed?') === 'Loc Projects 2 | To Room Availability' && nx('Loc Projects 2') === 'To Room Availability'
+       && nx('Read Cache 9') === 'Code Typed?' && nx('Code Typed?') === 'Loc Projects 9 | Note Toggle' && nx('Loc Projects 9') === 'Note Toggle'
+     : C.Route.main[14][0].node === 'Loc Projects S' && nx('Loc Projects S') === 'Suggest Codes' && nx('Suggest Codes') === 'Answer Suggest'
      && nx('Read Cache 2') === 'Loc Projects 2' && nx('Loc Projects 2') === 'To Room Availability' && nx('Read Cache 9') === 'Loc Projects 9' && nx('Loc Projects 9') === 'Note Toggle', 'wiring');
   const air = si.nodes.filter(n => /^Loc Projects/.test(n.name));
-  ok(air.length === 3 && air.every(n => n.executeOnce && n.alwaysOutputData && n.parameters.table.value === 'tbljkG6z7odPUtTIf'), 'the three project reads: Localization Projects, once, never empty-handed');
+  ok(air.length === (V29 ? 2 : 3) && air.every(n => n.executeOnce && n.alwaysOutputData && n.parameters.table.value === 'tbljkG6z7odPUtTIf'), 'the three project reads: Localization Projects, once, never empty-handed');
 
   // ---- the redraws
   const toggle = async (view, action, extra, state) => j1('Note Toggle', [], { 'Read Request': [{ json: { payload: { view: Object.assign({ id: 'V1', hash: 'h' }, view, { state: { values: state || {} } }),
