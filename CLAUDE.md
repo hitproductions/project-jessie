@@ -285,6 +285,7 @@ only script that writes to n8n.
 | `node scripts/sim-availability-reads.js [ra]` | Room Availability's answers (v20/v21): a room asked about always with its booked times and free gaps, never "taken all day" for a part-day booking; the not-usual-room question |
 | `./scripts/test-forms` · `[si] [main] [book] [move] [cancel] [log-booking]` | **every Slack-app sim in one command** (forms, buttons, main's offers, Book Session round 8) on one set of builds - defaults to the newest file of each; one line per sim, then the totals. Run it on every SI / main / Book Session build (since 19 Oct) |
 | `node scripts/sim-round-8.js` · `sim-round-8-book.js` | round 8: the either / or room picker, booth and holding dropdowns, Atmos -> Studio C, Van Recording -> Studio M, the typed project code, the M booth name, placeholders, "Your booking details:"; Book Session v112's polled room answer, Client Cache, Log Booking, single-room refusals |
+| `node scripts/sim-book-v116.js` | Book Session v116: no Airtable client lookups for booking types with no client (Localization / QC, Post Processing, Meeting, Event, M booths) or no client named; every reader copes with the skip |
 | `node scripts/sim-round-12b.js` | round 12b (SI v31 + Book Session v115 + Log Booking v2): the wait estimates (which row, rounding, learning toward the 90th percentile), Localization Projects at step 2 only for a filled-in code, a new project code to the New Projects tab |
 | `node scripts/sim-round-12.js` | round 12 (SI v30): the Change form's Vocal booth / Holding rooms by booking type (and on a type change), no Enter on the project code, Post Processing's Booker dropdown (Book and Change), Repeats wording |
 | `node scripts/sim-round-11.js` | round 11 (SI v29): Localization Projects read only when used, a room tick with nothing to redraw answers nothing, the department from the engineer / arranger picked (no Department field), the project-code search gone, unsigned probes refused quietly |
@@ -904,3 +905,8 @@ tree. Every superseded build, every old handoff, and the reasoning behind each f
 live in git history — `git log` is the record of why things are the way they are,
 and the commit messages are long on purpose. `workflows/live/` is the backup of what n8n is actually running, written by
 `./scripts/backup-live`.
+50. **An Airtable call can hang for minutes, and n8n's Airtable node has no timeout** (20 Oct). Client Aliases waited 2 min 9 s
+    on a connection that never answered ("The connection to the server was closed unexpectedly"), then carried on (continue on
+    error), so a Localization booking took 2 min 12 s - for a lookup whose answer could only be empty (no client). Don't call
+    Airtable when the answer cannot matter (Book Session v116 skips the client reads without a client), and when a run is slow,
+    open the sub-execution from the Execute Workflow node's output and read each node's "Success in …" line.

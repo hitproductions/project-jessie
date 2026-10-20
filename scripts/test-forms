@@ -42,5 +42,6 @@ run round-3        "$MAIN"
 run v273           "$MAIN"
 run every-message  "$MAIN"
 run round-8-book   "$BOOK"
+run book-v116      "$BOOK"
 echo; [ $fails -eq 0 ] && echo "all sims pass" || echo "$fails sim(s) failing"
 exit $fails
