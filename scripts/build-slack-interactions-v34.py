@@ -5,6 +5,8 @@ Howard, 20 Oct ~22:00: typed "book studio e for dilan …" (Post Processing), th
 said "Studio E isn't a room for Music Presentation. These are free:" (good - it spotted the change) with Studio F ticked; after a
 problem the form came back with the same line although Studio F was picked. The line is now tagged (block_id pre_note) and the
 form shown again after a problem (formAgain in After Prepare / After Book / After Prepare Series) leaves it out.
+Also: NEED_SESSION_TYPE in words ("Couldn't tell which booking type this is. Go Back and pick it again.") - it showed as "Couldn't
+book this" on 20 Oct 22:00; Book Session v119 fixes the cause (the most specific type named wins).
 Built on workflows/imported/slack-interactions-v33-imported.json (the live download).
 """
 import json
@@ -32,6 +34,13 @@ by["Build Step 2"]["parameters"]["jsCode"] = _js.replace(_a, "if (preNote) block
 for n in ["After Prepare", "After Book", "After Prepare Series"]:
     patch(n, [("filter(b => b.block_id !== 'problem' && b.block_id !== 'problem_div' && extraIds.indexOf(b.block_id) === -1)",
                "filter(b => b.block_id !== 'problem' && b.block_id !== 'problem_div' && b.block_id !== 'pre_note' && extraIds.indexOf(b.block_id) === -1)   // v34: the room note only once")])
+# NEED_SESSION_TYPE in words (20 Oct 22:00, execution 53049: "Couldn't book this" - Book Session v119 fixes the cause)
+for n in ["After Prepare", "After Book", "After Prepare Series"]:
+    js = by[n]["parameters"]["jsCode"]
+    a1 = "  return { warn: 'Couldn’t book this. Che"
+    assert js.count(a1) == 1, (n, js.count(a1))
+    js = js.replace(a1, "  if (reason === 'NEED_SESSION_TYPE') return { warn: 'Couldn’t tell which booking type this is. Go *Back* and pick it again.' };   // v34\n" + a1)
+    by[n]["parameters"]["jsCode"] = js
 wf["name"] = "Jessie — Slack Interactions — v34 (the room note once)"
 with open(OUT, "w") as f:
     json.dump(wf, f, indent=2, ensure_ascii=False)

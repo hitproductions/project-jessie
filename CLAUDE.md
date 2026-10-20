@@ -289,6 +289,7 @@ only script that writes to n8n.
 | `node scripts/sim-round-13.js` | round 13 (main v277 + SI v33): typed "for <someone>" through the real Booked For and Form Offer (engineer / arranger / Who is it for?, fid for step 2, staff before client, "for bp"), Post Processing's Who is it for? and new title on Book and Change, the department filter on the dropdowns |
 | `node scripts/sim-v34-note.js` | Slack Interactions v34: the "X isn't a room for …" note shows when step 2 opens and is not repeated when the form comes back after a problem |
 | `node scripts/sim-music-types.js` | the Music types (20 Oct: Music Arranging, Mixing, Presentation, Recording, Band Recording): Arranger above Engineer, either one / arranger-only, typed types (vocal = Music Recording, voiceover = VO), Book Session's list |
+| `node scripts/sim-book-v119.js` | Book Session v119: every Music type booked from the form passes the type check (the most specific type named wins) - the form's Read Step 2 + To Prepare, then the whole Check Conflicts |
 | `node scripts/sim-book-v118.js` | Book Session v118: the whole Check Conflicts node on Post Processing titles ("POST PROCESSING - <PROJECT> / <who>") in the prepare and booking runs - kept, not refused or rewritten; other titles as before |
 | `node scripts/sim-room-check.js` | Book Session v117 (Booked right after the event is created, Room Check called without waiting), Jessie — Room Check v1 (decide / delete / DM / log), Slack Interactions v32's timing order |
 | `./scripts/set-room-check-id.py <id>` | puts Jessie — Room Check's new workflow id into the newest Book Session build's Room Check node (after Room Check is imported, before Book Session is) |
@@ -917,3 +918,8 @@ and the commit messages are long on purpose. `workflows/live/` is the backup of 
     error), so a Localization booking took 2 min 12 s - for a lookup whose answer could only be empty (no client). Don't call
     Airtable when the answer cannot matter (Book Session v116 skips the client reads without a client), and when a run is slow,
     open the sub-execution from the Execute Workflow node's output and read each node's "Success in …" line.
+51. **Renaming a session type in Airtable can make Book Session's type check ask "Which one?"** (20 Oct). The check compares the
+    type with the words of the request, leaving out "recording" / "session". Music Vocal Recording -> Music Recording left just
+    {music}, inside Music Presentation / Mixing / Arranging, so each of those booked from the form was refused NEED_SESSION_TYPE and
+    the form said "Couldn't book this". Book Session v119 keeps the most specific type named. After renaming or adding a type, run
+    `node scripts/sim-book-v119.js` with the new names in its list, and book one of each in Slack.
