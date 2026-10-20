@@ -82,12 +82,14 @@ const T = 'When Executed by Another Workflow';
   const lr = (await run(RC, 'Declined Row', [{ json: {} }], { [T]: [{ json: TI }], 'Decide': dec, 'Build DM': [{ json: dm }] }))[0].json;
   ok(lr.Action === 'ROOM_DECLINED' && lr.Title === 'NET-CMA / JL' && lr['Event ID'] === 'ev1' && /Studio A declined; removed/.test(lr.Note), 'a ROOM_DECLINED row for the Log sheet', lr);
 
+  if (/v32: placed above the other steps/.test(JSON.stringify(SI.nodes))) {   // Slack Interactions v32 on
   console.log('Slack Interactions v32: the time taken when the answer is on screen');
   const by = Object.fromEntries(SI.nodes.map(n => [n.name, n]));
   for (const e of ['Show Step 2', 'Show Result', 'Show Series Step', 'Show Series Result', 'Show Change Result']) {
     const sib = SI.connections[e].main[0].map(c => c.node);
     const first = sib.slice().sort((a, b) => (by[a].position[1] - by[b].position[1]) || (by[a].position[0] - by[b].position[0]))[0];
     ok(first === 'Timing Sample', e + ': Timing Sample is the top branch, so it runs before ' + (sib.filter(x => x !== 'Timing Sample').join(', ') || 'nothing else'));
+  }
   }
 
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
