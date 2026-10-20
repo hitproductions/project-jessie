@@ -1,0 +1,557 @@
+{
+  "name": "Jessie — Room Check — v1 (the rooms' answer after Booked)",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "event_id"
+            },
+            {
+              "name": "title"
+            },
+            {
+              "name": "rooms"
+            },
+            {
+              "name": "requester"
+            },
+            {
+              "name": "start_iso"
+            },
+            {
+              "name": "end_iso"
+            },
+            {
+              "name": "all_day"
+            },
+            {
+              "name": "session_type"
+            }
+          ]
+        }
+      },
+      "id": "b2528b05-8282-426d-ad99-f53dd5ace991",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "a2b3a181-c260-475b-9568-1b904de5664a",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        304
+      ],
+      "webhookId": "b1cc2c0f-222b-4a76-8d11-5f624bb15665"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent(String($('When Executed by Another Workflow').first().json.event_id || '')) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "id": "d5661f70-a399-486f-b84e-9bec69ac9e51",
+      "name": "Reread",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        304
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "0ea0e26b-6a96-4936-ba6d-4e36e4bab329",
+              "leftValue": "={{ (function(){ try { const e = $json || {}; if (!e.id) return true; const rs = (e.attendees || []).filter(a => a.resource); return !rs.length || rs.every(a => a.responseStatus && a.responseStatus !== 'needsAction'); } catch (x) { return true; } })() }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4ee848f2-c03d-489a-bd3e-18f0a7b90640",
+      "name": "Answered?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 4
+      },
+      "id": "08865fe8-c140-4dd3-ad9d-f10d9c496e68",
+      "name": "Wait 2",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        304
+      ],
+      "webhookId": "1ec87485-3c21-4ed1-9eb8-7db01e187a7c"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent(String($('When Executed by Another Workflow').first().json.event_id || '')) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "id": "ef691cb3-ed25-40d7-9a80-afed0205a488",
+      "name": "Reread 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        304
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "3abc6ad1-25d1-4d32-b22e-a9c3bde0b64e",
+              "leftValue": "={{ (function(){ try { const e = $json || {}; if (!e.id) return true; const rs = (e.attendees || []).filter(a => a.resource); return !rs.length || rs.every(a => a.responseStatus && a.responseStatus !== 'needsAction'); } catch (x) { return true; } })() }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "db826c80-b722-4022-bc95-7ca236db14c8",
+      "name": "Answered 2?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "id": "3e2de35c-1ddf-4e94-b8a7-d4eaef998475",
+      "name": "Wait 3",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1568,
+        304
+      ],
+      "webhookId": "c2d3bf8b-9275-43ee-90f0-9fab55f1854a"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent(String($('When Executed by Another Workflow').first().json.event_id || '')) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "id": "8e78dd62-60b0-4e27-8b69-161eac7bffa1",
+      "name": "Reread 3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1792,
+        304
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decide (Room Check v1): the event as read back. A room resource that declined -> delete the event and tell the person who\n// booked. Accepted, still silent, or the event gone (cancelled meanwhile, or an error reading it) -> nothing to do.\nconst T = $('When Executed by Another Workflow').first().json || {};\nconst ev = $input.first().json || {};\nif (!ev.id || ev.error || ev.status === 'cancelled') return [];\nconst declined = (ev.attendees || []).filter(a => a.resource && a.responseStatus === 'declined').map(a => String(a.displayName || a.email || ''));\nif (!declined.length) return [];\nconst rooms = declined.map(x => (x.match(/(Studio [0-9A-Z]|M[1-8]|Salin|Katha|Likha|Lobby)\\b/) || [])[1] || x);\nreturn [{ json: { event_id: ev.id, declined: rooms, title: String(T.title || ev.summary || ''), requester: String(T.requester || '') } }];"
+      },
+      "id": "3578b69a-d965-4698-926f-cbe5586482a6",
+      "name": "Decide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent(String($('Decide').first().json.event_id || '')) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2464,
+        560
+      ],
+      "id": "f8b6d95e-a08e-4fd1-98e4-c37cdc6e3ead",
+      "name": "Delete Declined",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// DM (Room Check v1): what the person who booked reads - in Slack Interactions' card style - with Book a room (the form filled in\n// again: date, times, booking type) and My bookings. The \"Booked.\" card they already have stays; its Change / Cancel find\n// nothing now and say so.\nconst T = $('When Executed by Another Workflow').first().json || {};\nconst D = $('Decide').first().json || {};\nconst del = $input.first().json || {};\nconst removed = !(del && (del.error || del.errorMessage));\nconst iso = String(T.start_iso || ''), iso2 = String(T.end_iso || '');\nconst ymd = iso.slice(0, 10), hm = s => (String(s).match(/T(\\d{2}:\\d{2})/) || [])[1] || '';\nconst t12 = v => { if (!v) return ''; let [h, m] = v.split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; };\nconst DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nconst x = /^\\d{4}-\\d{2}-\\d{2}$/.test(ymd) ? new Date(ymd + 'T12:00:00Z') : null;\nconst allDay = String(T.all_day) === 'true';\nconst when = (x ? DL[x.getUTCDay()] + ', ' + ML[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + x.getUTCFullYear() : '') + (allDay ? ' · All day' : (hm(iso) ? ' · ' + t12(hm(iso)) + ' – ' + t12(hm(iso2)) : ''));\nconst rm = D.declined.join(' and ');\nconst head = '❌ *' + rm + ' turned this booking down* - its calendar shows it is taken then. '\n  + (removed ? 'It was taken off the calendar, so nothing is booked.' : 'Nothing is booked, but the event could not be removed - delete it from the calendar.');\nconst st = String(T.session_type || '').trim(), first = String(D.title || '').split(' / ')[0].trim();\nconst again = { d: ymd, s: allDay ? '' : hm(iso), e: allDay ? '' : hm(iso2), p: st || (/^M\\d+/i.test(String(T.rooms || '').trim()) ? '__booth' : '') };\nif (/^(localization|qc)\\b/i.test(st)) again.cd = first; else if (D.title && String(D.title).indexOf(' / ') !== -1) again.pj = first;\nObject.keys(again).forEach(k => { if (!again[k]) delete again[k]; });\nconst blocks = [{ type: 'section', text: { type: 'mrkdwn', text: head + '\\n\\n*' + D.title + '*\\n' + when } },\n  { type: 'actions', elements: [{ type: 'button', style: 'primary', action_id: 'open_book', value: JSON.stringify(again).slice(0, 1900), text: { type: 'plain_text', text: 'Book a room' } },\n    { type: 'button', action_id: 'my_bookings', value: 'menu', text: { type: 'plain_text', text: 'My bookings' } }] }];\nreturn [{ json: { channel: D.requester, text: rm + ' turned down ' + D.title + ' - nothing is booked.', blocks, removed } }];"
+      },
+      "id": "fe4d8536-7bfb-414b-b215-f30fab955440",
+      "name": "Build DM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        560
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $('Build DM').first().json.channel, text: $('Build DM').first().json.text, blocks: $('Build DM').first().json.blocks }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2912,
+        560
+      ],
+      "id": "6e822f9e-b00e-4949-9fd6-4da5c5172b94",
+      "name": "Send DM",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Declined Row (Room Check v1): a ROOM_DECLINED row for the Jessie Log sheet, beside the BOOKED row Log Booking wrote.\nconst T = $('When Executed by Another Workflow').first().json || {};\nconst D = $('Decide').first().json || {}, M = $('Build DM').first().json || {};\nconst p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })\n  .formatToParts(new Date()).reduce((o, x) => (o[x.type] = x.value, o), {});\nreturn [{ json: { 'Timestamp': p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute, 'Action': 'ROOM_DECLINED', 'Title': D.title || '',\n  'Room(s)': String(T.rooms || ''), 'Date': String(T.start_iso || '').slice(0, 10), 'Event ID': D.event_id || '',\n  'Note': D.declined.join(', ') + ' declined' + (M.removed ? '; removed' : '; NOT removed - delete it by hand') } }];"
+      },
+      "id": "1f589062-1f5c-47f4-b7db-cd6bbfc186a4",
+      "name": "Declined Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3136,
+        560
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "cachedResultName": "Log",
+          "mode": "list",
+          "value": "gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [],
+          "schema": [],
+          "value": {}
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true,
+      "id": "5d624e3d-f7a6-489d-9607-0045043e5bf4",
+      "name": "Log Declined",
+      "position": [
+        3360,
+        560
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Jessie — Room Check\nThe rooms' answer, read after \"Booked.\" (Book Session v117+ calls it without waiting). A room that declined: the event is deleted, the person who booked is DM'd (Book a room / My bookings), and a ROOM_DECLINED row goes to the Log sheet. Accepted or silent: nothing happens.",
+        "width": 460
+      },
+      "id": "ab5d2d9e-d92e-4782-91c3-90dd5b931241",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        32
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Reread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reread": {
+      "main": [
+        [
+          {
+            "node": "Answered?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answered?": {
+      "main": [
+        [
+          {
+            "node": "Decide",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2": {
+      "main": [
+        [
+          {
+            "node": "Reread 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reread 2": {
+      "main": [
+        [
+          {
+            "node": "Answered 2?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answered 2?": {
+      "main": [
+        [
+          {
+            "node": "Decide",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3": {
+      "main": [
+        [
+          {
+            "node": "Reread 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reread 3": {
+      "main": [
+        [
+          {
+            "node": "Decide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide": {
+      "main": [
+        [
+          {
+            "node": "Delete Declined",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Declined": {
+      "main": [
+        [
+          {
+            "node": "Build DM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build DM": {
+      "main": [
+        [
+          {
+            "node": "Send DM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send DM": {
+      "main": [
+        [
+          {
+            "node": "Declined Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Declined Row": {
+      "main": [
+        [
+          {
+            "node": "Log Declined",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "7bb38a3e-059c-4038-876c-65a5e34eee0b",
+  "meta": {
+    "instanceId": "47b8f2db30f5474de1dd72088d2efb6e9f5862c79e8ac68a94619b94d7aeb560"
+  },
+  "nodeGroups": [],
+  "id": "CB3JPU052OfHFIQr",
+  "tags": []
+}
