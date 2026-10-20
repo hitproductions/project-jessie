@@ -1,0 +1,58 @@
+#!/usr/bin/env node
+// flip-launch-switches: writes the launch builds - every workflow that carries a QA switch, with each switch flipped and
+// nothing else changed. Reads files only (never n8n).
+//   ./scripts/flip-launch-switches             from what is live (the newest workflows/imported/*-imported.json of each)
+//   ./scripts/flip-launch-switches --builds    from the newest builds in workflows/ (when candidates are waiting to go in too)
+// Flips: every `const YEAR_SHIFT = 1;` -> 0, every `const DEV_REDIRECT = '…';` -> '', and main's prompt `.plus({ years: 1 })`
+// removed. Each changed workflow is written as its next free build number (gotcha 24), titled "<title> — vN (launch switches)".
+// Then: ./scripts/check-launch-switches --builds must say "OK: LAUNCH", and the builds are imported together (docs/launch-checklist.md).
+// Going back to QA = re-importing the builds these were made from (they stay in the repo).
+const fs = require('fs');
+const path = require('path');
+const ROOT = path.join(__dirname, '..');
+const BUILDS = process.argv.includes('--builds');
+const NAMES = { 'project-jessie': 'main', 'slack-interactions': 'Slack Interactions', 'cancel-booking': 'Cancel Booking', 'move-booking': 'Move Booking',
+  'reminders': 'Reminders', 'book-session': 'Book Session', 'room-check': 'Room Check', 'log-booking': 'Log Booking', 'book-series': 'Book Series',
+  'open-consent-request': 'Open Consent Request' };
+const vers = (dir, re) => fs.existsSync(dir) ? fs.readdirSync(dir).map(x => [x, x.match(re)]).filter(x => x[1]).map(x => [path.join(dir, x[0]), Number(x[1][1])]) : [];
+const top = a => a.length ? a.sort((x, y) => x[1] - y[1])[a.length - 1] : null;
+const out = [];
+for (const k of Object.keys(NAMES)) {
+  const builds = vers(path.join(ROOT, 'workflows'), new RegExp('^' + k + '-v(\\d+)\\.json$'));
+  const live = vers(path.join(ROOT, 'workflows', 'imported'), new RegExp('^' + k + '-v(\\d+)-imported\\.json$'));
+  let src = BUILDS ? (top(builds) || top(live)) : (top(live) || top(builds));
+  if (k === 'open-consent-request') {   // always the 29 Sep snapshot - what runs (v11 is an unimported candidate, never import it by the way)
+    const snap = path.join(ROOT, 'workflows', 'live', 'jessie-open-consent-request__nEHnCMMXS0am59Zy.json');
+    if (fs.existsSync(snap)) src = [snap, 0];
+  }
+  if (!src) continue;
+  const wf = JSON.parse(fs.readFileSync(src[0], 'utf8'));
+  const changes = [];
+  for (const n of wf.nodes || []) {
+    const p = n.parameters || {};
+    if (typeof p.jsCode === 'string') {
+      const before = p.jsCode;
+      p.jsCode = p.jsCode.replace(/const(\s+)YEAR_SHIFT(\s*)=(\s*)1(\s*);/g, (m, a, b, c, d) => { changes.push('YEAR_SHIFT 1 -> 0 in ' + n.name); return 'const' + a + 'YEAR_SHIFT' + b + '=' + c + '0' + d + ';'; })
+        .replace(/const(\s+)DEV_REDIRECT(\s*)=(\s*)'([^']+)'(\s*);/g, (m, a, b, c, v, d) => { changes.push("DEV_REDIRECT '" + v + "' -> '' in " + n.name); return 'const' + a + 'DEV_REDIRECT' + b + '=' + c + "''" + d + ';'; });
+      if (p.jsCode === before) p.jsCode = before;
+    }
+    const opt = p.options || {};
+    if (typeof opt.systemMessage === 'string' && opt.systemMessage.indexOf('.plus({ years: 1 })') !== -1) {
+      opt.systemMessage = opt.systemMessage.split('.plus({ years: 1 })').join('');
+      changes.push('prompt .plus({ years: 1 }) removed in ' + n.name);
+    }
+  }
+  if (!changes.length) continue;
+  const next = Math.max(0, ...builds.map(x => x[1]), ...live.map(x => x[1])) + 1;
+  wf.name = String(wf.name || NAMES[k]).split(' — v')[0] + ' — v' + next + ' (launch switches)';
+  const dest = path.join(ROOT, 'workflows', k + '-v' + next + '.json');
+  if (fs.existsSync(dest)) { console.error('STOP: ' + path.relative(ROOT, dest) + ' already exists'); process.exit(1); }
+  out.push({ name: NAMES[k], src: src[0], dest, wf, changes });
+}
+if (!out.length) { console.log('Nothing to flip - no QA switch found (already launch?). Run ./scripts/check-launch-switches.'); process.exit(0); }
+for (const o of out) {
+  fs.writeFileSync(o.dest, JSON.stringify(o.wf, null, 2) + '\n');
+  console.log(o.name + ': ' + path.relative(ROOT, o.src) + ' -> ' + path.relative(ROOT, o.dest));
+  for (const c of o.changes) console.log('    ' + c);
+}
+console.log('\nNext: ./scripts/check-launch-switches --builds  (must say "OK: LAUNCH"), then import every file above - the steps are in docs/launch-checklist.md.');

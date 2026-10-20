@@ -8,6 +8,7 @@ const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v268.json', 'utf8'));
 const V275 = /Hi, I’m Jessie!/.test(JSON.stringify(main.nodes));   // main v275: short menu lines, "Your booking details so far:"
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v10.json', 'utf8'));
+const V35 = JSON.stringify(si.nodes).indexOf('v35: none of the type') !== -1;   // v35: no usual room free -> the other free rooms
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9 (SI v26)
 const V276 = /v276: the year/.test(JSON.stringify(main ? main.nodes : []));   // round 9 (main v276): the offer's date with its year
 const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: no field hints
@@ -193,7 +194,7 @@ async function run(wf, name, input, outs) {
   ok((x => x.element || x.elements[0])(b2('room')).initial_option.value === 'Studio 4' && (V26 ? !(x => x.element || x.elements[0])(b2('room')).initial_option.description : /not a usual room/i.test((x => x.element || x.elements[0])(b2('room')).initial_option.description.text)), 'step 2: a free room that is not usual -> offered as such, chosen');
   v2 = await step2(Object.assign({}, r1.s, { pre: { r: 'Likha' } }), { status: 'OK', free_priority: ['Studio 8'], free_last_resort: [], free_rooms: ['Studio 8', 'Likha'] });
   ok(v2.blocks.some(b => b.text && b.text.text === '⚠️ Likha isn’t a room for VO Recording. These are free:'), 'step 2: free but not a room for this -> said');
-  v2 = await step2(r1.s, { status: 'OK', free_priority: [], free_last_resort: [], free_rooms: [], busy: ['Studio 7 (GOLDFISH / X / HL)', 'Studio 8 (X)'] });
+  v2 = await step2(r1.s, { status: 'OK', free_priority: [], free_last_resort: [], free_rooms: [], busy: ['Studio 7 (GOLDFISH / X / HL)', 'Studio 8 (X)'].concat(V35 ? rooms.map(r => r.fields['Room Name'] + ' (X)') : []) });
   ok(v2.blocks.some(b => b.text && b.text.text === '⚠️ Studio 7 is taken then.') && !v2.submit, 'step 2: nothing free -> taken said, no Book');
   v2 = await step2(Object.assign({}, r1.s, { purpose: 'Music Mixing', pre: { ar: 'U4', en: 'U9' } }), { status: 'OK', free_priority: ['Studio F'], free_last_resort: [] });
   ok(b2('arranger').element.initial_option.value === 'U4' && b2('engineer').element.initial_option.value === 'U1', 'step 2: arranger filled in; an engineer not on the list falls back to the requester');

@@ -1,0 +1,65 @@
+#!/usr/bin/env node
+// check-launch-switches: every QA / launch switch across the Jessie workflows, read from files (never n8n), and whether they agree.
+//   ./scripts/check-launch-switches              what is live (the newest workflows/imported/*-imported.json of each workflow)
+//   ./scripts/check-launch-switches --builds     the newest builds in workflows/ (before importing them)
+// QA mode: every YEAR_SHIFT = 1, main's prompt + 1 year, every DEV_REDIRECT set, every ALLOW list the same.
+// LAUNCH mode: every YEAR_SHIFT = 0, no + 1 year, every DEV_REDIRECT ''. Anything in between is MIXED (exit 1) - flip the
+// rest before go-live. Switches are found by scanning every Code node, so a new one anywhere is listed too.
+const fs = require('fs');
+const path = require('path');
+const ROOT = path.join(__dirname, '..');
+const BUILDS = process.argv.includes('--builds');
+const NAMES = { 'project-jessie': 'main', 'slack-interactions': 'Slack Interactions', 'cancel-booking': 'Cancel Booking', 'move-booking': 'Move Booking',
+  'reminders': 'Reminders', 'book-session': 'Book Session', 'room-check': 'Room Check', 'log-booking': 'Log Booking', 'book-series': 'Book Series' };
+const newest = (dir, re) => { const f = fs.existsSync(dir) ? fs.readdirSync(dir).map(x => [x, x.match(re)]).filter(x => x[1]).sort((a, b) => Number(a[1][1]) - Number(b[1][1])) : [];
+  return f.length ? path.join(dir, f[f.length - 1][0]) : null; };
+const files = [];
+for (const k of Object.keys(NAMES)) {
+  const live = newest(path.join(ROOT, 'workflows', 'imported'), new RegExp('^' + k + '-v(\\d+)-imported\\.json$'));
+  const build = newest(path.join(ROOT, 'workflows'), new RegExp('^' + k + '-v(\\d+)\\.json$'));
+  const f = BUILDS ? (build || live) : (live || build);
+  if (f) files.push([NAMES[k], f]);
+}
+// the consent engine: no hand import since it went live, so the 29 Sep snapshot is what runs (open-consent-request-v11 is an
+// unimported candidate); with --builds, a launch build from flip-launch-switches is read instead
+const consent = path.join(ROOT, 'workflows', 'live', 'jessie-open-consent-request__nEHnCMMXS0am59Zy.json');
+const ocr = newest(path.join(ROOT, 'workflows'), /^open-consent-request-v(\d+)\.json$/);
+const ocrLaunch = BUILDS && ocr && /\(launch switches\)/.test(JSON.parse(fs.readFileSync(ocr, 'utf8')).name || '') ? ocr : null;
+if (ocrLaunch || fs.existsSync(consent)) files.push(['Open Consent Request', ocrLaunch || consent]);
+const rows = [], allows = [];
+for (const [wfName, f] of files) {
+  const wf = JSON.parse(fs.readFileSync(f, 'utf8'));
+  for (const n of wf.nodes || []) {
+    const p = n.parameters || {};
+    const nonCode = JSON.stringify(Object.assign({}, p, { jsCode: undefined }));   // the prompt; a code comment naming plus() is not a switch
+    const texts = [p.jsCode || ''].concat(/plus\(\{ years: \d+ \}\)/.test(nonCode) ? [nonCode] : []);
+    for (const t of texts) {
+      let m; const re1 = /const\s+YEAR_SHIFT\s*=\s*(-?\d+)\s*;/g; while ((m = re1.exec(t))) rows.push({ wf: wfName, node: n.name, sw: 'YEAR_SHIFT', v: Number(m[1]), file: f });
+      const re2 = /const\s+DEV_REDIRECT\s*=\s*'([^']*)'\s*;/g; while ((m = re2.exec(t))) rows.push({ wf: wfName, node: n.name, sw: 'DEV_REDIRECT', v: m[1], file: f });
+      const re3 = /const\s+ALLOW\s*=\s*\[([^\]]*)\]/g; while ((m = re3.exec(t))) allows.push({ wf: wfName, node: n.name, ids: m[1].match(/U[A-Z0-9]+/g) || [] });
+      const re4 = /plus\(\{ years: (\d+) \}\)/g; if (t !== (p.jsCode || '')) while ((m = re4.exec(t))) rows.push({ wf: wfName, node: n.name, sw: 'prompt +years', v: Number(m[1]), file: f });
+      if (/TEST_COORD\s*=/.test(t)) rows.push({ wf: wfName, node: n.name, sw: 'TEST_COORD', v: 'present', file: f });
+    }
+  }
+}
+const uniq = (a, k) => [...new Map(a.map(x => [x.wf + '|' + x.node + '|' + x.sw + '|' + x.v, x])).values()];
+const R = uniq(rows);
+console.log((BUILDS ? 'Builds' : 'Live (imported downloads)') + ' - files read:');
+for (const [n, f] of files) console.log('  ' + n.padEnd(22) + path.relative(ROOT, f));
+console.log('\nSwitches:');
+for (const r of R) console.log('  ' + r.sw.padEnd(14) + String(r.v === '' ? "''" : r.v).padEnd(14) + r.wf + ' -> ' + r.node);
+const qa = r => (r.sw === 'YEAR_SHIFT' && r.v === 1) || (r.sw === 'prompt +years' && r.v === 1) || (r.sw === 'DEV_REDIRECT' && r.v !== '') || r.sw === 'TEST_COORD';
+const launch = r => (r.sw === 'YEAR_SHIFT' && r.v === 0) || (r.sw === 'DEV_REDIRECT' && r.v === '');
+const nQa = R.filter(qa).length, nLaunch = R.filter(launch).length, odd = R.filter(r => !qa(r) && !launch(r));
+const allowSets = [...new Set(allows.map(a => a.ids.slice().sort().join(',')))];
+const devs = [...new Set(R.filter(r => r.sw === 'DEV_REDIRECT' && r.v).map(r => r.v))];
+console.log('\nALLOW lists: ' + allows.length + ' found, ' + (allowSets.length <= 1 ? 'all the same (' + (allowSets[0] || '').split(',').filter(Boolean).length + ' people)' : allowSets.length + ' DIFFERENT versions'));
+if (devs.length > 1) console.log('DEV_REDIRECT points at ' + devs.length + ' different people: ' + devs.join(', '));
+let mode;
+if (odd.length) mode = 'MIXED (unexpected values: ' + odd.map(r => r.sw + '=' + r.v + ' in ' + r.wf).join('; ') + ')';
+else if (nQa && !nLaunch) mode = 'QA - every switch in test mode';
+else if (nLaunch && !nQa) mode = 'LAUNCH - every switch flipped';
+else mode = 'MIXED - ' + nQa + ' in test mode, ' + nLaunch + ' flipped: ' + R.filter(qa).map(r => r.sw + ' in ' + r.wf + ' -> ' + r.node).join('; ');
+const bad = /^MIXED/.test(mode) || allowSets.length > 1 || devs.length > 1;
+console.log('\n' + (bad ? 'NOT CONSISTENT: ' : 'OK: ') + mode);
+process.exit(bad ? 1 : 0);

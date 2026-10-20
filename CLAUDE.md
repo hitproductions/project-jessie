@@ -244,6 +244,7 @@ because it read like a build number.
 | `Jessie — Slack Interactions` | `PyxSPoAMtSE1gzaH` | the Slack-app pivot: every button click and form submission (Slack Interactivity → `/webhook/jessie-interactions`), signature-checked. v1 is the hello-form test (passed 14 Oct); slice 1 builds on it. From v2 the signature comes from `Jessie — Slack Signature` - nothing to paste on import |
 | `Jessie — Log Booking` | `vmmb0fDD0PXd9443` | writes a booking's Jessie Log row and New Clients row **after** the reply; Book Session (v112+) calls it without waiting. Inputs `log`, `client` (each a row as JSON text) Since v2 (round 12b) also a Localization / QC project code Airtable Localization Projects does not have -> the **New Projects** tab (For Review; gid `47909145`, created 20 Oct, row 1: Code, Status, Booked by, Session Type, Department, Booking Date, Room(s), Calendar Title, Event ID, Added) |
 | `Jessie — Room Check` | `CB3JPU052OfHFIQr` | the rooms' answer **after** "Booked." (Book Session v117+ calls it without waiting): reads the event back at ~2 / 6 / 16 s; a room resource that declined -> the event deleted, the booker DM'd (Book a room / My bookings), a ROOM_DECLINED Log row |
+| `Jessie — Reminders` | (new - id once imported) | slice 2, **built 20 Oct, not imported**: 4:00 PM daily, a DM about tomorrow's studio sessions; Monday 9:00 AM, the week's bookings (studios, M booths, meeting rooms) - to the booker, the engineer / arranger and a staff member named as who it is for; Still on / Change / Free up the room (Keep on Mondays, Slack Interactions v35). Its own YEAR_SHIFT and DEV_REDIRECT (launch switches) |
 | `Jessie — Slack Signature` | `R06CBQNhFK0x4ZuO` | holds the Slack signing secret (pasted once into its **Sign** node) and returns only the HMAC of what it is given; saves no executions. **Never re-import it** - that erases the secret |
 
 The **consent engine** (the three workflows above) handles two callers that both need someone's OK before
@@ -301,6 +302,9 @@ only script that writes to n8n.
 | `node scripts/sim-round-10.js` | round 10: the department asked in step 2 for multi-department types; a question / problem whose window is gone reaches the DM with Book a room filled in |
 | `node scripts/sim-round-9.js` | round 9: the year on long dates, "Available rooms:" + why, Studio E only for Post Processing, optional dropdowns reading "No booth / engineer / arranger", "Recommended rooms:" / "Choose a different room", 6 rooms at most |
 | `./scripts/set-log-booking-id.py <id>` | puts Jessie — Log Booking's new workflow id into the newest Book Session build's Log Booking node (after Log Booking is imported, before Book Session is) |
+| `./scripts/check-launch-switches` · `--builds` | every QA / launch switch (YEAR_SHIFT, DEV_REDIRECT, the prompt's +1 year, ALLOW) across every Jessie workflow, live or the newest builds; says OK: QA, OK: LAUNCH or MIXED (exit 1). Files only |
+| `./scripts/flip-launch-switches` · `--builds` | writes the launch builds (each switched workflow as its next build number, only the switches changed); then `check-launch-switches --builds` must say OK: LAUNCH. Steps: `docs/launch-checklist.md` section 0 |
+| `node scripts/sim-reminders.js` · `[reminders] [si]` | Jessie — Reminders (who gets which booking, the day / week windows, the QA redirect) and Slack Interactions v35 (Keep; other rooms when no usual room is free) |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |
 | `./scripts/audit-model-text` · `<file>...` | every text the model reads (prompt, tool descriptions, `$fromAI`, every string a Code node returns or puts in the prompt) checked for instructions that contradict how Jessie works - above all "end with the line Confirm to ..." / "present the summary": cards come only from tools, and main v238 withdraws one the model wrote. Run on every build (since 2026-10-08) |
 | `./scripts/health [n]` | per-node status and timing from the last *n* real turns — what n8n actually ran |
@@ -556,7 +560,7 @@ Known contradictions in Rooms & Studios, and which field Jessie trusts:
 
 ## Before launch
 
-Three switches flip for launch — do them together:
+Three switches flip for launch — do them together, with `./scripts/flip-launch-switches` and `./scripts/check-launch-switches` (since 20 Oct; `docs/launch-checklist.md` section 0). The YEAR_SHIFT is also in Slack Interactions (`Build Step 1`, `My Window`) and Jessie — Reminders (`Window`), and Reminders has its own DEV_REDIRECT:
 
 1. **`YEAR_SHIFT`** at the top of `Gate Context` and the **`plus({ years: 1 })`** in the system
    prompt are the QA year shift. **They must go to zero together.** Change one and the model and the

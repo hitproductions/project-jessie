@@ -6,6 +6,7 @@ const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v267.json', 'utf8'));
 const V275 = /Hi, I’m Jessie!/.test(JSON.stringify(main.nodes));   // main v275: short menu lines, "Your booking details so far:"
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v10.json', 'utf8'));
+const V35 = JSON.stringify(si.nodes).indexOf('v35: none of the type') !== -1;   // v35: no usual room free -> the other free rooms
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9 (SI v26)
 const V276 = /v276: the year/.test(JSON.stringify(main ? main.nodes : []));   // round 9 (main v276): the offer's date with its year
 const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: no field hints
@@ -117,6 +118,8 @@ async function run(wf, name, input, outs) {
   s2 = await step2(r1, { status: 'OK', free_priority: [], free_last_resort: ['Studio 4'] });
   ok((V26 ? /Available rooms:/.test(JSON.stringify(s2.view)) && /The usual rooms for this type of booking are not available in your chosen schedule/.test(JSON.stringify(s2.view)) : /not a usual room/i.test(JSON.stringify(s2.view))), 'step 2: last resort only when no usual room is free');
   s2 = await step2(r1, { status: 'OK', free_priority: [], free_last_resort: [] });
+  if (V35) ok(s2.view.submit && /Available rooms:/.test(JSON.stringify(s2.view)), 'step 2 (v35): no usual room free, other studios free -> offered, Book');
+  s2 = await step2(r1, Object.assign({ status: 'OK', free_priority: [], free_last_resort: [] }, V35 ? { busy: rooms.map(r => r.fields['Room Name'] + ' (X)') } : {}));
   ok(!s2.view.submit && /Nothing that does VO Recording is free/.test(JSON.stringify(s2.view)), 'step 2: nothing free -> no Book, go Back');
   s2 = await step2(r1, { status: 'CALENDAR_ERROR' });
   ok(!s2.view.submit && /could(?: not|n’t) be checked|Couldn’t check/.test(JSON.stringify(s2.view)), 'step 2: calendar error -> no Book');
