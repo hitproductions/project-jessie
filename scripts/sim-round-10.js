@@ -94,7 +94,7 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   ok(dm.parameters.url === 'https://slack.com/api/chat.postMessage' && /\$json\.channel/.test(dm.parameters.jsonBody) && dm.onError === 'continueRegularOutput', 'DM Not Shown sends what its step built');
   ok(outs('Show Question').indexOf('Source Done') !== -1 && outs('Show Result').indexOf('Booked?') !== -1, 'the old paths unchanged (Source Done, Booked?)');
   const rsj = si.nodes.find(n => n.name === 'Read Step 2').parameters.jsCode;
-  ok(/we’ll let you know in your DM once it’s done/.test(rsj) && /Checking availability for each date\. You can close this window – we’ll let you know in your DM\./.test(rsj), 'the working lines say "in your DM"');
+  ok(/we’ll let you know in your DM once it’s done/.test(rsj) && /Checking availability for each date\. (?:' \+ _wait \+ ' )?You can close this window – we’ll let you know in your DM\./.test(rsj), 'the working lines say "in your DM"');
 
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

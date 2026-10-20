@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test-forms: every Slack-app sim (forms, buttons, main's offers) on one set of builds, one line each, then the totals.
-#   ./scripts/test-forms [slack-interactions] [main] [book-session] [move] [cancel]
+#   ./scripts/test-forms [slack-interactions] [main] [book-session] [move] [cancel] [log-booking]
 # Defaults: the newest build of each in workflows/. Offline only - reads files, never talks to n8n.
 set -u
 cd "$(dirname "$0")/.."
@@ -10,12 +10,14 @@ MAIN=${2:-$(newest project-jessie)}
 BOOK=${3:-$(newest book-session)}
 MOVE=${4:-$(newest move-booking)}
 CANCEL=${5:-$(newest cancel-booking)}
-echo "SI $SI · main $MAIN · Book Session $BOOK · Move $MOVE · Cancel $CANCEL"
+LOG=${6:-$(newest log-booking)}
+echo "SI $SI · main $MAIN · Book Session $BOOK · Move $MOVE · Cancel $CANCEL · Log Booking $LOG"
 fails=0
 run() { local name=$1; shift; local out; out=$(node "scripts/sim-$name.js" "$@" 2>&1); local code=$?
   local last; last=$(printf '%s\n' "$out" | grep -E '[0-9]+ (ok|passed)' | tail -1)
   if [ $code -ne 0 ]; then fails=$((fails+1)); printf '  FAIL  %-15s %s\n' "$name" "${last:-crashed}"; printf '%s\n' "$out" | grep -E 'FAIL|Error' | head -6 | sed 's/^/          /';
   else printf '  ok    %-15s %s\n' "$name" "$last"; fi; }
+run round-12b      "$SI" "$BOOK" "$LOG"
 run round-12       "$SI"
 run round-11       "$SI"
 run round-10       "$SI"

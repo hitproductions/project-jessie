@@ -597,3 +597,25 @@ Test in Slack after import:
 - Repeats: "How often?" with Weekly / Weekdays / Daily; a weekly series still books.
 - A long session: the shorter note under Booked.
 
+## Round 12b - Slack Interactions v31 + Book Session v115 + Log Booking v2 (20 Oct): wait estimates, new project codes - candidate
+
+1. The loading views say how long it usually takes, rounded up: "Usually under 30 seconds." (booking), "Usually under 10
+   seconds." (finding rooms), per date for a series ("Usually under 2 minutes." for 4 dates), "Usually under 30 seconds."
+   (changing). Self-updating from the data table *Jessie Timings*: one row per scenario, learned after every run; the first
+   five runs use measured fallbacks. "Multiple bookings may take longer to process." is replaced by the estimate.
+2. A Localization / QC project code is checked after "Booked." (nobody waits): a code Airtable *Localization Projects* does
+   not have goes to the *New Projects* tab of the Jessie Log sheet (For Review), one row per code. No "Did you mean".
+3. Step 2 reads Localization Projects only when the code is already filled in ("Book a room" again from a DM).
+
+Before importing: a *New Projects* tab in the Jessie Log sheet with row 1: Code, Status, Booked by, Session Type, Department,
+Booking Date, Room(s), Calendar Title, Event ID, Added. Import Log Booking v2 first, then Book Session v115; Slack
+Interactions v31 any time.
+
+Test in Slack after import:
+- Book anything: the Booking… view says "Usually under 30 seconds." After a few bookings, Jessie Timings has a *book* row.
+- Find rooms (step 1 -> step 2): "Usually under 10 seconds." under Finding free rooms….
+- A weekly series of 4: Checking 4 dates… and Booking 4 dates… each show an estimate.
+- Change a booking: Changing… shows "Usually under 30 seconds.".
+- Book QC with a made-up code (e.g. TEST-NEW-01): after Booked., a row for it appears in New Projects. A code that is in
+  Localization Projects adds nothing.
+

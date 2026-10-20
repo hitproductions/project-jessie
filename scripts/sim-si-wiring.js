@@ -36,5 +36,10 @@ if (by['Prepare Input']) {
   const lost = live.filter(a => route(a) === 3);
   ok(live.length >= 8 && !lost.length, 'every toggle / button has a route (' + live.length + ' checked)' + (lost.length ? ' - not routed: ' + lost.join(', ') : ''));
 }
+// every Code node compiles (20 Oct: a `//` comment inside a one-line expression cut the rest of the line off - Read Series
+// Confirm would have failed on every series booking)
+{ const bad = []; for (const n of si.nodes) { const js = (n.parameters || {}).jsCode; if (!js) continue;
+    try { new Function('$', '$input', 'return (async function(){' + js + '\n})'); } catch (e) { bad.push(n.name + ': ' + e.message); } }
+  ok(bad.length === 0, 'every Code node compiles - ' + bad.join('; ')); }
 console.log(pass + ' ok, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

@@ -104,7 +104,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const sub2 = { type: 'view_submission', view: { id: 'V2', private_metadata: JSON.stringify(meta2), blocks: [{ type: 'input', block_id: 'room', element: { type: 'radio_buttons', action_id: 'room_radio', options: [{ value: 'Studio 8' }] } }],
     state: { values: { room: { room_radio: { selected_option: { value: 'Studio 8' } } }, code: { code_in: { value: 'NFX-ABC-01' } }, engineer: { engineer_pick: { selected_option: { value: 'U1' } } } } } } };
   const r2 = await j1(si, 'Read Step 2', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: sub2 } }], 'Read Cache 3': cache });
-  ok(r2.valid && /Checking 3 dates in Studio 8/.test(JSON.stringify(r2.answer.view)) && (V17 ? /Checking availability for each date\.( This takes a few seconds\.| You can close this window – we’ll let you know in your DM\.)?"/.test(JSON.stringify(r2.answer.view)) : /Nothing is booked yet/.test(JSON.stringify(r2.answer.view))), 'Check: "Checking 3 dates…" at once');
+  ok(r2.valid && /Checking 3 dates in Studio 8/.test(JSON.stringify(r2.answer.view)) && (V17 ? /Checking availability for each date\.( This takes a few seconds\.|(?: Usually under \d+ (?:seconds|minutes?)\.)? You can close this window – we’ll let you know in your DM\.)?"/.test(JSON.stringify(r2.answer.view)) : /Nothing is booked yet/.test(JSON.stringify(r2.answer.view))), 'Check: "Checking 3 dates…" at once');
   const tp = await j1(si, 'To Prepare', [], { 'Read Step 2': [{ json: r2 }], 'Read Cache 3': cache });
   const tps = await j1(si, 'To Prepare Series', [], { 'To Prepare': [{ json: tp }], 'Read Step 2': [{ json: r2 }] });
   ok(tps.mode === 'prepare' && tps.dates === '2027-10-19,2027-10-26,2027-11-02' && tps.time_start === '14:00' && tps.rooms === 'Studio 8' && tps.summary === 'NFX-ABC-01 / HL'
@@ -136,7 +136,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const confPay = m => ({ type: 'view_submission', view: { id: 'V3', private_metadata: JSON.stringify(m) } });
   const meta3 = { key: 'prep-sabc', n: 2, title: 'NFX-ABC-01 / HL', requester: 'U1', channel: 'D1', time: '14:00-16:00' };
   const rsc = await j1(si, 'Read Series Confirm', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: confPay(meta3) } }] });
-  ok(rsc.key === 'prep-sabc' && rsc.answer.response_action === 'update' && /Booking 2 dates/.test(JSON.stringify(rsc.answer.view)) && (V25 ? /Multiple bookings may take longer to process\. You can close this window – we’ll let you know (?:in your DM )?once it’s done\./.test(JSON.stringify(rsc.answer.view)) : V17 ? /Processing your series of bookings\. This may take a while(, so you can close this window for now\. You will be notified once finished\.|\. You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\.)/.test(JSON.stringify(rsc.answer.view)) : /result comes to your DM/.test(JSON.stringify(rsc.answer.view))), '"Booking 2 dates…" at once');
+  ok(rsc.key === 'prep-sabc' && rsc.answer.response_action === 'update' && /Booking 2 dates/.test(JSON.stringify(rsc.answer.view)) && (V25 ? /(?:Multiple bookings may take longer to process|Usually under \d+ (?:seconds|minutes?))\. You can close this window – we’ll let you know (?:in your DM )?once it’s done\./.test(JSON.stringify(rsc.answer.view)) : V17 ? /Processing your series of bookings\. This may take a while(, so you can close this window for now\. You will be notified once finished\.|\. You may close this window(?:\. You’ll be notified when it’s done| – we’ll notify you once it’s done)\.)/.test(JSON.stringify(rsc.answer.view)) : /result comes to your DM/.test(JSON.stringify(rsc.answer.view))), '"Booking 2 dates…" at once');
   const tbs = async (rows, R) => j1(si, 'To Book Series', V15 ? cache : rows.map(x => ({ json: x })), { 'Read Series Confirm': [{ json: R || rsc }], 'Read Saved Series': rows.map(x => ({ json: x })), 'Read Cache 8': cache });
   let T = await tbs([{ cache_key: 'prep-sabc', payload: JSON.stringify(payload) }]);
   ok(T.go && T.confirmed === true && T.mode === '' && T.dates === '2027-10-19,2027-11-02' && T.rooms === 'Studio 8', 'the stored series, checked, booked as stored');
@@ -157,7 +157,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   T = await tbs([], Object.assign({}, rsc, { meta: Object.assign({}, meta3, { key: '', inputs }) }));
   ok(T.go && T.dates === inputs.dates, 'carried on the form -> booked from there');
   ok(nx('Read Series Confirm') === 'Answer Series' && ['Read Saved Series', 'Get Source Series'].indexOf(nx('Answer Series')) !== -1 && nx('To Book Series') === 'Series Go?' && nx('Series Go?') === 'Book Series | After Book Series'
-     && nx('Book Series') === 'After Book Series' && ['DM Series', 'DM Series+Source Done Series'].indexOf(nx('Show Series Result')) !== -1, 'wiring: route 13');
+     && nx('Book Series') === 'After Book Series' && ['DM Series', 'DM Series+Source Done Series'].indexOf(nx('Show Series Result').replace('+Timing Sample', '')) !== -1, 'wiring: route 13');
 
   // ---- the result
   const abs = async (res, Tx) => j1(si, 'After Book Series', [{ json: res }], { 'Read Series Confirm': [{ json: Object.assign({}, rsc, { viewId: 'V3' }) }], 'To Book Series': [{ json: Tx || Object.assign({ go: true }, inputs) }] });

@@ -44,7 +44,8 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   const nx = n => ((C[n] || {}).main || []).map(o => (o || []).map(c => c.node).join('+')).join(' | ');
   ok(nx('Read Cache 2') === 'Loc Needed?' && nx('Loc Needed?') === 'Loc Projects 2 | To Room Availability' && nx('Loc Projects 2') === 'To Room Availability', 'Find rooms: Read Cache 2 -> Loc Needed? -> Loc Projects 2 (yes) or To Room Availability (no)', [nx('Read Cache 2'), nx('Loc Needed?')]);
   ok(nx('Read Cache 9') === 'Code Typed?' && nx('Code Typed?') === 'Loc Projects 9 | Note Toggle' && nx('Loc Projects 9') === 'Note Toggle', 'a redraw: Read Cache 9 -> Code Typed? -> Loc Projects 9 (yes) or Note Toggle (no)');
-  for (const k of ['loc', 'studio', 'meeting', 'booth', 'atmos', 'post']) ok(ifExpr('Loc Needed?', { 'Read Step 1': [{ json: { s: { kind: k } } }] }) === (k === 'loc'), 'Loc Needed? for ' + k + ': ' + (k === 'loc'));
+  for (const k of ['loc', 'studio', 'meeting', 'booth', 'atmos', 'post']) ok(ifExpr('Loc Needed?', { 'Read Step 1': [{ json: { s: { kind: k, pre: { cd: 'NET-MALAS' } } } }] }) === (k === 'loc'), 'Loc Needed? for ' + k + ' (a code filled in): ' + (k === 'loc'));
+  if (/v31: the estimate/.test(JSON.stringify(si.nodes))) ok(ifExpr('Loc Needed?', { 'Read Step 1': [{ json: { s: { kind: 'loc' } } }] }) === false, 'v31: Loc Needed? for loc with no code filled in: false (read only for a filled-in code)');
   for (const a of ['code_in', 'det_code_in', 'code_pick', 'room_radio', 'room_other_pick', 'repeat_toggle', 'purpose_pick', 'note_toggle'])
     ok(ifExpr('Code Typed?', { 'Read Request': [{ json: { payload: { actions: [{ action_id: a }] } } }] }) === /code/.test(a), 'Code Typed? for ' + a + ': ' + /code/.test(a));
   ok(ifExpr('Code Typed?', { 'Read Request': [{ json: { payload: {} } }] }) === false, 'Code Typed? with no action: false (no crash)');

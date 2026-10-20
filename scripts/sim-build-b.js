@@ -136,7 +136,7 @@ const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: 
     'After Book Series': [{ json: { text: '✅ *Booked 3 dates.*\n\n*SER / DR x PL*\n*Dates:*\n- Tue, Oct 19' } }], 'Read Cache 8': cache });
   ok(sn.length === 2 && /booked you as the engineer for 3 dates/.test(sn[0].json.text) && /booked you as the arranger for 3 dates/.test(sn[1].json.text) && /\n\n\*SER \/ DR x PL\*/.test(sn[0].json.text), 'v18: a series -> its engineer and arranger told once, with the dates');
   // wiring
-  ok(nx('Read Cache 10') === 'Read Change' && C.Route.main[11][0].node === 'Read Cache 10' && nx('Change OK?') === 'Client Names' && nx('Read Cache 7') === 'To Move' && nx('To Move') === 'Go Move?'
+  ok((nx('Read Cache 10') === 'Read Change' || (nx('Read Cache 10') === 'Timings 10' && nx('Timings 10') === 'Read Change')) && C.Route.main[11][0].node === 'Read Cache 10' && nx('Change OK?') === 'Client Names' && nx('Read Cache 7') === 'To Move' && nx('To Move') === 'Go Move?'
      && nx('Go Move?') === 'Move | Ask Again' && nx('Ask Again') === 'Restore Asked' && ['Get Message+Change Notices | Restore Message', 'Get Message+Change Notices+DM Changed | Restore Message'].indexOf(nx('Moved?')) !== -1, 'v18 wiring: route 11');
   ok(nx('DM Booked') === 'Booked Notices' && nx('Booked Notices') === 'Send Booked Notices' && nx('DM Series') === 'Series Notices', 'v18 wiring: notices after booking');
   const cnn = si.nodes.find(n => n.name === 'Client Names');
