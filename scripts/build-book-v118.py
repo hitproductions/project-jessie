@@ -8,6 +8,7 @@ initials (the initials check TITLE_INITIALS, initials rewritten from Bookers, th
   - the title as it arrived is kept when the session type is Post Processing and it starts "POST PROCESSING - ";
   - TITLE_INITIALS skips it, and so does the "what's the project?" check (it read "POST PROCESSING - X" as the project);
   - after every check has passed, final_summary is put back to that title (final_client '').
+Also: Check Conflicts' list of Music types - Music Recording (was Music Vocal Recording), Music Mixing, Music Arranging, Music Presentation, Band Recording (Howard, 20 Oct).
 Every other booking is untouched. Built on workflows/imported/book-session-v117-imported.json (the live download).
 """
 import json
@@ -38,6 +39,9 @@ js = js.replace(a, "})();\n// v118: the Post Processing title back, once every c
 a = "      if (_studioB && _sum.indexOf(' / ') !== -1) {"
 assert js.count(a) == 1, js.count(a)
 js = js.replace(a, "      if (_studioB && _sum.indexOf(' / ') !== -1 && !(typeof __postTitle0 !== 'undefined' && __postTitle0)) {   // v118: a Post Processing title's first part is not a project")
+a = "      'music': ['Music Vocal Recording', 'Band Recording', 'Music Mixing'],"
+assert js.count(a) == 1, js.count(a)
+js = js.replace(a, "      'music': ['Music Recording', 'Music Vocal Recording', 'Band Recording', 'Music Mixing', 'Music Arranging', 'Music Presentation'],   // v118: the Music types (20 Oct)")
 by["Check Conflicts"]["parameters"]["jsCode"] = js
 wf["name"] = "Jessie — Book Session — v118 (the Post Processing title kept)"
 with open(OUT, "w") as f:

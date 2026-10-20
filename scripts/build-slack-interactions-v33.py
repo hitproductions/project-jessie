@@ -150,6 +150,32 @@ for n in CHANGE_NODES:
     by[n]["parameters"]["jsCode"] = js
 patch("Read Change", [("{ const _id = oneBooker(data, d.forname); d.en = _id || c.user; d.teamShown = true; }",
                        "{ const _id = oneBooker(data, d.forname); d.en = _id; d.teamShown = true; }")])
+
+# ---- Music types (Howard, 20 Oct): for a Music session that takes an engineer or an arranger, the Arranger comes first
+ARRFIRST = r"""// v33 (Howard, 20 Oct): a Music session (every role Music Engineer / Music Arranger) puts the Arranger above the Engineer
+function arrFirst(data, t) { const r = ((data && data.sessionTypes) || []).find(x => String((x.fields || {}).Type || '').trim().toLowerCase() === String(t || '').trim().toLowerCase());
+  const roles = r ? [].concat((r.fields || {})['Engineer Role Required'] || []).map(x => String((x && x.name) || x).trim()).filter(Boolean) : [];
+  return roles.length > 0 && roles.every(x => /^music (?:engineer|arranger)$/i.test(x)) && roles.some(x => /arranger/i.test(x)); }
+"""
+for n in ["Build Step 2"] + CHANGE_NODES:
+    by[n]["parameters"]["jsCode"] = ARRFIRST + by[n]["parameters"]["jsCode"]
+patch("Build Step 2", [("const team = [].concat(RR.eng || !RR.known ? [engineer] : []).concat(RR.arr && arranger ? [arranger] : []);",
+                        "let team = [].concat(RR.eng || !RR.known ? [engineer] : []).concat(RR.arr && arranger ? [arranger] : []);\n"
+                        "  if (arrFirst(data, s.purpose)) team = team.slice().reverse();   // v33: Music - the Arranger first")])
+for n in CHANGE_NODES:
+    js = by[n]["parameters"]["jsCode"]
+    a1 = "  if (R.eng || !R.known) out.push(engIn(R.either));\n  if (R.arr) out.push(inp('det_arranger', 'Arranger', sel('det_arranger_pick', arrs, V.ar, 'No arranger'), true));\n"
+    assert js.count(a1) == 1, (n, "team order")
+    js = js.replace(a1, "  const _team = [].concat(R.eng || !R.known ? [engIn(R.either)] : []).concat(R.arr ? [inp('det_arranger', 'Arranger', sel('det_arranger_pick', arrs, V.ar, 'No arranger'), true)] : []);\n"
+                        "  out.push(...(arrFirst(data, T) ? _team.slice().reverse() : _team));   // v33: Music - the Arranger first\n")
+    by[n]["parameters"]["jsCode"] = js
+# a type that takes an arranger only (Airtable: Music Arranger alone - Music Arranging / Music Presentation until Music Engineer
+# is added) needs its arranger: required on the form, "Pick the arranger." on Book
+patch("Build Step 2", [("const arranger = arrs.length ? input('arranger', 'Arranger', arrEl, { optional: true }) : null;",
+                        "const arranger = arrs.length ? input('arranger', 'Arranger', arrEl, (RR.known && RR.arr && !RR.eng) ? {} : { optional: true }) : null;   // v33: required when it is the only role")])
+patch("Read Step 2", [("    else if ((RR.eng || !RR.known) && !engineerId) errors.engineer = 'Pick the engineer.'; } }",
+                       "    else if ((RR.eng || !RR.known) && !engineerId) errors.engineer = 'Pick the engineer.';\n"
+                       "    else if (RR.known && RR.arr && !RR.eng && !arrangerId) errors.arranger = 'Pick the arranger.'; } }   // v33: an arranger-only type")])
 wf["name"] = "Jessie — Slack Interactions — v33 (Who is it for, for someone)"
 with open(OUT, "w") as f:
     json.dump(wf, f, indent=2, ensure_ascii=False)

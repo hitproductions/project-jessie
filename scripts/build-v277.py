@@ -82,6 +82,14 @@ patch("Booked For", [
     ("        const who = lookup(norm(words.slice(0, k).join(' ')));\n        if (!who) continue;\n        // One word (\"Japs\")",
      "        const who = lookup(norm(words.slice(0, k).join(' '))) || (k === 1 ? cap2(words[0]) : '');   // v277: \"for BP\"\n        if (!who) continue;\n        // One word (\"Japs\")"),
 ])
+# Music types (Howard, 20 Oct): Music Arranging, Music Mixing, Music Presentation, Music Recording (was Music Vocal Recording)
+patch("Form Offer", [("const ALIAS = { voiceover: 'vo', 'voice over': 'vo', celeb: 'celebrity', dub: 'dubbing', meeting: 'meeting', meetings: 'meeting' };",
+                      "const ALIAS = { voiceover: 'vo', 'voice over': 'vo', celeb: 'celebrity', dub: 'dubbing', meeting: 'meeting', meetings: 'meeting', vocal: 'music recording', vocals: 'music recording' };   // v277: Music Vocal Recording is Music Recording")])
+_st = by["Session Types"]["parameters"]
+_s = json.dumps(_st)
+_a = "Meeting, Music Mixing, Music Vocal Recording, Post Mixing"
+assert _s.count(_a) == 1, _s.count(_a)
+by["Session Types"]["parameters"] = json.loads(_s.replace(_a, "Meeting, Music Arranging, Music Mixing, Music Presentation, Music Recording, Post Mixing"))
 wf["name"] = "Project Jessie — v277 (for someone fills the form)"
 with open(OUT, "w") as f:
     json.dump(wf, f, indent=2, ensure_ascii=False)
