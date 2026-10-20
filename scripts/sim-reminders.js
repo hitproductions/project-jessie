@@ -7,6 +7,7 @@ const fs = require('fs');
 const RM = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/reminders-v1.json', 'utf8'));
 const SI = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v35.json', 'utf8'));
 const FX = require('./sim-fixture-rooms.js');
+const ALL = JSON.stringify(RM.nodes).indexOf('const ALL_TO_DEV = true;') !== -1;   // v2: every reminder to Howard during QA
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('FAIL ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
 const node = (wf, n) => wf.nodes.find(x => x.name === n);
@@ -38,7 +39,7 @@ const items = [
   ok(w.kind === 'daily' && w.yearShift === 1 && w.start === new Date(Date.parse(exp + 'T12:00:00Z') + 86400000).toISOString().slice(0, 10), 'daily (QA): tomorrow, a year ahead', w);
   w = (await run(RM, 'Window', [], { 'Monday 9 AM': [{ json: {} }] }))[0].json;
   ok(w.kind === 'weekly' && new Date(w.start + 'T12:00:00Z').getUTCDay() === 1 && (Date.parse(w.end) - Date.parse(w.start)) === 7 * 86400000, 'Monday (QA): Monday to Sunday of this week, a year ahead', w);
-  ok(node(RM, 'Daily 4 PM').parameters.rule.interval[0].expression === '0 16 * * *' && node(RM, 'Monday 9 AM').parameters.rule.interval[0].expression === '0 9 * * 1' && RM.settings.timezone === 'Asia/Manila', '4:00 PM daily and 9:00 AM Mondays, Manila time');
+  ok(node(RM, 'Daily 4 PM').parameters.rule.interval[0].expression === '0 16 * * *' && node(RM, 'Monday 9 AM').parameters.rule.interval[0].expression === '0 9 * * 1' && (RM.settings.timezone === 'Asia/Manila' || !RM.settings.timezone), '4:00 PM daily and 9:00 AM Mondays, Manila time (n8n drops the setting on import: the instance default is Manila - the pruner\'s hour 4 runs 04:00 PHT)');
   console.log('the day before (4:00 PM)');
   const W1 = { kind: 'daily', start: '2027-10-22', end: '2027-10-23' };
   let out = (await run(RM, 'Build Reminders', [], { 'Window': [{ json: W1 }], 'List Events R': [{ json: { items } }], 'Read Cache R': cache })).map(i => i.json);
@@ -51,7 +52,9 @@ const items = [
   ok(!out.some(o => ids(o).some(x => ['ev5', 'ev6', 'ev7', 'ev3', 'ev4'].indexOf(x) !== -1)), 'not: a tablet booking (no ref), tomorrow+1, a cancelled event, M booths, meetings');
   const m = by['U2'][0];
   ok(m.channel === 'U08V3CKDGJF' && /Test: this reminder is for Daryl Reyes/.test(JSON.stringify(m.blocks)), 'QA: Daryl is not on ALLOW -> to Howard, marked "Test: … for Daryl Reyes"');
-  ok(by['U098UFMKQHZ'][0].channel === 'U098UFMKQHZ' && !/Test:/.test(JSON.stringify(by['U098UFMKQHZ'][0].blocks)), 'QA: Camy is on ALLOW -> to Camy herself');
+  if (ALL) ok(out.every(o => o.channel === 'U08V3CKDGJF') && /Test: this reminder is for Camy Caridad/.test(JSON.stringify(by['U098UFMKQHZ'][0].blocks)) && !/Test:/.test(JSON.stringify(by['U08V3CKDGJF'][0].blocks)),
+    'QA (v2): every reminder to Howard - Camy (on ALLOW) too, marked; Howard\'s own unmarked');
+  else ok(by['U098UFMKQHZ'][0].channel === 'U098UFMKQHZ' && !/Test:/.test(JSON.stringify(by['U098UFMKQHZ'][0].blocks)), 'QA: Camy is on ALLOW -> to Camy herself');
   const acts = m.blocks.find(b => b.block_id === 'bka_ev1').elements;
   ok(acts.map(a => a.action_id + ':' + a.text.text).join() === 'rm_keep:Still on,bk_change:Change,bk_cancel:Free up the room' && acts[2].confirm.title.text === 'Free up this room?' && JSON.parse(acts[1].value).id === 'ev1',
      'Still on / Change / Free up the room (Slack\'s confirm), the row ids bk_ / bka_ as My bookings', acts.map(a => a.action_id));

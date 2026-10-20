@@ -816,7 +816,7 @@ the task runner), for whoever has shell access to the box.
     `check-import after` said DIFFERS for a build that was imported correctly. Leave default values out of builds. And a sim that feeds a
     node's input directly can pass while live fails because the node feeding it never runs on that path (PENDING 82: Client Aliases only
     ran for on-behalf bookings) - check the upstream node's own conditions before trusting the sim.
- The same for a node's trailing empty output (an unwired last output - Route after v29 removed the search route, 20 Oct); `check-import` ignores those since then.
+ The same for a node's trailing empty output (an unwired last output - Route after v29 removed the search route, 20 Oct); `check-import` ignores those since then. And for the workflow setting `timezone: Asia/Manila` (Reminders v1, 20 Oct): the instance default is Manila (the pruner's `triggerAtHour: 4` runs at 04:00 PHT), so the download leaves it out and the schedules still run on Manila time.
 38. **Importing can create a second workflow, and two workflows can't share a webhook path** (14 Oct). Importing Slack
     Interactions v2 made a whole new workflow next to the existing one; publishing then failed with "Conflicting Webhook
     Path" (`/webhook/jessie-interactions`). n8n is right to refuse - Slack can send clicks to one place only. Import into
