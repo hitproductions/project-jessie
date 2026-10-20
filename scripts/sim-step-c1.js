@@ -7,6 +7,7 @@
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v18.json', 'utf8'));
 const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: fewer words (round 8)
+const V36 = JSON.stringify(si.nodes).indexOf("block_id: 'nav'") !== -1;   // v36: shortcut buttons (a nav block) at the end of results
 const V17 = si.nodes.some(n => n.name === 'Mark Cancelling');
 const cx = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/cancel-booking-v27.json', 'utf8'));
 const mv = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/move-booking-v30.json', 'utf8'));
@@ -178,7 +179,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
     const cOne = Object.assign({}, cpay, { message: { blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Here’s the booking – press *Cancel* to cancel it.' } },
       { type: 'section', block_id: 'bk_ev1', text: { type: 'mrkdwn', text: '*ORANGE*' } }, { type: 'actions', block_id: 'bka_ev1', elements: [] }] } });
     const ac1 = await j1(si, 'After Cancel', [{ json: { status: 'CANCELLED' } }], { 'Read Request': [{ json: { payload: cOne } }] });
-    ok(ac1.blocks.length === 1 && /^❌ \*Cancelled\.\*/.test(ac1.blocks[0].text.text), 'v17: a one-booking reply -> just the Cancelled card');
+    ok(ac1.blocks.length === (V36 ? 2 : 1) && /^❌ \*Cancelled\.\*/.test(ac1.blocks[0].text.text) && (!V36 || ac1.blocks[1].block_id === 'nav'), 'v17: a one-booking reply -> just the Cancelled card (v36: + Book a room / My bookings)');
     const which = Object.assign({}, cpay, { message: { blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Which one?' } }].concat(msg.blocks.slice(1)) } });
     ok((await j1(si, 'After Cancel', [{ json: { status: 'CANCELLED' } }], { 'Read Request': [{ json: { payload: which } }] })).blocks[0].text.text === 'Which one?', 'v17: a list keeps its heading');
     // the processing lines

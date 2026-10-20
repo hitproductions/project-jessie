@@ -5,6 +5,8 @@
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v23.json', 'utf8'));
 const bs = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/book-session-v111.json', 'utf8'));
+const V36 = JSON.stringify(si.nodes).indexOf("block_id: 'nav'") !== -1;   // v36: shortcut buttons (a nav block) at the end of results
+const NAV = V36 ? ',nav' : '';
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
@@ -35,12 +37,12 @@ const j1 = async (...a) => (await run(...a))[0].json;
     'Read Step 2': [{ json: { s: { date: '2027-10-16', t0: '09:00', t1: '11:00', when: 'Saturday, Oct 16 · 9:00 AM–11:00 AM' }, room: 'Studio 2', rooms: 'Studio 2, Studio B', viewId: 'V1', channel: 'D1' } }],
     'After Prepare': [{ json: { F: { Room: 'Studio 2, Studio B', Date: 'Saturday, October 16, 2027', Time: '9:00 AM – 11:00 AM' }, book: { start_iso: '2027-10-16T09:00:00+08:00', end_iso: '2027-10-16T11:00:00+08:00' } } }] });
   const ids = ab.blocks.map(x => x.block_id || x.type);
-  ok(ids.join() === 'bk_ev1,bkn_ev1,bka_ev1' && ab.blocks[1].type === 'context' && ab.blocks[1].elements[0].text === note, 'DM: card, then the note as a small line, then Change / Cancel - ' + ids.join());
+  ok(ids.join() === 'bk_ev1,bkn_ev1,bka_ev1' + NAV && ab.blocks[1].type === 'context' && ab.blocks[1].elements[0].text === note, 'DM: card, then the note as a small line, then Change / Cancel - ' + ids.join());
   ok(ab.blocks[0].text.text.indexOf('That is a bit') === -1 && ab.blocks[0].text.text.endsWith('*Room:* Studio 2 + Studio B'), 'the card itself ends at Room');
   ok(ab.view.blocks.length === 2 && ab.view.blocks[1].type === 'context' && ab.view.blocks[1].elements[0].text === note, 'the form\'s result: the same small line');
   const ab2 = await j1('After Book', [{ json: { status: 'CREATED', event_id: 'ev2', title: 'X / HL' } }], {
     'Read Step 2': [{ json: { s: { date: '2027-10-16', t0: '09:00', t1: '11:00', when: 'x · y' }, room: 'Studio 7', viewId: 'V1', channel: 'D1' } }], 'After Prepare': [{ json: { F: { Room: 'Studio 7' }, book: {} } }] });
-  ok(ab2.blocks.map(x => x.block_id).join() === 'bk_ev2,bka_ev2' && ab2.view.blocks.length === 1, 'no note -> nothing added');
+  ok(ab2.blocks.map(x => x.block_id).join() === 'bk_ev2,bka_ev2' + NAV && ab2.view.blocks.length === 1, 'no note -> nothing added');
 
   // ---- Cancel / Change that go through remove the old note
   const msgBlocks = ab.blocks;
