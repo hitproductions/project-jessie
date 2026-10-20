@@ -7,7 +7,7 @@ const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v277.json', 'utf8'));
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v33.json', 'utf8'));
 if (!/v277 \(Howard, 20 Oct/.test(JSON.stringify(main.nodes))) { console.log('0 ok, 0 failed (round 13 is main v277 on; this build is older)'); process.exit(0); }
-const SI33 = /v33: "for <name>" typed/.test(JSON.stringify(si.nodes));
+const SI33 = (si.nodes.find(n => n.name === 'Build Step 2').parameters.jsCode || '').indexOf('v33: "for <name>" typed') !== -1;
 const FX = require('./sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('FAIL ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
@@ -96,16 +96,29 @@ const offer = async (text, dates) => {
   let v = await step2(S('Localization Dubbing', 'loc', { en: 'U044A89SGQY' }), { free_priority: ['Studio 1', 'Studio 2'] });
   const eng = v.blocks.find(b => b.block_id === 'engineer');
   ok(eng && eng.element.initial_option && eng.element.initial_option.value === 'U044A89SGQY', 'Localization Dubbing: Engineer starts on Josiah', eng && eng.element.initial_option);
-  v = await step2(S('__booth', 'booth', { fn: 'Japs' }), { free_priority: ['M4'] });
+  v = await step2(S('', 'booth', { fn: 'Japs' }), { free_rooms: ['M4', 'M5'] });
   const fnb = v.blocks.find(b => b.block_id === 'forname');
   if (SI33) {
     ok(fnb && fnb.element.initial_value === 'Japs', 'SI v33: M booth - Who is it for? starts on Japs', fnb && fnb.element);
-    v = await step2(S('__booth', 'booth', {}), { free_priority: ['M4'] });
+    v = await step2(S('', 'booth', {}), { free_rooms: ['M4', 'M5'] });
     ok(v.blocks.find(b => b.block_id === 'forname').element.initial_value === 'Howard', 'no name typed -> your first name, as before');
-    const meta = Object.assign(S('__booth', 'booth'), { label: 'M booth', when: 'x' });
+    const meta = Object.assign(S('', 'booth'), { label: 'M booth', when: 'x' });
     const r2 = (await run(si, 'Read Step 2', [], { 'Check Signature': [{ json: { user: 'U1' } }], 'Read Cache 3': cacheRow,
       'Read Request': [{ json: { payload: { type: 'view_submission', view: { id: 'V1', private_metadata: JSON.stringify(meta), blocks: [], state: { values: { room: { room_radio: { selected_option: { value: 'M4' } } }, forname: { forname_in: { value: 'japs' } } } } } } } }] }))[0].json;
     ok(r2.again && r2.again.fn === 'Japs', '"Book a room" again keeps the name (Japs)', r2.again);
+    // Dylan Diaz is "Dilan Diaz" in Bookers (Howard, 20 Oct): the fallbacks find him by either spelling
+    const ST3 = STAFF.map(f => f.Name === 'Dylan Diaz' ? Object.assign({}, f, { Name: 'Dilan Diaz', Info: 'Multimedia Specialist, Goes by Dilan, Dylan.' }) : f);
+    const cache3 = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Date().toISOString(), payload: JSON.stringify({ rooms: FX.rooms, sessionTypes: FX.sessionTypes, bookers: ST3.map((f, i) => ({ id: 'b' + i, fields: f })) }) } }];
+    const PM = Object.assign(S('Post Processing', 'post'), { label: 'Post Processing', when: 'x' });
+    const vals3 = { room: { room_radio: { selected_option: { value: 'Studio E' } } }, project: { project_in: { value: 'trailer' } } };
+    const view3 = { id: 'V1', private_metadata: JSON.stringify(PM), blocks: [], state: { values: vals3 } };
+    const r3 = (await run(si, 'Read Step 2', [], { 'Check Signature': [{ json: { user: 'U1' } }], 'Read Cache 3': cache3, 'Read Request': [{ json: { payload: { type: 'view_submission', view: view3 } } }] }))[0].json;
+    ok(r3.valid && r3.calTitle === 'TRAILER / DD', 'an old Post Processing form (no Booker field) -> Dilan Diaz, TRAILER / DD', { v: r3.valid, t: r3.calTitle, e: r3.answer && r3.answer.errors });
+    const bc = async b => (await run(si, 'Build Change', [], { 'Check Signature': [{ json: { user: 'U1', triggerId: 'T1', channel: 'D1' } }], 'Read Request': [{ json: { payload: { actions: [{ value: JSON.stringify(b) }], container: { channel_id: 'D1', message_ts: '1' } } } }], 'Read Cache 6': cache3 }))[0].json.view;
+    let cv = await bc({ id: 'e1', d: '2027-10-21', s: '13:00', e: '15:00', r: 'Studio E', t: 'TRAILER / DD', st: 'Post Processing' });
+    ok(cv.blocks.find(b => b.block_id === 'det_engineer').element.initial_option.text.text === 'Dilan Diaz', 'Change: TRAILER / DD -> Booker: Dilan Diaz');
+    cv = await bc({ id: 'e1', d: '2027-10-21', s: '13:00', e: '15:00', r: 'Studio E', t: 'TRAILER / ZZ', st: 'Post Processing' });
+    ok(cv.blocks.find(b => b.block_id === 'det_engineer').element.initial_option.text.text === 'Dilan Diaz', 'Change: initials nobody has -> starts on Dilan Diaz (the usual booker)');
   } else ok(true, '(SI v33 not in this build - the booth name check skipped)');
 
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
