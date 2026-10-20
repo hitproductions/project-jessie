@@ -574,7 +574,7 @@ Test in Slack after import:
 - A Localization booking: the project code still finds the project (title, client).
 - Timings (Logs panel): step 1 -> step 2 and a room tick, against the 20 Oct baseline.
 
-## Round 12 - Slack Interactions v30 + Book Session v114 (20 Oct): form fixes - candidate
+## Round 12 - Slack Interactions v30 + Book Session v114 (20 Oct): form fixes - LIVE ~20:12, Slack test owed
 
 From Howard's Slack test on 20 Oct.
 
