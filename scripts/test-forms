@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test-forms: every Slack-app sim (forms, buttons, main's offers) on one set of builds, one line each, then the totals.
-#   ./scripts/test-forms [slack-interactions] [main] [book-session] [move] [cancel] [log-booking]
+#   ./scripts/test-forms [slack-interactions] [main] [book-session] [move] [cancel] [log-booking] [room-check]
 # Defaults: the newest build of each in workflows/. Offline only - reads files, never talks to n8n.
 set -u
 cd "$(dirname "$0")/.."
@@ -11,7 +11,8 @@ BOOK=${3:-$(newest book-session)}
 MOVE=${4:-$(newest move-booking)}
 CANCEL=${5:-$(newest cancel-booking)}
 LOG=${6:-$(newest log-booking)}
-echo "SI $SI · main $MAIN · Book Session $BOOK · Move $MOVE · Cancel $CANCEL · Log Booking $LOG"
+ROOM=${7:-$(newest room-check)}
+echo "SI $SI · main $MAIN · Book Session $BOOK · Move $MOVE · Cancel $CANCEL · Log Booking $LOG · Room Check $ROOM"
 fails=0
 run() { local name=$1; shift; local out; out=$(node "scripts/sim-$name.js" "$@" 2>&1); local code=$?
   local last; last=$(printf '%s\n' "$out" | grep -E '[0-9]+ (ok|passed)' | tail -1)
@@ -43,5 +44,6 @@ run v273           "$MAIN"
 run every-message  "$MAIN"
 run round-8-book   "$BOOK"
 run book-v116      "$BOOK"
+run room-check     "$BOOK" "$ROOM" "$SI"
 echo; [ $fails -eq 0 ] && echo "all sims pass" || echo "$fails sim(s) failing"
 exit $fails

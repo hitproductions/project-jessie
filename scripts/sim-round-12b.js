@@ -96,16 +96,26 @@ const ctx = v => (v.blocks.find(b => b.type === 'context') || { elements: [{}] }
   ok((await samp(8, {})).length === 0 && (await samp(6, {}, 4000000)).length === 0, 'a redraw (route 8) or a run over 30 minutes -> no sample');
   ok((await runIn(si, 'Timing Sample', [], { 'Check Signature': [{ json: { route: 6 } }], 'Read Request': [{ json: {} }] })).length === 0, 'no receivedAt -> no sample');
   const nextE = async (per, rows) => runIn(si, 'Next Estimate', [], { 'Timing Sample': [{ json: { scenario: 'book', per } }], 'Read Timing': rows });
-  let n = await nextE(21, [{ json: {} }]);
-  ok(n[0].json.seconds === 21 && n[0].json.dates === 1, 'the first run -> 21 s, 1 run');
-  n = await nextE(18, [T('book', 21, 3)]);
-  ok(n[0].json.seconds === 21 && n[0].json.dates === 4, 'runs 2-5 keep the slowest (21 s)');
-  n = await nextE(18, [T('book', 21, 9)]);
-  ok(n[0].json.seconds === 20.4 && n[0].json.dates === 10, 'after 5 runs a faster run nudges it down a little (21 -> 20.4)');
-  n = await nextE(30, [T('book', 21, 9)]);
-  ok(n[0].json.seconds === 26.7, 'a slower run moves it up more (21 -> 26.7)');
-  let q = 20; for (let i = 0; i < 400; i++) { const x = 15 + 10 * ((i * 7919) % 100) / 100; const o = await nextE(x, [T('book', q, 9)]); q = o[0].json.seconds; }
-  ok(q > 22.5 && q < 25.5, 'runs spread evenly over 15-25 s -> it settles near the 90th percentile (~24 s): ' + q);
+  const V32 = /v32\): the scenario's estimate/.test(JSON.stringify(si.nodes));
+  if (V32) {   // v32: tracked from the fallback from the first run - one slow run fades (sim-room-check has the rest)
+    let n = await nextE(21, [{ json: {} }]);
+    ok(n[0].json.seconds === 29.1 && n[0].json.dates === 1, 'v32: the first run (21 s) starts from the 30 s fallback and nudges it down (29.1)', n[0] && n[0].json);
+    n = await nextE(148.6, [T('book', 20, 3)]);
+    ok(n[0].json.seconds === 25.4, 'v32: a 2 1/2-minute run moves it up once (20 -> 25.4), not to 148.6');
+    let q = 25.4; for (let i = 0; i < 12; i++) q = (await nextE(19, [T('book', q, 4 + i)]))[0].json.seconds;
+    ok(q >= 18 && q <= 25, 'v32: a dozen normal runs (19 s) bring it back to a band just above them (18-25 s, "under 20 / 30 seconds"): ' + q);
+  } else {
+    let n = await nextE(21, [{ json: {} }]);
+    ok(n[0].json.seconds === 21 && n[0].json.dates === 1, 'the first run -> 21 s, 1 run');
+    n = await nextE(18, [T('book', 21, 3)]);
+    ok(n[0].json.seconds === 21 && n[0].json.dates === 4, 'runs 2-5 keep the slowest (21 s)');
+    n = await nextE(18, [T('book', 21, 9)]);
+    ok(n[0].json.seconds === 20.4 && n[0].json.dates === 10, 'after 5 runs a faster run nudges it down a little (21 -> 20.4)');
+    n = await nextE(30, [T('book', 21, 9)]);
+    ok(n[0].json.seconds === 26.7, 'a slower run moves it up more (21 -> 26.7)');
+    let q = 20; for (let i = 0; i < 400; i++) { const x = 15 + 10 * ((i * 7919) % 100) / 100; const o = await nextE(x, [T('book', q, 9)]); q = o[0].json.seconds; }
+    ok(q > 22.5 && q < 25.5, 'runs spread evenly over 15-25 s -> it settles near the 90th percentile (~24 s): ' + q);
+  }
   ok((await nextE(20, [{ json: { error: 'x' } }])).length === 0, 'the table could not be read -> nothing written');
 
   console.log('wiring');

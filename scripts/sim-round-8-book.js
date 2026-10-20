@@ -51,6 +51,7 @@ ok(!/\$\('Get Client'\)\.(all|first)\(\)(?![^(]*\}\)\(\)\))/.test(CCjs.replace(/
 }
 
 // ── 1. the room's answer ─────────────────────────────────────────────────────────────────────────────────────────────────
+if (B.nodes.some(n => n.name === 'Room Answered?')) {   // v117: the room's answer is read by Jessie — Room Check after Booked (sim-room-check)
 console.log('Room Answered? - on as soon as every room has answered');
 const ansExpr = node(B, 'Room Answered?').parameters.conditions.conditions[0].leftValue.replace(/^=\{\{\s*/, '').replace(/\s*\}\}$/, '');
 const answered = ev => new Function('$json', 'return ' + ansExpr)(ev);
@@ -62,6 +63,7 @@ ok(answered({ id: 'e', attendees: [{ ...S7, responseStatus: 'accepted' }, { emai
 ok(answered({ id: 'e', attendees: [{ email: 'p@hitproductions.net', responseStatus: 'needsAction' }] }) === true, 'only people on it (no room) -> on');
 ok(answered({ error: { message: 'boom' } }) === true, 'the read failed -> on (Verify keeps the create response)');
 ok(node(B, 'Room Answered 2?').parameters.conditions.conditions[0].leftValue === node(B, 'Room Answered?').parameters.conditions.conditions[0].leftValue, 'the second check is the same test');
+}
 
 // ── 4. single-room booking types ─────────────────────────────────────────────────────────────────────────────────────────
 console.log('Check Conflicts - single-room booking types');
@@ -107,7 +109,7 @@ console.log('Build Log Row -> Log Booking (no wait) -> Return Booked');
   ok(lb.type === 'n8n-nodes-base.executeWorkflow' && lb.parameters.options.waitForSubWorkflow === false && lb.onError === 'continueRegularOutput',
      'Log Booking: Execute Workflow, not waited for, never fails the booking');
   ok(lb.parameters.workflowInputs.value.log === '={{ $json.log }}' && lb.parameters.workflowInputs.value.client === '={{ $json.client }}', 'Log Booking gets the two rows');
-  ok(to(B, 'Logged?', 0)[0] === 'Build Log Row' && to(B, 'Build Log Row')[0] === 'Log Booking' && to(B, 'Log Booking')[0] === 'Return Booked', 'Logged? -> Build Log Row -> Log Booking -> Return Booked');
+  ok(to(B, 'Logged?', 0)[0] === 'Build Log Row' && to(B, 'Build Log Row')[0] === 'Log Booking' && (to(B, 'Log Booking')[0] === 'Return Booked' || (to(B, 'Log Booking')[0] === 'Room Check' && to(B, 'Room Check')[0] === 'Return Booked')), 'Logged? -> Build Log Row -> Log Booking (-> Room Check, v117) -> Return Booked');
   ok(['Log to Sheet', 'New Client?', 'New Client Row', 'Log New Client'].every(n => !node(B, n)), 'the sheet nodes are gone from Book Session');
   ok(lb.parameters.workflowId.value !== '' , 'Log Booking id set: ' + lb.parameters.workflowId.value);
 }
