@@ -69,11 +69,25 @@ const offer = async (text, dates) => {
   ok(!F.prefill.fn, 'an M booth "for tomorrow" -> no name (a date word)', F.prefill);
   ({ F } = await offer('book studio 7 tomorrow 2-4pm vo recording for Josiah'));
   ok(F.prefill.en === 'U044A89SGQY' && !F.prefill.c, 'a name that is staff is never the client - staff first (Howard, 20 Oct)', F.prefill);
-  ({ F } = await offer('book studio f tomorrow for bp'));
-  ok(!F.prefill.ar && !F.prefill.c, 'lowercase "for bp" -> nothing (two letters count only in capitals)', F.prefill);
+  ({ F } = await offer('book studio f tomorrow 2-4pm band recording for bp'));
+  ok(F.prefill.ar === 'U9' && !F.prefill.c, 'lowercase "for bp" -> Arranger BP Valenzuela too (a nickname, not initials - Howard)', F.prefill);
   ({ F } = await offer('book studio 7 tomorrow 2-4pm vo recording'));
   ok(!F.prefill.en && !F.prefill.fn, 'no "for" -> nothing new');
 
+  console.log('two-letter names (Howard: "bp" too)');
+  const ST2 = STAFF.concat([{ Name: 'Daryl Reyes', Initials: 'DR', 'Slack User ID': 'U2', Info: 'Music Engineer, Post Engineer. Goes by Daryl, Drei, Drey, DR.' },
+    { Name: 'Kelly Dawa', Initials: 'KD', 'Slack User ID': 'U3', Info: 'Billing & Cost Assistant, Goes by Ate Kelly, Kelly, KD.' }]).map(f => f.Name === 'BP Valenzuela' ? Object.assign({}, f, { Initials: 'BP ' }) : f);
+  const bf2 = text => new Function('$', jsOf(main, 'Booked For'))(n => {
+    if (n === 'Get Booker') return { first: () => ({ json: { fields: { Name: 'Howard Luistro' } } }) };
+    if (n === 'All Bookers') return { all: () => ST2.map(f => ({ json: { fields: f } })) };
+    if (n === 'Slack Trigger') return { first: () => ({ json: { text, user: 'U1', ts: '1', channel: 'D1' } }) };
+    if (n === 'Gate Context') return { first: () => ({ json: { epoch: '' } }) };
+    if (n === 'Get Recent Messages') return { all: () => [{ json: { ts: '1', text, user: 'U1' } }] };
+    return { first: () => ({ json: {} }), all: () => [] }; })[0].json;
+  for (const [t, want] of [['book studio f for bp tomorrow', 'BP Valenzuela'], ['book studio f for BP tomorrow', 'BP Valenzuela'], ['book studio f for Bp', 'BP Valenzuela'],
+    ['book studio 7 for DR tomorrow', 'Daryl Reyes'], ['book studio 7 for dr cruz tomorrow', ''], ['book studio 7 for KD', 'Kelly Dawa'], ['book studio 7 for kd', ''],
+    ['book studio 7 for me tomorrow', ''], ['book studio 7 for am session', '']])
+    ok(bf2(t).bookedFor === want, JSON.stringify(t) + ' -> ' + (want || 'no one'), bf2(t).bookedFor);
   console.log('2: the form starts on them');
   const cacheRow = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Date().toISOString(), payload: JSON.stringify({ rooms: FX.rooms.concat([{ id: 'm4', fields: { 'Room Name': 'M4', 'Room Type': ['M Booth'] } }]),
     sessionTypes: FX.sessionTypes, bookers: STAFF.map((f, i) => ({ id: 'b' + i, fields: f })) }) } }];

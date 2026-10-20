@@ -9,8 +9,9 @@ Form Offer now, when neither an engineer nor an arranger was typed and "for <nam
   - Post Processing -> its Booker (anyone on staff)
   - an M booth -> "Who is it for?" = the name as typed, capitalised ("for japs" -> Japs), staff or not; never the client
   - anyone else on staff -> nothing (the form books as the person typing); not staff -> the client, as before
-Booked For: a two-letter "Goes by" name counts when typed in capitals ("for BP" = BP Valenzuela, an arranger); before, every key
-under 3 letters was left out, so "for BP" became a client named BP. Lowercase "for bp" still is not a person.
+Booked For: a two-letter "Goes by" nickname counts in any case ("for bp" / "for BP" = BP Valenzuela, an arranger - Howard,
+20 Oct); a two-letter name that is just the person's initials (DR, KD) only in capitals; common short words never. Before,
+every key under 3 letters was left out, so "for BP" became a client named BP.
 Built on workflows/imported/project-jessie-v276-imported.json (the live download).
 """
 import json
@@ -60,12 +61,17 @@ patch("Form Offer", [
 patch("Booked For", [
     ("  const lookup = k => (keyMap[k] && keyMap[k].size === 1) ? [...keyMap[k]][0] : '';\n",
      "  const lookup = k => (keyMap[k] && keyMap[k].size === 1) ? [...keyMap[k]][0] : '';\n"
-     "  // v277: a two-letter \"Goes by\" name counts only typed in capitals (\"for BP\" = BP Valenzuela) - shorter keys are left out above\n"
-     "  // so \"for me\" / \"for a\" are never people\n"
-     "  const caps2 = {};\n"
-     "  for (const f of staff) { const gb2 = String(f.Info || '').match(/goes by\\s+([^\\n]*)/i);\n"
-     "    for (const a of (gb2 ? gb2[1] : '').split(/,|\\band\\b/i)) { const x = a.trim().replace(/[.;:]+$/, ''); if (/^[A-Z]{2}$/.test(x)) (caps2[x] = caps2[x] || new Set()).add(String(f.Name).trim()); } }\n"
-     "  const cap2 = w => (/^[A-Z]{2}$/.test(String(w || '')) && caps2[w] && caps2[w].size === 1) ? [...caps2[w]][0] : '';\n"),
+     "  // v277: two-letter \"Goes by\" names (keys under 3 letters are left out above, so \"for me\" / \"for a\" are never people): a\n"
+     "  // nickname that is not the person's initials counts in any case (\"for bp\" / \"for BP\" = BP Valenzuela, initials BPV); one that is\n"
+     "  // just their initials (DR, KD) only in capitals (\"for dr cruz\" is not Daryl); common short words never\n"
+     "  const caps2 = {}, nick2 = {}, COMMON2 = /^(?:me|us|it|am|pm|an|ok|po|no|so|to|in|on|at|by|my|hi|yo|or|of|up|go|do|be|is|as|we|he|ya)$/i;\n"
+     "  for (const f of staff) { const gb2 = String(f.Info || '').match(/goes by\\s+([^\\n]*)/i), ini2 = String(f.Initials || '').replace(/\\s+/g, '').toUpperCase(), first2 = String(f.Name || '').trim().split(/\\s+/)[0].toUpperCase();\n"
+     "    for (const a of (gb2 ? gb2[1] : '').split(/,|\\band\\b/i)) { const x = a.trim().replace(/[.;:]+$/, ''); if (!/^[A-Za-z]{2}$/.test(x) || COMMON2.test(x)) continue;\n"
+     "      const M2 = (x.toUpperCase() === ini2 && x.toUpperCase() !== first2) ? caps2 : nick2, key = M2 === caps2 ? x.toUpperCase() : x.toLowerCase();\n"
+     "      (M2[key] = M2[key] || new Set()).add(String(f.Name).trim()); }\n"
+     "    if (/^[A-Za-z]{2}$/.test(first2) && !COMMON2.test(first2)) (nick2[first2.toLowerCase()] = nick2[first2.toLowerCase()] || new Set()).add(String(f.Name).trim()); }   // a two-letter first name (BP)\n"
+     "  const one = set => (set && set.size === 1) ? [...set][0] : '';\n"
+     "  const cap2 = w => { w = String(w || ''); if (!/^[A-Za-z]{2}$/.test(w) || COMMON2.test(w)) return ''; return one(nick2[w.toLowerCase()]) || (/^[A-Z]{2}$/.test(w) ? one(caps2[w]) : ''); };\n"),
     ("        const who = lookup(norm(words.slice(0, k).join(' ')));\n        if (!who) continue;\n        // One word (\"Japs\")",
      "        const who = lookup(norm(words.slice(0, k).join(' '))) || (k === 1 ? cap2(words[0]) : '');   // v277: \"for BP\"\n        if (!who) continue;\n        // One word (\"Japs\")"),
 ])
