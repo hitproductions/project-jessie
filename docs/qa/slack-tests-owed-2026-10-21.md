@@ -1,7 +1,7 @@
 # Slack tests owed - 21 Oct 2026
 
 Everything built since round 5 (15 Oct) that has not been tested in Slack yet, in one list, as it works **now** (main
-v277, Book Session v119, Slack Interactions v35 - v36 once imported, Move v34, Room Check v2, Reminders v2). Steps that
+v277, Book Session v119, Slack Interactions v36 (live 21 Oct ~00:17), Move v34, Room Check v2, Reminders v2). Steps that
 later builds replaced are left out (the project-code search list, the Post Processing Booker dropdown, "pick one or
 both", Music Vocal Recording). Per-round detail: `docs/design/slack-app-test-round-1.md`.
 
@@ -55,7 +55,7 @@ a screenshot - from n8n too if a step was slow or said nothing (open the run, th
     Jessie -> a DM "Studio A turned this booking down", the event gone; Book a room refills the form.
 23. The Jessie Log row a few seconds after Booked; a new client -> New Clients; a made-up QC code (TEST-NEW-01) -> a row
     in New Projects (a code Airtable has adds nothing).
-24. **v36 (once imported):** the Booked DM ends with *Book another* / *My bookings*; *Book another* opens a blank form and
+24. **v36:** the Booked DM ends with *Book another* / *My bookings*; *Book another* opens a blank form and
     the Booked card above stays as it is while the new one books; a booked series' DM says *Book another*; the Changed DM
     ends with *Book a room* / *My bookings*. Post Processing for Dilan: the notice says "… booked this for you." (comes to
     you in QA).
