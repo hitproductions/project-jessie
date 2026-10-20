@@ -597,7 +597,7 @@ Test in Slack after import:
 - Repeats: "How often?" with Weekly / Weekdays / Daily; a weekly series still books.
 - A long session: the shorter note under Booked.
 
-## Round 12b - Slack Interactions v31 + Book Session v115 + Log Booking v2 (20 Oct): wait estimates, new project codes - candidate
+## Round 12b - Slack Interactions v31 + Book Session v115 + Log Booking v2 (20 Oct): wait estimates, new project codes - LIVE ~20:34, Slack test owed
 
 1. The loading views say how long it usually takes, rounded up: "Usually under 30 seconds." (booking), "Usually under 10
    seconds." (finding rooms), per date for a series ("Usually under 2 minutes." for 4 dates), "Usually under 30 seconds."
