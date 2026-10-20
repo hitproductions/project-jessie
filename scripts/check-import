@@ -44,7 +44,21 @@ got, want = load(got_p), load(want_p)
 A, B = nodes(got), nodes(want)
 only_got = sorted(set(A) - set(B)); only_want = sorted(set(B) - set(A))
 changed = sorted(k for k in set(A) & set(B) if A[k] != B[k])
-conn_same = json.dumps(got.get("connections", {}), sort_keys=True) == json.dumps(want.get("connections", {}), sort_keys=True)
+def _conn(c):
+    # n8n drops a node's trailing empty outputs when it saves (an output left unwired) - compare without them
+    out = {}
+    for k, v in (c or {}).items():
+        v = dict(v)
+        for t, outs in list(v.items()):
+            outs = list(outs or [])
+            while outs and not outs[-1]:
+                outs.pop()
+            v[t] = outs
+        out[k] = v
+    return out
+
+
+conn_same = json.dumps(_conn(got.get("connections", {})), sort_keys=True) == json.dumps(_conn(want.get("connections", {})), sort_keys=True)
 problems = []
 if stable(got.get("name")) != stable(want.get("name")):
     problems.append(f'a different workflow: "{got.get("name")}" is not "{want.get("name")}"')

@@ -551,7 +551,7 @@ room · date · time, with "⚠️ Not booked yet – see below" (the question i
 Test: Book from the menu something that asks after Book ("jem lin"), close the window at once → the menu message shows your
 details with "⚠️ Not booked yet – see below", and the DM below it asks the question.
 
-## Round 11 - Slack Interactions v29 (20 Oct): faster redraws + clean-up - candidate
+## Round 11 - Slack Interactions v29 (20 Oct): faster redraws + clean-up - LIVE ~11:55, Slack test owed
 
 From the 20 Oct review ("anything more efficient / debug / optimize / faster") and Howard's 19 Oct note on Celebrity Recording.
 

@@ -121,9 +121,13 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   ok(!si.nodes.some(n => /\$\('(Loc Projects S|Suggest Codes|Answer Suggest)'\)/.test(JSON.stringify(n.parameters))), 'no node reads them');
   const route = async (payload) => (await j1('Check Signature', [{ json: { computed: 'abc' } }], { 'Read Request': [{ json: { sig: 'v0=abc', ts: String(Math.floor(Date.now() / 1000)), payload } }] })).route;
   ok(await route({ type: 'block_suggestion', action_id: 'code_pick' }) === 3, 'a block_suggestion (an old form) -> "other" (answered, nothing done)');
-  const sw = node('Check Signature').parameters.jsCode.match(/const ROUTES = \{([^}]*)\}/)[1];
-  const outs = (C['Route'] || C['Route Request'] || Object.values(C).find(o => (o.main || []).length > 10) || { main: [] }).main;
-  ok(outs.length >= Math.max(...sw.match(/\d+/g).map(Number)) + 1, 'the router still has an output for every route');
+  const csj = node('Check Signature').parameters.jsCode;
+  const RT = Function('return {' + csj.match(/const ROUTES = \{([^}]*)\}/)[1] + '}')();
+  const used = [...new Set([...csj.matchAll(/ROUTES\.(\w+)/g)].map(m => m[1]))].filter(k => k !== 'suggest' || /route = ROUTES\.suggest/.test(csj));
+  const outs = (C['Route'] || { main: [] }).main;
+  const unwired = used.filter(k => !((outs[RT[k]] || []).length));
+  ok(used.length > 10 && unwired.length === 0, 'every route Check Signature can pick (' + used.length + ') has a wired output', unwired);
+  ok(!/route = ROUTES\.suggest/.test(csj), 'nothing routes to the old search any more');
 
   console.log('5: refusals');
   let x = await run('Report Refused', [], { 'Check Signature': [{ json: { sigOk: false, fresh: false, ageSec: null, rawSource: 'none', rawLength: 0 } }] });
