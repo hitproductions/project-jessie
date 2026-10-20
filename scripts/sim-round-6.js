@@ -20,11 +20,13 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const cc = jsOf(bs, 'Check Conflicts');
   const a = cc.indexOf('const hasMin = Number.isFinite(minD) && minD > 0;'), b = cc.indexOf('// --- what actually goes on the calendar entry');
   const noteFor = (minD, maxD, mins, type) => new Function('minD', 'maxD', 'mins', 'allDay', 'ST', 'let durationNote = "";' + cc.slice(a, b) + '; return durationNote;')(minD, maxD, mins, false, { Type: type });
-  ok(noteFor(240, 600, 120, 'Localization Dubbing') === 'That is a bit shorter than Localization Dubbing sessions usually run (4–10 hours is typical).',
+  const V114 = /a usual ' \+ kind/.test(cc);   // round 12: "That's a bit longer than a usual X session (1–3 hours)."
+  const N = (w, type, range) => V114 ? 'That’s a bit ' + w + ' than a usual ' + type + ' session (' + range + ').' : 'That is a bit ' + w + ' than ' + type + ' sessions usually run (' + range + ' is typical).';
+  ok(noteFor(240, 600, 120, 'Localization Dubbing') === N('shorter', 'Localization Dubbing', '4–10 hours'),
      'hours: "(4–10 hours is typical)" - Slack 15 Oct said "(240-600 minutes is typical)" - ' + noteFor(240, 600, 120, 'Localization Dubbing'));
-  ok(noteFor(60, 180, 300, 'VO Recording') === 'That is a bit longer than VO Recording sessions usually run (1–3 hours is typical).', 'VO Recording 1–3 hours');
-  ok(noteFor(90, 150, 30, 'X') === 'That is a bit shorter than X sessions usually run (1 hour 30 minutes – 2 hours 30 minutes is typical).', 'not whole hours - ' + noteFor(90, 150, 30, 'X'));
-  ok(noteFor(0, 180, 300, 'X') === 'That is a bit longer than X sessions usually run (up to 3 hours is typical).' && noteFor(45, 0, 30, 'X') === 'That is a bit shorter than X sessions usually run (at least 45 minutes is typical).', 'up to / at least');
+  ok(noteFor(60, 180, 300, 'VO Recording') === N('longer', 'VO Recording', '1–3 hours'), 'VO Recording 1–3 hours');
+  ok(noteFor(90, 150, 30, 'X') === N('shorter', 'X', '1 hour 30 minutes – 2 hours 30 minutes'), 'not whole hours - ' + noteFor(90, 150, 30, 'X'));
+  ok(noteFor(0, 180, 300, 'X') === N('longer', 'X', 'up to 3 hours') && noteFor(45, 0, 30, 'X') === N('shorter', 'X', 'at least 45 minutes'), 'up to / at least');
   ok(noteFor(60, 180, 120, 'X') === '', 'inside the range -> no note');
 
   // ---- After Book: the note as a small line, on the form and in the DM

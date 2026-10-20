@@ -7,6 +7,7 @@ const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v25.json', 'utf8'));
 const main = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/project-jessie-v275.json', 'utf8'));
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: labels, no descriptions / hints, no "No …" options (sim-round-9)
+const V30 = /function pairBlocksC\(/.test(JSON.stringify(si.nodes));   // round 12: Booker dropdown, code without Enter (sim-round-12)
 const FX = require('./sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('FAIL ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
@@ -166,7 +167,7 @@ const views = [];
   console.log('Localization project code (19)');
   v = await step2(S('Localization Dubbing', 'loc', { pre: { cd: 'net-malas' } }), { free_priority: ['Studio 1'] });
   const cb = blk(v, 'code');
-  ok(cb.element.type === 'plain_text_input' && cb.element.action_id === 'code_in' && cb.dispatch_action && cb.element.dispatch_action_config.trigger_actions_on[0] === 'on_enter_pressed'
+  ok(cb.element.type === 'plain_text_input' && cb.element.action_id === 'code_in' && (V30 ? !cb.dispatch_action && !cb.element.dispatch_action_config : cb.dispatch_action && cb.element.dispatch_action_config.trigger_actions_on[0] === 'on_enter_pressed')
      && cb.element.initial_value === 'NET-MALAS' && !cb.hint, '19: a text box (Enter looks it up), the typed code in capitals, no hint');
   ok(/\*BAD DAY\* · NETFLIX/.test(blk(v, 'code_info').elements[0].text) && blk(v, 'engineer').element.initial_option.value === 'U3' && !blk(v, 'engineer').hint, '19: a known code -> the project, the Recordist set, no hint');
   v = await step2(S('Localization Dubbing', 'loc'), { free_priority: ['Studio 1'] });

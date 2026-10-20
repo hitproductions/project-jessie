@@ -16,6 +16,7 @@ run() { local name=$1; shift; local out; out=$(node "scripts/sim-$name.js" "$@" 
   local last; last=$(printf '%s\n' "$out" | grep -E '[0-9]+ (ok|passed)' | tail -1)
   if [ $code -ne 0 ]; then fails=$((fails+1)); printf '  FAIL  %-15s %s\n' "$name" "${last:-crashed}"; printf '%s\n' "$out" | grep -E 'FAIL|Error' | head -6 | sed 's/^/          /';
   else printf '  ok    %-15s %s\n' "$name" "$last"; fi; }
+run round-12       "$SI"
 run round-11       "$SI"
 run round-10       "$SI"
 run round-9        "$SI" "$MAIN" "$BOOK"

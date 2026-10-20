@@ -10,6 +10,7 @@ const main = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/project-je
 const V29 = !si.nodes.some(n => n.name === 'Suggest Codes');   // v29: the project-code search route removed (a text box since v25)
 const FX = require('./sim-fixture-rooms.js');
 const V25 = /function onlyRoom\(/.test(JSON.stringify(si.nodes));   // round 8: no "for someone else", a typed project code, an M booth name
+const V30 = /function pairBlocksC\(/.test(JSON.stringify(si.nodes));   // round 12: Booker dropdown, code without Enter (sim-round-12)
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 async function runIn(wf, name, input, outs) {
@@ -73,7 +74,7 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   // ---- 11: Localization - the project code search
   v = await step2(S('Localization Dubbing', 'loc', { pre: { cd: 'net-malas' } }), { free_priority: ['Studio 1'] });
   const code = blk(v, 'code');
-  ok(V25 ? (code.element.type === 'plain_text_input' && code.element.action_id === 'code_in' && code.dispatch_action === true && code.element.initial_value === 'NET-MALAS')
+  ok(V25 ? (code.element.type === 'plain_text_input' && code.element.action_id === 'code_in' && (V30 ? !code.dispatch_action : code.dispatch_action === true) && code.element.initial_value === 'NET-MALAS')
      : (code.element.type === 'external_select' && code.element.action_id === 'code_pick' && code.dispatch_action === true && code.element.min_query_length === 0
      && code.element.initial_option.value === 'NET-MALAS'), '11: Project code - a type-to-search list, the typed code picked (v25: typed)');
   ok(/\*BAD DAY\* · NETFLIX\nRecordist: Jetrho · Editor: - · Mixer: Via/.test(blk(v, 'code_info').elements[0].text), '11: the project shown under it - ' + JSON.stringify(blk(v, 'code_info').elements[0].text));
