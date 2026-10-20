@@ -574,3 +574,26 @@ Test in Slack after import:
 - A Localization booking: the project code still finds the project (title, client).
 - Timings (Logs panel): step 1 -> step 2 and a room tick, against the 20 Oct baseline.
 
+## Round 12 - Slack Interactions v30 + Book Session v114 (20 Oct): form fixes - candidate
+
+From Howard's Slack test on 20 Oct.
+
+1. Change form: *Vocal booth* and *Holding rooms* whenever the booking type offers them on Book - not only when the booking
+   already has one. Empty by default; changing *What's it for?* adds or removes them.
+2. *Project code* is a plain text box on Book and Change - no "Press 'enter' to submit". Pressing Enter used to show the
+   project's line and preset the engineer from Localization Projects; the engineer is now picked.
+3. Post Processing: *Booker* is a dropdown of everyone in Bookers, set to the person booking (was fixed: Dylan Diaz). On the
+   Change form too; the title's initials follow the booker.
+4. Repeats: *How often?* - Weekly / Weekdays / Daily.
+5. The length note on Booked: "That's a bit longer than a usual Music Vocal Recording session (1–2 hours)."
+
+Not in this build: the wait-time estimate on the working view (needs a new n8n data table first).
+
+Test in Slack after import:
+- Change a Band Recording booking with no booth: Vocal booth is there, empty; pick Studio A -> Changed, Studio F + Studio A.
+- Change a Celebrity Recording booking: Holding rooms offered. Switch *What's it for?* to Post Mixing - both disappear.
+- QC / Localization: the code box has no "Press 'enter'" line; the booking's title starts with the code.
+- Post Processing: Booker shows you; pick Dylan -> the title ends DD. Change it to yourself -> ends with your initials.
+- Repeats: "How often?" with Weekly / Weekdays / Daily; a weekly series still books.
+- A long session: the shorter note under Booked.
+
