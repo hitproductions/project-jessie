@@ -50,5 +50,6 @@ run book-v116      "$BOOK"
 run book-v118      "$BOOK"
 run book-v119      "$SI" "$BOOK"
 run room-check     "$BOOK" "$ROOM" "$SI"
+run room-check-v2  "$ROOM" "$MOVE"
 echo; [ $fails -eq 0 ] && echo "all sims pass" || echo "$fails sim(s) failing"
 exit $fails

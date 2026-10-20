@@ -44,11 +44,11 @@ const T = 'When Executed by Another Workflow';
      && got.end_iso === REQ.end_iso && got.all_day === 'false' && got.session_type === 'Localization Dubbing', 'Room Check gets the event, the title, both rooms, the booker (ref:), the times', got);
   ok(rcn.parameters.options.waitForSubWorkflow === false && rcn.onError === 'continueRegularOutput' && rcn.type === 'n8n-nodes-base.executeWorkflow', 'called without waiting; a failed call never touches the booking');
   ok(['ROOM_CHECK_ID'].indexOf(rcn.parameters.workflowId.value) !== -1 || /^[A-Za-z0-9]{10,24}$/.test(rcn.parameters.workflowId.value), 'the Room Check id: the placeholder until set-room-check-id.py, then a real id - ' + rcn.parameters.workflowId.value);
-  ok(Object.keys(m).join() === RC.nodes.find(n => n.name === T).parameters.workflowInputs.values.map(x => x.name).join(), 'the inputs match Room Check\'s trigger, name for name');
+  ok((() => { const tr = RC.nodes.find(n => n.name === T).parameters.workflowInputs.values.map(x => x.name); return Object.keys(m).every(k => tr.indexOf(k) !== -1) && tr.filter(k => Object.keys(m).indexOf(k) === -1).every(k => k === 'kind'); })(), 'the inputs match Room Check\'s trigger (v2 adds kind, which Book Session leaves empty)');
 
   console.log('Jessie — Room Check v1');
   ok(nx(RC, T) === 'Wait' && nx(RC, 'Wait') === 'Reread' && nx(RC, 'Reread') === 'Answered?' && nx(RC, 'Answered?') === 'Decide | Wait 2' && nx(RC, 'Answered 2?') === 'Decide | Wait 3'
-     && nx(RC, 'Reread 3') === 'Decide' && nx(RC, 'Decide') === 'Delete Declined' && nx(RC, 'Delete Declined') === 'Build DM' && nx(RC, 'Build DM') === 'Send DM'
+     && nx(RC, 'Reread 3') === 'Decide' && (nx(RC, 'Decide') === 'Delete Declined' || (nx(RC, 'Decide') === 'Delete?' && nx(RC, 'Delete?') === 'Delete Declined | Build DM')) && nx(RC, 'Delete Declined') === 'Build DM' && nx(RC, 'Build DM') === 'Send DM'
      && nx(RC, 'Send DM') === 'Declined Row' && nx(RC, 'Declined Row') === 'Log Declined', 'read back at ~2 / 6 / 16 s, then decide, delete, DM, log');
   ok(['Wait', 'Wait 2', 'Wait 3'].map(n => node(RC, n).parameters.amount).join() === '2,4,10' && ['Wait', 'Wait 2', 'Wait 3'].every(n => node(RC, n).webhookId), 'waits 2 / 4 / 10 s (each with its own webhook id)');
   for (const n of ['Reread', 'Reread 2', 'Reread 3', 'Delete Declined']) ok(node(RC, n).credentials.googleCalendarOAuth2Api.id === '6D1r3kaq6KaFdL0a' && node(RC, n).onError === 'continueRegularOutput', n + ': the Google Calendar credential Book Session uses');
