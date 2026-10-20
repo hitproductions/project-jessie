@@ -7,6 +7,7 @@
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v21.json', 'utf8'));
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: room labels, no descriptions, no "No …" options (sim-round-9)
+const V33P = /v33 \(Howard, 20 Oct\): "Who is it for\?"/.test((si.nodes.find(n => n.name === 'Build Step 2') || { parameters: {} }).parameters.jsCode || '');   // v33: Post Processing asks Who is it for?
 const V30 = /function pairBlocksC\(/.test(JSON.stringify(si.nodes));   // round 12: Booker dropdown, code without Enter (sim-round-12)
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
@@ -117,7 +118,7 @@ const tv = v => ({ selected_option: { value: v } });
 
   // Post Processing
   v = (await step2(S('Post Processing', 'post'), { free_priority: ['Studio E'] })).view;
-  ok(radio(v).options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio E' && (V30 ? v.blocks.find(b => b.block_id === 'booker').element.action_id === 'booker_pick' : /\*Booker\*\nDylan Diaz/.test(v.blocks.find(b => b.block_id === 'booker').text.text))
+  ok(radio(v).options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio E' && (V33P ? !!v.blocks.find(b => b.block_id === 'forname') : V30 ? v.blocks.find(b => b.block_id === 'booker').element.action_id === 'booker_pick' : /\*Booker\*\nDylan Diaz/.test(v.blocks.find(b => b.block_id === 'booker').text.text))
      && v.blocks.find(b => b.block_id === 'project').label.text === 'Project title' && !v.blocks.some(b => ['client', 'engineer', 'arranger'].indexOf(b.block_id) !== -1),
      '5: Post Processing - Booker Dylan Diaz, Project title, no client / engineer');
 

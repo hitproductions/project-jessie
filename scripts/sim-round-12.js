@@ -90,6 +90,8 @@ const BK = (st, r, t) => ({ id: 'e1', d: '2027-10-21', s: '13:00', e: '16:00', r
   const r0 = await read2({ room: { room_radio: tv('Studio 3') }, code: { code_in: { value: 'net-malas' } }, engineer: { engineer_pick: tv('U1') } }, Object.assign(S('QC', 'loc'), { label: 'QC' }));
   ok(r0.valid && /^NET-MALAS \//.test(r0.calTitle), 'the code typed still books (NET-MALAS / …)', r0.calTitle);
 
+  const V33P = /v33 \(Howard, 20 Oct\): "Who is it for\?"/.test(si.nodes.find(n => n.name === 'Build Step 2').parameters.jsCode);
+  if (!V33P) {   // v33: Post Processing asks "Who is it for?" (sim-round-13)
   console.log('4: Post Processing - Booker is a dropdown');
   v = await step2(S('Post Processing', 'post'), { free_priority: ['Studio E'] });
   let bk = blk(v, 'booker');
@@ -122,6 +124,7 @@ const BK = (st, r, t) => ({ id: 'e1', d: '2027-10-21', s: '13:00', e: '16:00', r
     purpose_c: { purpose_c: tv('VO Recording') }, det_project: { det_project_in: { value: 'VO' } }, det_client: { det_client_in: { value: '' } }, det_engineer: { det_engineer_pick: tv('U2') } });
   ok(rc.valid && rc.newDetails && rc.newDetails.team === 'U2', 'VO Recording: a new engineer is still told (unchanged)', rc.newDetails);
 
+  }
   console.log('5: Repeats wording');
   const s1 = (await j1('Build Step 1', [], { 'Check Signature': [chk()], 'Read Cache': cacheRow, 'Read Request': [{ json: { payload: { actions: [{ action_id: 'open_book', value: JSON.stringify({ d: '2027-10-20', rep: { f: 'weekly', days: ['WE'] } }) }], container: { channel_id: 'D1', message_ts: '9.9' } } } }] })).view;
   const fq = s1.blocks.find(b => b.block_id === 'rep_freq');

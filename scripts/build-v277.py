@@ -6,8 +6,10 @@ engineer. Booked For read "for josiah" = Josiah Lateo (bookedFor, staff), but Fo
 "engineer <name>" - "for <colleague>" was the chat's on-behalf idea, dropped in the form (14 Oct).
 Form Offer now, when neither an engineer nor an arranger was typed and "for <name>" is in this message:
   - a colleague whose Bookers Info says engineer -> Engineer (shown "Engineer: Josiah Lateo"); an arranger -> Arranger
-  - Post Processing -> its Booker (anyone on staff)
-  - an M booth -> "Who is it for?" = the name as typed, capitalised ("for japs" -> Japs), staff or not; never the client
+  - Post Processing or an M booth -> "Who is it for?" = the name as typed, capitalised ("for japs" -> Japs), staff or not; never
+    the client (Howard, 20 Oct: Post Processing's Booker dropdown becomes "Who is it for?" - Slack Interactions v33)
+  - no booking type typed yet ("book studio e for dilan"): the colleague (fid) and the name (fn) ride along; step 2 puts them in
+    the box of the type picked. Studio E alone means Post Processing, Studio M alone Van Recording
   - anyone else on staff -> nothing (the form books as the person typing); not staff -> the client, as before
 Booked For: a two-letter "Goes by" nickname counts in any case ("for bp" / "for BP" = BP Valenzuela, an arranger - Howard,
 20 Oct); a two-letter name that is just the person's initials (DR, KD) only in capitals; common short words never. Before,
@@ -36,27 +38,32 @@ ARR = "    if (bf.arranger && bf.arrangerResolved && inT(bf.arrangerPhrase)) { c
 patch("Form Offer", [
     (ARR, ARR +
      "    // v277 (Howard, 20 Oct: \"... studio 4 2-4pm for josiah\"): \"for <someone>\" in this message fills the form like the chat did\n"
-     "    // (PENDING 94) - an engineer -> Engineer, an arranger -> Arranger (when neither was typed); Post Processing -> its Booker;\n"
-     "    // an M booth -> \"Who is it for?\" (the name as typed, never the client). Anyone else on staff: nothing; not staff: the client.\n"
+     "    // (PENDING 94), when neither an engineer nor an arranger was typed:\n"
+     "    //   a known booking type: an engineer colleague -> Engineer, an arranger -> Arranger; Post Processing / an M booth -> \"Who is\n"
+     "    //   it for?\" (the name as typed - staff or not, never the client); anyone else on staff: nothing; not staff: the client;\n"
+     "    //   no type yet (\"book studio e for dilan\"): the colleague (fid) and the name (fn) ride along and step 2 puts them in the box\n"
+     "    //   the type picked has (Slack Interactions v33). Studio E is only for Post Processing, Studio M only for Van Recording.\n"
+     "    if (P.r === 'Studio E' && !P.p) P.p = 'Post Processing';\n"
+     "    if (P.r === 'Studio M' && !P.p) P.p = 'Van Recording';\n"
      "    const _forTyped = String(bf.matched || '').replace(/^\\s*(?:for|on behalf of)\\s+/i, '').trim();\n"
-     "    if (bf.bookedFor && inT(bf.matched) && !P.en && !P.ar && P.p !== '__booth') {\n"
-     "      const f = staff.find(s => String(s.Name).trim().toLowerCase() === String(bf.bookedFor).trim().toLowerCase());\n"
-     "      const id = f ? String(f['Slack User ID'] || '').split(/[\\s,]+/).filter(Boolean)[0] || '' : '', info = String((f && f.Info) || '');\n"
-     "      if (id && /^post processing$/i.test(String(P.p || ''))) { P.en = id; P.enN = cut(f.Name, 60); }\n"
-     "      else if (id && /\\bengineer\\b/i.test(info)) { P.en = id; P.enN = cut(f.Name, 60); }\n"
-     "      else if (id && /\\barranger\\b/i.test(info)) { P.ar = id; P.arN = cut(f.Name, 60); }\n"
+     "    const _isPost = /^post processing$/i.test(String(P.p || '')), _nameBox = _isPost || P.p === '__booth';\n"
+     "    const _fs = bf.bookedFor && inT(bf.matched) ? staff.find(s => String(s.Name).trim().toLowerCase() === String(bf.bookedFor).trim().toLowerCase()) || null : null;\n"
+     "    const _fid = _fs ? String(_fs['Slack User ID'] || '').split(/[\\s,]+/).filter(Boolean)[0] || '' : '';\n"
+     "    if (_fid && !P.en && !P.ar && !_nameBox) {\n"
+     "      const info = String(_fs.Info || '');\n"
+     "      if (P.p && /\\bengineer\\b/i.test(info)) { P.en = _fid; P.enN = cut(_fs.Name, 60); }\n"
+     "      else if (P.p && /\\barranger\\b/i.test(info)) { P.ar = _fid; P.arN = cut(_fs.Name, 60); }\n"
+     "      else if (!P.p) { P.fid = _fid; P.fidN = cut(_fs.Name, 60); }\n"
      "    }\n"
-     "    if (P.p === '__booth') {\n"
-     "      const nm = bf.bookedFor && inT(bf.matched) ? (_forTyped || String(bf.bookedFor).split(/\\s+/)[0])\n"
-     "        : (bf.forClient && inT(bf.forClientPhrase || bf.forClient) ? String(bf.forClient).trim() : '');\n"
-     "      let _nm = nm;   // an M booth's name is free text: \"for sasa\" in lowercase too - the words after \"for\", up to a date or time word\n"
-     "      if (!_nm) { const _SF = /^(?:tomorrow|today|tonight|next|this|the|a|an|at|from|to|on|in|and|all|whole|day|morning|afternoon|evening|noon|am|pm|please|pls|po|booth|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|m\\d)$/i;\n"
-     "        const _m = t.match(/\\bfor\\s+([^\\s\\d][^\\s]*(?:\\s+[^\\s\\d][^\\s]*){0,2})/i);\n"
-     "        if (_m) { const keep = []; for (const w0 of _m[1].split(/\\s+/)) { const w = w0.replace(/[.,!?;:]+$/, ''); if (!w || _SF.test(w) || /\\d/.test(w) || keep.length >= 3) break; keep.push(w); if (w0 !== w) break; } _nm = keep.join(' '); } }\n"
-     "      if (_nm) { P.fn = cut(_nm.replace(/(^|[\\s\\-'’])(\\p{Ll})/gu, (m, p, c) => p + c.toUpperCase()), 40); delete P.c; }\n"
-     "    }\n"),
+     "    // the name for a \"Who is it for?\" box: the colleague as typed, or a name that is not staff (lowercase too - the words after \"for\",\n"
+     "    // up to a date or time word)\n"
+     "    let _nm = _fs ? (_forTyped || String(_fs.Name).split(/\\s+/)[0]) : (bf.forClient && inT(bf.forClientPhrase || bf.forClient) ? String(bf.forClient).trim() : '');\n"
+     "    if (!_nm && (_nameBox || !P.p)) { const _SF = /^(?:tomorrow|today|tonight|next|this|the|a|an|at|from|to|on|in|and|all|whole|day|morning|afternoon|evening|noon|am|pm|please|pls|po|booth|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|m\\d)$/i;\n"
+     "      const _m = t.match(/\\bfor\\s+([^\\s\\d][^\\s]*(?:\\s+[^\\s\\d][^\\s]*){0,2})/i);\n"
+     "      if (_m) { const keep = []; for (const w0 of _m[1].split(/\\s+/)) { const w = w0.replace(/[.,!?;:]+$/, ''); if (!w || _SF.test(w) || /\\d/.test(w) || keep.length >= 3) break; keep.push(w); if (w0 !== w) break; } _nm = keep.join(' '); } }\n"
+     "    if (_nm && (_nameBox || !P.p)) { P.fn = cut(_nm.replace(/(^|[\\s\\-'’])(\\p{Ll})/gu, (m, p, c) => p + c.toUpperCase()), 40); if (_nameBox) delete P.c; }\n"),
     ("        P.enN ? 'Engineer: ' + P.enN : '', P.arN ? 'Arranger: ' + P.arN : ''].filter(Boolean).join(' · ');",
-     "        P.enN ? (/^post processing$/i.test(String(P.p || '')) ? 'Booker: ' : 'Engineer: ') + P.enN : '', P.arN ? 'Arranger: ' + P.arN : '', P.fn ? 'For: ' + P.fn : ''].filter(Boolean).join(' · ');   // v277"),
+     "        P.enN ? 'Engineer: ' + P.enN : '', P.arN ? 'Arranger: ' + P.arN : '', (/^post processing$/i.test(String(P.p || '')) || P.p === '__booth') && P.fn ? 'For: ' + P.fn : (P.fidN ? 'For: ' + P.fidN : '')].filter(Boolean).join(' · ');   // v277"),
 ])
 patch("Booked For", [
     ("  const lookup = k => (keyMap[k] && keyMap[k].size === 1) ? [...keyMap[k]][0] : '';\n",
