@@ -6,6 +6,7 @@
 // Usage: node scripts/sim-round-4.js [slack-interactions v21]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v21.json', 'utf8'));
+const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: room labels, no descriptions, no "No …" options (sim-round-9)
 const V33P = /v33 \(Howard, 20 Oct\): "Who is it for\?"/.test((si.nodes.find(n => n.name === 'Build Step 2') || { parameters: {} }).parameters.jsCode || '');   // v33: Post Processing asks Who is it for?
 const V30 = /function pairBlocksC\(/.test(JSON.stringify(si.nodes));   // round 12: Booker dropdown, code without Enter (sim-round-12)
@@ -90,7 +91,7 @@ const tv = v => ({ selected_option: { value: v } });
   const ids = v.blocks.map(b => b.block_id).filter(Boolean);
   if (V25) { const hb = v.blocks.find(b => b.block_id === 'holding'), bb = boothOf(v);
     ok(ids.indexOf('add_holding') === -1 && ids.indexOf('add_booth') === -1 && hb && hb.element.type === 'multi_static_select' && hb.element.options.map(o => o.value).join() === 'Katha,Likha'
-       && bb && bb.optional && bb.element.options.map(o => o.value).join() === (V26 ? 'Studio A,Studio B,Studio D' : 'none,Studio A,Studio B,Studio D') && !bb.element.initial_option, '2 (v25): Holding rooms (Katha, Likha - Salin taken) and the Vocal booth as dropdowns, shown at once');
+       && bb && bb.optional && bb.element.options.map(o => o.value).join() === (V39 ? 'Studio A,Studio B,Studio D,none' : V26 ? 'Studio A,Studio B,Studio D' : 'none,Studio A,Studio B,Studio D') && !bb.element.initial_option, '2 (v25): Holding rooms (Katha, Likha - Salin taken) and the Vocal booth as dropdowns, shown at once');
     ok(v.blocks.find(b => b.block_id === 'room').type === 'actions', '3 (v25): the list is an actions block - every pick redraws');
   } else {
   ok(ids.indexOf('add_holding') !== -1 && ids.indexOf('add_booth') > ids.indexOf('add_holding') && ids.indexOf('booth') === -1, '2: + Holding room, then + Vocal booth (unticked)');

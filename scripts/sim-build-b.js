@@ -5,6 +5,7 @@
 // Usage: node scripts/sim-build-b.js [slack interactions v18] [move v31] [cancel v28]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v18.json', 'utf8'));
+const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: no "No arranger" option
 const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: fewer words (round 8)
 const mv = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/move-booking-v31.json', 'utf8'));
@@ -78,7 +79,7 @@ const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: 
   const T = id => (V24 ? bc : tog).view.blocks.find(b => b.block_id === id);   // v24: already on the form
   ok(T('det_project').element.initial_value === 'ORANGE' && T('det_client').element.initial_value === 'Jem Lim' && T('det_engineer').element.initial_option.value === 'U1' && T('det_arranger').element.initial_option.value === 'U4',
      'v18: ticked -> Project, Client, Engineer, Arranger filled in from the title and Bookers');
-  ok(T('det_arranger').element.options.map(o => o.text.text).join() === (V26 ? 'Mike Villegas,Peter Legaste' : 'No arranger,Mike Villegas,Peter Legaste'), 'v18: arrangers include "Head of Music, Arranger" (Mike Villegas)');
+  ok(T('det_arranger').element.options.map(o => o.text.text).join() === (V39 ? 'Mike Villegas,Peter Legaste,No arranger' : V26 ? 'Mike Villegas,Peter Legaste' : 'No arranger,Mike Villegas,Peter Legaste'), 'v18: arrangers include "Head of Music, Arranger" (Mike Villegas)');
 
   // reading the change
   const meta = JSON.parse(bc.view.private_metadata);

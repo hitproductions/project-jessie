@@ -4,6 +4,7 @@
 // Usage: node scripts/sim-round-7.js [slack-interactions v24] [move-booking v33] [main v274]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v24.json', 'utf8'));
+const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: no "No …" options, no "pick one or both", room labels (sim-round-9)
 const mv = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/move-booking-v33.json', 'utf8'));
 const main = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/project-jessie-v274.json', 'utf8'));
@@ -56,7 +57,7 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   v = await step2(S('Music Mixing', 'studio'), { free_priority: ['Studio F'] });
   ok((V26 ? !blk(v, 'team_note') : blk(v, 'team_note') && ids(v).indexOf('team_note') < ids(v).indexOf('engineer') && /pick one or both/.test(blk(v, 'team_note').elements[0].text))
      && blk(v, 'engineer').optional && blk(v, 'arranger').optional, '6: Music Mixing - "Engineer and arranger: pick one or both.", both optional');
-  ok(V26 ? !blk(v, 'engineer').element.options.some(o => o.value === 'none') && !blk(v, 'arranger').element.options.some(o => o.value === 'none') && blk(v, 'engineer').element.placeholder.text === 'No engineer' && blk(v, 'arranger').element.placeholder.text === 'No arranger'
+  ok(V26 ? (V39 ? blk(v, 'engineer').element.options.slice(-1)[0].value === 'none' : !blk(v, 'engineer').element.options.some(o => o.value === 'none')) && (V39 ? blk(v, 'arranger').element.options.slice(-1)[0].value === 'none' : !blk(v, 'arranger').element.options.some(o => o.value === 'none')) && blk(v, 'engineer').element.placeholder.text === 'No engineer' && blk(v, 'arranger').element.placeholder.text === 'No arranger'
      : blk(v, 'engineer').element.options[0].value === 'none' && blk(v, 'arranger').element.options[0].value === 'none', '6: "No engineer" / "No arranger" first - a picked Slack dropdown cannot be emptied otherwise');
   ok(!(await step2(S('VO Recording', 'studio'))).blocks.find(b => b.block_id === 'engineer').element.options.some(o => o.value === 'none'), '5: VO Recording - no "No engineer"');
   v = await step2(S('Music Mixing', 'studio', { requester: 'U9' }), { free_priority: ['Studio F'] });

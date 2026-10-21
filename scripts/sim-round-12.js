@@ -5,6 +5,7 @@
 // Usage: node scripts/sim-round-12.js [slack-interactions v30]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v30.json', 'utf8'));
+const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 if (!/function pairBlocksC\(/.test(JSON.stringify(si.nodes))) { console.log('0 ok, 0 failed (round 12 is v30 on; this build is older)'); process.exit(0); }
 const FX = require('./sim-fixture-rooms.js');
 let pass = 0, fail = 0;
@@ -41,7 +42,7 @@ const BK = (st, r, t) => ({ id: 'e1', d: '2027-10-21', s: '13:00', e: '16:00', r
   console.log('2: the Change form - Vocal booth / Holding rooms when the type offers them');
   let cv = await buildChange(BK('Band Recording', 'Studio F', 'BAND REC TEST / Sasa Abella / HL x BPV'));   // Howard's screenshot
   let bc = blk(cv, 'booth_c');
-  ok(bc && bc.optional && !bc.element.initial_option && bc.element.placeholder.text === 'No booth' && bc.element.options.map(o => o.value).join() === 'Studio A,Studio B,Studio D',
+  ok(bc && bc.optional && !bc.element.initial_option && bc.element.placeholder.text === 'No booth' && bc.element.options.map(o => o.value).join() === 'Studio A,Studio B,Studio D' + (V39 ? ',none' : ''),
      'Band Recording in Studio F, no booth -> Vocal booth offered, empty ("No booth")', bc);
   ok(blk(cv, 'room').label.text === 'Studio' && ids(cv).indexOf('booth_c') === ids(cv).indexOf('room') + 1 && !blk(cv, 'holding_c'), 'right under Studio; no Holding rooms for Band Recording');
   cv = await buildChange(BK('Celebrity Recording', 'Studio F', 'CELEB / Jem Lim / HL'));

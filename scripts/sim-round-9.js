@@ -6,6 +6,7 @@
 // Usage: node scripts/sim-round-9.js [slack-interactions v26] [main v276] [book-session v113]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v26.json', 'utf8'));
+const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 const main = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/project-jessie-v276.json', 'utf8'));
 const bs = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/book-session-v113.json', 'utf8'));
 const FX = require('./sim-fixture-rooms.js');
@@ -101,9 +102,9 @@ const views = [];
   v = await step2(S('Music Vocal Recording', 'studio'), { free_priority: ['Studio F', 'Studio C'] });
   views.push(v);
   const eng = blk(v, 'engineer'), arr = blk(v, 'arranger'), bt = blkRe(v, /^booth~\d+$/);
-  ok(eng.optional && eng.element.placeholder.text === 'No engineer' && !eng.element.options.some(o => o.value === 'none'), 'Engineer (an arranger also counts) - optional, empty reads "No engineer", no "No engineer" option');
-  ok(arr.optional && arr.element.placeholder.text === 'No arranger' && !arr.element.options.some(o => o.value === 'none') && !arr.element.initial_option, 'Arranger - empty reads "No arranger"');
-  ok(bt.optional && bt.element.placeholder.text === 'No booth' && !bt.element.options.some(o => o.value === 'none'), 'Vocal booth - empty reads "No booth"');
+  ok(eng.optional && eng.element.placeholder.text === 'No engineer' && (V39 ? eng.element.options.slice(-1)[0].value === 'none' : !eng.element.options.some(o => o.value === 'none')), 'Engineer (an arranger also counts) - optional, empty reads "No engineer", no "No engineer" option');
+  ok(arr.optional && arr.element.placeholder.text === 'No arranger' && (V39 ? arr.element.options.slice(-1)[0].value === 'none' : !arr.element.options.some(o => o.value === 'none')) && !arr.element.initial_option, 'Arranger - empty reads "No arranger"');
+  ok(bt.optional && bt.element.placeholder.text === 'No booth' && (V39 ? bt.element.options.slice(-1)[0].value === 'none' : !bt.element.options.some(o => o.value === 'none')), 'Vocal booth - empty reads "No booth"');
   ok(!blk(v, 'team_note') && !/pick one or both/.test(JSON.stringify(v)), 'no "Engineer and arranger: pick one or both."');
   v = await step2(S('VO Recording', 'studio'), { free_priority: ['Studio 7'] });
   ok(!blk(v, 'engineer').optional && blk(v, 'engineer').element.placeholder.text === 'Select an engineer', 'VO Recording - the engineer still required, "Select an engineer"');
@@ -121,9 +122,9 @@ const views = [];
   // the Change form
   cv = await buildChange({ id: 'e2', d: '2027-10-19', s: '08:00', e: '10:00', r: 'Studio F, Studio A', t: 'SONG / DR', st: 'Music Vocal Recording' });
   const de = blk(cv, 'det_engineer'), da = blk(cv, 'det_arranger'), bc = blk(cv, 'booth_c');
-  ok(de.optional && de.element.placeholder.text === 'No engineer' && de.element.initial_option.value === 'U2' && !de.element.options.some(o => o.value === 'none'), 'Change: Engineer - the booking\'s, empty reads "No engineer"');
-  ok(da.element.placeholder.text === 'No arranger' && !da.element.initial_option && !da.element.options.some(o => o.value === 'none'), 'Change: Arranger - none on the booking -> empty, "No arranger"');
-  ok(bc.optional && bc.element.placeholder.text === 'No booth' && bc.element.initial_option.value === 'Studio A' && !bc.element.options.some(o => o.value === 'none'), 'Change: Vocal booth - Studio A, can be emptied');
+  ok(de.optional && de.element.placeholder.text === 'No engineer' && de.element.initial_option.value === 'U2' && (V39 ? de.element.options.slice(-1)[0].value === 'none' : !de.element.options.some(o => o.value === 'none')), 'Change: Engineer - the booking\'s, empty reads "No engineer"');
+  ok(da.element.placeholder.text === 'No arranger' && (V39 ? da.element.initial_option.value === 'none' : !da.element.initial_option) && (V39 ? da.element.options.slice(-1)[0].value === 'none' : !da.element.options.some(o => o.value === 'none')), 'Change: Arranger - none on the booking -> empty, "No arranger"');
+  ok(bc.optional && bc.element.placeholder.text === 'No booth' && bc.element.initial_option.value === 'Studio A' && (V39 ? bc.element.options.slice(-1)[0].value === 'none' : !bc.element.options.some(o => o.value === 'none')), 'Change: Vocal booth - Studio A, can be emptied');
   ok(!blk(cv, 'team_note'), 'Change: no "pick one or both"');
   const rcv = async (m, vals) => j1('Read Change', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { view: { id: 'V1', private_metadata: JSON.stringify(m), state: { values: vals } } } } }], 'Read Cache 10': cacheRow });
   const base = { date: { date_pick: { selected_date: '2027-10-19' } }, start: { start_pick: tv('08:00') }, end: { end_pick: tv('10:00') }, room: { room_pick: tv('Studio F') },
@@ -141,7 +142,7 @@ const views = [];
     if (/^(static_select|multi_static_select|radio_buttons)$/.test(x.type)) for (const o of [].concat(x.options || [])) { if (o.value === 'none') noneOpts++; if (x.type !== 'radio_buttons' && o.description) descs++; }
     for (const k of Object.keys(x)) walk(x[k]); };
   views.concat([cv]).forEach(walk);
-  ok(noneOpts === 0, 'no "No …" option in any dropdown (' + noneOpts + ')');
+  if (!V39) ok(noneOpts === 0, 'no "No …" option in any dropdown (' + noneOpts + ')');   // v39: they are back (phones cannot clear a pick)
   ok(descs === 0, 'no dropdown option carries a description');
 
   console.log('\n' + pass + ' ok, ' + fail + ' failed');

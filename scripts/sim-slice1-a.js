@@ -6,6 +6,7 @@ const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v267.json', 'utf8'));
 const V275 = /Hi, I’m Jessie!/.test(JSON.stringify(main.nodes));   // main v275: short menu lines, "Your booking details so far:"
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v10.json', 'utf8'));
+const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 const V35 = JSON.stringify(si.nodes).indexOf('v35: none of the type') !== -1;   // v35: no usual room free -> the other free rooms
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9 (SI v26)
 const V276 = /v276: the year/.test(JSON.stringify(main ? main.nodes : []));   // round 9 (main v276): the offer's date with its year
@@ -134,7 +135,7 @@ async function run(wf, name, input, outs) {
   s2 = await step2(rMus, { status: 'OK', free_priority: ['Studio F'], free_last_resort: [] });
   ok(s2.view.blocks.some(b => b.block_id === 'arranger'), 'music: arranger field');
   const arrEl = s2.view.blocks.find(b => b.block_id === 'arranger').element;
-  if (arrEl.type === 'static_select') ok(['Peter Legaste', 'No arranger,Peter Legaste'].indexOf(arrEl.options.map(o => o.text.text).join()) !== -1, 'arrangers only, from Bookers (v7: plus No arranger first)');
+  if (arrEl.type === 'static_select') ok(['Peter Legaste', 'No arranger,Peter Legaste', 'Peter Legaste,No arranger'].indexOf(arrEl.options.map(o => o.text.text).join()) !== -1, 'arrangers only, from Bookers (v7: plus No arranger first)');
   const engM = s2.view.blocks.find(b => b.block_id === 'engineer').element;
   if (engM.option_groups) ok(engM.option_groups[0].label.text === 'Music Engineers' && engM.option_groups[0].options.map(o => o.text.text).join() === 'Daryl Reyes,Howard Luistro', 'music: music engineers first');
   else ok(engM.options.filter(o => o.value !== 'none').map(o => o.text.text).join() === 'Daryl Reyes,Howard Luistro,Jetrho Ty', 'music: the same A to Z list (v22: after No engineer)');

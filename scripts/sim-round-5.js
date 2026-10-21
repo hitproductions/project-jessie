@@ -5,6 +5,7 @@
 // Usage: node scripts/sim-round-5.js [slack-interactions v22] [move-booking v32]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v22.json', 'utf8'));
+const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: room labels, no descriptions, no "No …" options (sim-round-9)
 const mv = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/move-booking-v32.json', 'utf8'));
 const FX = require('./sim-fixture-rooms.js');
@@ -130,7 +131,7 @@ const V25 = JSON.stringify(si).indexOf('function onlyRoom(') !== -1;   // v25: b
   ok(/Now: Sat, Oct 16 · 11:00 AM – 2:00 PM · Studio F \+ Studio D \+ Likha, Katha/.test(cv.blocks[0].text.text), '6: Now: Studio F + Studio D + Likha, Katha - ' + cv.blocks[0].text.text.split('\n')[1]);
   ok(sel('room').label.text === 'Studio' && sel('room').element.initial_option.value === 'Studio F' && sel('room').element.options.every(o => ['Studio A', 'Studio B', 'Studio D', 'Likha', 'Katha', 'Salin'].indexOf(o.value) === -1),
      '6: Studio = Studio F (was "Room: Studio D"), studios only');
-  ok(sel('booth_c').element.initial_option.value === 'Studio D' && (V26 ? sel('booth_c').optional && sel('booth_c').element.placeholder.text === 'No booth' && !sel('booth_c').element.options.some(o => o.value === 'none') : sel('booth_c').element.options[0].value === 'none'), '6: Booth = Studio D, or No booth (v26: empty = No booth)');
+  ok(sel('booth_c').element.initial_option.value === 'Studio D' && (V26 ? sel('booth_c').optional && sel('booth_c').element.placeholder.text === 'No booth' && (V39 ? sel('booth_c').element.options.slice(-1)[0].value === 'none' : !sel('booth_c').element.options.some(o => o.value === 'none')) : sel('booth_c').element.options[0].value === 'none'), '6: Booth = Studio D, or No booth (v26: empty = No booth)');
   ok(sel('holding_c').element.initial_options.map(o => o.value).join() === 'Katha,Likha' && sel('holding_c').element.options.map(o => o.value).join() === 'Katha,Likha,Salin', '6: Holding rooms - Likha, Katha ticked, Salin offered');
   const ccm = JSON.parse(cv.private_metadata);
   ok(ccm.b.r === 'Studio F, Studio D, Likha, Katha', '6: the form works on the rooms in order');

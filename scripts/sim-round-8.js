@@ -5,6 +5,7 @@
 // Usage: node scripts/sim-round-8.js [slack-interactions v25] [main v275] [book-session v112]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v25.json', 'utf8'));
+const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 const main = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/project-jessie-v275.json', 'utf8'));
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: labels, no descriptions / hints, no "No …" options (sim-round-9)
 const V30 = /function pairBlocksC\(/.test(JSON.stringify(si.nodes));   // round 12: Booker dropdown, code without Enter (sim-round-12)
@@ -95,7 +96,7 @@ const views = [];
   v = await step2(S('Celebrity Recording', 'studio'), { free_priority: ['Studio F', 'Likha', 'Katha', 'Salin', 'Studio C'], busy: ['Salin (TEAM)'] });
   views.push(v);
   let bt = blkRe(v, /^booth~\d+$/), hb = blk(v, 'holding');
-  ok(bt && bt.label.text === 'Vocal booth' && bt.optional && bt.element.type === 'static_select' && (V26 ? !bt.element.options.some(o => o.value === 'none') && bt.element.placeholder.text === 'No booth' : bt.element.options[0].value === 'none' && bt.element.placeholder.text === 'Select a booth') && !bt.element.initial_option && !bt.hint, '21: Celebrity Recording (records in the room) - Vocal booth, optional, "No booth", nothing picked, no hint');
+  ok(bt && bt.label.text === 'Vocal booth' && bt.optional && bt.element.type === 'static_select' && (V26 ? (V39 ? bt.element.options.slice(-1)[0].value === 'none' : !bt.element.options.some(o => o.value === 'none')) && bt.element.placeholder.text === 'No booth' : bt.element.options[0].value === 'none' && bt.element.placeholder.text === 'Select a booth') && !bt.element.initial_option && !bt.hint, '21: Celebrity Recording (records in the room) - Vocal booth, optional, "No booth", nothing picked, no hint');
   ok(hb && hb.element.type === 'multi_static_select' && hb.optional && hb.element.options.map(o => o.value).join() === 'Katha,Likha' && hb.element.placeholder.text === 'Select holding rooms',
      '21: Holding rooms - a dropdown, several can be picked (Salin taken)');
   ok(!blk(v, 'add_booth') && !blk(v, 'add_holding'), '21: no tick boxes');
