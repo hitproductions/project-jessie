@@ -17,11 +17,11 @@
           ]
         }
       },
-      "id": "b6805dfd-d527-4fa0-ba66-f59966eb13b7",
+      "id": "438dba48-30f5-4611-8568-272a1eafd04e",
       "name": "When Executed by Another Workflow",
       "position": [
-        1424,
-        128
+        4288,
+        320
       ],
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1
@@ -30,11 +30,11 @@
       "parameters": {
         "jsCode": "// Finalize Plan - inlined from workflows/drafts/consent/finalize.js (33/33). Computes everything the\n// branches need so downstream nodes only reference $('Plan').\nconst IN = $('When Executed by Another Workflow').first().json || {};\nfunction safeParse(s){ if(s&&typeof s==='object') return s; try{ return JSON.parse(s||''); }catch(_){ return null; } }\nfunction dateOf(iso){ try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(iso)); }catch(_){ return ''; } }\nconst row0 = safeParse(IN.row) || {};\n// v11: the row as the sheet has it now - a request that ended (or was withdrawn) since the caller read it is never placed\nlet fresh = null; try { fresh = $('Read Row').all().map(i => i.json || {}).find(r => r['Request ID'] && String(r['Request ID']) === String(row0['Request ID'])) || null; } catch (e) { fresh = null; }\nconst row = Object.assign({}, row0, fresh || {});\nconst now = new Date().toISOString();\nfunction fail(reason){ return [{ json: { ok:false, reason:reason, rowFail:{ 'Request ID':row['Request ID'], 'Status':'FAILED', 'Resolved Via':reason, 'Decided At':now }, notifyReq:'Sorry - that request could not be completed ('+reason+'). Nothing was changed.', requester:row['Requester']||'' } }]; }\nconst status=String(row['Status']||'').toUpperCase();\nif(['DONE','REJECTED','EXPIRED','FAILED','WITHDRAWN'].indexOf(status)!==-1) return fail('ALREADY_'+status);\nif(!row['Req Start']||!row['Req End']||!row['Room/Booth']) return fail('MISSING_REQ_SLOT');\nconst req=safeParse(row['Req Payload']); if(!req) return fail('BAD_REQ_PAYLOAD');\nconst kind=String(row['Kind']||'').toUpperCase();\n// relocate the incumbent, invoked AS the incumbent (owner=true), confirmed=consent\nconst movePayload={ title:row['Incumbent Title']||'', event_id:row['Incumbent Event Id']||'', booking_date:dateOf(row['Req Start']), new_start_iso:row['Incumbent New Start']||'', new_end_iso:row['Incumbent New End']||'', new_rooms:row['Room/Booth']||'', requester:row['Approver']||'', requester_name:row['Approver Name']||'', confirmed:true, authority:'', department:'' };\n// place the requester: move their booking (kind:move) or a fresh book\nconst placeTarget=(req&&req.kind==='move')?'move':'book';\nconst placePayload = placeTarget==='move'\n  ? { title:req.title||row['Incumbent Title']||'', event_id:req.event_id||'', booking_date:req.booking_date||'', new_start_iso:req.new_start_iso||row['Req Start'], new_end_iso:req.new_end_iso||row['Req End'], new_rooms:req.new_rooms||row['Room/Booth']||'', requester:req.requester||row['Requester']||'', requester_name:req.requester_name||row['Requester Name']||'', confirmed:true, authority:'', department:'' }\n  : Object.assign({}, req, { confirmed:true, room_override:true, rooms:req.rooms||row['Room/Booth']||'', start_iso:req.start_iso||row['Req Start'], end_iso:req.end_iso||row['Req End'] });\nconst rowDone={ 'Request ID':row['Request ID'], 'Status':'DONE', 'Resolved Via':IN.resolvedVia||'', 'Attested By':IN.attestedBy||'', 'Decided At':now };\nconst rowFailMove={ 'Request ID':row['Request ID'], 'Status':'FAILED', 'Resolved Via':'MOVE_FAILED', 'Decided At':now };\nconst rowFailPlace={ 'Request ID':row['Request ID'], 'Status':'FAILED', 'Resolved Via':'PLACE_FAILED', 'Decided At':now };\nconst _isMB = String(row['Kind']||'').toUpperCase()==='MBOOTH';\nfunction whenPhrase(s,e){try{if(/^\\d{4}-\\d{2}-\\d{2}$/.test(String(s||''))){return new Date(s+'T00:00:00+08:00').toLocaleDateString('en-US',{timeZone:'Asia/Manila',month:'short',day:'numeric'})+' (all day)';}const o={timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'};const a=new Date(s).toLocaleString('en-US',o);const b=e?new Date(e).toLocaleTimeString('en-US',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'}):'';return b?(a+'\\u2013'+b):a;}catch(_){return String(s||'');}}\nconst _when = whenPhrase(row['Req Start'], row['Req End']);\nconst notifyIncumbent = _isMB\n  ? (\"You've offered your \"+row['Room/Booth']+\" booth (\"+_when+\") to \"+(row['Requester Name']||'someone')+\". Thanks for sharing!\")\n  : ('Heads up - your \"'+row['Incumbent Title']+'\" was moved to make room for a higher-priority session in '+row['Room/Booth']+\", as you OK'd. It's now at the time we agreed. Thanks!\");\nconst notifyReqOK = _isMB\n  ? ('Done - '+row['Room/Booth']+' is yours for '+_when+'. '+(row['Approver Name']||'The holder')+\" OK'd sharing the booth.\")\n  : ('Done - '+row['Room/Booth']+' is yours for the requested time. '+row['Approver Name']+' moved their session to make way.');\nconst notifyReqMoveFail=\"Couldn't free \"+row['Room/Booth']+' - '+row['Approver Name']+\"'s session couldn't be moved to the agreed slot, so nothing changed. Want to try another time or room?\";\nconst notifyReqPlaceFail = _isMB\n  ? ((row['Approver Name']||'The holder')+\" OK'd, but I couldn't book \"+row['Room/Booth']+' for you just now. Nothing is double-booked. Please try again.')\n  : (row['Approver Name']+\"'s session was moved, but I couldn't place your booking in \"+row['Room/Booth']+' just now. Nothing is double-booked. Please try again.');\nreturn [{ json: { ok:true, kind:kind, placeTarget:placeTarget, incumbentEventId: row['Incumbent Event Id']||'', movePayload:movePayload, placePayload:placePayload, rowDone:rowDone, rowFailMove:rowFailMove, rowFailPlace:rowFailPlace, notifyIncumbent:notifyIncumbent, notifyReqOK:notifyReqOK, notifyReqMoveFail:notifyReqMoveFail, notifyReqPlaceFail:notifyReqPlaceFail, approver:row['Approver']||'', requester:row['Requester']||'' } }];\n"
       },
-      "id": "7569042e-99ae-426d-880c-75619632a820",
+      "id": "8d2b081b-c09f-49b8-ab89-a4a1caaa0703",
       "name": "Plan",
       "position": [
-        1648,
-        128
+        4512,
+        320
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
@@ -65,11 +65,11 @@
         },
         "options": {}
       },
-      "id": "8fd04c77-7fa3-4899-8f27-152742d9d700",
+      "id": "71c0e9bd-7eaa-4565-bad2-4ffc33fd9317",
       "name": "Plan OK?",
       "position": [
-        1872,
-        128
+        4736,
+        320
       ],
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3
@@ -78,11 +78,11 @@
       "parameters": {
         "jsCode": "return [{ json: { status:'FAILED', reason: $('Plan').first().json.reason, human: $('Plan').first().json.notifyReq || 'The request could not be completed.' } }];"
       },
-      "id": "b148390a-35ea-4a2e-b14b-21e18a630f98",
+      "id": "a4c0654e-2c98-43c3-9623-bbcccb7a368f",
       "name": "Return Fail",
       "position": [
-        1872,
-        -80
+        4736,
+        112
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
@@ -112,11 +112,11 @@
         },
         "options": {}
       },
-      "id": "a9acb445-220d-491c-99c5-d221770c41a1",
+      "id": "266cea3f-15c1-4468-b536-fb5f1e0166a9",
       "name": "Place Kind?",
       "position": [
-        2528,
-        128
+        5392,
+        320
       ],
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3
@@ -151,11 +151,11 @@
         },
         "options": {}
       },
-      "id": "fe576014-0267-446f-ac96-d1232ad6ccc6",
+      "id": "df2c0e91-6c13-46b0-8afc-e285e8640fdf",
       "name": "Move Requester",
       "position": [
-        2752,
-        64
+        5616,
+        256
       ],
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2
@@ -193,11 +193,11 @@
         },
         "options": {}
       },
-      "id": "ab31a3b8-017d-4a47-95d6-852f0062420a",
+      "id": "589876bc-aa46-482a-a454-e7c88fd716c2",
       "name": "Book Requester",
       "position": [
-        2752,
-        240
+        5616,
+        432
       ],
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2
@@ -227,11 +227,11 @@
         },
         "options": {}
       },
-      "id": "8b9b2f06-71a3-4772-b2bb-e5d546ff63fd",
+      "id": "eefc6faa-ed93-40af-98f6-64f2220fc898",
       "name": "Placed Move?",
       "position": [
-        2960,
-        64
+        5824,
+        256
       ],
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3
@@ -261,11 +261,11 @@
         },
         "options": {}
       },
-      "id": "6d014ea4-3a1a-457a-b233-7363eb4a1f08",
+      "id": "dd59b6ce-8ad3-4316-81d7-5ec2d1614d3b",
       "name": "Placed Book?",
       "position": [
-        2960,
-        240
+        5824,
+        432
       ],
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3
@@ -274,11 +274,11 @@
       "parameters": {
         "jsCode": "return [{ json: $('Plan').first().json.rowDone }];"
       },
-      "id": "d4bc2206-9b97-4ff1-bf55-4fa59d3b52de",
+      "id": "ae1b3560-fe73-4f37-b3c7-5482532efc1e",
       "name": "Done Row",
       "position": [
-        3184,
-        128
+        6048,
+        320
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
@@ -308,11 +308,11 @@
         },
         "options": {}
       },
-      "id": "fdb78d01-25b5-47e7-a27c-54888bd13402",
+      "id": "d6a936f9-6e2f-483e-a768-a899293209df",
       "name": "Mark Done",
       "position": [
-        3408,
-        128
+        6272,
+        320
       ],
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
@@ -327,11 +327,11 @@
       "parameters": {
         "jsCode": "return [{ json: { status:'DONE', human: $('Plan').first().json.notifyReqOK } }];"
       },
-      "id": "61a10956-3d17-46a3-a793-283a367716e9",
+      "id": "68ada16a-4962-4ce0-a473-5548e0d3c5dd",
       "name": "Return Done",
       "position": [
-        4064,
-        128
+        6928,
+        320
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
@@ -340,11 +340,11 @@
       "parameters": {
         "jsCode": "return [{ json: $('Plan').first().json.rowFailPlace }];"
       },
-      "id": "11203c39-6f1b-4494-a116-c9e887ae99c0",
+      "id": "710002f9-8851-44d2-8202-4120e93d2eb2",
       "name": "Fail Place Row",
       "position": [
-        3184,
-        368
+        6048,
+        560
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
@@ -374,11 +374,11 @@
         },
         "options": {}
       },
-      "id": "2371f756-0161-4c1c-ba51-2ce2f3972c69",
+      "id": "52379448-15b3-44ef-9b7e-20e4efc2d1e5",
       "name": "Mark Failed Place",
       "position": [
-        3408,
-        368
+        6272,
+        560
       ],
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
@@ -393,11 +393,11 @@
       "parameters": {
         "jsCode": "return [{ json: { status:'FAILED', reason:'PLACE_FAILED', human: $('Plan').first().json.notifyReqPlaceFail } }];"
       },
-      "id": "af137f1f-d3ba-4378-b88d-cd879f5b1b85",
+      "id": "f6cdc3e7-301f-48d7-9955-60afbe68236a",
       "name": "Return Place Fail",
       "position": [
-        3840,
-        368
+        6704,
+        560
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
@@ -408,11 +408,11 @@
         "height": 300,
         "width": 460
       },
-      "id": "ca508491-ce81-484c-8cb0-93587d733afb",
+      "id": "90e88e07-2af3-497d-9ad6-94bdf72518b9",
       "name": "About",
       "position": [
-        2080,
-        -240
+        4944,
+        -48
       ],
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1
@@ -453,11 +453,11 @@
         },
         "options": {}
       },
-      "id": "71cb99cd-a1c3-4d4d-851b-e7bede7003e6",
+      "id": "aa14edc2-a7e3-4bd7-ad9b-5abb5380733f",
       "name": "Cancel Hold?",
       "position": [
-        1728,
-        64
+        4592,
+        256
       ],
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2
@@ -470,11 +470,11 @@
         "nodeCredentialType": "googleCalendarOAuth2Api",
         "options": {}
       },
-      "id": "49677086-fe8e-41d6-ae8d-6a7e5253eacd",
+      "id": "b5e117c0-a6ca-48fa-8527-4a5edd54f949",
       "name": "Cancel Hold",
       "position": [
-        1952,
-        0
+        4816,
+        192
       ],
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -503,11 +503,11 @@
         "options": {}
       },
       "alwaysOutputData": true,
-      "id": "f62c31b0-90d4-4ddb-9a4f-20e3cd425f91",
+      "id": "e87804b1-8ef8-4e23-b999-49977de1add4",
       "name": "Read Row",
       "position": [
-        1536,
-        320
+        4400,
+        512
       ],
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
@@ -524,13 +524,13 @@
       "parameters": {
         "jsCode": "// v11: how it ended, for Jessie — Request Messages - the row as written, and the requester's new booking (Change / Cancel)\nconst P = $('Plan').first().json, IN = $('When Executed by Another Workflow').first().json || {};\nlet row = {}; try { row = JSON.parse(IN.row || '{}') || {}; } catch (e) { row = {}; }\ntry { const f = $('Read Row').all().map(i => i.json || {}).find(r => String(r['Request ID'] || '') === String(row['Request ID'] || '')); if (f) row = Object.assign({}, row, f); } catch (e) {}\nlet ev = {};\ntry { const b = $('Book Requester').first().json || {}; if (b.event_id) ev = { id: b.event_id, title: b.title || b.summary || '' }; } catch (e) {}\ntry { if (!ev.id) { const m = $('Move Requester').first().json || {}; if (m.event_id) ev = { id: m.event_id, title: m.title || '' }; } } catch (e) {}\nconst upd = P.rowDone;\nreturn [{ json: { row: JSON.stringify(Object.assign({}, row, upd)), extra: JSON.stringify({ how: IN.resolvedVia || '', by: IN.attestedBy || '', event: ev,\n  why: '' }) } }];\n"
       },
-      "id": "bec5241d-4311-4233-998c-4f35b06313b8",
+      "id": "5753b512-644c-445c-a645-c1f428a501ef",
       "name": "Done Info",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3632,
-        128
+        6496,
+        320
       ]
     },
     {
@@ -555,13 +555,13 @@
         },
         "options": {}
       },
-      "id": "3bc1d458-6908-497f-944d-a611f60c1e9b",
+      "id": "dca3d035-e617-476a-b82a-649734ee9def",
       "name": "Done Messages",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        3840,
-        128
+        6704,
+        320
       ],
       "alwaysOutputData": true,
       "onError": "continueRegularOutput"
@@ -570,13 +570,13 @@
       "parameters": {
         "jsCode": "// v11: how it ended, for Jessie — Request Messages - the row as written, and the requester's new booking (Change / Cancel)\nconst P = $('Plan').first().json, IN = $('When Executed by Another Workflow').first().json || {};\nlet row = {}; try { row = JSON.parse(IN.row || '{}') || {}; } catch (e) { row = {}; }\ntry { const f = $('Read Row').all().map(i => i.json || {}).find(r => String(r['Request ID'] || '') === String(row['Request ID'] || '')); if (f) row = Object.assign({}, row, f); } catch (e) {}\nlet ev = {};\ntry { const b = $('Book Requester').first().json || {}; if (b.event_id) ev = { id: b.event_id, title: b.title || b.summary || '' }; } catch (e) {}\ntry { if (!ev.id) { const m = $('Move Requester').first().json || {}; if (m.event_id) ev = { id: m.event_id, title: m.title || '' }; } } catch (e) {}\nconst upd = P.rowFailPlace;\nreturn [{ json: { row: JSON.stringify(Object.assign({}, row, upd)), extra: JSON.stringify({ how: IN.resolvedVia || '', by: IN.attestedBy || '', event: ev,\n  why: 'it’s still taken then' }) } }];\n"
       },
-      "id": "383f73b9-9508-41b8-9a3f-94e8ca087ac1",
+      "id": "dd65e1dd-6d24-4add-bab9-b614c2d58cda",
       "name": "Fail Info",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3632,
-        368
+        6496,
+        560
       ]
     },
     {
@@ -601,599 +601,13 @@
         },
         "options": {}
       },
-      "id": "49535aa6-b235-47e3-ada5-385505e6d0f8",
+      "id": "f6419d5e-5dcd-4a1e-8983-5fe51a856349",
       "name": "Fail Messages",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        3840,
-        528
-      ],
-      "alwaysOutputData": true,
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Finalize Plan - inlined from workflows/drafts/consent/finalize.js (33/33). Computes everything the\n// branches need so downstream nodes only reference $('Plan1').\nconst IN = $('When Executed by Another Workflow').first().json || {};\nfunction safeParse(s){ if(s&&typeof s==='object') return s; try{ return JSON.parse(s||''); }catch(_){ return null; } }\nfunction dateOf(iso){ try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(iso)); }catch(_){ return ''; } }\nconst row0 = safeParse(IN.row) || {};\n// v11: the row as the sheet has it now - a request that ended (or was withdrawn) since the caller read it is never placed\nlet fresh = null; try { fresh = $('Read Row1').all().map(i => i.json || {}).find(r => r['Request ID'] && String(r['Request ID']) === String(row0['Request ID'])) || null; } catch (e) { fresh = null; }\nconst row = Object.assign({}, row0, fresh || {});\nconst now = new Date().toISOString();\nfunction fail(reason){ return [{ json: { ok:false, reason:reason, rowFail:{ 'Request ID':row['Request ID'], 'Status':'FAILED', 'Resolved Via':reason, 'Decided At':now }, notifyReq:'Sorry - that request could not be completed ('+reason+'). Nothing was changed.', requester:row['Requester']||'' } }]; }\nconst status=String(row['Status']||'').toUpperCase();\nif(['DONE','REJECTED','EXPIRED','FAILED','WITHDRAWN'].indexOf(status)!==-1) return fail('ALREADY_'+status);\nif(!row['Req Start']||!row['Req End']||!row['Room/Booth']) return fail('MISSING_REQ_SLOT');\nconst req=safeParse(row['Req Payload']); if(!req) return fail('BAD_REQ_PAYLOAD');\nconst kind=String(row['Kind']||'').toUpperCase();\n// relocate the incumbent, invoked AS the incumbent (owner=true), confirmed=consent\nconst movePayload={ title:row['Incumbent Title']||'', event_id:row['Incumbent Event Id']||'', booking_date:dateOf(row['Req Start']), new_start_iso:row['Incumbent New Start']||'', new_end_iso:row['Incumbent New End']||'', new_rooms:row['Room/Booth']||'', requester:row['Approver']||'', requester_name:row['Approver Name']||'', confirmed:true, authority:'', department:'' };\n// place the requester: move their booking (kind:move) or a fresh book\nconst placeTarget=(req&&req.kind==='move')?'move':'book';\nconst placePayload = placeTarget==='move'\n  ? { title:req.title||row['Incumbent Title']||'', event_id:req.event_id||'', booking_date:req.booking_date||'', new_start_iso:req.new_start_iso||row['Req Start'], new_end_iso:req.new_end_iso||row['Req End'], new_rooms:req.new_rooms||row['Room/Booth']||'', requester:req.requester||row['Requester']||'', requester_name:req.requester_name||row['Requester Name']||'', confirmed:true, authority:'', department:'' }\n  : Object.assign({}, req, { confirmed:true, room_override:true, rooms:req.rooms||row['Room/Booth']||'', start_iso:req.start_iso||row['Req Start'], end_iso:req.end_iso||row['Req End'] });\nconst rowDone={ 'Request ID':row['Request ID'], 'Status':'DONE', 'Resolved Via':IN.resolvedVia||'', 'Attested By':IN.attestedBy||'', 'Decided At':now };\nconst rowFailMove={ 'Request ID':row['Request ID'], 'Status':'FAILED', 'Resolved Via':'MOVE_FAILED', 'Decided At':now };\nconst rowFailPlace={ 'Request ID':row['Request ID'], 'Status':'FAILED', 'Resolved Via':'PLACE_FAILED', 'Decided At':now };\nconst _isMB = String(row['Kind']||'').toUpperCase()==='MBOOTH';\nfunction whenPhrase(s,e){try{if(/^\\d{4}-\\d{2}-\\d{2}$/.test(String(s||''))){return new Date(s+'T00:00:00+08:00').toLocaleDateString('en-US',{timeZone:'Asia/Manila',month:'short',day:'numeric'})+' (all day)';}const o={timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'};const a=new Date(s).toLocaleString('en-US',o);const b=e?new Date(e).toLocaleTimeString('en-US',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'}):'';return b?(a+'\\u2013'+b):a;}catch(_){return String(s||'');}}\nconst _when = whenPhrase(row['Req Start'], row['Req End']);\nconst notifyIncumbent = _isMB\n  ? (\"You've offered your \"+row['Room/Booth']+\" booth (\"+_when+\") to \"+(row['Requester Name']||'someone')+\". Thanks for sharing!\")\n  : ('Heads up - your \"'+row['Incumbent Title']+'\" was moved to make room for a higher-priority session in '+row['Room/Booth']+\", as you OK'd. It's now at the time we agreed. Thanks!\");\nconst notifyReqOK = _isMB\n  ? ('Done - '+row['Room/Booth']+' is yours for '+_when+'. '+(row['Approver Name']||'The holder')+\" OK'd sharing the booth.\")\n  : ('Done - '+row['Room/Booth']+' is yours for the requested time. '+row['Approver Name']+' moved their session to make way.');\nconst notifyReqMoveFail=\"Couldn't free \"+row['Room/Booth']+' - '+row['Approver Name']+\"'s session couldn't be moved to the agreed slot, so nothing changed. Want to try another time or room?\";\nconst notifyReqPlaceFail = _isMB\n  ? ((row['Approver Name']||'The holder')+\" OK'd, but I couldn't book \"+row['Room/Booth']+' for you just now. Nothing is double-booked. Please try again.')\n  : (row['Approver Name']+\"'s session was moved, but I couldn't place your booking in \"+row['Room/Booth']+' just now. Nothing is double-booked. Please try again.');\nreturn [{ json: { ok:true, kind:kind, placeTarget:placeTarget, incumbentEventId: row['Incumbent Event Id']||'', movePayload:movePayload, placePayload:placePayload, rowDone:rowDone, rowFailMove:rowFailMove, rowFailPlace:rowFailPlace, notifyIncumbent:notifyIncumbent, notifyReqOK:notifyReqOK, notifyReqMoveFail:notifyReqMoveFail, notifyReqPlaceFail:notifyReqPlaceFail, approver:row['Approver']||'', requester:row['Requester']||'' } }];\n"
-      },
-      "id": "6b12048d-e81e-46b2-92a1-64b6951ebb5c",
-      "name": "Plan1",
-      "position": [
-        3280,
-        176
-      ],
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "combinator": "and",
-          "conditions": [
-            {
-              "id": "c1",
-              "leftValue": "={{ $json.ok }}",
-              "operator": {
-                "name": "filter.operator.true",
-                "operation": "true",
-                "singleValue": true,
-                "type": "boolean"
-              },
-              "rightValue": ""
-            }
-          ],
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          }
-        },
-        "options": {}
-      },
-      "id": "dfbe0393-a1bb-403d-9300-58e30f93d76c",
-      "name": "Plan OK?1",
-      "position": [
-        3504,
-        176
-      ],
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{ json: { status:'FAILED', reason: $('Plan1').first().json.reason, human: $('Plan1').first().json.notifyReq || 'The request could not be completed.' } }];"
-      },
-      "id": "48f2a01d-90b5-4bb8-916d-bd167249c3a8",
-      "name": "Return Fail1",
-      "position": [
-        3504,
-        -32
-      ],
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "combinator": "and",
-          "conditions": [
-            {
-              "id": "c1",
-              "leftValue": "={{ $('Plan1').first().json.placeTarget }}",
-              "operator": {
-                "name": "filter.operator.equals",
-                "operation": "equals",
-                "type": "string"
-              },
-              "rightValue": "move"
-            }
-          ],
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          }
-        },
-        "options": {}
-      },
-      "id": "fc8720f2-c147-48eb-843b-2e5dbce22c80",
-      "name": "Place Kind?1",
-      "position": [
-        4160,
-        176
-      ],
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "cachedResultName": "Jessie - Move Booking",
-          "mode": "id",
-          "value": "t7lwR2km4tfN8DbM"
-        },
-        "workflowInputs": {
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true,
-          "mappingMode": "defineBelow",
-          "matchingColumns": [],
-          "schema": [],
-          "value": {
-            "authority": "",
-            "booking_date": "={{ $('Plan1').first().json.placePayload.booking_date }}",
-            "confirmed": "={{ true }}",
-            "department": "",
-            "event_id": "={{ $('Plan1').first().json.placePayload.event_id }}",
-            "new_end_iso": "={{ $('Plan1').first().json.placePayload.new_end_iso }}",
-            "new_rooms": "={{ $('Plan1').first().json.placePayload.new_rooms }}",
-            "new_start_iso": "={{ $('Plan1').first().json.placePayload.new_start_iso }}",
-            "requester": "={{ $('Plan1').first().json.placePayload.requester }}",
-            "requester_name": "={{ $('Plan1').first().json.placePayload.requester_name }}",
-            "title": "={{ $('Plan1').first().json.placePayload.title }}"
-          }
-        },
-        "options": {}
-      },
-      "id": "33d90fc3-af91-407f-a2ff-e764efe96c52",
-      "name": "Move Requester1",
-      "position": [
-        4384,
-        112
-      ],
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "cachedResultName": "Jessie - Book Session",
-          "mode": "id",
-          "value": "EUG3sGXkfsJSYIMz"
-        },
-        "workflowInputs": {
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true,
-          "mappingMode": "defineBelow",
-          "matchingColumns": [],
-          "schema": [],
-          "value": {
-            "all_day": "={{ $('Plan1').first().json.placePayload.all_day }}",
-            "bookingType": "={{ $('Plan1').first().json.placePayload.bookingType }}",
-            "client": "={{ $('Plan1').first().json.placePayload.client }}",
-            "confirmed": "={{ true }}",
-            "department": "={{ $('Plan1').first().json.placePayload.department }}",
-            "description": "={{ $('Plan1').first().json.placePayload.description }}",
-            "end_iso": "={{ $('Plan1').first().json.placePayload.end_iso }}",
-            "engineer": "={{ $('Plan1').first().json.placePayload.engineer }}",
-            "reference_data": "={{ $('Plan1').first().json.placePayload.reference_data }}",
-            "room_override": "={{ true }}",
-            "rooms": "={{ $('Plan1').first().json.placePayload.rooms }}",
-            "session_type": "={{ $('Plan1').first().json.placePayload.session_type }}",
-            "start_iso": "={{ $('Plan1').first().json.placePayload.start_iso }}",
-            "summary": "={{ $('Plan1').first().json.placePayload.summary }}"
-          }
-        },
-        "options": {}
-      },
-      "id": "fa43366e-d68f-400d-ab80-3de2b0d59e5c",
-      "name": "Book Requester1",
-      "position": [
-        4384,
-        288
-      ],
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "combinator": "and",
-          "conditions": [
-            {
-              "id": "c1",
-              "leftValue": "={{ $json.status }}",
-              "operator": {
-                "name": "filter.operator.equals",
-                "operation": "equals",
-                "type": "string"
-              },
-              "rightValue": "MOVED"
-            }
-          ],
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          }
-        },
-        "options": {}
-      },
-      "id": "e3b9e512-afcd-4988-908a-c8fa0d3cad37",
-      "name": "Placed Move?1",
-      "position": [
-        4592,
-        112
-      ],
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "combinator": "and",
-          "conditions": [
-            {
-              "id": "c1",
-              "leftValue": "={{ $json.status }}",
-              "operator": {
-                "name": "filter.operator.equals",
-                "operation": "equals",
-                "type": "string"
-              },
-              "rightValue": "CREATED"
-            }
-          ],
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          }
-        },
-        "options": {}
-      },
-      "id": "1ef8dd82-7a94-425d-a414-3579cfdfab20",
-      "name": "Placed Book?1",
-      "position": [
-        4592,
-        288
-      ],
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{ json: $('Plan1').first().json.rowDone }];"
-      },
-      "id": "68657717-b83d-4cb0-9831-386ef00133e6",
-      "name": "Done Row1",
-      "position": [
-        4816,
-        176
-      ],
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2
-    },
-    {
-      "parameters": {
-        "authentication": "serviceAccount",
-        "operation": "update",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
-        },
-        "sheetName": {
-          "__rl": true,
-          "cachedResultName": "Consent Requests",
-          "mode": "list",
-          "value": "431550013"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "matchingColumns": [
-            "Request ID"
-          ],
-          "schema": [],
-          "value": {}
-        },
-        "options": {}
-      },
-      "id": "5e48748f-d3e5-4c18-a0f0-de37c323676c",
-      "name": "Mark Done1",
-      "position": [
-        5040,
-        176
-      ],
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "credentials": {
-        "googleApi": {
-          "id": "DU75rLW4KHlVhcK1",
-          "name": "Google Sheets - Jessie Log"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{ json: { status:'DONE', human: $('Plan1').first().json.notifyReqOK } }];"
-      },
-      "id": "fb84860f-285e-4295-8e5e-b0959148a525",
-      "name": "Return Done1",
-      "position": [
-        5696,
-        176
-      ],
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{ json: $('Plan1').first().json.rowFailPlace }];"
-      },
-      "id": "02380a7f-46e9-4a40-8e3e-0bfe79676981",
-      "name": "Fail Place Row1",
-      "position": [
-        4816,
-        416
-      ],
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2
-    },
-    {
-      "parameters": {
-        "authentication": "serviceAccount",
-        "operation": "update",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
-        },
-        "sheetName": {
-          "__rl": true,
-          "cachedResultName": "Consent Requests",
-          "mode": "list",
-          "value": "431550013"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "matchingColumns": [
-            "Request ID"
-          ],
-          "schema": [],
-          "value": {}
-        },
-        "options": {}
-      },
-      "id": "9d76c1b6-6539-4a36-aff8-f0f4528c6c34",
-      "name": "Mark Failed Place1",
-      "position": [
-        5040,
-        416
-      ],
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "credentials": {
-        "googleApi": {
-          "id": "DU75rLW4KHlVhcK1",
-          "name": "Google Sheets - Jessie Log"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{ json: { status:'FAILED', reason:'PLACE_FAILED', human: $('Plan1').first().json.notifyReqPlaceFail } }];"
-      },
-      "id": "d32fff45-830f-4541-9f8b-ef5e07f38208",
-      "name": "Return Place Fail1",
-      "position": [
-        5472,
-        416
-      ],
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2
-    },
-    {
-      "parameters": {
-        "content": "## Finalize Consent\nOn an APPROVED consent request: relocate the incumbent via Move Booking (as the incumbent, owner=true), then PLACE the requester - by Move (move-preempt) or Book (book-preempt), per placeTarget. All-or-nothing move-first. Marks the Consent Requests row DONE/FAILED and notifies both. Logic mirrors workflows/drafts/consent/finalize.js (33/33). executeWorkflow/Sheets-update wiring validates at the coordinated live QA. Inactive until wired.\n\nv11 (slice 2): reads the row again first (an ended / withdrawn request is never placed); the outcome updates every message of the request through Jessie — Request Messages instead of plain DMs.",
-        "height": 300,
-        "width": 460
-      },
-      "id": "a32fc398-cd14-49a7-833b-ac07fca58e60",
-      "name": "About1",
-      "position": [
-        3712,
-        -192
-      ],
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "combinator": "and",
-          "conditions": [
-            {
-              "id": "ck",
-              "leftValue": "={{ $('Plan1').first().json.kind }}",
-              "operator": {
-                "name": "filter.operator.equals",
-                "operation": "equals",
-                "type": "string"
-              },
-              "rightValue": "MBOOTH"
-            },
-            {
-              "id": "ci",
-              "leftValue": "={{ $('Plan1').first().json.incumbentEventId }}",
-              "operator": {
-                "name": "filter.operator.notEmpty",
-                "operation": "notEmpty",
-                "singleValue": true,
-                "type": "string"
-              },
-              "rightValue": ""
-            }
-          ],
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          }
-        },
-        "options": {}
-      },
-      "id": "ba3cd424-0a80-4073-a1d1-7f76925a8acf",
-      "name": "Cancel Hold?1",
-      "position": [
-        3360,
-        112
-      ],
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2
-    },
-    {
-      "parameters": {
-        "method": "DELETE",
-        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent($('Plan1').first().json.incumbentEventId) }}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleCalendarOAuth2Api",
-        "options": {}
-      },
-      "id": "b2d2c354-e41e-4b25-ac9d-02501447acca",
-      "name": "Cancel Hold1",
-      "position": [
-        3584,
-        48
-      ],
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "credentials": {
-        "googleCalendarOAuth2Api": {
-          "id": "6D1r3kaq6KaFdL0a",
-          "name": "Google Calendar account"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "authentication": "serviceAccount",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
-        },
-        "sheetName": {
-          "__rl": true,
-          "cachedResultName": "Consent Requests",
-          "mode": "list",
-          "value": "431550013"
-        },
-        "options": {}
-      },
-      "alwaysOutputData": true,
-      "id": "f140d8c3-4417-443f-962b-d08b57d61f51",
-      "name": "Read Row1",
-      "position": [
-        3168,
-        368
-      ],
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "executeOnce": true,
-      "credentials": {
-        "googleApi": {
-          "id": "DU75rLW4KHlVhcK1",
-          "name": "Google Sheets - Jessie Log"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "// v11: how it ended, for Jessie — Request Messages - the row as written, and the requester's new booking (Change / Cancel)\nconst P = $('Plan1').first().json, IN = $('When Executed by Another Workflow').first().json || {};\nlet row = {}; try { row = JSON.parse(IN.row || '{}') || {}; } catch (e) { row = {}; }\ntry { const f = $('Read Row1').all().map(i => i.json || {}).find(r => String(r['Request ID'] || '') === String(row['Request ID'] || '')); if (f) row = Object.assign({}, row, f); } catch (e) {}\nlet ev = {};\ntry { const b = $('Book Requester1').first().json || {}; if (b.event_id) ev = { id: b.event_id, title: b.title || b.summary || '' }; } catch (e) {}\ntry { if (!ev.id) { const m = $('Move Requester1').first().json || {}; if (m.event_id) ev = { id: m.event_id, title: m.title || '' }; } } catch (e) {}\nconst upd = P.rowDone;\nreturn [{ json: { row: JSON.stringify(Object.assign({}, row, upd)), extra: JSON.stringify({ how: IN.resolvedVia || '', by: IN.attestedBy || '', event: ev,\n  why: '' }) } }];\n"
-      },
-      "id": "80325a9d-81af-4d16-87f6-33b1226fad67",
-      "name": "Done Info1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        5264,
-        176
-      ]
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "wyrOstv3g0BcIzdV",
-          "cachedResultName": "Jessie — Request Messages"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "mode": "end",
-            "row": "={{ $json.row }}",
-            "extra": "={{ $json.extra }}"
-          },
-          "matchingColumns": [],
-          "schema": [],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true
-        },
-        "options": {}
-      },
-      "id": "bb296daf-c347-468f-8bee-8d89ae53081e",
-      "name": "Done Messages1",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [
-        5472,
-        176
-      ],
-      "alwaysOutputData": true,
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "// v11: how it ended, for Jessie — Request Messages - the row as written, and the requester's new booking (Change / Cancel)\nconst P = $('Plan1').first().json, IN = $('When Executed by Another Workflow').first().json || {};\nlet row = {}; try { row = JSON.parse(IN.row || '{}') || {}; } catch (e) { row = {}; }\ntry { const f = $('Read Row1').all().map(i => i.json || {}).find(r => String(r['Request ID'] || '') === String(row['Request ID'] || '')); if (f) row = Object.assign({}, row, f); } catch (e) {}\nlet ev = {};\ntry { const b = $('Book Requester1').first().json || {}; if (b.event_id) ev = { id: b.event_id, title: b.title || b.summary || '' }; } catch (e) {}\ntry { if (!ev.id) { const m = $('Move Requester1').first().json || {}; if (m.event_id) ev = { id: m.event_id, title: m.title || '' }; } } catch (e) {}\nconst upd = P.rowFailPlace;\nreturn [{ json: { row: JSON.stringify(Object.assign({}, row, upd)), extra: JSON.stringify({ how: IN.resolvedVia || '', by: IN.attestedBy || '', event: ev,\n  why: 'it’s still taken then' }) } }];\n"
-      },
-      "id": "b16d00ba-017a-4ad9-968b-66d32bb651c6",
-      "name": "Fail Info1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        5264,
-        416
-      ]
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "wyrOstv3g0BcIzdV",
-          "cachedResultName": "Jessie — Request Messages"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "mode": "end",
-            "row": "={{ $json.row }}",
-            "extra": "={{ $json.extra }}"
-          },
-          "matchingColumns": [],
-          "schema": [],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true
-        },
-        "options": {}
-      },
-      "id": "836b9870-f6e9-4b99-a1e1-619adb02b3a5",
-      "name": "Fail Messages1",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [
-        5472,
-        576
+        6704,
+        720
       ],
       "alwaysOutputData": true,
       "onError": "continueRegularOutput"
@@ -1444,239 +858,6 @@
           }
         ]
       ]
-    },
-    "Plan1": {
-      "main": [
-        [
-          {
-            "node": "Plan OK?1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Plan OK?1": {
-      "main": [
-        [
-          {
-            "node": "Place Kind?1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Return Fail1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Place Kind?1": {
-      "main": [
-        [
-          {
-            "node": "Move Requester1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Cancel Hold?1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Move Requester1": {
-      "main": [
-        [
-          {
-            "node": "Placed Move?1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Book Requester1": {
-      "main": [
-        [
-          {
-            "node": "Placed Book?1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Placed Move?1": {
-      "main": [
-        [
-          {
-            "node": "Done Row1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Fail Place Row1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Placed Book?1": {
-      "main": [
-        [
-          {
-            "node": "Done Row1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Fail Place Row1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Done Row1": {
-      "main": [
-        [
-          {
-            "node": "Mark Done1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mark Done1": {
-      "main": [
-        [
-          {
-            "node": "Done Info1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fail Place Row1": {
-      "main": [
-        [
-          {
-            "node": "Mark Failed Place1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mark Failed Place1": {
-      "main": [
-        [
-          {
-            "node": "Fail Info1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Cancel Hold?1": {
-      "main": [
-        [
-          {
-            "node": "Cancel Hold1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Book Requester1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Cancel Hold1": {
-      "main": [
-        [
-          {
-            "node": "Book Requester1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Read Row1": {
-      "main": [
-        [
-          {
-            "node": "Plan1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Done Info1": {
-      "main": [
-        [
-          {
-            "node": "Done Messages1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Done Messages1": {
-      "main": [
-        [
-          {
-            "node": "Return Done1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fail Info1": {
-      "main": [
-        [
-          {
-            "node": "Fail Messages1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fail Messages1": {
-      "main": [
-        [
-          {
-            "node": "Return Place Fail1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
   "active": true,
@@ -1684,7 +865,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "615b3177-9873-4054-99d7-245adf5337a6",
+  "versionId": "112dcb9b-b519-42d7-8b4d-2935912486ae",
   "meta": {
     "instanceId": "47b8f2db30f5474de1dd72088d2efb6e9f5862c79e8ac68a94619b94d7aeb560"
   },
