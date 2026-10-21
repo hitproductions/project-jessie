@@ -7,7 +7,8 @@ const fs = require('fs');
 const RM = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/reminders-v1.json', 'utf8'));
 const SI = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v35.json', 'utf8'));
 const FX = require('./sim-fixture-rooms.js');
-const ALL = JSON.stringify(RM.nodes).indexOf('const ALL_TO_DEV = true;') !== -1;   // v2: every reminder to Howard during QA
+const ALL = JSON.stringify(RM.nodes).indexOf('const ALL_TO_DEV = true;') !== -1;
+const V3 = JSON.stringify(RM.nodes).indexOf('REMINDER: You have') !== -1;   // v3: a reminder - cards with Change / Cancel, no Still on   // v2: every reminder to Howard during QA
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('FAIL ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
 const node = (wf, n) => wf.nodes.find(x => x.name === n);
@@ -52,13 +53,21 @@ const items = [
   ok(!out.some(o => ids(o).some(x => ['ev5', 'ev6', 'ev7', 'ev3', 'ev4'].indexOf(x) !== -1)), 'not: a tablet booking (no ref), tomorrow+1, a cancelled event, M booths, meetings');
   const m = by['U2'][0];
   ok(m.channel === 'U08V3CKDGJF' && /Test: this reminder is for Daryl Reyes/.test(JSON.stringify(m.blocks)), 'QA: Daryl is not on ALLOW -> to Howard, marked "Test: … for Daryl Reyes"');
+  if (V3) {
+    ok(m.blocks[0].text.text === '🔔 *REMINDER: You have a booking tomorrow*' && m.text === 'Reminder: you have a booking tomorrow', 'v3: one booking -> "You have a booking tomorrow"', m.blocks[0].text.text);
+    const card = m.blocks.find(b => b.block_id === 'bk_ev1').text.text;
+    ok(card === '*SONG / Jem Lim / DR x AV*\n*Date:* Friday, October 22, 2027\n*Time:* 2:00 PM – 4:00 PM\n*Room:* Studio F', 'v3: the booking as a card - title, Date, Time, Room', card);
+    const a3 = m.blocks.find(b => b.block_id === 'bka_ev1').elements;
+    ok(a3.map(x => x.action_id + ':' + x.text.text).join() === 'bk_change:Change,bk_cancel:Cancel' && a3[1].confirm && !m.blocks.some(b => b.block_id === 'rm_nav'), 'v3: Change / Cancel only (Cancel asks first), no Still on, no My bookings');
+    ok(m.blocks[m.blocks.length - 1].type === 'context', 'v3: the test line at the bottom');
+  }
   if (ALL) ok(out.every(o => o.channel === 'U08V3CKDGJF') && /Test: this reminder is for Camy Caridad/.test(JSON.stringify(by['U098UFMKQHZ'][0].blocks)) && !/Test:/.test(JSON.stringify(by['U08V3CKDGJF'][0].blocks)),
     'QA (v2): every reminder to Howard - Camy (on ALLOW) too, marked; Howard\'s own unmarked');
   else ok(by['U098UFMKQHZ'][0].channel === 'U098UFMKQHZ' && !/Test:/.test(JSON.stringify(by['U098UFMKQHZ'][0].blocks)), 'QA: Camy is on ALLOW -> to Camy herself');
   const acts = m.blocks.find(b => b.block_id === 'bka_ev1').elements;
-  ok(acts.map(a => a.action_id + ':' + a.text.text).join() === 'rm_keep:Still on,bk_change:Change,bk_cancel:Free up the room' && acts[2].confirm.title.text === 'Free up this room?' && JSON.parse(acts[1].value).id === 'ev1',
+  if (!V3) ok(acts.map(a => a.action_id + ':' + a.text.text).join() === 'rm_keep:Still on,bk_change:Change,bk_cancel:Free up the room' && acts[2].confirm.title.text === 'Free up this room?' && JSON.parse(acts[1].value).id === 'ev1',
      'Still on / Change / Free up the room (Slack\'s confirm), the row ids bk_ / bka_ as My bookings', acts.map(a => a.action_id));
-  ok(/📅 \*Tomorrow\* · Friday, October 22, 2027/.test(m.blocks.find(b => b.type === 'section').text.text), 'the header: Tomorrow · Friday, October 22, 2027');
+  if (!V3) ok(/📅 \*Tomorrow\* · Friday, October 22, 2027/.test(m.blocks.find(b => b.type === 'section').text.text), 'the header: Tomorrow · Friday, October 22, 2027');
   ok((await run(RM, 'Build Reminders', [], { 'Window': [{ json: W1 }], 'List Events R': [{ json: { error: 'boom' } }], 'Read Cache R': cache })).length === 0, 'the calendar could not be read -> nothing sent');
   console.log('Monday 9:00 AM');
   out = (await run(RM, 'Build Reminders', [], { 'Window': [{ json: { kind: 'weekly', start: '2027-10-18', end: '2027-10-25' } }], 'List Events R': [{ json: { items } }], 'Read Cache R': cache })).map(i => i.json);
@@ -66,7 +75,9 @@ const items = [
   ok(H && ids(H).join() === 'ev2,ev3,ev6', 'Howard\'s week: the Post Processing, the M4 booth, Saturday\'s VO - in time order', H && ids(H));
   ok(J && ids(J).join() === 'ev3', 'Japs (who the M4 booth is for) gets it too');
   ok(C && ids(C).join() === 'ev1,ev4', 'Camy: her studio session and her Likha meeting');
-  ok(H.blocks.find(b => b.block_id === 'bka_ev3').elements[0].text.text === 'Keep' && JSON.parse(H.blocks.find(b => b.block_id === 'bka_ev3').elements[0].value).w === 'weekly' && /Your week/.test(JSON.stringify(H.blocks)), 'Keep / Change / Free up; "Your week"');
+  if (V3) ok(/🔔 \*REMINDER: You have bookings this week\*\nMon, Oct 18 – Sun, Oct 24/.test(H.blocks[0].text.text) && H.blocks.filter(b => b.type === 'divider').length === 2 && /Reminder: you have 3 bookings this week/.test(H.text)
+     && /You have a booking this week/.test(J.blocks[0].text.text), 'v3 Monday: "You have bookings this week" + the dates, a line between bookings; one -> "a booking"', H.blocks[0].text.text);
+  else ok(H.blocks.find(b => b.block_id === 'bka_ev3').elements[0].text.text === 'Keep' && JSON.parse(H.blocks.find(b => b.block_id === 'bka_ev3').elements[0].value).w === 'weekly' && /Your week/.test(JSON.stringify(H.blocks)), 'Keep / Change / Free up; "Your week"');
   console.log('Slack Interactions v35: Still on / Keep');
   const cs = SI.nodes.find(n => n.name === 'Check Signature').parameters.jsCode;
   const route = (await run(SI, 'Check Signature', [{ json: { computed: 'abc' } }], { 'Read Request': [{ json: { sig: 'v0=abc', ts: String(Math.floor(Date.now() / 1000)), payload: { type: 'block_actions', actions: [{ action_id: 'rm_keep' }] } } }] }))[0].json.route;
