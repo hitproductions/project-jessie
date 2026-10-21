@@ -6,6 +6,9 @@ dropdown a "Clear selection" line; the phone app does not - so since v26 (which 
 showed both) an optional booth / engineer / arranger, once picked, could not be emptied on a phone. The optional dropdowns get
 their "No …" choice back, last in the list: Book (Vocal booth when not required, Engineer when an arranger also counts, Arranger
 unless it is the only role) and Change (Vocal booth, Engineer when optional, Arranger). Every reader already treats "none" as empty.
+  Then (Howard: "is Clear selection redundant now?"): Slack draws "Clear selection" only on OPTIONAL dropdowns, so those become
+  required with the "No …" choice picked by default - no "(optional)" tag, no "Clear selection". Repeats' How many times gets
+  "Use the end date" (a phone could not go back to Or until once a number was picked); Read Step 1 reads it as no number.
 Built on workflows/imported/slack-interactions-v38-imported.json (the live download).
 """
 import json
@@ -30,6 +33,27 @@ REPS = [
     ("sel('det_arranger_pick', arrs, V.ar, 'No arranger')",
      "sel('det_arranger_pick', arrs.concat([" + NO("arranger") + "]), V.ar, 'No arranger')"),
 ]
+# v39 (Howard, 22 Oct: "is Clear selection redundant now?"): Slack draws "Clear selection" only on OPTIONAL dropdowns - so the ones
+# with a "No …" choice become required with it picked by default, and the line goes away (desktop showed both).
+NOB = NO("booth")
+REPS += [
+    ("const el = Object.assign({ type: 'static_select', action_id: 'booth_pick', placeholder: pt(BX.need ? 'Select a booth' : 'No booth'), options: opts }, BX.need ? { initial_option: opts[0] } : {});",
+     "const el = Object.assign({ type: 'static_select', action_id: 'booth_pick', placeholder: pt(BX.need ? 'Select a booth' : 'No booth'), options: opts }, { initial_option: BX.need ? opts[0] : opts[opts.length - 1] });   // v39: \"No booth\" picked"),
+    ("return [Object.assign({ type: 'input', block_id: bid, label: pt('Vocal booth'), element: el }, BX.need ? {} : { optional: true })];",
+     "return [{ type: 'input', block_id: bid, label: pt('Vocal booth'), element: el }];   // v39: required (no Slack \"Clear selection\"), \"No booth\" picked"),
+    ("const engineer = input('engineer', 'Engineer', engEl, RR.either ? { optional: true } : {});",
+     "if (!engEl.initial_option && RR.either) engEl.initial_option = NONE_E;   // v39: required, \"No engineer\" picked\n  const engineer = input('engineer', 'Engineer', engEl, {});"),
+    ("const arranger = arrs.length ? input('arranger', 'Arranger', arrEl, (RR.known && RR.arr && !RR.eng) ? {} : { optional: true }) : null;",
+     "if (!arrEl.initial_option && !(RR.known && RR.arr && !RR.eng)) arrEl.initial_option = NONE_A;   // v39: required, \"No arranger\" picked\n  const arranger = arrs.length ? input('arranger', 'Arranger', arrEl, {}) : null;"),
+    ("out.push({ type: 'input', block_id: 'booth_c', optional: true, label: pt('Vocal booth'), element: Object.assign({ type: 'static_select', action_id: 'booth_c_pick', placeholder: pt('No booth'), options: bo.concat([" + NOB + "]) }, bi ? { initial_option: bi } : {}) }); }",
+     "out.push({ type: 'input', block_id: 'booth_c', label: pt('Vocal booth'), element: Object.assign({ type: 'static_select', action_id: 'booth_c_pick', placeholder: pt('No booth'), options: bo.concat([" + NOB + "]) }, { initial_option: bi || " + NOB + " }) }); }   // v39: required, \"No booth\" picked"),
+    ("sel('det_engineer_pick', opt ? engs.concat([" + NO("engineer") + "]) : engs, V.en, opt ? 'No engineer' : 'Select an engineer'), opt)",
+     "sel('det_engineer_pick', opt ? engs.concat([" + NO("engineer") + "]) : engs, opt ? (V.en || 'none') : V.en, opt ? 'No engineer' : 'Select an engineer'), false)   /* v39: required, \"No engineer\" picked */"),
+    ("sel('det_arranger_pick', arrs.concat([" + NO("arranger") + "]), V.ar, 'No arranger'), true)",
+     "sel('det_arranger_pick', arrs.concat([" + NO("arranger") + "]), V.ar || 'none', 'No arranger'), false)   /* v39: required, \"No arranger\" picked */"),
+    ("const counts = []; for (let i = 2; i <= 16; i++) counts.push({ text: pt(i + ' times'), value: String(i) });",
+     "const counts = []; for (let i = 2; i <= 16; i++) counts.push({ text: pt(i + ' times'), value: String(i) });\n  counts.push({ text: pt('Use the end date'), value: '0' });   // v39: a phone cannot clear a picked number - this hands over to \"Or until\""),
+]
 hits = {i: 0 for i in range(len(REPS))}
 for n in wf["nodes"]:
     js = n["parameters"].get("jsCode")
@@ -43,7 +67,7 @@ for n in wf["nodes"]:
     n["parameters"]["jsCode"] = js
 assert all(hits.values()), hits
 print("replacements:", hits)
-wf["name"] = "Jessie — Slack Interactions — v39 (No booth / engineer / arranger again)"
+wf["name"] = "Jessie — Slack Interactions — v39 (No booth / engineer / arranger, no Clear selection)"
 with open(OUT, "w") as f:
     json.dump(wf, f, indent=2, ensure_ascii=False)
     f.write("\n")

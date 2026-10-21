@@ -12,11 +12,19 @@ if (!/function arrFirst\(/.test(JSON.stringify(si.nodes))) { console.log('0 ok, 
 const FX = require('./sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('FAIL ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
+// v39 (22 Oct): the "No …" dropdowns became required with "No …" picked (no Slack "Clear selection"). The checks below were written
+// for optional + empty, which means the same thing - so on v39+ a picked "No …" reads as empty and optional (sim-v39-dropdowns checks v39 itself)
+const V39B = (wf => JSON.stringify(wf.nodes).indexOf('required (no Slack') !== -1);
+function norm39(x, wf) { if (!V39B(wf)) return x; const walk = o => { if (Array.isArray(o)) return o.forEach(walk); if (!o || typeof o !== 'object') return;
+    if (o.type === 'input' && o.element && o.element.type === 'static_select' && (o.element.options || []).some(p => p.value === 'none')) {
+      o.optional = true; if (o.element.initial_option && o.element.initial_option.value === 'none') delete o.element.initial_option; }
+    for (const k of Object.keys(o)) walk(o[k]); };
+  walk(x); return x; }
 async function run(wf, name, input, outs) {
   const js = wf.nodes.find(x => x.name === name).parameters.jsCode;
   const $ = n => ({ first: () => (outs[n] || [])[0], all: () => outs[n] || [] });
   const $input = { first: () => input[0], all: () => input };
-  return new Function('$', '$input', 'return (async function(){' + js + '\n}).call(this);').call({ helpers: {} }, $, $input);
+  return norm39(await new Function('$', '$input', 'return (async function(){' + js + '\n}).call(this);').call({ helpers: {} }, $, $input), wf);
 }
 const ST = (t, roles, pri) => ({ id: 'st-' + t, fields: { Type: t, Priority: pri || ['rf', 'r7', 'r8', 'rc'], 'Last Resort': [], 'Engineer Role Required': roles, 'Room Requirements': '' } });
 const ME = 'Music Engineer', MA = 'Music Arranger';

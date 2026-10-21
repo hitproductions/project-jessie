@@ -12,10 +12,18 @@ const FX = require('./sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = n => si.nodes.find(x => x.name === n).parameters.jsCode;
+// v39 (22 Oct): the "No …" dropdowns became required with "No …" picked (no Slack "Clear selection"). The checks below were written
+// for optional + empty, which means the same thing - so on v39+ a picked "No …" reads as empty and optional (sim-v39-dropdowns checks v39 itself)
+const V39B = (wf => JSON.stringify(wf.nodes).indexOf('required (no Slack') !== -1);
+function norm39(x, wf) { if (!V39B(wf)) return x; const walk = o => { if (Array.isArray(o)) return o.forEach(walk); if (!o || typeof o !== 'object') return;
+    if (o.type === 'input' && o.element && o.element.type === 'static_select' && (o.element.options || []).some(p => p.value === 'none')) {
+      o.optional = true; if (o.element.initial_option && o.element.initial_option.value === 'none') delete o.element.initial_option; }
+    for (const k of Object.keys(o)) walk(o[k]); };
+  walk(x); return x; }
 async function run(name, input, outs) {
   const $ = n => ({ first: () => (outs[n] || [])[0], all: () => outs[n] || [] });
   const $input = { first: () => input[0], all: () => input };
-  return new Function('$', '$input', 'return (async function(){' + jsOf(name) + '\n}).call(this);').call({ helpers: {} }, $, $input);
+  return norm39(await new Function('$', '$input', 'return (async function(){' + jsOf(name) + '\n}).call(this);').call({ helpers: {} }, $, $input), si);
 }
 const j1 = async (...a) => (await run(...a))[0].json;
 const bookers = FX.bookers.concat([{ id: 'b9', fields: { Name: 'Joaquin Santos', Initials: 'JS', 'Slack User ID': 'U9', Info: 'Music Arranger, Goes by Joaquin.' } }]);
