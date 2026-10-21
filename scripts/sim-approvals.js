@@ -88,7 +88,12 @@ const uniq = bl => bl.every(b => { const a = (b.elements || []).map(e => e.actio
   ok(/Jem Santos let you use it/.test(o[0].blocks[0].text.text), 'shared booth, let use: "Jem Santos let you use it."');
   const col = (await run(RM, 'Collect', [{ json: { ok: true, channel: 'D1', ts: '5.1' } }, { json: { ok: false, error: 'channel_not_found' } }], { 'Render': [{ json: { r: 'r', u: 'U7', channel: HOWARD } }, { json: { r: 'a1', u: 'U2', channel: HOWARD } }] }))[0].json;
   ok(col.messages.length === 1 && col.messages[0].t === '5.1' && col.failed[0] === 'a1: channel_not_found', 'Collect: where each went; a failed one said');
-  ok(/const DEV_REDIRECT = 'U08V3CKDGJF';/.test(node(RM, 'Render').parameters.jsCode) && /const ALL_TO_DEV = true;/.test(node(RM, 'Render').parameters.jsCode), 'launch switch: DEV_REDIRECT + ALL_TO_DEV in Render');
+  ok(/const DEV_REDIRECT = 'U08V3CKDGJF';/.test(node(RM, 'Render').parameters.jsCode) && /const ALL_TO_DEV = (true|false);/.test(node(RM, 'Render').parameters.jsCode), 'launch switch: DEV_REDIRECT + ALL_TO_DEV in Render');
+  if (/const ALL_TO_DEV = false;/.test(node(RM, 'Render').parameters.jsCode)) {   // v2 (21 Oct, QA): the QA roster gets its own
+    const q = await render('open', baseRow({ 'Requester': 'U098UFMKQHZ', 'Requester Name': 'Camy Caridad', 'Approver': HOWARD, 'Approver Name': 'Howard Luistro', 'Approver 2': 'U2' }));
+    ok(q.map(x => x.r + '>' + x.channel).join() === 'r>U098UFMKQHZ,a1>' + HOWARD + ',a2>' + HOWARD && !/Test:/.test(JSON.stringify(q[0].blocks)) && !/Test:/.test(JSON.stringify(q[1].blocks))
+       && /Test: this is for Angelo Villegas/.test(JSON.stringify(q[2].blocks)), 'v2 (QA): Camy gets her own card, Howard his request; the engineer (not on the QA list) comes to Howard, marked - one each, no copies', q.map(x => x.r + '>' + x.channel));
+  }
 
   console.log('Open Consent Request v12');
   const trig = { requester: 'U7', requesterName: 'Celeste Cruz', approver: 'U2', approverName: '', room: 'Studio F', reqStart: '2027-10-22T14:00:00+08:00', reqEnd: '2027-10-22T16:00:00+08:00',
