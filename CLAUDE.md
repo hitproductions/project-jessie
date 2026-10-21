@@ -245,6 +245,7 @@ because it read like a build number.
 | `Jessie — Log Booking` | `vmmb0fDD0PXd9443` | writes a booking's Jessie Log row and New Clients row **after** the reply; Book Session (v112+) calls it without waiting. Inputs `log`, `client` (each a row as JSON text) Since v2 (round 12b) also a Localization / QC project code Airtable Localization Projects does not have -> the **New Projects** tab (For Review; gid `47909145`, created 20 Oct, row 1: Code, Status, Booked by, Session Type, Department, Booking Date, Room(s), Calendar Title, Event ID, Added) |
 | `Jessie — Room Check` | `CB3JPU052OfHFIQr` | the rooms' answer **after** "Booked." (Book Session v117+ calls it without waiting): reads the event back at ~2 / 6 / 16 s; a room resource that declined -> the event deleted, the booker DM'd (Book a room / My bookings), a ROOM_DECLINED Log row |
 | `Jessie — Reminders` | `56EXEU8aE4OL3eM6` | slice 2, **live 20 Oct ~23:48**: 4:00 PM daily, a DM about tomorrow's studio sessions; Monday 9:00 AM, the week's bookings (studios, M booths, meeting rooms) - to the booker, the engineer / arranger and a staff member named as who it is for; Still on / Change / Free up the room (Keep on Mondays, Slack Interactions v35). Its own YEAR_SHIFT and DEV_REDIRECT (launch switches) |
+| `Jessie — Request Messages` | (new - id once imported) | slice 2, **built 21 Oct, not imported**: every message of a room request (priority or shared booth) in one place - posts the requester's card and the request with buttons (open), and updates each in place when the request ends (end). Called by Open Consent Request v12, Finalize v11, Consent Sweep v3, Slack Interactions v37. Its own DEV_REDIRECT + ALL_TO_DEV (every request message to Howard while testing). Design: `docs/design/slice-2-approvals.md` |
 | `Jessie — Slack Signature` | `R06CBQNhFK0x4ZuO` | holds the Slack signing secret (pasted once into its **Sign** node) and returns only the HMAC of what it is given; saves no executions. **Never re-import it** - that erases the secret |
 
 The **consent engine** (the three workflows above) handles two callers that both need someone's OK before
@@ -254,7 +255,9 @@ their hold instance is cancelled and the requester is booked). State lives in th
 the Jessie Log Google Sheet (gid `431550013`), one row per request. Detection + the request are wired into
 `Book Session`/`Move Booking`; the reply-router + `Call Finalize` live in `Project Jessie v2`. Design:
 `docs/design/consent-engine.md` + `docs/design/mbooth-approval.md`. During QA, consent DMs reach the dev +
-QA roster (Howard, Trish, Camy, Jess, Tel, Tara, Genzo) and everyone else is redirected to Howard. The
+QA roster (Howard, Trish, Camy, Jess, Tel, Tara, Genzo) and everyone else is redirected to Howard. **Slice 2 (built 21 Oct, not imported):**
+buttons instead of typed replies, the row keeps the real ids, every request message goes to Howard while testing (Jessie — Request Messages), the
+form asks through "Booked – ask to use" - `docs/design/slice-2-approvals.md`. The
 launch flip is `DEV_REDIRECT=''` in the three spots (see *Before launch* #2 and `docs/launch-checklist.md`).
 
 Airtable base `app8GQxEInqJi1NRP` · calendar `c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com`
@@ -304,6 +307,8 @@ only script that writes to n8n.
 | `./scripts/set-log-booking-id.py <id>` | puts Jessie — Log Booking's new workflow id into the newest Book Session build's Log Booking node (after Log Booking is imported, before Book Session is) |
 | `./scripts/check-launch-switches` · `--builds` | every QA / launch switch (YEAR_SHIFT, DEV_REDIRECT, the prompt's +1 year, ALLOW) across every Jessie workflow, live or the newest builds; says OK: QA, OK: LAUNCH or MIXED (exit 1). Files only |
 | `./scripts/flip-launch-switches` · `--builds` | writes the launch builds (each switched workflow as its next build number, only the switches changed); then `check-launch-switches --builds` must say OK: LAUNCH. Steps: `docs/launch-checklist.md` section 0 |
+| `node scripts/sim-approvals.js` · `[request-messages] [open-consent] [finalize] [sweep] [room-availability] [book-session] [si]` | slice 2 (21 Oct), every new piece through the real nodes: the request messages (open / every ending), Open Consent Request v12's row (real ids, engineer, names, asked twice), Finalize v11 (row read again, WITHDRAWN), Sweep v3 (no answer), Book Session v120 (request_ok), Slack Interactions v37 (Booked – ask to use, Send request, the buttons, I've cleared it with them) |
+| `./scripts/set-request-messages-id.py <id>` | puts Jessie — Request Messages' new id into the newest Open Consent Request, Finalize, Sweep and Slack Interactions builds (after it is imported, before they are) |
 | `node scripts/sim-shortcuts.js` · `[si] [main]` | Slack Interactions v36: Book another / Book a room + My bookings at the end of results (Booked, series, Changed, Cancelled), a Booked card never overwritten by the next booking, Post Processing's "booked this for you" |
 | `node scripts/sim-reminders.js` · `[reminders] [si]` | Jessie — Reminders (who gets which booking, the day / week windows, the QA redirect) and Slack Interactions v35 (Keep; other rooms when no usual room is free) |
 | `./scripts/check-fromai <file>` | catches an unescaped apostrophe in a `$fromAI` description before it takes the agent down |

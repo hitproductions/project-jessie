@@ -13,7 +13,7 @@ const ROOT = path.join(__dirname, '..');
 const BUILDS = process.argv.includes('--builds');
 const NAMES = { 'project-jessie': 'main', 'slack-interactions': 'Slack Interactions', 'cancel-booking': 'Cancel Booking', 'move-booking': 'Move Booking',
   'reminders': 'Reminders', 'book-session': 'Book Session', 'room-check': 'Room Check', 'log-booking': 'Log Booking', 'book-series': 'Book Series',
-  'open-consent-request': 'Open Consent Request' };
+  'open-consent-request': 'Open Consent Request', 'request-messages': 'Request Messages' };
 const vers = (dir, re) => fs.existsSync(dir) ? fs.readdirSync(dir).map(x => [x, x.match(re)]).filter(x => x[1]).map(x => [path.join(dir, x[0]), Number(x[1][1])]) : [];
 const top = a => a.length ? a.sort((x, y) => x[1] - y[1])[a.length - 1] : null;
 const out = [];
@@ -21,7 +21,7 @@ for (const k of Object.keys(NAMES)) {
   const builds = vers(path.join(ROOT, 'workflows'), new RegExp('^' + k + '-v(\\d+)\\.json$'));
   const live = vers(path.join(ROOT, 'workflows', 'imported'), new RegExp('^' + k + '-v(\\d+)-imported\\.json$'));
   let src = BUILDS ? (top(builds) || top(live)) : (top(live) || top(builds));
-  if (k === 'open-consent-request') {   // always the 29 Sep snapshot - what runs (v11 is an unimported candidate, never import it by the way)
+  if (k === 'open-consent-request' && !BUILDS && !live.length) {   // until v12 is imported, the 29 Sep snapshot is what runs (v11 was never imported)
     const snap = path.join(ROOT, 'workflows', 'live', 'jessie-open-consent-request__nEHnCMMXS0am59Zy.json');
     if (fs.existsSync(snap)) src = [snap, 0];
   }

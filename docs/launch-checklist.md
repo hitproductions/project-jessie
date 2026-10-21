@@ -51,7 +51,9 @@ pinged. Flip one constant per sub-workflow and notifications go to the real book
 |---|---|---|---|
 | `Cancel Booking` → `Build Recipients` | `const DEV_REDIRECT = '…';` | `'U08V3CKDGJF'` (Howard) | `''` |
 | `Move Booking` → `Build Recipients` | `const DEV_REDIRECT = '…';` | `'U08V3CKDGJF'` (Howard) | `''` |
-| **`Open Consent Request` → `Build Request`** (consent engine) | `const DEV_REDIRECT = '…';` | `'U08V3CKDGJF'` (Howard) | `''` |
+| **`Open Consent Request` → `Build Request`** (consent engine) | `const DEV_REDIRECT = '…';` | `'U08V3CKDGJF'` (Howard) | `''` | *(until Open Consent Request v12 is imported - from v12 the row keeps the real ids and the redirect is in Request Messages, below)*
+| **`Jessie — Request Messages` → `Render`** (slice 2, 21 Oct: every message of a room request) | `const DEV_REDIRECT = '…';` (+ `ALL_TO_DEV = true`: every request message to Howard, the QA roster included - inert once the redirect is `''`) | `'U08V3CKDGJF'` (Howard) | `''` |
+| **`Jessie — Slack Interactions` → `Request Act`, `Give Up Plan`** (v37: Howard answers a request for whoever it is for while testing) | `const DEV_REDIRECT = '…';` | `'U08V3CKDGJF'` (Howard) | `''` |
 | **`Jessie — Slack Interactions` → `Booked Notices`, `Series Notices`, `Change Notices`** (v18+, engineer / arranger notices) | `const DEV_REDIRECT = '…';` (one constant in `NOTICE_JS`, `scripts/build-slack-interactions-vN.py` - rebuild with `''`) | `'U08V3CKDGJF'` (Howard) | `''` |
 | **`Jessie — Reminders` → `Build Reminders`** (the 4:00 PM day-before and Monday 9:00 AM DMs, since 20 Oct) | `const DEV_REDIRECT = '…';` | `'U08V3CKDGJF'` (Howard; a redirected reminder says "Test: this reminder is for X") | `''` |
 

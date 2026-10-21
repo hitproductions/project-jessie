@@ -54,5 +54,6 @@ run room-check     "$BOOK" "$ROOM" "$SI"
 run room-check-v2  "$ROOM" "$MOVE"
 run reminders      "$REM" "$SI"
 run shortcuts      "$SI"
+run approvals      "" "" "" "" "" "$BOOK" "$SI"
 echo; [ $fails -eq 0 ] && echo "all sims pass" || echo "$fails sim(s) failing"
 exit $fails

@@ -10,7 +10,8 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const BUILDS = process.argv.includes('--builds');
 const NAMES = { 'project-jessie': 'main', 'slack-interactions': 'Slack Interactions', 'cancel-booking': 'Cancel Booking', 'move-booking': 'Move Booking',
-  'reminders': 'Reminders', 'book-session': 'Book Session', 'room-check': 'Room Check', 'log-booking': 'Log Booking', 'book-series': 'Book Series' };
+  'reminders': 'Reminders', 'book-session': 'Book Session', 'room-check': 'Room Check', 'log-booking': 'Log Booking', 'book-series': 'Book Series',
+  'request-messages': 'Request Messages', 'open-consent-request': 'Open Consent Request' };   // 21 Oct: the request messages (slice 2)
 const newest = (dir, re) => { const f = fs.existsSync(dir) ? fs.readdirSync(dir).map(x => [x, x.match(re)]).filter(x => x[1]).sort((a, b) => Number(a[1][1]) - Number(b[1][1])) : [];
   return f.length ? path.join(dir, f[f.length - 1][0]) : null; };
 const files = [];
@@ -20,12 +21,13 @@ for (const k of Object.keys(NAMES)) {
   const f = BUILDS ? (build || live) : (live || build);
   if (f) files.push([NAMES[k], f]);
 }
-// the consent engine: no hand import since it went live, so the 29 Sep snapshot is what runs (open-consent-request-v11 is an
-// unimported candidate); with --builds, a launch build from flip-launch-switches is read instead
-const consent = path.join(ROOT, 'workflows', 'live', 'jessie-open-consent-request__nEHnCMMXS0am59Zy.json');
-const ocr = newest(path.join(ROOT, 'workflows'), /^open-consent-request-v(\d+)\.json$/);
-const ocrLaunch = BUILDS && ocr && /\(launch switches\)/.test(JSON.parse(fs.readFileSync(ocr, 'utf8')).name || '') ? ocr : null;
-if (ocrLaunch || fs.existsSync(consent)) files.push(['Open Consent Request', ocrLaunch || consent]);
+// Open Consent Request: until v12 is imported, what runs is the 29 Sep snapshot (no hand import before slice 2); the unimported
+// v11 candidate is never read (a newer build or an imported download always wins over it)
+if (!BUILDS && !files.some(f => f[0] === 'Open Consent Request' && /-imported\.json$/.test(f[1]))) {
+  const consent = path.join(ROOT, 'workflows', 'live', 'jessie-open-consent-request__nEHnCMMXS0am59Zy.json');
+  for (let i = files.length - 1; i >= 0; i--) if (files[i][0] === 'Open Consent Request') files.splice(i, 1);
+  if (fs.existsSync(consent)) files.push(['Open Consent Request', consent]);
+}
 const rows = [], allows = [];
 for (const [wfName, f] of files) {
   const wf = JSON.parse(fs.readFileSync(f, 'utf8'));

@@ -1,6 +1,6 @@
 # Slice 2 — approvals and shared rooms (design, 21 Oct 2026)
 
-For review before building. What a request looks like from each side in the Slack app, what stays from the consent engine
+**Built 21 Oct, not imported yet** (answers below in *Decided 21 Oct*). Was: for review before building. What a request looks like from each side in the Slack app, what stays from the consent engine
 that is already live, what changes, and the build order. Earlier decisions this builds on: `slack-app-processes.md` section 6
 (agreed 13 Oct), `consent-engine.md` (the engine), `mbooth-approval.md` (shared booths).
 
@@ -148,3 +148,30 @@ answer it from the booker's message (move, give up, keep); the engineer's messag
 booths only. Offline, every piece gets a sim before it reaches you.
 
 **Size:** about three builds - (1)+(3) the engine side, (2)+(5) the form, (4) the endings - each imported in that order.
+
+## Decided 21 Oct (Howard) and built
+
+- **A** Give it up: yes (for an M booth holder, *Let them use it* already gives up that day). **B** I've cleared it with them on a
+  priority request: the small form - *They'll move it – I'll pick where* (their booking's Change form, changed as its booker) or
+  *They gave it up* (cancelled as its booker); on a shared booth it books at once after a confirm. **C** the Change form: later.
+  **D** deadlines unchanged. **E** no requests for a series.
+- Built: Jessie — Request Messages v1 (new), Open Consent Request v12, Finalize Consent v11, Consent Sweep v3, Room Availability
+  v23, Book Session v120, Slack Interactions v37 - `VERSIONS.md` has what each changes; `node scripts/sim-approvals.js` (85).
+- Two things found while building: a request must never be booked with `room_override` (it also skips standing holds), so
+  "Booked – ask to use" lists only rooms that normally do the booking type; and a priority request now keeps every room it was
+  made with (booth, holding rooms) and places them together.
+- Not in this build: the engineer / arranger notice for the booking placed by a request (the messages say it is booked).
+- During QA the deadline follows the real clock while the booking is a year ahead, so it is usually "now + 24 h".
+
+### Import order (each by the usual routine: download before + check-import before, Cmd+A -> Delete, import, Save, Publish, download after + check-import after)
+
+0. Jessie Log sheet, *Consent Requests* tab: four headers after **Req Payload** - `Approver 2`, `Approver 2 Name`, `Messages`,
+   `Withdrawn At`.
+1. **Jessie — Request Messages v1** - a NEW workflow, Publish; send its id, then `scripts/set-request-messages-id.py <id>`
+   (Open Consent Request, Finalize, Sweep, Slack Interactions) - commit.
+2. **Room Availability v23** (`e7tBQB458nstrqei`) - before = v22.
+3. **Book Session v120** (`EUG3sGXkfsJSYIMz`) - before = v119.
+4. **Open Consent Request v12** (`nEHnCMMXS0am59Zy`) - before = `workflows/live/jessie-open-consent-request__nEHnCMMXS0am59Zy.json`.
+5. **Finalize Consent v11** (`TO1UnZTZ2LhtE9J3`) - before = `workflows/live/jessie-finalize-consent__TO1UnZTZ2LhtE9J3.json`.
+6. **Consent Sweep v3** (`QHHDevaWhMk8gSBX`) - before = `workflows/live/jessie-consent-sweep__QHHDevaWhMk8gSBX.json`.
+7. **Slack Interactions v37** (`PyxSPoAMtSE1gzaH`) - before = v36. Last: it is what offers requests.
