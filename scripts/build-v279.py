@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds workflows/project-jessie-v279.json - main "Project Jessie", v279 (my bookings in a room; no leaked reasoning), 22 Oct.
 
-QA (22 Oct 12:47, Howard): "do i have studio 8 bookings" went to the AI - Mine Check only knew "do I have bookings" with nothing
+QA (22 Oct 00:47, Howard): "do i have studio 8 bookings" went to the AI - Mine Check only knew "do I have bookings" with nothing
 in between - and the reply carried an early room-check card ("Heads up: You already have Studio 8 booked …", as if booking) and
 the model's own reasoning: "Howard is asking about Studio 8 bookings with no date given. Per the rules, I need a timeframe before
 calling List Events. I'll ask for it."

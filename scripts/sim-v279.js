@@ -38,7 +38,7 @@ ok(/Nothing booked for you in M4 then\./.test(JSON.stringify(r.blocks)), 'none t
 console.log('Guard Probe leak filter');
 const g = code('Guard Probe'); const L = g.match(/const _LEAK = (\/.*\/i);/)[1]; const LEAK = eval(L);
 const said = ['Howard is asking about Studio 8 bookings with no date given.', 'Per the rules, I need a timeframe before calling List Events.', "I'll ask for it."];
-ok(said.every(x => LEAK.test(x)), 'the three leaked lines (12:47) are dropped');
+ok(said.every(x => LEAK.test(x)), 'the three leaked lines (00:47) are dropped');
 ok(!LEAK.test('Which dates should I check for Studio 8 - tomorrow (Saturday, October 23), or a different day or range?') && !LEAK.test('Studio 7 is free 2:00 PM – 6:00 PM.') && !LEAK.test('Use Book a room to pick a time.'),
    'ordinary answers are kept');
 console.log('Form Offer');

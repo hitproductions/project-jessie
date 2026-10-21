@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds workflows/slack-interactions-v39.json - "Jessie — Slack Interactions", v39 (No booth / engineer / arranger again), 22 Oct.
 
-QA (22 Oct 12:43, Howard on mobile): a Vocal booth picked could not be taken off again. Slack's desktop app gives an optional
+QA (22 Oct 00:43, Howard on mobile): a Vocal booth picked could not be taken off again. Slack's desktop app gives an optional
 dropdown a "Clear selection" line; the phone app does not - so since v26 (which dropped the "No …" options because desktop
 showed both) an optional booth / engineer / arranger, once picked, could not be emptied on a phone. The optional dropdowns get
 their "No …" choice back, last in the list: Book (Vocal booth when not required, Engineer when an arranger also counts, Arranger
