@@ -23,13 +23,20 @@ def load(p):
 # as equal (found 29 Sep: a Code node's mode "runOnceForAllItems" in the build, absent in the download).
 # 6 Oct: Execute Workflow's source "database" (Book Series' Create Each), and the Data Table node's matchType "anyCondition"
 # (main v226 Read Prepared - downloads keep "allConditions", so "anyCondition" is the default n8n leaves out).
+# 21 Oct (slice 2): Execute Workflow's mode "once", Google Sheets' operation "read", and an IF node's empty top-level options /
+# conditions.options.leftValue "" - a build copied from an API-pulled snapshot carries one form, the UI download the other.
 DEFAULTS = {"n8n-nodes-base.code": {"mode": "runOnceForAllItems"},
-            "n8n-nodes-base.executeWorkflow": {"source": "database"},
+            "n8n-nodes-base.executeWorkflow": {"source": "database", "mode": "once"},
+            "n8n-nodes-base.googleSheets": {"operation": "read"},
             "n8n-nodes-base.dataTable": {"matchType": "anyCondition"}}
 def params(n):
-    p = dict(n.get("parameters", {}))
+    p = json.loads(json.dumps(n.get("parameters", {})))
     for k, v in DEFAULTS.get(n.get("type"), {}).items():
         if p.get(k) == v: p.pop(k)
+    if n.get("type") == "n8n-nodes-base.if":
+        if p.get("options") == {}: p.pop("options")
+        o = (p.get("conditions") or {}).get("options")
+        if isinstance(o, dict) and o.get("leftValue") == "": o.pop("leftValue")
     return json.dumps(p, sort_keys=True)
 FLAGS = ("disabled", "type", "typeVersion", "credentials", "onError", "executeOnce", "alwaysOutputData", "retryOnFail")
 def flags(n): return json.dumps({k: n.get(k) for k in FLAGS if n.get(k) not in (None, False)}, sort_keys=True)
