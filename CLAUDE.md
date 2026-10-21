@@ -587,7 +587,7 @@ Three switches flip for launch — do them together, with `./scripts/flip-launch
    the `HAIST Dev` Airtable tag is live on Howard (it's strictly broader). Weekend hard-code only.
 4. **`HAIST Dev`** authority (Bookers `Authority` tag) — **god-mode**: bypasses the owner check and
    the department scope, so a holder can move/cancel *any* booking in *any* department. Dev team
-   only: **Howard, Genzo** (Tel left the dev team 19 Oct - remove her `HAIST Dev` tag in Bookers). Before/after launch, **decide: keep for devs or pull.** Enforced in
+   only: **Howard, Genzo** (Tel left the dev team 19 Oct; her `HAIST Dev` tag was removed 21 Oct). Before/after launch, **decide: keep for devs or pull.** Enforced in
    `Check Ownership` / `Resolve Booking` via `isHaistDev`. (Tara, the strategic lead rather than a
    dev, is set up QA-style: on the notification ALLOW list with her real Standard authority.)
 5. **The model (since 8 Oct).** Check the Gemini fallback once since memory was removed (PENDING 101), raise the Console
