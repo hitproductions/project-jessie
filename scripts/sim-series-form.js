@@ -10,6 +10,8 @@ const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 
 const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: step 1 / room wording, the list an actions block
 const V15 = si.nodes.some(n => n.name === 'Read Cache 8'), V17 = si.nodes.some(n => n.name === 'Mark Cancelling');
 const bs = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/imported/book-series-v8-imported.json', 'utf8'));
+// v40 / v280 (22 Oct): the summary on separate lines - read back as the one " · " line these checks were written for
+const one40 = s => String(s).replace(/🗓️ \*([^*\n]+)\*((?:\n\*[^*\n]+\*)+)/g, (m, a, b) => '🗓️ *' + [a].concat(b.split('\n').filter(Boolean).map(x => x.slice(1, -1))).join(' · ') + '*');
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
@@ -92,7 +94,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(radio.options.map(o => o.value).filter(x => x !== '__other').join() === 'Studio 8,Studio 7,Studio F', 'rooms free on more dates first: ' + radio.options.map(o => o.value).join());
   ok((V26 ? !radio.options[0].description : radio.options[0].description.text === (V25 ? 'Recommended · free on all 3 dates' : 'Recommended · usual for Localization Dubbing · free on all 3 dates')) && radio.options[1].description.text === 'free on 2 of 3 dates'
      && radio.options[2].description.text === 'free on 1 of 3 dates', 'each says on how many dates it is free');
-  ok(/🗓️ \*3 dates · 2:00 PM–4:00 PM · Localization Dubbing\*/.test(JSON.stringify(s2.view.blocks[1])) && s2.view.blocks[2].elements[0].text === 'Tue Oct 19 · Tue Oct 26 · Tue Nov 2'
+  ok(/🗓️ \*3 dates · 2:00 PM–4:00 PM · Localization Dubbing\*/.test(one40(s2.view.blocks[1].text.text)) && s2.view.blocks[2].elements[0].text === 'Tue Oct 19 · Tue Oct 26 · Tue Nov 2'
      && s2.view.submit.text === 'Check 3 dates', 'header, the dates, "Check 3 dates"');
   s2 = await step2([{ status: 'OK', free_priority: ['Studio 7'] }, { status: 'CALENDAR_ERROR' }, { status: 'OK', free_priority: ['Studio 7'] }]);
   ok(!s2.view.submit && /could(?: not|n’t) be checked|Couldn’t check the calendar/.test(JSON.stringify(s2.view)) && !/CALENDAR_ERROR/.test(JSON.stringify(s2.view)), 'a date not checked -> no button, no code');

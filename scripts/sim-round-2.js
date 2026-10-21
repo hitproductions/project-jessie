@@ -8,6 +8,8 @@ const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v19.json', 'utf8'));
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: room labels, no descriptions, no "No …" options (sim-round-9)
 const main = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/project-jessie-v270.json', 'utf8'));
+// v40 / v280 (22 Oct): the summary on separate lines - read back as the one " · " line these checks were written for
+const one40 = s => String(s).replace(/🗓️ \*([^*\n]+)\*((?:\n\*[^*\n]+\*)+)/g, (m, a, b) => '🗓️ *' + [a].concat(b.split('\n').filter(Boolean).map(x => x.slice(1, -1))).join(' · ') + '*');
 const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: Another room always shown, the form's details on the source message
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
@@ -78,7 +80,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   const mark = async (m) => j1(si, 'Mark Source', [{ json: { ok: true, messages: [m] } }], { 'Read Step 2': [{ json: rs2 }] });
   let M = await mark(offerMsg);
   ok(M.ok && M.offer && M.blocks.length === 2 && M.blocks[1].elements[0].text === (V25 ? '⏳ Booking…' : '⏳ Your booking is being processed…') && !M.blocks.some(b => b.type === 'actions')
-     && (!V25 || M.blocks[0].text.text === 'Your booking details:\n🗓️ *Studio 7 · Saturday, October 16' + (V26 ? ', 2027' : '') + ' · 10:00 AM – 2:00 PM*'), '7: a booking reply -> buttons hidden, "⏳ Your booking is being processed…" (v25: "Your booking details:" from the form, "⏳ Booking…") - ' + JSON.stringify(M.blocks[0].text));
+     && (!V25 || one40(M.blocks[0].text.text) === 'Your booking details:\n🗓️ *Studio 7 · Saturday, October 16' + (V26 ? ', 2027' : '') + ' · 10:00 AM – 2:00 PM*'), '7: a booking reply -> buttons hidden, "⏳ Your booking is being processed…" (v25: "Your booking details:" from the form, "⏳ Booking…") - ' + JSON.stringify(M.blocks[0].text));
   let D = await run(si, 'Source Done', [], { 'Mark Source': [{ json: M }], 'After Book': [{ json: { ok: true } }] });
   ok(D[0].json.blocks[1].elements[0].text === '✅ Booked.' && !D[0].json.blocks.some(b => b.type === 'actions') && (!V25 || /^Your booking details:/.test(D[0].json.blocks[0].text.text)), '7: booked -> "✅ Booked." and the buttons stay hidden');
   D = await run(si, 'Source Done', [], { 'Mark Source': [{ json: M }] });

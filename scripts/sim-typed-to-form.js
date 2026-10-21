@@ -8,6 +8,8 @@ const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v268.json', 'utf8'));
 const V275 = /Hi, I’m Jessie!/.test(JSON.stringify(main.nodes));   // main v275: short menu lines, "Your booking details so far:"
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v10.json', 'utf8'));
+// v40 / v280 (22 Oct): the summary on separate lines - read back as the one " · " line these checks were written for
+const one40 = s => String(s).replace(/🗓️ \*([^*\n]+)\*((?:\n\*[^*\n]+\*)+)/g, (m, a, b) => '🗓️ *' + [a].concat(b.split('\n').filter(Boolean).map(x => x.slice(1, -1))).join(' · ') + '*');
 const V35 = JSON.stringify(si.nodes).indexOf('v35: none of the type') !== -1;   // v35: no usual room free -> the other free rooms
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9 (SI v26)
 const V276 = /v276: the year/.test(JSON.stringify(main ? main.nodes : []));   // round 9 (main v276): the offer's date with its year
@@ -53,7 +55,7 @@ async function run(wf, name, input, outs) {
   ok(r.keep === 1 && F.offer && F.why === 'a booking request', 'a booking request -> an offer (the item passes through)');
   ok(JSON.stringify(F.prefill) === JSON.stringify({ d: '2027-10-14', s: '14:00', e: '16:00', r: 'Studio 7', p: 'VO Recording', pj: 'ORANGE', c: 'Jem Lim', en: 'U1', enN: 'Howard Luistro' }),
      'read by code: date, times, room, type, project, client, engineer - ' + JSON.stringify(F.prefill));
-  ok(F.text === (V275 ? 'Your booking details so far:' : 'Here’s what I have so far:') + '\n🗓️ *Studio 7 · Thursday, October 14' + (V276 ? ', 2027' : '') + ' · 2:00 PM – 4:00 PM*\nVO Recording · Project' + (M264 ? ': ' : ' ') + 'ORANGE · Client' + (M264 ? ': ' : ' ') + 'Jem Lim · Engineer' + (M264 ? ': ' : ' ') + 'Howard Luistro',
+  ok((/v280: one per line/.test(JSON.stringify(main.nodes)) ? F.text === 'Your booking details so far:\n🗓️ *Studio 7*\n*Thursday, October 14, 2027*\n*2:00 PM – 4:00 PM*\nVO Recording\nProject: ORANGE\nClient: Jem Lim\nEngineer: Howard Luistro' : F.text === (V275 ? 'Your booking details so far:' : 'Here’s what I have so far:') + '\n🗓️ *Studio 7 · Thursday, October 14' + (V276 ? ', 2027' : '') + ' · 2:00 PM – 4:00 PM*\nVO Recording · Project' + (M264 ? ': ' : ' ') + 'ORANGE · Client' + (M264 ? ': ' : ' ') + 'Jem Lim · Engineer' + (M264 ? ': ' : ' ') + 'Howard Luistro'),
      'the reply, written by code - ' + F.text.replace(/\n/g, ' | '));
   const btn = F.blocks[1].elements[0];
   ok(btn.action_id === 'open_book' && JSON.parse(btn.value).r === 'Studio 7' && btn.value.length < 1900 && F.blocks[0].text.text === F.text, 'Book a room button carries the prefill');

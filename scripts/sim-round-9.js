@@ -9,6 +9,8 @@ const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-intera
 const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 const main = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/project-jessie-v276.json', 'utf8'));
 const bs = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/book-session-v113.json', 'utf8'));
+// v40 / v280 (22 Oct): the summary on separate lines - read back as the one " · " line these checks were written for
+const one40 = s => String(s).replace(/🗓️ \*([^*\n]+)\*((?:\n\*[^*\n]+\*)+)/g, (m, a, b) => '🗓️ *' + [a].concat(b.split('\n').filter(Boolean).map(x => x.slice(1, -1))).join(' · ') + '*');
 const FX = require('./sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('FAIL ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
@@ -51,11 +53,11 @@ const views = [];
   console.log('1: the year on long dates');
   let v = await step2(S('VO Recording', 'studio'), { free_priority: ['Studio 7', 'Studio 8'] });
   views.push(v);
-  ok(/🗓️ \*Tuesday, Oct 19, 2027 · 8:00 AM–10:00 AM · VO Recording\*/.test(JSON.stringify(v.blocks[1])), 'step 2\'s header - "Tuesday, Oct 19, 2027"');
+  ok(/🗓️ \*Tuesday, Oct 19, 2027 · 8:00 AM–10:00 AM · VO Recording\*/.test(one40(v.blocks[1].text.text)), 'step 2\'s header - "Tuesday, Oct 19, 2027"');
   let r = await read2({ room: { room_radio: tv('Studio 7') }, project: { project_in: { value: 'x' } }, engineer: { engineer_pick: tv('U1') } }, M('VO Recording', 'studio', { msg: { ch: 'D1', ts: '5.5' } }));
   ok(r.answer.view.blocks[0].text.text === '⏳ *Booking Studio 7…*\nTuesday, October 19, 2027\n8:00 AM – 10:00 AM', 'the Booking… window - "Tuesday, October 19, 2027"');
   const MS = await j1('Mark Source', [{ json: { ok: true, messages: [{ ts: '5.5', text: 'x', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Hi, I’m Jessie!' } }] }] } }], { 'Read Step 2': [{ json: r }] });
-  ok(MS.blocks[0].text.text === 'Your booking details:\n🗓️ *Studio 7 · Tuesday, October 19, 2027 · 8:00 AM – 10:00 AM*', '"Your booking details:" - with the year');
+  ok(one40(MS.blocks[0].text.text) === 'Your booking details:\n🗓️ *Studio 7 · Tuesday, October 19, 2027 · 8:00 AM – 10:00 AM*', '"Your booking details:" - with the year');
   const fo = main.nodes.find(n => n.name === 'Form Offer').parameters.jsCode;
   ok((fo.match(/year: 'numeric'/g) || []).length === 2, 'main: the offer\'s date and a series\' "until" carry the year');
   const allDay = await read2({ room: { room_radio: tv('M2') }, forname: { forname_in: { value: 'Howard' } } }, M('', 'booth', { allDay: true, t0: '00:00', t1: '23:59', label: 'M booth' }));

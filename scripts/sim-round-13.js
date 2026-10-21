@@ -56,7 +56,7 @@ const offer = async (text, dates) => {
   ({ F } = await offer('book studio 7 tomorrow 2-4pm vo recording for japs'));
   ok(!F.prefill.en && !F.prefill.ar && !F.prefill.c, 'for a colleague who is neither (Japs, Accounts) -> nothing filled (the form books as you), not the client', F.prefill);
   ({ F } = await offer('book studio e tomorrow 2-4pm post processing for dylan'));
-  ok(F.prefill.fn === 'Dylan' && !F.prefill.en && !F.prefill.c && /Post Processing · For: Dylan/.test(F.text), 'Post Processing for dylan -> Who is it for? Dylan (Howard: no Booker dropdown)', F.text);
+  ok(F.prefill.fn === 'Dylan' && !F.prefill.en && !F.prefill.c && /Post Processing(?: · |\n)For: Dylan/.test(F.text), 'Post Processing for dylan -> Who is it for? Dylan (Howard: no Booker dropdown)', F.text);
   ({ F } = await offer('hi book studio e for dylan tomorrow 12-2pm'));
   ok(F.prefill.p === 'Post Processing' && F.prefill.fn === 'Dylan', 'Howard\'s 21:31 message (Studio E, no type) -> Post Processing, For: Dylan (Studio E is only for Post Processing)', F.prefill);
   ({ F } = await offer('book studio 7 tomorrow 2-4pm for josiah'));

@@ -7,6 +7,8 @@ const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v25.json', 'utf8'));
 const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 const main = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/project-jessie-v275.json', 'utf8'));
+// v40 / v280 (22 Oct): the summary on separate lines - read back as the one " · " line these checks were written for
+const one40 = s => String(s).replace(/🗓️ \*([^*\n]+)\*((?:\n\*[^*\n]+\*)+)/g, (m, a, b) => '🗓️ *' + [a].concat(b.split('\n').filter(Boolean).map(x => x.slice(1, -1))).join(' · ') + '*');
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: labels, no descriptions / hints, no "No …" options (sim-round-9)
 const V30 = /function pairBlocksC\(/.test(JSON.stringify(si.nodes));   // round 12: Booker dropdown, code without Enter (sim-round-12)
 const FX = require('./sim-fixture-rooms.js');
@@ -211,16 +213,16 @@ const views = [];
   const offerMsg = { ts: '50.5', text: 'so far', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'Your booking details so far:\n🗓️ *Studio 7 · Wednesday, October 20 · 4:00 PM – 6:00 PM*' } },
     { type: 'actions', elements: [{ action_id: 'open_book', value: '{"r":"Studio 7"}' }, { action_id: 'my_bookings', value: 'menu' }] }] };
   let MS = await j1('Mark Source', [{ json: { ok: true, messages: [menuMsg] } }], { 'Read Step 2': [{ json: r }] });
-  ok(MS.ok && MS.blocks[0].text.text === 'Your booking details:\n🗓️ *Studio 6 · Wednesday, October 20' + (V26 ? ', 2027' : '') + ' · 4:00 PM – 6:00 PM*' && MS.blocks[1].elements[0].text === '⏳ Booking…' && MS.blocks.length === 2,
+  ok(MS.ok && one40(MS.blocks[0].text.text) === 'Your booking details:\n🗓️ *Studio 6 · Wednesday, October 20' + (V26 ? ', 2027' : '') + ' · 4:00 PM – 6:00 PM*' && MS.blocks[1].elements[0].text === '⏳ Booking…' && MS.blocks.length === 2,
      '17: opened from the menu -> "Your booking details:" and the form\'s room · date · time, "⏳ Booking…"');
   let SD = await runIn(si, 'Source Done', [], { 'Mark Source': [{ json: MS }], 'After Book': [{ json: { ok: true } }] });
   ok(SD[0].json.blocks === MS.original, '17: the menu gets its buttons back after booking (the Booked card is its own message)');
   MS = await j1('Mark Source', [{ json: { ok: true, messages: [offerMsg] } }], { 'Read Step 2': [{ json: r }] });
   SD = await runIn(si, 'Source Done', [], { 'Mark Source': [{ json: MS }], 'After Book': [{ json: { ok: true } }] });
-  ok(/Studio 6 · Wednesday/.test(MS.blocks[0].text.text) && SD[0].json.blocks[0].text.text === MS.blocks[0].text.text && SD[0].json.blocks[1].elements[0].text === '✅ Booked.',
+  ok(/Studio 6 · Wednesday/.test(one40(MS.blocks[0].text.text)) && SD[0].json.blocks[0].text.text === MS.blocks[0].text.text && SD[0].json.blocks[1].elements[0].text === '✅ Booked.',
      '17: a typed offer changed on the form (Studio 7 -> 6) -> the form\'s details, then "✅ Booked."');
   const MSS = await j1('Mark Source Series', [{ json: { ok: true, messages: [menuMsg] } }], { 'Read Series Confirm': [{ json: { meta: { msg: { ch: 'D1', ts: '50.5' }, n: 3, time: '14:00-16:00', rooms: 'Studio 6, Studio A' } } }] });
-  ok(MSS.blocks[0].text.text === 'Your booking details:\n🗓️ *Studio 6 + Studio A · 3 dates · 2:00 PM – 4:00 PM*' && MSS.blocks[1].elements[0].text === '⏳ Booking…', '17: a series - rooms · N dates · time, "⏳ Booking…"');
+  ok(one40(MSS.blocks[0].text.text) === 'Your booking details:\n🗓️ *Studio 6 + Studio A · 3 dates · 2:00 PM – 4:00 PM*' && MSS.blocks[1].elements[0].text === '⏳ Booking…', '17: a series - rooms · N dates · time, "⏳ Booking…"');
   const aps = await j1('After Prepare Series', [{ json: { status: 'PREPARED', card_text: '*X*', title: 'X', dates: ['2027-10-20', '2027-10-27'], prep_key: 'k', prep_stored: true } }],
     { 'Read Step 2': [{ json: Object.assign({}, r, { s: Object.assign({}, r.s, { series: { dates: ['2027-10-20', '2027-10-27'] } }) }) }], 'Read Request': [{ json: { payload: { view: {} } } }] });
   ok(JSON.parse(aps.view.private_metadata).rooms === 'Studio 6', '17: the series check screen carries the rooms');

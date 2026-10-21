@@ -6,6 +6,8 @@
 // Usage: node scripts/sim-round-4.js [slack-interactions v21]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v21.json', 'utf8'));
+// v40 / v280 (22 Oct): the summary on separate lines - read back as the one " · " line these checks were written for
+const one40 = s => String(s).replace(/🗓️ \*([^*\n]+)\*((?:\n\*[^*\n]+\*)+)/g, (m, a, b) => '🗓️ *' + [a].concat(b.split('\n').filter(Boolean).map(x => x.slice(1, -1))).join(' · ') + '*');
 const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: room labels, no descriptions, no "No …" options (sim-round-9)
 const V33P = /v33 \(Howard, 20 Oct\): "Who is it for\?"/.test((si.nodes.find(n => n.name === 'Build Step 2') || { parameters: {} }).parameters.jsCode || '');   // v33: Post Processing asks Who is it for?
@@ -139,7 +141,7 @@ const tv = v => ({ selected_option: { value: v } });
   ok(!v.blocks.some(b => b.block_id === 'add_booth' || b.block_id === 'add_holding' || b.block_id === 'holding' || /^booth/.test(b.block_id || '')) && (V25 || v.blocks.find(b => b.block_id === 'room').dispatch_action === undefined || radio(v).options.slice(-1)[0].value === '__other'), '2: Music Mixing - no extras (v22: the list redraws only for Another room…)');
   // M booth all day
   v = (await step2(S('', 'booth', { allDay: true, t0: '00:00', t1: '23:59' }), { free_rooms: ['M1', 'M2'] })).view;
-  ok(/All day · M booth/.test(v.blocks[1].text.text), '6: step 2 says All day');
+  ok(/All day · M booth/.test(one40(v.blocks[1].text.text)), '6: step 2 says All day');
 
   // ---- Note Toggle: the redraws
   const toggle = async (view, action, extra, state) => j1('Note Toggle', [], { 'Read Request': [{ json: { payload: { view: Object.assign({ id: 'V1', hash: 'h' }, view, { state: { values: state || {} } }),
