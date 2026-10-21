@@ -263,7 +263,15 @@ const uniq = bl => bl.every(b => { const a = (b.elements || []).map(e => e.actio
     state: { values: { cleared: { cleared_pick: { selected_option: { value: choice } } } } } } } } }] }))[0].json;
   const rcm = await rc('move');
   ok(rcm.move && rcm.answer.response_action === 'update' && rcm.as === 'U2' && rcm.inc.id === 'e1', 'move -> "Opening their booking…"');
-  const bcc = (await run(SI, 'Build Change C', [], { 'Check Signature': [{ json: { user: 'U7', viewId: 'V9' } }], 'Read Cleared': [{ json: rcm }], 'Read Cache C': cache }))[0].json;
+  const V38 = /const _row = \$\('Read Requests C'\)/.test(node(SI, 'Build Change C').parameters.jsCode);   // v38: the request checked first
+  const bcc = (await run(SI, 'Build Change C', [], { 'Check Signature': [{ json: { user: 'U7', viewId: 'V9' } }], 'Read Cleared': [{ json: rcm }], 'Read Cache C': cache, 'Read Requests C': [{ json: baseRow() }] }))[0].json;
+  if (V38) {
+    const kept = (await run(SI, 'Build Change C', [], { 'Check Signature': [{ json: { user: 'U7', viewId: 'V9' } }], 'Read Cleared': [{ json: rcm }], 'Read Cache C': cache, 'Read Requests C': [{ json: baseRow({ 'Status': 'REJECTED' }) }] }))[0].json;
+    const other = (await run(SI, 'Build Change C', [], { 'Check Signature': [{ json: { user: 'U098UFMKQHZ', viewId: 'V9' } }], 'Read Cleared': [{ json: rcm }], 'Read Cache C': cache, 'Read Requests C': [{ json: baseRow() }] }))[0].json;
+    ok(/isn’t open any more/.test(JSON.stringify(kept.view)) && /isn’t open any more/.test(JSON.stringify(other.view)) && kept.view.callback_id === undefined,
+       'v38: the booker kept it (REJECTED), or not the requester -> no Change form, "That request isn’t open any more"');
+    ok(nx(SI, 'Answer Cleared')[0] === 'Read Requests C' && nx(SI, 'Read Requests C')[0] === 'Cleared Move?' && nx(SI, 'Cleared Move?').join('|') === 'Read Cache C|Give Up Plan', 'v38 wiring: the sheet read before either choice');
+  }
   const meta = JSON.parse(bcc.view.private_metadata);
   ok(bcc.view_id === 'V9' && bcc.view.callback_id === 'change_booking' && meta.as === 'U2' && meta.b.id === 'e1' && meta.ch === '' && meta.ts === '', 'their booking\'s Change form, changed as its booker', meta);
   ok(/requester: \(R\.meta && R\.meta\.as\) \|\| R\.user/.test(node(SI, 'To Move').parameters.jsCode), 'To Move: as its booker when the request says so');
