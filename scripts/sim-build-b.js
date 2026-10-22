@@ -60,7 +60,7 @@ const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: 
   const rooms = [{ id: 'r7', fields: { 'Room Name': 'Studio 7' } }, { id: 'r8', fields: { 'Room Name': 'Studio 8' } }, { id: 'rl', fields: { 'Room Name': 'Likha', 'Room Type': ['Conference Room'] } }, { id: 'rs', fields: { 'Room Name': 'Salin', 'Room Type': ['Conference Room'] } }];
   const bookers = [{ fields: { Name: 'Howard Luistro', Initials: 'HL', 'Slack User ID': 'U1', Info: 'Post Engineer' } }, { fields: { Name: 'Daryl Reyes', Initials: 'DR', 'Slack User ID': 'U2', Info: 'Music Engineer' } },
     { fields: { Name: 'Peter Legaste', Initials: 'PL', 'Slack User ID': 'U4', Info: 'Music Arranger' } }, { fields: { Name: 'Mike Villegas', Initials: 'MV', 'Slack User ID': 'U5', Info: 'Head of Music, Arranger, Goes by Mike.' } },
-    { fields: { Name: 'Tara Lim', Initials: 'TL', 'Slack User ID': 'U026N6E1R', Info: 'Post Engineer' } }];
+    { fields: { Name: 'Tara Lim', Initials: 'TL', 'Slack User ID': 'U026N6E1R', Info: 'Post Engineer' } }, { fields: { Name: 'Camy Caridad', Initials: 'CC', 'Slack User ID': 'U08JL17A50A', Info: 'Voice Caster' } }];
   const cache = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Date().toISOString(), payload: JSON.stringify({ rooms, sessionTypes: [], bookers }) } }];
   const chk = [{ json: { user: 'U1', triggerId: 'T1', channel: 'D1' } }];
   const B = { id: 'evO', d: '2027-10-16', s: '12:00', e: '14:00', r: 'Studio 7', t: 'ORANGE / Jem Lim / HL x PL' };
@@ -129,9 +129,12 @@ const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: 
   const cn = await run(si, 'Change Notices', [], { 'Read Change': [{ json: rcN }], 'After Move': [{ json: amOk }], 'Read Cache 7': cache });
   ok(cn.length === 2 && cn.every(x => x.json.channel === 'U08V3CKDGJF') && /\[DEV\] would notify Daryl Reyes \(U2\):\n👋 \*Howard Luistro added you as the engineer\.\*\n\n\*ORANGE/.test(cn[0].json.text)
      && /added you as the arranger/.test(cn[1].json.text) && cn[0].json.blocks[1].elements.map(e => e.action_id).join() === 'my_bookings,open_book', 'v18: a change adds an engineer and an arranger -> both told (to Howard in QA)');
-  const R2 = { s: { requester: 'U1' }, engineerId: 'U026N6E1R', arrangerId: '' };
+  const R2 = { s: { requester: 'U1' }, engineerId: 'U08JL17A50A', arrangerId: '' };   // 22 Oct: Camy - the QA roster is Howard + Camy
   const bn = await run(si, 'Booked Notices', [], { 'Read Step 2': [{ json: R2 }], 'After Book': [{ json: { text: '✅ *Booked.*\n\n*KIWI / TL*\n*Date:* x' } }], 'Read Cache 3': cache });
-  ok(bn.length === 1 && bn[0].json.channel === 'U026N6E1R' && bn[0].json.text === '👋 *Howard Luistro booked you as the engineer.*\n\n*KIWI / TL*\n*Date:* x', 'v18: booked with Tara as engineer -> Tara told (on ALLOW: her own DM)');
+  ok(bn.length === 1 && bn[0].json.channel === 'U08JL17A50A' && bn[0].json.text === '👋 *Howard Luistro booked you as the engineer.*\n\n*KIWI / TL*\n*Date:* x', 'v18: booked with someone on ALLOW as engineer -> told in their own DM');
+  if (JSON.stringify(si.nodes).indexOf('U026N6E1R') === -1) {   // v41: Tara is off the roster -> to Howard, marked
+    const bt = await run(si, 'Booked Notices', [], { 'Read Step 2': [{ json: { s: { requester: 'U1' }, engineerId: 'U026N6E1R', arrangerId: '' } }], 'After Book': [{ json: { text: '✅ *Booked.*\n\n*KIWI / TL*\n*Date:* x' } }], 'Read Cache 3': cache });
+    ok(bt.length === 1 && bt[0].json.channel === 'U08V3CKDGJF' && /^\[DEV\] would notify Tara Lim \(U026N6E1R\)/.test(bt[0].json.text), 'v41: Tara (off the roster) as engineer -> to Howard, marked', bt.map(x => x.json.text)); }
   ok((await run(si, 'Booked Notices', [], { 'Read Step 2': [{ json: { s: { requester: 'U1' }, engineerId: 'U1', arrangerId: '' } }], 'After Book': [{ json: { text: 'x' } }], 'Read Cache 3': cache })).length === 0, 'v18: booked as your own engineer -> nobody told');
   const sn = await run(si, 'Series Notices', [], { 'Read Series Confirm': [{ json: { user: 'U1' } }], 'To Book Series': [{ json: { go: true, description: 'Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | team: U2 U4' } }],
     'After Book Series': [{ json: { text: '✅ *Booked 3 dates.*\n\n*SER / DR x PL*\n*Dates:*\n- Tue, Oct 19' } }], 'Read Cache 8': cache });

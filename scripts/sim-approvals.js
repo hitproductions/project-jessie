@@ -24,7 +24,7 @@ const nx = (wf, k) => ((wf.connections[k] || {}).main || []).map(o => (o || []).
 const J = x => { try { return JSON.parse(x); } catch (e) { return null; } };
 const HOWARD = 'U08V3CKDGJF';
 const B = (name, slack, info, auth, dept) => ({ id: 'b' + slack, fields: { Name: name, 'Slack User ID': slack, Info: info, Authority: auth ? [auth] : [], Department: [dept || 'Music'], Initials: 'X' } });
-const bookers = [B('Howard Luistro', HOWARD, 'Post Engineer', 'HAIST Dev', 'Audio Post'), B('Camy Caridad', 'U098UFMKQHZ', 'Voice Caster', 'Standard'),
+const bookers = [B('Howard Luistro', HOWARD, 'Post Engineer', 'HAIST Dev', 'Audio Post'), B('Camy Caridad', 'U08JL17A50A', 'Voice Caster', 'Standard'),
   B('Celeste Cruz', 'U7', 'Producer', 'Dept Head'), B('Daryl Reyes', 'U2', 'Music Engineer'), B('Angelo Villegas', 'U3', 'Music Arranger, Goes by Anj.'), B('Jem Santos', 'U9', 'Voice Talent')];
 const ST = (t, pri, last, rank) => ({ id: 'st-' + t, fields: { Type: t, Priority: pri, 'Last Resort': last, 'Preemption Rank': rank, 'Engineer Role Required': ['Music Engineer'] } });
 const sessionTypes = [ST('Celebrity Recording', ['rf', 'rc'], ['r7'], 3), ST('VO Recording', ['r7', 'rf'], ['r8'], 1), ST('Music Mixing', ['r3'], [], 2)];
@@ -90,8 +90,8 @@ const uniq = bl => bl.every(b => { const a = (b.elements || []).map(e => e.actio
   ok(col.messages.length === 1 && col.messages[0].t === '5.1' && col.failed[0] === 'a1: channel_not_found', 'Collect: where each went; a failed one said');
   ok(/const DEV_REDIRECT = 'U08V3CKDGJF';/.test(node(RM, 'Render').parameters.jsCode) && /const ALL_TO_DEV = (true|false);/.test(node(RM, 'Render').parameters.jsCode), 'launch switch: DEV_REDIRECT + ALL_TO_DEV in Render');
   if (/const ALL_TO_DEV = false;/.test(node(RM, 'Render').parameters.jsCode)) {   // v2 (21 Oct, QA): the QA roster gets its own
-    const q = await render('open', baseRow({ 'Requester': 'U098UFMKQHZ', 'Requester Name': 'Camy Caridad', 'Approver': HOWARD, 'Approver Name': 'Howard Luistro', 'Approver 2': 'U2' }));
-    ok(q.map(x => x.r + '>' + x.channel).join() === 'r>U098UFMKQHZ,a1>' + HOWARD + ',a2>' + HOWARD && !/Test:/.test(JSON.stringify(q[0].blocks)) && !/Test:/.test(JSON.stringify(q[1].blocks))
+    const q = await render('open', baseRow({ 'Requester': 'U08JL17A50A', 'Requester Name': 'Camy Caridad', 'Approver': HOWARD, 'Approver Name': 'Howard Luistro', 'Approver 2': 'U2' }));
+    ok(q.map(x => x.r + '>' + x.channel).join() === 'r>U08JL17A50A,a1>' + HOWARD + ',a2>' + HOWARD && !/Test:/.test(JSON.stringify(q[0].blocks)) && !/Test:/.test(JSON.stringify(q[1].blocks))
        && /Test: this is for Angelo Villegas/.test(JSON.stringify(q[2].blocks)), 'v2 (QA): Camy gets her own card, Howard his request; the engineer (not on the QA list) comes to Howard, marked - one each, no copies', q.map(x => x.r + '>' + x.channel));
   }
 
@@ -177,7 +177,7 @@ const uniq = bl => bl.every(b => { const a = (b.elements || []).map(e => e.actio
   ok(groups && groups.length === 2 && groups[1].label.text === 'Booked – ask to use' && groups[1].options.map(o => o.value).join() === 'ask:P|Studio F,ask:P|Studio C'
      && groups[1].options[0].text.text === 'Studio F · VO Recording, 2:00 PM–4:00 PM', 'a Dept Head: Studio F (VO Recording) and Studio C (Music Mixing) can be asked for - both lower', groups);
   ok(v.submit.text === 'Book' && JSON.parse(v.private_metadata).sub === 'Book', 'a free room too -> Book (sub kept for when a request is unpicked)');
-  v = await step2(Object.assign({}, s, { requester: 'U098UFMKQHZ' }), RAres(['Studio 7'], [vo]));
+  v = await step2(Object.assign({}, s, { requester: 'U08JL17A50A' }), RAres(['Studio 7'], [vo]));
   ok(!JSON.stringify(v).includes('ask:'), 'a Standard user: no priority requests');
   v = await step2(Object.assign({}, s, { requester: 'U2' }), RAres(['Studio 7'], [vo]));
   ok(!JSON.stringify(v).includes('ask:'), 'your own booking is never offered');
@@ -192,7 +192,7 @@ const uniq = bl => bl.every(b => { const a = (b.elements || []).map(e => e.actio
   ok(!v.blocks.some(b => b.block_id === 'room') && /you can ask for a booked room below/.test(JSON.stringify(v.blocks)) && v.submit.text === 'Send request'
      && v.blocks.find(b => b.block_id === 'room_other').element.option_groups.length === 1 && v.blocks.some(b => b.block_id === 'project'),
      'nothing free, one to ask for -> no dead end: the request group, the details, Send request', v.blocks.map(b => b.block_id || b.type));
-  const sB = { date: '2027-10-22', t0: '10:00', t1: '12:00', purpose: '__booth', kind: 'booth', requester: 'U098UFMKQHZ', channel: 'D1', ext: 'x' };
+  const sB = { date: '2027-10-22', t0: '10:00', t1: '12:00', purpose: '__booth', kind: 'booth', requester: 'U08JL17A50A', channel: 'D1', ext: 'x' };
   v = await step2(sB, Object.assign(RAres([], [det('M4', [{ id: 'h1_x', title: 'M4 - Jem', start: '2027-10-22T09:00:00+08:00', end: '2027-10-22T18:00:00+08:00', ref: 'U9', recurring: true }])]), { free_rooms: ['M1'] }));
   const bg = (v.blocks.find(b => b.block_id === 'room_other') || { element: {} }).element.option_groups || [];
   ok(bg.length && bg[bg.length - 1].options[0].value === 'ask:M|M4' && /M4 · Jem’s standing hold/.test(bg[bg.length - 1].options[0].text.text), 'an M booth during a standing hold - anyone can ask', bg);
@@ -237,7 +237,7 @@ const uniq = bl => bl.every(b => { const a = (b.elements || []).map(e => e.actio
   ok(x.go === 0 && x.upd.Status === 'REJECTED' && x.extra.by === 'Daryl Reyes', 'the booker keeps it -> REJECTED');
   x = await act(HOWARD, 'cr_keep', 'a2');
   ok(x.go === 0 && x.extra.by === 'Angelo Villegas', 'Howard answers for the engineer while testing (by = the engineer)');
-  x = await act('U098UFMKQHZ', 'cr_keep', 'a1');
+  x = await act('U08JL17A50A', 'cr_keep', 'a1');
   ok(x.go === 3, 'someone else pressing it -> nothing');
   x = await act('U7', 'cr_keep', 'r');
   ok(x.go === 3, 'the requester cannot "keep"');
@@ -267,7 +267,7 @@ const uniq = bl => bl.every(b => { const a = (b.elements || []).map(e => e.actio
   const bcc = (await run(SI, 'Build Change C', [], { 'Check Signature': [{ json: { user: 'U7', viewId: 'V9' } }], 'Read Cleared': [{ json: rcm }], 'Read Cache C': cache, 'Read Requests C': [{ json: baseRow() }] }))[0].json;
   if (V38) {
     const kept = (await run(SI, 'Build Change C', [], { 'Check Signature': [{ json: { user: 'U7', viewId: 'V9' } }], 'Read Cleared': [{ json: rcm }], 'Read Cache C': cache, 'Read Requests C': [{ json: baseRow({ 'Status': 'REJECTED' }) }] }))[0].json;
-    const other = (await run(SI, 'Build Change C', [], { 'Check Signature': [{ json: { user: 'U098UFMKQHZ', viewId: 'V9' } }], 'Read Cleared': [{ json: rcm }], 'Read Cache C': cache, 'Read Requests C': [{ json: baseRow() }] }))[0].json;
+    const other = (await run(SI, 'Build Change C', [], { 'Check Signature': [{ json: { user: 'U08JL17A50A', viewId: 'V9' } }], 'Read Cleared': [{ json: rcm }], 'Read Cache C': cache, 'Read Requests C': [{ json: baseRow() }] }))[0].json;
     ok(/isn’t open any more/.test(JSON.stringify(kept.view)) && /isn’t open any more/.test(JSON.stringify(other.view)) && kept.view.callback_id === undefined,
        'v38: the booker kept it (REJECTED), or not the requester -> no Change form, "That request isn’t open any more"');
     ok(nx(SI, 'Answer Cleared')[0] === 'Read Requests C' && nx(SI, 'Read Requests C')[0] === 'Cleared Move?' && nx(SI, 'Cleared Move?').join('|') === 'Read Cache C|Give Up Plan', 'v38 wiring: the sheet read before either choice');
@@ -279,7 +279,7 @@ const uniq = bl => bl.every(b => { const a = (b.elements || []).map(e => e.actio
   ok(!rcg.move && rcg.answer.response_action === 'clear', 'gave up -> the form closes');
   const gp2 = (await run(SI, 'Give Up Plan', [{ json: baseRow() }], { 'Check Signature': [{ json: { user: 'U7', channel: 'D1' } }], 'Read Cleared': [{ json: rcg }] }))[0].json;
   ok(gp2.ok && gp2.how === 'cleared-gave-up' && gp2.by === 'Celeste Cruz' && gp2.cancel.requester === 'U2', '… cancelled as its booker, then Finalize');
-  const gp3 = (await run(SI, 'Give Up Plan', [{ json: baseRow() }], { 'Check Signature': [{ json: { user: 'U098UFMKQHZ', channel: 'D1' } }], 'Read Cleared': [{ json: rcg }] }))[0].json;
+  const gp3 = (await run(SI, 'Give Up Plan', [{ json: baseRow() }], { 'Check Signature': [{ json: { user: 'U08JL17A50A', channel: 'D1' } }], 'Read Cleared': [{ json: rcg }] }))[0].json;
   ok(gp3.ok === false, 'not the requester -> nothing changed');
   const bch = (await run(SI, 'Build Change', [], { 'Check Signature': [{ json: { user: 'U2', triggerId: 'T' } }], 'Read Cache 6': cache,
     'Read Request': [{ json: { payload: { actions: [{ action_id: 'cr_move', value: a1.blocks[1].elements[0].value }], container: { channel_id: 'D1', message_ts: '1.2' } } } }] }))[0].json;

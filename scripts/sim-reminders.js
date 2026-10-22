@@ -18,17 +18,17 @@ const run = async (wf, name, input, outs) => { const $ = n => { if (outs[n] === 
   return new Function('$', '$input', 'return (async function(){' + node(wf, name).parameters.jsCode + '\n})();')($, $input); };
 const B = (id, name, slack, info) => ({ id, fields: { Name: name, Initials: 'X', 'Slack User ID': slack, Info: info, Department: ['Music'] } });
 const bookers = [B('b1', 'Howard Luistro', 'U08V3CKDGJF', 'Post Engineer'), B('b2', 'Daryl Reyes', 'U2', 'Music Engineer'), B('b3', 'Angelo Villegas', 'U3', 'Music Arranger, Goes by Anj.'),
-  B('b4', 'Dilan Diaz', 'U4', 'Multimedia Specialist, Goes by Dilan.'), B('b5', 'Japs Concepcion', 'U5', 'Accounts Lead, Goes by Japs.'), B('b6', 'Camy Caridad', 'U098UFMKQHZ', 'Voice Caster')];
+  B('b4', 'Dilan Diaz', 'U4', 'Multimedia Specialist, Goes by Dilan.'), B('b5', 'Japs Concepcion', 'U5', 'Accounts Lead, Goes by Japs.'), B('b6', 'Camy Caridad', 'U08JL17A50A', 'Voice Caster')];
 const rooms = FX.rooms.concat([{ id: 'm4', fields: { 'Room Name': 'M4', 'Room Type': ['M Booth'] } }]);
 const cache = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Date().toISOString(), payload: JSON.stringify({ rooms, sessionTypes: FX.sessionTypes, bookers }) } }];
 const res = id => ({ email: id + '@resource.calendar.google.com', resource: true, responseStatus: 'accepted' });
 const EV = (id, title, d, s, e, room, desc, extra) => Object.assign({ id, summary: title, start: { dateTime: d + 'T' + s + ':00+08:00' }, end: { dateTime: d + 'T' + e + ':00+08:00' },
   attendees: [Object.assign(res(id), { displayName: room })], description: desc }, extra || {});
 const items = [
-  EV('ev1', 'SONG / Jem Lim / DR x AV', '2027-10-22', '14:00', '16:00', 'Studio F', 'Engineer: Daryl Reyes | Arranger: Angelo Villegas | Booked by: Camy Caridad | ref: U098UFMKQHZ | team: U2 U3\nSType: Music Recording'),
+  EV('ev1', 'SONG / Jem Lim / DR x AV', '2027-10-22', '14:00', '16:00', 'Studio F', 'Engineer: Daryl Reyes | Arranger: Angelo Villegas | Booked by: Camy Caridad | ref: U08JL17A50A | team: U2 U3\nSType: Music Recording'),
   EV('ev2', 'POST PROCESSING - TRAILER / Dilan', '2027-10-22', '09:00', '11:00', 'Studio E', 'Engineer: Dilan Diaz | Booked by: Howard Luistro | ref: U08V3CKDGJF\nSType: Post Processing'),
   EV('ev3', 'M4 - Japs', '2027-10-22', '10:00', '12:00', 'M4', 'Booked by: Howard Luistro (for Japs Concepcion) | ref: U08V3CKDGJF | team: U5'),
-  EV('ev4', 'LIKHA - Weekly sync', '2027-10-22', '15:00', '16:00', 'Likha', 'Booked by: Camy Caridad | ref: U098UFMKQHZ\nSType: Meeting'),
+  EV('ev4', 'LIKHA - Weekly sync', '2027-10-22', '15:00', '16:00', 'Likha', 'Booked by: Camy Caridad | ref: U08JL17A50A\nSType: Meeting'),
   EV('ev5', 'TABLET BOOKING', '2027-10-22', '13:00', '14:00', 'Studio 7', 'Booked on the tablet'),   // no ref: not made through Jessie
   EV('ev6', 'VO / HL', '2027-10-23', '13:00', '14:00', 'Studio 7', 'Booked by: Howard Luistro | ref: U08V3CKDGJF'),   // the day after tomorrow
   EV('ev7', 'GONE / HL', '2027-10-22', '13:00', '14:00', 'Studio 8', 'ref: U08V3CKDGJF', { status: 'cancelled' })];
@@ -46,7 +46,7 @@ const items = [
   let out = (await run(RM, 'Build Reminders', [], { 'Window': [{ json: W1 }], 'List Events R': [{ json: { items } }], 'Read Cache R': cache })).map(i => i.json);
   const by = {}; for (const o of out) (by[o.person] = by[o.person] || []).push(o);
   const ids = o => o.blocks.filter(b => /^bk_/.test(b.block_id || '')).map(b => b.block_id.slice(3));
-  ok(by['U098UFMKQHZ'] && ids(by['U098UFMKQHZ'][0]).join() === 'ev1', 'the booker (Camy) - her studio session only (not the Likha meeting)', by['U098UFMKQHZ'] && ids(by['U098UFMKQHZ'][0]));
+  ok(by['U08JL17A50A'] && ids(by['U08JL17A50A'][0]).join() === 'ev1', 'the booker (Camy) - her studio session only (not the Likha meeting)', by['U08JL17A50A'] && ids(by['U08JL17A50A'][0]));
   ok(by['U2'] && ids(by['U2'][0]).join() === 'ev1' && by['U3'] && ids(by['U3'][0]).join() === 'ev1', 'the engineer (Daryl) and the arranger (Angelo) are reminded too');
   ok(by['U4'] && ids(by['U4'][0]).join() === 'ev2', 'who it is for: Dilan on POST PROCESSING - TRAILER / Dilan (the Engineer line)');
   ok(by['U08V3CKDGJF'] && ids(by['U08V3CKDGJF'][0]).join() === 'ev2', 'the booker of the Post Processing (Howard) - not the M4 booth (daily = studios), not the day after');
@@ -61,9 +61,9 @@ const items = [
     ok(a3.map(x => x.action_id + ':' + x.text.text).join() === 'bk_change:Change,bk_cancel:Cancel' && a3[1].confirm && !m.blocks.some(b => b.block_id === 'rm_nav'), 'v3: Change / Cancel only (Cancel asks first), no Still on, no My bookings');
     ok(m.blocks[m.blocks.length - 1].type === 'context', 'v3: the test line at the bottom');
   }
-  if (ALL) ok(out.every(o => o.channel === 'U08V3CKDGJF') && /Test: this reminder is for Camy Caridad/.test(JSON.stringify(by['U098UFMKQHZ'][0].blocks)) && !/Test:/.test(JSON.stringify(by['U08V3CKDGJF'][0].blocks)),
+  if (ALL) ok(out.every(o => o.channel === 'U08V3CKDGJF') && /Test: this reminder is for Camy Caridad/.test(JSON.stringify(by['U08JL17A50A'][0].blocks)) && !/Test:/.test(JSON.stringify(by['U08V3CKDGJF'][0].blocks)),
     'QA (v2): every reminder to Howard - Camy (on ALLOW) too, marked; Howard\'s own unmarked');
-  else ok(by['U098UFMKQHZ'][0].channel === 'U098UFMKQHZ' && !/Test:/.test(JSON.stringify(by['U098UFMKQHZ'][0].blocks)), 'QA: Camy is on ALLOW -> to Camy herself');
+  else ok(by['U08JL17A50A'][0].channel === 'U08JL17A50A' && !/Test:/.test(JSON.stringify(by['U08JL17A50A'][0].blocks)), 'QA: Camy is on ALLOW -> to Camy herself');
   const acts = m.blocks.find(b => b.block_id === 'bka_ev1').elements;
   if (!V3) ok(acts.map(a => a.action_id + ':' + a.text.text).join() === 'rm_keep:Still on,bk_change:Change,bk_cancel:Free up the room' && acts[2].confirm.title.text === 'Free up this room?' && JSON.parse(acts[1].value).id === 'ev1',
      'Still on / Change / Free up the room (Slack\'s confirm), the row ids bk_ / bka_ as My bookings', acts.map(a => a.action_id));
@@ -71,7 +71,7 @@ const items = [
   ok((await run(RM, 'Build Reminders', [], { 'Window': [{ json: W1 }], 'List Events R': [{ json: { error: 'boom' } }], 'Read Cache R': cache })).length === 0, 'the calendar could not be read -> nothing sent');
   console.log('Monday 9:00 AM');
   out = (await run(RM, 'Build Reminders', [], { 'Window': [{ json: { kind: 'weekly', start: '2027-10-18', end: '2027-10-25' } }], 'List Events R': [{ json: { items } }], 'Read Cache R': cache })).map(i => i.json);
-  const H = out.find(o => o.person === 'U08V3CKDGJF'), J = out.find(o => o.person === 'U5'), C = out.find(o => o.person === 'U098UFMKQHZ');
+  const H = out.find(o => o.person === 'U08V3CKDGJF'), J = out.find(o => o.person === 'U5'), C = out.find(o => o.person === 'U08JL17A50A');
   ok(H && ids(H).join() === 'ev2,ev3,ev6', 'Howard\'s week: the Post Processing, the M4 booth, Saturday\'s VO - in time order', H && ids(H));
   ok(J && ids(J).join() === 'ev3', 'Japs (who the M4 booth is for) gets it too');
   ok(C && ids(C).join() === 'ev1,ev4', 'Camy: her studio session and her Likha meeting');

@@ -65,7 +65,7 @@ booking is still the one moved or placed; only the messages go to the wrong pers
 
 Once `DEV_REDIRECT = ''`, the `ALLOW` list beside it is inert (everyone is notified for real), so it
 needs no change — leave it or delete it. During QA round 2 all three `ALLOW` lists hold the dev + QA
-roster (Howard, Trish, Camy, Jess, Tel, Tara, Genzo), and since 2026-09-24 the Cancel/Move **engineer**
+roster (round 2: Howard, Trish, Camy, Jess, Tel, Tara, Genzo; since 22 Oct: Howard, Camy - in every ALLOW), and since 2026-09-24 the Cancel/Move **engineer**
 notice honors `ALLOW` too (it used to always redirect). All of that is moot once the redirects are `''`.
 
 ## 3. `HAIST Dev` god-mode — decide (keep or pull)
