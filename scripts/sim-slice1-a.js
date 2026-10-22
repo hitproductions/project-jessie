@@ -75,7 +75,13 @@ async function run(wf, name, input, outs) {
   // v8: Start / End are lists (selected_option); before v8 they were time pickers (selected_time)
   const v8 = s1.view.blocks[2].element.type === 'static_select';
   const tv = x => v8 ? { selected_option: x ? { value: x } : null } : { selected_time: x };
-  if (v8) {
+  if (v8 && JSON.stringify(si.nodes).indexOf('(6 * 60 + i * 30)') !== -1) {   // v42 (22 Oct): the lists open at 6:00 AM
+    const o = s1.view.blocks[2].element.options;
+    ok(o.length === 48 && o[0].value === '06:00' && o[0].text.text === '6:00 AM' && o[35].value === '23:30' && o[36].value === '00:00' && o[36].text.text === '12:00 AM'
+       && o[47].value === '05:30' && new Set(o.map(x => x.value)).size === 48, 'v42: half-hour times, opening at 6:00 AM, round to 5:30 AM - all 48 bookable');
+    ok(o[28].text.text === '8:00 PM' && o[12].text.text === '12:00 PM' && !s1.view.blocks[2].element.initial_option && !s1.view.blocks[3].element.initial_option,
+       'v42: labels (12:00 PM, 8:00 PM); nothing chosen in advance');
+  } else if (v8) {
     const o = s1.view.blocks[2].element.options;
     ok(o.length === 48 && o[0].value === '08:00' && o[0].text.text === '8:00 AM' && o[1].value === '08:30' && o[31].value === '23:30'
        && o[32].value === '00:00' && o[32].text.text === '12:00 AM' && o[47].value === '07:30' && new Set(o.map(x => x.value)).size === 48,
