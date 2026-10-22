@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Slack Interactions v42 + main v281 (22 Oct): the time lists open at 6:00 AM; the End list ends the day at 11:59 PM (in place
 // of 12:00 AM - 12:00 AM to 11:59 PM is the whole day, and a 12:00 AM end from an old form is read as 11:59 PM); an Event can
-// be all day (the Lobby only); typed "all day / whole day / full day" fills the form (an M booth or the Lobby: All day ticked;
+// be all day (any of its rooms - Howard: "all day for all events, not just the lobby"); typed "all day / whole day / full day" fills the form (an M booth or the Lobby: All day ticked;
 // anything else 12:00 AM to 11:59 PM).
 // Usage: node scripts/sim-v42-times.js [slack-interactions v42] [main v281]
 const fs = require('fs');
@@ -20,7 +20,7 @@ async function runIn(wf, name, input, outs) {
 const j1 = async (wf, ...a) => (await runIn(wf, ...a))[0].json;
 const rooms = FX.rooms.concat([{ id: 'lo', fields: { 'Room Name': 'Lobby', 'Room Type': ['Lobby'] } }]);
 const ST = (t, pri) => ({ id: 'st-' + t, fields: { Type: t, Priority: pri, 'Last Resort': [], 'Engineer Role Required': ['None'], 'Room Requirements': '' } });
-const sessionTypes = FX.sessionTypes.concat([ST('Event', ['lo']), ST('Meeting', [])]);
+const sessionTypes = FX.sessionTypes.concat([ST('Event', ['lo', 'lk']), ST('Meeting', [])]);
 const cacheRow = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Date().toISOString(), payload: JSON.stringify({ rooms, sessionTypes, bookers: [{ id: 'b1', fields: { Name: 'Howard Luistro', Initials: 'HL', 'Slack User ID': 'U1', Info: 'Post Engineer', Department: ['Audio Post'] } }] }) } }];
 const chk = { json: { user: 'U1', triggerId: 'T1', channel: 'D1' } };
 const step1 = async pre => (await j1(si, 'Build Step 1', [], { 'Check Signature': [chk], 'Read Cache': cacheRow,
@@ -51,14 +51,14 @@ const V1 = (p, s, e, ad) => Object.assign({ date: { date_pick: { selected_date: 
   ok(r.valid && r.s.t0 === '18:00' && r.s.t1 === '23:59', '6:00 PM to 12:00 AM -> to 11:59 PM (was "The end has to be after the start")');
   r = await read1(V1('VO Recording', '14:00', '10:00'));
   ok(!r.valid && /after the start/.test(r.answer.errors.end || ''), 'an end before the start is still refused');
-  console.log('3. All day for an Event (the Lobby)');
+  console.log('3. All day for an Event (any of its rooms)');
   r = await read1(V1('Event', '', '', true));
   ok(r.valid && r.s.allDay && r.s.t0 === '00:00' && r.s.t1 === '23:59' && r.s.kind === 'meeting', 'Event + All day -> all day', r.answer);
   r = await read1(V1('Meeting', '10:00', '11:00', true));
   ok(r.valid && !r.s.allDay && r.s.t0 === '10:00', 'a Meeting is never all day (no box for it)');
   v = await step1({ d: '2027-10-23', p: 'Event', ad: 1 });
   const ab = blk(v, 'allday_toggle');
-  ok(ab && ab.elements[0].options[0].text.text === 'All day (Lobby only)' && ab.elements[0].initial_options && !blk(v, 'start') && !blk(v, 'end'), 'typed Event all day: the box ticked, no Start / End', v.blocks.map(b => b.block_id));
+  ok(ab && ab.elements[0].options[0].text.text === 'All day booking' && ab.elements[0].initial_options && !blk(v, 'start') && !blk(v, 'end'), 'typed Event all day: the box ticked, no Start / End', v.blocks.map(b => b.block_id));
   v = await step1({ d: '2027-10-23', p: 'Event' });
   ok(blk(v, 'allday_toggle') && !blk(v, 'allday_toggle').elements[0].initial_options && blk(v, 'start') && blk(v, 'end'), 'an Event: the box, unticked, with Start / End');
   v = await step1({ d: '2027-10-23', p: '__booth', ad: 1 });
@@ -70,19 +70,20 @@ const V1 = (p, s, e, ad) => Object.assign({ date: { date_pick: { selected_date: 
   const tog = async (val) => j1(si, 'Note Toggle', [], { 'Read Request': [{ json: { payload: { view: Object.assign({ id: 'V1', hash: 'h' }, s1, { state: { values: {} } }),
     actions: [{ action_id: 'purpose_pick', selected_option: { value: val } }] } } }], 'Read Cache 9': cacheRow });
   let t = await tog('Event'); let tv2 = t.view || (t.json && t.json.view) || t;
-  ok(blk(tv2, 'allday_toggle') && blk(tv2, 'allday_toggle').elements[0].options[0].text.text === 'All day (Lobby only)' && blk(tv2, 'start') && blk(tv2, 'end'), 'Event picked: "All day (Lobby only)" appears, Start / End stay', tv2.blocks && tv2.blocks.map(b => b.block_id));
+  ok(blk(tv2, 'allday_toggle') && blk(tv2, 'allday_toggle').elements[0].options[0].text.text === 'All day booking' && blk(tv2, 'start') && blk(tv2, 'end'), 'Event picked: "All day booking" appears, Start / End stay', tv2.blocks && tv2.blocks.map(b => b.block_id));
   t = await tog('Meeting'); tv2 = t.view || t;
   ok(!blk(tv2, 'allday_toggle') && blk(tv2, 'start'), 'Meeting picked: no box');
   t = await tog('__booth'); tv2 = t.view || t;
   ok(blk(tv2, 'allday_toggle').elements[0].options[0].text.text === 'All day booking', 'M booth picked: All day booking, as before');
-  // step 2: the Lobby only
+  // step 2: an all-day Event - the rooms Room Availability has free all day, as for any Event
   const step2 = async (s, ra) => (await j1(si, 'Build Step 2', [{ json: Object.assign({ status: 'OK', busy: [] }, ra) }], { 'Read Step 1': [{ json: { s } }], 'Read Cache 2': cacheRow, 'Loc Projects 2': [] })).view;
   const S = { date: '2027-10-23', t0: '00:00', t1: '23:59', purpose: 'Event', kind: 'meeting', requester: 'U1', channel: 'D1', ext: 'x', allDay: true };
-  let v2 = await step2(S, { free_priority: ['Lobby', 'Likha', 'Katha'], free_rooms: ['Lobby', 'Likha', 'Katha', 'Studio 7'] });
+  let v2 = await step2(S, { free_priority: ['Lobby', 'Likha'], free_rooms: ['Lobby', 'Likha', 'Katha', 'Studio 7'] });
   const rb = v2.blocks.find(b => /^room(~\d+)?$/.test(b.block_id || '')), radio = rb && (rb.element || (rb.elements || [])[0]);
-  ok(radio && radio.options.map(o => o.value).filter(x => x !== '__other').join() === 'Lobby' && !v2.blocks.some(b => /^room_other/.test(b.block_id || '')), 'all-day Event: only the Lobby offered', radio && radio.options.map(o => o.value));
-  v2 = await step2(S, { free_priority: ['Likha'], busy: ['Lobby'] });
-  ok(/Lobby is taken then/.test(JSON.stringify(v2.blocks)), 'the Lobby taken -> says so');
+  ok(radio && radio.options.map(o => o.value).filter(x => x !== '__other').join() === 'Lobby,Likha', 'all-day Event: its usual rooms free all day (the Lobby, Likha), not the Lobby only', radio && radio.options.map(o => o.value));
+  v2 = await step2(S, { free_priority: ['Likha'], free_rooms: ['Likha', 'Katha'], busy: ['Lobby'] });
+  const rb3 = v2.blocks.find(b => /^room(~\d+)?$/.test(b.block_id || '')), r3 = rb3 && (rb3.element || (rb3.elements || [])[0]);
+  ok(r3 && r3.options.map(o => o.value).filter(x => x !== '__other').join() === 'Likha' && /Not free then: Lobby/.test(JSON.stringify(v2.blocks)), 'the Lobby taken all day -> Likha, "Not free then: Lobby"', v2.blocks.map(b => b.block_id));
   v2 = await step2(Object.assign({}, S, { allDay: false, t0: '10:00', t1: '12:00' }), { free_priority: ['Lobby', 'Likha'] });
   const rb2 = v2.blocks.find(b => /^room(~\d+)?$/.test(b.block_id || '')), r2 = rb2 && (rb2.element || (rb2.elements || [])[0]);
   ok(r2 && r2.options.some(o => o.value === 'Likha'), 'an Event with times: the usual rooms, as before');
