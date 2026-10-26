@@ -193,10 +193,14 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   const k1 = rb.indexOf('let __title = title, __desc = desc;'), k2 = rb.indexOf('} catch (e) { __title = title; __desc = desc; }', k1);
   const runDesc = (desc, nd) => new Function('desc', 'title', 'REQ', rb.slice(k1, k2) + '} catch (e) { __title = title; __desc = desc; }\nreturn __desc;')(desc, 'T', { new_details: JSON.stringify(nd) });
   const desc0 = 'Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | team: U2 | Notes: old\nSType: VO Recording';
-  ok(runDesc(desc0, { SType: 'Music Mixing', Arranger: 'Joaquin Santos', team: 'U2 U9' }) === 'Arranger: Joaquin Santos | Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | Notes: old | team: U2 U9\nSType: Music Mixing',
+  const NB = /v37 \(26 Oct\)/.test(rb);   // Move v37: the note in its own block under the SType line
+  ok(runDesc(desc0, { SType: 'Music Mixing', Arranger: 'Joaquin Santos', team: 'U2 U9' }) === (NB ? 'Arranger: Joaquin Santos | Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | team: U2 U9\nSType: Music Mixing\n\nNotes:\nold'
+       : 'Arranger: Joaquin Santos | Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | Notes: old | team: U2 U9\nSType: Music Mixing'),
      'Move v33: a new session type - the SType line rewritten, kept last - ' + JSON.stringify(runDesc(desc0, { SType: 'Music Mixing', Arranger: 'Joaquin Santos', team: 'U2 U9' })));
-  ok(runDesc(desc0, { Notes: 'new note' }) === 'Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | team: U2 | Notes: new note\nSType: VO Recording', 'Move v33: a new note - replaced, SType kept');
-  ok(runDesc(desc0, { Rooms: 'Studio F, Studio A' }).endsWith('Rooms: Studio F, Studio A\nSType: VO Recording'), 'Move v33: other changes keep the SType line last (v32 put Rooms after it)');
+  ok(runDesc(desc0, { Notes: 'new note' }) === (NB ? 'Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | team: U2\nSType: VO Recording\n\nNotes:\nnew note'
+       : 'Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | team: U2 | Notes: new note\nSType: VO Recording'), 'Move v33: a new note - replaced, SType kept (v37: in its own block)');
+  ok(NB ? /Rooms: Studio F, Studio A\nSType: VO Recording\n\nNotes:\nold$/.test(runDesc(desc0, { Rooms: 'Studio F, Studio A' })) : runDesc(desc0, { Rooms: 'Studio F, Studio A' }).endsWith('Rooms: Studio F, Studio A\nSType: VO Recording'),
+     'Move v33: other changes keep the SType line after the technical line (v32 put Rooms after it; v37: the note below)');
 
   // ---- rows: the session type rides on Change; main v274's chat lists
   const mr = main.nodes.find(n => n.name === 'Mine Reply').parameters.jsCode;

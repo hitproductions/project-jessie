@@ -40,7 +40,9 @@ const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: 
   const resolve = async (req) => j1(mv, 'Resolve Booking', [{ json: day }], { 'When Executed by Another Workflow': [{ json: Object.assign({ event_id: 'evO', booking_date: '2027-10-16', title: 'ORANGE / Jem Lim / HL x PL',
     new_start_iso: '2027-10-16T12:00:00+08:00', new_end_iso: '2027-10-16T14:00:00+08:00', confirmed: true, requester: 'U1', authority: 'Standard', department: 'Music' }, req) }] });
   let rb = await resolve({ new_summary: 'ORANGE / Jem Lim / DR', new_details: JSON.stringify({ Engineer: 'Daryl Reyes', Arranger: '', team: 'U2' }) });
-  ok(rb.verdict === 'CLEAR' && rb.title === 'ORANGE / Jem Lim / DR' && rb.description === 'Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | Notes: bring cans | Type: Advertising | Dept: Music | team: U2',
+  const _nb = /v37 \(26 Oct\)/.test(JSON.stringify(mv.nodes));   // Move v37: an inline note moves to its own block
+  ok(rb.verdict === 'CLEAR' && rb.title === 'ORANGE / Jem Lim / DR' && rb.description === (_nb ? 'Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | Type: Advertising | Dept: Music | team: U2\n\nNotes:\nbring cans'
+       : 'Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | Notes: bring cans | Type: Advertising | Dept: Music | team: U2'),
      'Move v31: the replacement gets the new title, engineer and team; the booker, notes, type and department stay - ' + rb.description);
   rb = await resolve({});
   ok(rb.title === 'ORANGE / Jem Lim / HL x PL' && rb.description === DESC, 'Move v31: no new details -> as before');
@@ -113,8 +115,8 @@ const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: 
   ok(tm.go && tm.new_summary === 'ORANGE / Harold Orozco / DR x PL' && JSON.parse(tm.new_details).team === 'U2 U4', 'v18: a client on the list -> its own spelling; the new engineer');
   // the form's inputs reach Move v31 and land on the replacement
   rb = await resolve({ new_summary: tm.new_summary, new_details: tm.new_details });
-  ok(rb.title === 'ORANGE / Harold Orozco / DR x PL' && /^Engineer: Daryl Reyes \| Arranger: Peter Legaste \| Booked by: Howard Luistro \| ref: U1/.test(rb.description) && /team: U2 U4$/.test(rb.description),
-     'v18 -> Move v31: the replacement gets the new title and team - ' + rb.description);
+  ok(rb.title === 'ORANGE / Harold Orozco / DR x PL' && /^Engineer: Daryl Reyes \| Arranger: Peter Legaste \| Booked by: Howard Luistro \| ref: U1/.test(rb.description) && /team: U2 U4(?:\n\nNotes:\nbring cans)?$/.test(rb.description),
+     'v18 -> Move v31: the replacement gets the new title and team (v37: the note below) - ' + rb.description);
   // a meeting moved to another room takes that room in its title
   const BM = { id: 'evM', d: '2027-10-16', s: '15:00', e: '16:00', r: 'Likha', t: 'LIKHA - Q4 planning' };
   const subM = { type: 'view_submission', view: { id: 'V6', private_metadata: JSON.stringify({ b: BM }), state: { values: {
