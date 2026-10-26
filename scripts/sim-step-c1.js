@@ -38,11 +38,11 @@ const j1 = async (...a) => (await run(...a))[0].json;
      && await route({ type: 'block_actions', actions: [{ action_id: 'my_bookings' }] }) === 7, 'routes: cancel 9, change 10, change submit 11, page 12, my bookings 7');
   const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');
   ok(C.Route.main[7][0].node === 'Ack My Bookings' && C.Route.main[12][0].node === 'Ack My Bookings' && nx('Page?') === 'Update List | Post List', 'wiring: My bookings posts, a page updates');
-  ok(nx('To Cancel') === 'Cancel' && nx('Cancel') === 'After Cancel' && nx('After Cancel') === 'Update Cancelled', 'wiring: cancel');
+  ok(nx('To Cancel') === 'Cancel' && (nx('Cancel') === 'After Cancel' || (nx('Cancel') === 'Get Message C2' && nx('Get Message C2') === 'After Cancel')) && nx('After Cancel') === 'Update Cancelled', 'wiring: cancel');
   const V18 = si.nodes.some(n => n.name === 'Change Notices');
   ok(nx('Change OK?') === (V18 ? 'Client Names' : V17 ? 'Get Message Before' : 'Read Cache 7') && nx('After Move') === 'Show Change Result'
-     && nx('Moved?') === (si.nodes.some(n => n.name === 'DM Changed') ? 'Get Message+Change Notices+DM Changed | Restore Message' : V18 ? 'Get Message+Change Notices | Restore Message' : V17 ? 'Get Message | Restore Message' : 'Get Message') && nx('Fix Message') === 'Update Changed', 'wiring: change');
-  if (V17) ok(nx('Ack Cancel') === 'Mark Cancelling' && nx('Cancelling Shown?') === 'Show Cancelling | Read Cache 5' && nx('Show Cancelling') === 'Read Cache 5'
+     && nx('Moved?').replace(' | Get Message R', ' | Restore Message') === (si.nodes.some(n => n.name === 'DM Changed') ? 'Get Message+Change Notices+DM Changed | Restore Message' : V18 ? 'Get Message+Change Notices | Restore Message' : V17 ? 'Get Message | Restore Message' : 'Get Message') && nx('Fix Message') === 'Update Changed', 'wiring: change');
+  if (V17) ok((nx('Ack Cancel') === 'Mark Cancelling' || (nx('Ack Cancel') === 'Get Message C' && nx('Get Message C') === 'Mark Cancelling')) && nx('Cancelling Shown?') === 'Show Cancelling | Read Cache 5' && nx('Show Cancelling') === 'Read Cache 5'
      && nx('Get Message Before') === 'Mark Changing' && nx('Changing Shown?') === 'Show Changing | Read Cache 7' && nx('Show Changing') === 'Read Cache 7' && nx('Restore Message') === 'Update Restored', 'v17 wiring: processing lines, restore');
   ok(si.nodes.find(n => n.name === 'Cancel').parameters.workflowId.value === 'bAyDw7udhmY0NL38' && si.nodes.find(n => n.name === 'Move').parameters.workflowId.value === 't7lwR2km4tfN8DbM', 'Cancel / Move Booking ids');
 

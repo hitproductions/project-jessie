@@ -82,7 +82,7 @@ const items = [
   const cs = SI.nodes.find(n => n.name === 'Check Signature').parameters.jsCode;
   const route = (await run(SI, 'Check Signature', [{ json: { computed: 'abc' } }], { 'Read Request': [{ json: { sig: 'v0=abc', ts: String(Math.floor(Date.now() / 1000)), payload: { type: 'block_actions', actions: [{ action_id: 'rm_keep' }] } } }] }))[0].json.route;
   const nx = k => ((SI.connections[k] || {}).main || []).map(o => (o || []).map(c => c.node).join('+'));
-  ok(route === 15 && nx('Route')[15] === 'Ack Keep' && nx('Ack Keep')[0] === 'Keep Row' && nx('Keep Row')[0] === 'Update Kept' && node(SI, 'Route').parameters.numberOutputs >= 16, 'rm_keep -> route 15 -> Ack Keep -> Keep Row -> Update Kept');
+  ok(route === 15 && nx('Route')[15] === 'Ack Keep' && (nx('Ack Keep')[0] === 'Keep Row' || (nx('Ack Keep')[0] === 'Get Message K' && nx('Get Message K')[0] === 'Keep Row')) && nx('Keep Row')[0] === 'Update Kept' && node(SI, 'Route').parameters.numberOutputs >= 16, 'rm_keep -> route 15 -> Ack Keep -> Keep Row -> Update Kept');
   const msg = { ts: '9.9', text: 'Tomorrow', blocks: m.blocks };
   const kr = (await run(SI, 'Keep Row', [], { 'Read Request': [{ json: { payload: { actions: [{ action_id: 'rm_keep', value: JSON.stringify({ id: 'ev1', w: 'daily' }) }], message: msg, container: { channel_id: 'D1', message_ts: '9.9' } } } }] }))[0].json;
   ok(kr.channel === 'D1' && kr.ts === '9.9' && !kr.blocks.some(b => b.block_id === 'bka_ev1') && kr.blocks.some(b => b.block_id === 'bkd_ev1' && b.elements[0].text === '✓ Still on'), 'Still on: the row\'s buttons become "✓ Still on"', kr.blocks.map(b => b.block_id));
