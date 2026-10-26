@@ -52,7 +52,10 @@ const uniq = bl => bl.every(b => { const a = (b.elements || []).map(e => e.actio
   const cv = J(req.blocks[1].elements[0].value), pv = J(req.blocks[1].elements[2].value);
   ok(cv.id === '20271021-U7' && cv.as === 'U2' && cv.inc.id === 'e1' && pv.d === '2027-10-22' && pv.s === '14:00' && pv.p === 'Celebrity Recording', 'values: the request, their booking, and the form at the same date and time', [cv, pv]);
   ok(/Test: this is for Celeste Cruz/.test(JSON.stringify(req.blocks)) && /Test: this is for Daryl Reyes/.test(JSON.stringify(a1.blocks)) && /Test: this is for Angelo Villegas/.test(JSON.stringify(a2.blocks)), 'each marked who it is really for');
-  ok(/Celeste Cruz asks for Studio F/.test(a1.blocks[0].text.text) && /takes priority over VO Recording/.test(a1.blocks[0].text.text) && /Your booking: \*SONG \/ Jem Lim \/ DR\* · Fri, Oct 22 · 2:00 PM – 4:00 PM/.test(a1.blocks[0].text.text)
+  const RM4 = /v4 \(Howard, 26 Oct\)/.test(JSON.stringify(RM.nodes));   // Request Messages v4: both bookings as cards
+  ok((RM4 ? /^🙋 Celeste Cruz is requesting a new booking to take over your existing one\. Their Celebrity Recording session takes priority over your VO Recording session in that room\.\n\n\*Their requested booking:\*\n\*SONG 2 \/ Netflix \/ HL\*\n\*Date:\* Friday, October 22, 2027\n\*Time:\* 2:00 PM – 4:00 PM\n\*Room:\* Studio F\n\n\*Your existing booking:\*\n\*SONG \/ Jem Lim \/ DR\*\n\*Date:\* Friday, October 22, 2027/.test(a1.blocks[0].text.text)
+        && /Please answer by/.test(JSON.stringify(a1.blocks[a1.blocks.length - 2]))
+     : /Celeste Cruz asks for Studio F/.test(a1.blocks[0].text.text) && /takes priority over VO Recording/.test(a1.blocks[0].text.text) && /Your booking: \*SONG \/ Jem Lim \/ DR\* · Fri, Oct 22 · 2:00 PM – 4:00 PM/.test(a1.blocks[0].text.text))
      && btns(a1.blocks).join() === 'cr_move:Move my booking,cr_giveup:Give it up,cr_keep:Keep my booking' && uniq(a1.blocks), 'the booker: who asks, why, their booking, Move / Give it up / Keep', a1.blocks[0].text.text);
   const mv = J(a1.blocks[1].elements[0].value);
   ok(mv.id === 'e1' && mv.d === '2027-10-22' && mv.s === '14:00' && mv.st === 'VO Recording' && mv.rid === '20271021-U7' && mv.w === 'a1' && J(a2.blocks[1].elements[2].value).w === 'a2',
@@ -71,7 +74,9 @@ const uniq = bl => bl.every(b => { const a = (b.elements || []).map(e => e.actio
   ok(o.length === 3 && o.every(x => x.op === 'update' && x.channel === 'D1') && o.map(x => x.ts).join() === '1.1,1.2,1.3', 'every message updated in place (channel + ts kept on the row)');
   ok(/✅ \*Booked\.\* Daryl Reyes moved their booking/.test(o[0].blocks[0].text.text) && ids(o[0].blocks).join().indexOf('bk_n9,bka_n9,actions') === 0 && btns(o[0].blocks).join().indexOf('bk_change:Change,bk_cancel:Cancel,open_book:Book another') === 0,
      'booked: the requester\'s card becomes the Booked card with Change / Cancel and Book another', o[0].blocks[0].text.text);
-  ok(/✓ Done – Studio F is Celeste’s from 2:00 PM\. Your booking was moved\./.test(JSON.stringify(o[1].blocks)) && !btns(o[1].blocks).length, 'the booker: done, no buttons left');
+  ok(/✓ Done – Studio F is Celeste’s from 2:00 PM\. Your booking was moved\./.test(JSON.stringify(o[1].blocks)) && (/v4 \(Howard, 26 Oct\)/.test(JSON.stringify(RM.nodes)) ? btns(o[1].blocks).join() === 'my_bookings:My bookings'
+     && /^Celeste Cruz asks for the following booking:\n\n\*Date:\* Friday, October 22, 2027\n\*Time:\* 2:00 PM – 4:00 PM\n\*Room:\* Studio F$/.test(o[1].blocks[0].text.text) : !btns(o[1].blocks).length),
+     'the booker: done - who asked for which booking, how it ended, My bookings only (v4; no buttons before)');
   o = await ended('REJECTED', { how: 'kept', by: 'Daryl Reyes' });
   ok(/❌ \*Daryl Reyes is keeping Studio F\.\*/.test(o[0].blocks[0].text.text) && btns(o[0].blocks).join() === 'cr_pick:Pick another room,my_bookings:My bookings'
      && /You kept it/.test(JSON.stringify(o[1].blocks)) && /Daryl Reyes kept it/.test(JSON.stringify(o[2].blocks)), 'kept: said to the requester (Pick another room); "You kept it" / "Daryl Reyes kept it"');

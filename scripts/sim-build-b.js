@@ -53,7 +53,10 @@ const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: 
   const co = await j1(cx, 'Check Ownership', [{ json: day }], { 'When Executed by Another Workflow': [{ json: { event_id: 'evO', booking_date: '2027-10-16', title: 'ORANGE / Jem Lim / HL x PL', confirmed: true, requester: 'U1', authority: 'Standard' } }], 'Find By Title': [{ json: { items: [] } }] });
   ok(co.verdict === 'CLEAR' && co.notify === true && co.team.join() === 'U1,U4', 'Cancel v28: the booker cancels -> the arranger (team) is told');
   const recips = await run(cx, 'Build Recipients', [], { 'Check Ownership': [{ json: co }], 'When Executed by Another Workflow': [{ json: { requester: 'U1', requester_name: 'Howard Luistro', booking_date: '2027-10-16' } }], 'Lookup Engineer': [{ json: {} }] });
-  ok(recips.length === 1 && recips[0].json.to === 'U08V3CKDGJF' && /\[DEV\] would notify a team member \(U4\)/.test(recips[0].json.text) && /a session you are on, was cancelled by Howard Luistro/.test(recips[0].json.text),
+  const _rc = recips[0] && recips[0].json, _card = !!(_rc && _rc.blocks);   // Cancel v30 (26 Oct): the notice is a card
+  ok(recips.length === 1 && _rc.to === 'U08V3CKDGJF' && (_card ? /Test: this is for a team member \(U4\)/.test(JSON.stringify(_rc.blocks)) && /^A session you are on was cancelled by Howard Luistro:\n\n\*ORANGE \/ Jem Lim \/ HL x PL\*\n\*Date:\* Saturday, October 16, 2027/.test(_rc.blocks[0].text.text)
+       && _rc.blocks[1].elements.map(e => e.action_id).join() === 'open_book,my_bookings'
+     : /\[DEV\] would notify a team member \(U4\)/.test(_rc.text) && /a session you are on, was cancelled by Howard Luistro/.test(_rc.text)),
      'Cancel v28: only the arranger, redirected during QA - ' + JSON.stringify(recips[0].json).slice(0, 140));
 
   // ---- Slack Interactions v18

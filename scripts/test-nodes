@@ -1686,7 +1686,10 @@ suite('Build Recipients — who gets a DM on an authorized change', ()=>{
     if(name==='When Executed by Another Workflow') return {first:()=>({json:trig})};
     if(name==='Lookup Engineer') return {first:()=>({json:eng})};
     return {first:()=>({json:{}})};
-  }).map(i=>i.json);
+  }).map(i=>i.json).map(o=>{   // v30 Cancel / v36 Move (26 Oct): the notice is a card (blocks) - read back as the old one-line text for these checks
+    if(!o.blocks) return o; const sec=((o.blocks[0]||{}).text||{}).text||''; const m=/Test: this is for (.+?) \(([^)]+)\)\._/.exec(JSON.stringify(o.blocks));
+    return Object.assign({},o,{text:(m?'[DEV] would notify '+m[1]+' ('+m[2]+'):\n':'')+sec}); });
+  const CARD=/v30 Cancel \/ v36 Move/.test(s);
   const co={bookerRef:'U0TESTVENER',bookerName:'Vener Ariston',title:'X / Y / TL',roomNote:' to Studio 7'};
   const trig={requester_name:'Howard Luistro',requester:'U08V3CKDGJF',booking_date:'2027-10-15'};
   const engRow=id=>({fields:{'Slack User ID':id,'Name':'Tara Lim'}});
@@ -1694,10 +1697,13 @@ suite('Build Recipients — who gets a DM on an authorized change', ()=>{
   let r=run(co,trig,{});
   check('nr','booker only when no engineer match',r.length===1&&/Vener Ariston \(U0TESTVENER\)/.test(r[0].text),JSON.stringify(r).slice(0,90));
   check('nr','booker DM is dev-redirected',r[0].to==='U08V3CKDGJF'&&/^\[DEV\] would notify/.test(r[0].text));
-  check('nr','booker DM carries the room note',/was moved to Studio 7 by Howard Luistro/.test(r[0].text));
+  if(CARD){ const rc=run({...co,location:'Studio 7',new_start:'2027-10-15T14:00:00+08:00',new_end:'2027-10-15T16:00:00+08:00'},trig,{});
+    check('nr','v36: the card - who moved it, the title, the new date / time / room',/^\[DEV\] would notify Vener Ariston \(U0TESTVENER\):\nYour booking was moved by Howard Luistro:\n\n\*X \/ Y \/ TL\*\n\*Date:\* Friday, October 15, 2027\n\*Time:\* 2:00 PM – 4:00 PM\n\*Room:\* Studio 7$/.test(rc[0].text),rc[0].text);
+    check('nr','v36: My bookings under it, the test line last',JSON.stringify(rc[0].blocks[1].elements.map(e=>e.action_id))==='["my_bookings"]'&&/Test: this is for Vener Ariston/.test(JSON.stringify(rc[0].blocks[2]))); }
+  else check('nr','booker DM carries the room note',/was moved to Studio 7 by Howard Luistro/.test(r[0].text));
 
   r=run(co,trig,engRow('U08JL17A50A'));   // an engineer on ALLOW (Camy - the QA roster since 22 Oct: Howard, Camy)
-  check('nr','engineer added when distinct',r.length===2&&/you are assigned to|a session you are on/.test(r[1].text),JSON.stringify(r).slice(0,120));
+  check('nr','engineer added when distinct',r.length===2&&/you are assigned to|a session you are on/i.test(r[1].text),JSON.stringify(r).slice(0,120));
   check('nr','an allowlisted engineer gets a real DM (honors ALLOW)',r[1].to==='U08JL17A50A'&&!/\[DEV\]/.test(r[1].text));
   if(s.indexOf('U026N6E1R')===-1){ r=run(co,trig,engRow('U026N6E1R'));   // Tara, off the roster since 22 Oct
     check('nr','22 Oct: a former tester (Tara) is redirected to Howard',r.length===2&&r[1].to==='U08V3CKDGJF'&&/^\[DEV\] would notify/.test(r[1].text)); }
@@ -1716,7 +1722,7 @@ suite('Build Recipients — who gets a DM on an authorized change', ()=>{
   // tester assigned as the engineer (e.g. Tara) gets a real DM; a non-listed engineer still
   // redirects (covered above). Booker + engineer both honor ALLOW now.
   r=run({...co,bookerRef:'U08V3CKDGJF',bookerName:'Howard Luistro'},{...trig,requester:'U0TESTACT',requester_name:'Someone Else'},engRow('U08JL17A50A'));  // booker and engineer both on ALLOW (the roster has two people since 22 Oct), someone else acting
-  check('nr','an allowlisted engineer gets a real DM too',r.length===2&&r[1].to==='U08JL17A50A'&&!/\[DEV\]/.test(r[1].text)&&/you are assigned to|a session you are on/.test(r[1].text),JSON.stringify(r[1]).slice(0,90));
+  check('nr','an allowlisted engineer gets a real DM too',r.length===2&&r[1].to==='U08JL17A50A'&&!/\[DEV\]/.test(r[1].text)&&/you are assigned to|a session you are on/i.test(r[1].text),JSON.stringify(r[1]).slice(0,90));
   if(/decided 15 Oct/.test(s)){
     // v28 / v31: the team ("team:" ids) is told, never the person who acted; the booker only when someone else acted
     r=run({...co,team:['U08JL17A50A','U0TESTARR']},trig,{});

@@ -1,0 +1,147 @@
+{
+  "name": "Jessie — Request Messages — v4 (cards)",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "mode"
+            },
+            {
+              "name": "row"
+            },
+            {
+              "name": "extra"
+            }
+          ]
+        }
+      },
+      "id": "d17cb610-5461-47b1-87b4-e3e0afcee28b",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1600,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Render (Jessie — Request Messages v1, slice 2, 21 Oct): every message of a room request, written in one place.\n//   mode \"open\": the requester's card (Requested) and the request to the booker and engineer (priority) or the booth's holder\n//                (shared booth) - posted.\n//   mode \"end\":  every message of the request updated in place to how it ended (the row's Status + extra.how / extra.by);\n//                a request with no stored messages (made before slice 2) gets new ones instead.\n// Called by Open Consent Request (open), Finalize Consent, Consent Sweep and Slack Interactions (end).\nconst T = $('When Executed by Another Workflow').first().json || {};\nconst mode = String(T.mode || 'open').trim().toLowerCase();\nconst J = x => { if (x && typeof x === 'object') return x; try { return JSON.parse(x || '{}') || {}; } catch (e) { return {}; } };\nconst row = J(T.row), X = J(T.extra);\nconst M = J(row['Messages']);\nconst inc = (X.inc && X.inc.id) ? X.inc : (M.inc || {});\n// LAUNCH SWITCH: DEV_REDIRECT '' at launch (scripts/flip-launch-switches). During QA every request message goes to\n// DEV_REDIRECT - Howard, 21 Oct: all of them, the ALLOW roster too (ALL_TO_DEV) - each marked who it is really for.\n// ALL_TO_DEV does nothing once DEV_REDIRECT is ''.\nconst DEV_REDIRECT = 'U08V3CKDGJF';\nconst ALL_TO_DEV = false;   // 21 Oct (QA, Camy testing): the QA roster (ALLOW) gets its own; everyone else still to DEV_REDIRECT\nconst ALLOW = ['U08V3CKDGJF','U08JL17A50A'];\nconst route = id => (DEV_REDIRECT && (ALL_TO_DEV || ALLOW.indexOf(String(id)) === -1)) ? DEV_REDIRECT : id;\n\nconst _DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], _ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nconst _DS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst _mnl = iso => new Date((/^\\d{4}-\\d{2}-\\d{2}$/.test(String(iso || '')) ? Date.parse(iso + 'T00:00:00+08:00') : Date.parse(iso)) + 8 * 3600000);\nconst _ymd = iso => { const x = _mnl(iso); return isNaN(x) ? '' : x.toISOString().slice(0, 10); };\nconst _hm = iso => { const x = _mnl(iso); return isNaN(x) ? '' : x.toISOString().slice(11, 16); };\nconst _t12 = hm => { if (!hm) return ''; let [h, m] = String(hm).split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; };\nconst _dayLong = d => { const x = new Date(d + 'T12:00:00Z'); return isNaN(x) ? '' : _DL[x.getUTCDay()] + ', ' + _ML[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + x.getUTCFullYear(); };\nconst _dayShort = d => { const x = new Date(d + 'T12:00:00Z'); return isNaN(x) ? '' : _DS[x.getUTCDay()] + ', ' + _MS[x.getUTCMonth()] + ' ' + x.getUTCDate(); };\nconst _isAllDay = (s, e) => /^\\d{4}-\\d{2}-\\d{2}$/.test(String(s || '')) || (_hm(s) === '00:00' && _hm(e) === '00:00');\nconst _times = (s, e) => _isAllDay(s, e) ? 'All day' : _t12(_hm(s)) + ' – ' + _t12(_hm(e));\nconst _deadlineText = iso => { const x = _mnl(iso); return isNaN(x) ? '' : _DS[x.getUTCDay()] + ', ' + _MS[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + _t12(x.toISOString().slice(11, 16)); };\n\nconst md = t => ({ type: 'mrkdwn', text: t });\nconst pt = t => ({ type: 'plain_text', text: t });\nconst sec = t => ({ type: 'section', text: md(String(t).slice(0, 2900)) });\nconst ctx = t => ({ type: 'context', elements: [md(String(t).slice(0, 2900))] });\nconst btn = (aid, text, value, o) => Object.assign({ type: 'button', action_id: aid, text: pt(text), value: String(typeof value === 'string' ? value : JSON.stringify(value)).slice(0, 2000) }, o || {});\nconst confirm = (title, text, yes, no, danger) => Object.assign({ title: pt(title), text: md(String(text).slice(0, 290)), confirm: pt(yes), deny: pt(no) }, danger ? { style: 'danger' } : {});\n\nconst P = J(row['Req Payload']);\nconst rid = String(row['Request ID'] || '');\nconst isMB = String(row['Kind'] || '').toUpperCase() === 'MBOOTH';\nconst room = String(row['Room/Booth'] || '');\nconst rs = row['Req Start'], re = row['Req End'];\nconst day = _ymd(rs);\nconst when = _dayLong(day) + ' · ' + _times(rs, re);\nconst whenShort = _dayShort(day) + ' · ' + _times(rs, re);\nconst title = String(P.summary || '').trim();\nconst type = String(P.session_type || '').trim();\nconst R = { r: 'r', u: String(row['Requester'] || ''), name: String(row['Requester Name'] || '').trim() || 'Someone' };\nconst A1 = { r: 'a1', u: String(row['Approver'] || ''), name: String(row['Approver Name'] || '').trim() };\nconst A2 = { r: 'a2', u: String(row['Approver 2'] || ''), name: String(row['Approver 2 Name'] || '').trim() };\nconst first = n => String(n || '').trim().split(/\\s+/)[0] || '';\nconst dl = _deadlineText(row['Deadline']);\nconst incWhen = inc.d ? _dayShort(inc.d) + ' · ' + (inc.s && !(inc.s === '00:00' && inc.e === '00:00') ? _t12(inc.s) + ' – ' + _t12(inc.e) : 'All day') : '';\nconst incTitle = String(inc.t || row['Incumbent Title'] || '').trim();\nconst holder = A1.name || first(String(row['Incumbent Title'] || '').replace(/^\\s*M\\d+\\s*-\\s*/i, '')) || 'the holder';\nconst asked = isMB ? holder + ' (their standing hold)'\n  : [A1.name ? A1.name + ' (booker)' : '', A2.u && A2.u !== A1.u && A2.name ? A2.name + ' (engineer)' : ''].filter(Boolean).join(', ');\nconst testLine = (to, p) => to !== p.u && p.u ? [ctx('_Test: this is for ' + (p.name || p.u) + '._')] : [];\nconst bkv = { id: String(inc.id || row['Incumbent Event Id'] || ''), d: inc.d || '', s: inc.s || '', e: inc.e || '', r: inc.r || room, t: incTitle.slice(0, 150), st: inc.st || '' };\nconst pick = { d: day, s: _isAllDay(rs, re) ? '' : _hm(rs), e: _isAllDay(rs, re) ? '' : _hm(re), p: isMB ? '__booth' : type };\nObject.keys(pick).forEach(k => { if (!pick[k]) delete pick[k]; });\nconst reqHead = '*' + title + '*\\n' + when + ' · ' + room;\n// v4 (26 Oct, Howard: \"clearer and simpler\"): a booking as a card - *title*, Date, Time, Room - like the other cards\nconst bookCard = (t, dLong, times, rm) => (t ? '*' + t + '*\\n' : '') + '*Date:* ' + dLong + '\\n*Time:* ' + times + '\\n*Room:* ' + rm;\nconst reqCard = bookCard(title, _dayLong(day), _times(rs, re), room);\nconst incCard = bookCard(incTitle, _dayLong(inc.d || day), inc.d ? (inc.s && !(inc.s === '00:00' && inc.e === '00:00') ? _t12(inc.s) + ' – ' + _t12(inc.e) : 'All day') : _times(rs, re), inc.r || room);\n\n\nfunction requesterOpen() {\n  const lines = ['⏳ *Requested – ' + room + '*', '', reqCard, '',   // v4: the card\n    isMB ? 'Asked: ' + asked + '. No answer by *' + dl + '* and it’s booked for you.'\n         : 'Asked: ' + (asked || 'its booker') + ' · they have until *' + dl + '* to answer.'];\n  const cleared = isMB\n    ? btn('cr_attest', 'I’ve cleared it with them', { id: rid, w: 'r' }, { confirm: confirm('Cleared it with them?', holder + ' said you can use ' + room + ' then? It will be booked for you now.', 'Yes, book it', 'Not yet') })\n    : btn('cr_cleared', 'I’ve cleared it with them', { id: rid, w: 'r', as: A1.u, inc: bkv });\n  return [sec(lines.join('\\n')), { type: 'actions', block_id: 'cra_' + rid, elements: [cleared,\n    btn('cr_withdraw', 'Withdraw request', { id: rid, w: 'r' }, { confirm: confirm('Withdraw this request?', 'Nobody will be asked for ' + room + ' any more.', 'Withdraw', 'Keep it open') }),\n    btn('cr_pick', 'Pick another room', pick)] }];\n}\nfunction approverOpen(p) {\n  if (isMB) return [sec('🙋 ' + R.name + ' asks to use ' + room + ' during your standing hold:\\n\\n' + bookCard(title, _dayLong(day), _times(rs, re), room)\n      + '\\n\\nIf you don’t need it that day, let them use it. *No answer by ' + dl + ': it’s booked for them.*'),   // v4: the card\n    { type: 'actions', block_id: 'crq_' + rid, elements: [\n      btn('cr_allow', 'Let them use it', { id: rid, w: p.r }, { style: 'primary', confirm: confirm('Let ' + first(R.name) + ' use ' + room + '?', 'Your hold on ' + _dayShort(day) + ' is taken off for that day only, and ' + room + ' is booked for ' + R.name + '.', 'Let them use it', 'Not yet') }),\n      btn('cr_keep', 'Keep it', { id: rid, w: p.r }, { confirm: confirm('Keep ' + room + '?', R.name + ' is told you need it.', 'Keep it', 'Not yet') })] }];\n  // v4 (Howard, 26 Oct): what they want, then both bookings as cards; the answer-by time under the buttons\n  const lines = ['🙋 ' + R.name + ' is requesting a new booking to take over your existing one. Their ' + (type || 'session') + (type ? ' session' : '') + ' takes priority over your '\n      + (inc.st ? inc.st + ' session' : 'booking') + ' in that room.',\n    '', '*Their requested booking:*', reqCard, '', '*Your existing booking:*', incCard];\n  return [sec(lines.join('\\n')), { type: 'actions', block_id: 'crq_' + rid, elements: [\n    btn('cr_move', 'Move my booking', Object.assign({}, bkv, { rid, w: p.r }), { style: 'primary' }),\n    btn('cr_giveup', 'Give it up', { id: rid, w: p.r }, { confirm: confirm('Give up your booking?', '*' + incTitle + '*' + (incWhen ? ' (' + incWhen + ')' : '') + ' is cancelled and ' + room + ' booked for ' + R.name + '.', 'Give it up', 'Not yet', true) }),\n    btn('cr_keep', 'Keep my booking', { id: rid, w: p.r }, { confirm: confirm('Keep your booking?', R.name + ' is told you need ' + room + ' then.', 'Keep it', 'Not yet') })] },\n    ctx('Move it to a time or room that doesn’t clash, give it up, or keep it. Please answer by *' + dl + '* – no answer keeps your booking.')];   // v4\n}\n\n// How it ended\nconst st = String(row['Status'] || '').toUpperCase();\nconst how = String(X.how || row['Resolved Via'] || '').toLowerCase();\nconst by = String(X.by || '').trim();\nconst ev = X.event || {};\nconst nav = book => ({ type: 'actions', elements: [btn('open_book', book, 'menu'), btn('my_bookings', 'My bookings', 'menu')] });\nfunction requesterEnd() {\n  if (st === 'DONE') {\n    const t = String(ev.title || title), id = String(ev.id || '');\n    const card = '✅ *Booked.*' + (how === 'sweep-timeout' ? ' No answer by ' + dl + ', so it’s yours.' : how === 'attestation' || how === 'cleared-gave-up' ? ''\n        : isMB ? ' ' + holder + ' let you use it.' : how === 'move-hook' ? ' ' + (A1.name || 'They') + ' moved their booking.'\n        : /gave-up/.test(how) ? ' ' + (by || A1.name || 'They') + ' gave it up.' : '')\n      + '\\n\\n*' + t + '*\\n*Date:* ' + _dayLong(day) + '\\n*Time:* ' + _times(rs, re) + '\\n*Room:* ' + room;\n    const bk = { id, d: day, s: _isAllDay(rs, re) ? '' : _hm(rs), e: _isAllDay(rs, re) ? '' : _hm(re), r: room, t: t.slice(0, 150), st: type };\n    const out = [{ type: 'section', block_id: 'bk_' + (id || 'new'), text: md(card) }];\n    if (id) out.push({ type: 'actions', block_id: 'bka_' + id, elements: [btn('bk_change', 'Change', bk),\n      btn('bk_cancel', 'Cancel', bk, { style: 'danger', confirm: confirm('Cancel this booking?', '*' + t + '*\\n' + whenShort, 'Cancel booking', 'Keep it', true) })] });\n    out.push(nav('Book another'));\n    return out;\n  }\n  const lead = st === 'REJECTED' ? '❌ *' + (by || (isMB ? holder : A1.name) || 'They') + ' ' + 'is keeping ' + room + '.*'\n    : st === 'EXPIRED' ? '⌛ *No answer by ' + dl + ' – ' + room + ' stays booked.*'\n    : st === 'WITHDRAWN' ? '*Request withdrawn* – nothing was booked.'\n    : st === 'FAILED' ? '⚠️ *Couldn’t book ' + room + ' after all*' + (X.why ? ' – ' + X.why : ' – it’s still taken then.')\n    : '⏳ *Requested – ' + room + '*';\n  return [sec(lead + '\\n\\n' + reqCard), { type: 'actions', elements: [btn('cr_pick', 'Pick another room', pick), btn('my_bookings', 'My bookings', 'menu')] }];   // v4: the card\n}\nfunction approverEnd(p) {\n  const head = (isMB ? R.name + ' asks to use ' + room + ' during your standing hold:' : R.name + ' asks for the following booking:')   // v4 (Howard, 26 Oct)\n    + '\\n\\n' + bookCard('', _dayLong(day), _times(rs, re), room);\n  let line;\n  if (st === 'DONE') line = isMB ? (how === 'sweep-timeout' ? '⌛ No answer by ' + dl + ' – ' + room + ' was booked for ' + first(R.name) + ' that day. Your hold stays on the other days.'\n      : '✓ ' + first(R.name) + ' is using ' + room + ' that day. Your hold stays on the other days.')\n    : '✓ Done – ' + room + ' is ' + first(R.name) + '’s from ' + _t12(_hm(rs)) + '.' + (how === 'move-hook' ? ' Your booking was moved.' : /gave-up/.test(how) ? ' Your booking was cancelled.' : '');\n  else if (st === 'REJECTED') line = '✓ ' + (by && by !== p.name ? by + ' kept it.' : 'You kept it.') + ' ' + first(R.name) + ' was told.';\n  else if (st === 'EXPIRED') line = '⌛ The request ended with no answer – your booking stays.';\n  else if (st === 'WITHDRAWN') line = 'Withdrawn – nothing to do.';\n  else if (st === 'FAILED') line = 'The request ended – nothing changed for ' + first(R.name) + '.';\n  else line = '⏳ Waiting for an answer.';\n  return [sec(head), ctx(line), { type: 'actions', elements: [btn('my_bookings', 'My bookings', 'menu')] }];   // v4: My bookings\n}\nconst textOf = (role, open) => open ? (role === 'r' ? 'Requested ' + room + ' · ' + whenShort : R.name + ' asks for ' + room + ' · ' + whenShort)\n  : (role === 'r' ? (st === 'DONE' ? 'Booked ' + room + ' · ' + whenShort : 'Your request for ' + room + ': ' + st.toLowerCase()) : 'The request for ' + room + ' ended');\n\nconst people = [R, A1].concat(!isMB && A2.u && A2.u !== A1.u ? [A2] : []);\nconst out = [];\nif (mode === 'open') {\n  for (const p of people) { if (!p.u) continue; const to = route(p.u);\n    out.push({ op: 'post', r: p.r, u: p.u, channel: to, text: textOf(p.r, true), blocks: (p.r === 'r' ? requesterOpen() : approverOpen(p)).concat(testLine(to, p)) }); }\n} else {\n  const stored = Array.isArray(M.m) ? M.m.filter(x => x && x.c && x.t) : [];\n  if (stored.length) for (const m of stored) { const p = people.find(x => x.r === m.r) || { r: m.r, u: m.u, name: '' }; const to = route(p.u);\n    out.push({ op: 'update', r: m.r, u: m.u, channel: m.c, ts: m.t, text: textOf(m.r, false), blocks: (m.r === 'r' ? requesterEnd() : approverEnd(p)).concat(testLine(to, p)) }); }\n  else for (const p of people) { if (!p.u) continue; const to = route(p.u);   // a request from before slice 2: new messages\n    out.push({ op: 'post', r: p.r, u: p.u, channel: to, text: textOf(p.r, false), blocks: (p.r === 'r' ? requesterEnd() : approverEnd(p)).concat(testLine(to, p)) }); }\n}\nreturn out.map(x => ({ json: x }));\n"
+      },
+      "id": "18ea8547-17e4-439f-8b13-16a7580c0921",
+      "name": "Render",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1936,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.op === 'update' ? 'https://slack.com/api/chat.update' : 'https://slack.com/api/chat.postMessage' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify(Object.assign({ channel: $json.channel, text: $json.text, blocks: $json.blocks }, $json.op === 'update' ? { ts: $json.ts } : {})) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2272,
+        640
+      ],
+      "id": "4bbbf52a-fc97-43ca-a5f6-f439f6ea125f",
+      "name": "Send",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect: where each message went (channel + ts), so the request's messages can be updated when it ends.\nconst sent = $('Render').all().map(i => i.json || {});\nconst res = $input.all().map(i => i.json || {});\nconst m = sent.map((x, i) => ({ r: x.r, u: x.u, c: (res[i] || {}).channel || x.channel, t: (res[i] || {}).ts || x.ts || '', ok: (res[i] || {}).ok === true,\n  error: (res[i] || {}).error || '' }));\nreturn [{ json: { messages: m.filter(x => x.ok && x.t).map(x => ({ r: x.r, u: x.u, c: x.c, t: x.t })), sent: m.length,\n  failed: m.filter(x => !x.ok).map(x => x.r + ': ' + (x.error || 'not sent')) } }];\n"
+      },
+      "id": "d4f6ec32-75b6-4a4f-b4e2-d80f1a1020e7",
+      "name": "Collect",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2608,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Jessie — Request Messages\nEvery message of a room request, in one place. **open**: the requester's card + the request to the booker and engineer (or the booth holder), posted; Collect returns where each went (kept on the row's Messages). **end**: each of them updated to how the request ended. Called by Open Consent Request, Finalize Consent, Consent Sweep and Slack Interactions.\n\nLAUNCH SWITCH: DEV_REDIRECT in Render ('' at launch).",
+        "height": 300,
+        "width": 520
+      },
+      "id": "6d99f19b-500b-4056-b843-aaeba34c3eda",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        272
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render": {
+      "main": [
+        [
+          {
+            "node": "Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send": {
+      "main": [
+        [
+          {
+            "node": "Collect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e450a5a2-f965-40a1-92bf-e5fec7e3396b",
+  "meta": {
+    "instanceId": "47b8f2db30f5474de1dd72088d2efb6e9f5862c79e8ac68a94619b94d7aeb560"
+  },
+  "nodeGroups": [],
+  "id": "wyrOstv3g0BcIzdV",
+  "tags": []
+}
