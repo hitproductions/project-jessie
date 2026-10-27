@@ -7,13 +7,61 @@ known behaviour gaps, and pre-launch work. Each item says how it was found and w
 **Item numbers are permanent**; other docs cite "PENDING 15". New items get the next number, and resolved
 ones move to the bottom instead of being renumbered.
 
-**15 Oct close (~19:55): slice 1 of the Slack app is built and live (main v273 - every message leads to the buttons, the AI answers questions only; Slack Interactions v22, Book Session v110, Cancel v28, Move v32) - the form, My bookings, Change (incl. details, all day, multi-room), Cancel, series; booths and holding rooms on top of the studio; QC / Post Processing details; engineer / arranger notices; no typed confirmations. Rounds 2-5 of Slack notes live; round 5's test owed, round 6 queued; open 115, 118; `docs/eod/EOD-2026-10-15.md`.** 14 Oct: step A; `docs/eod/EOD-2026-10-14.md`. 13 Oct: the Slack-app pivot is decided (buttons and forms, Block Kit); running record `docs/design/slack-app-processes.md`, day `docs/eod/EOD-2026-10-13.md`. 100 folds into the new My bookings.** Triage last updated 2026-10-12 (live: main v261, Book Session v108, Book Series v8, Cancel v26, Move v29, Room Availability v22, Find v8 - on Claude Haiku 5.5, Gemini 3.5 Flash Lite fallback; per-function status `docs/status/STATUS-2026-10-09.md` (updated 12 Oct), the days `docs/eod/EOD-2026-10-09.md`, `docs/eod/EOD-2026-10-12.md`). Batches 1 and 2 done (107-112, 72, 44, 82, Move alternatives). **Next, in order:** 100; then 78-80, 27, 37; then 59, 89, 99, 36, 98. **Consent rebuild candidates (main v176, Book v57, Open v11, Finalize v10, Sweep v2, and a Move candidate in git at `060afd9`) predate today's builds: rebuild on live, never import as they are.**
+**27 Oct:** QA round 4 is done and every fix from it is live; the launch review's findings are on the **launch board** at the top of the triage. (Earlier status lines live in git history and the EODs.)
 
 ---
 
 ## Triage: start here
 
-### 🔴 Urgent: must be done before launch
+### 🚀 Launch board (27 Oct, after QA round 4 and the launch review) - start here
+
+The older tables below are kept for the record; this board is what is open for launch. Launch steps:
+[`docs/launch-checklist.md`](docs/launch-checklist.md).
+
+**Builds (Claude)**
+
+| # | What | Status |
+|---|---|---|
+| 125 | **A failure mid-booking leaves the person waiting for a DM that never comes** - no workflow has an error path; a Calendar / Sheets / sub-workflow error on Book, Prepare, Change or Cancel stops the run after "⏳ … we'll let you know in your DM" | Build (round of 27 Oct) |
+| 127 | **Reminders / My bookings read people from the note** - since the note has its own block (Book Session v122), `team:` / "for" / Engineer are read across the whole description: a note with "URGENT" or "USB" becomes a reminder recipient, a name in a note can be read as the engineer | Build (round of 27 Oct) |
+| 128 | **The Change form's "Did you mean …?" is lost when the window was closed** (`Ask Again` is a views.update only - gotcha 49), and several in-form Slack updates fail silently | Build (round of 27 Oct) |
+| 129 | **Notices drifted** - Series / Change Notices lack the "for" line (the "for" person reads "booked you as the arranger"), a details change drops the "for" person from `team:`, Move's notice says "moved" for any change and tells a removed engineer "a session you are on was moved" | Build (round of 27 Oct) |
+| 121 | Room requests: a change to the booking in the way ends the request | Build (after QA - now) |
+| 122 | Room requests: two answers within seconds both count | Build (after QA - now) |
+| 115 | Coordinators cannot find someone else's booking by typing | Build |
+| 126 | **No engineer / arranger notice for a booking placed by a room request** (noted 21-22 Oct, not built) | Build |
+
+**Decisions (Howard)**
+
+| # | What |
+|---|---|
+| 33 | HAIST Dev: keep (decided 28 Sep as an emergency backup) or pull at launch; the flip itself - [`docs/launch-checklist.md`](docs/launch-checklist.md) |
+| 101 | The model: raise the Console spend limit from $50; accept the Gemini fallback (untested since memory was removed) or test it; delete the two Organization-scoped keys |
+| 123 | Studio M bookings post to #isr--mrk--studio_m (Zapier): keep (announces van bookings) or change the tagging |
+| 124 | A booking with no `ref:` cannot be asked for (queued: the "Booked by" fallback) - fix before launch or launch with the workaround |
+| 118 | Cancel a whole repeating booking at once - before launch or after |
+
+**Accounts, IT and data (not code)**
+
+| # | What | Owner |
+|---|---|---|
+| 15 | No external uptime monitor | Owner accounts (UptimeRobot) |
+| 21 | Cloudflare: deliveries still 66-97 s late after the 1 Oct rule; the Security -> Events check was never recorded | Howard / Cloudflare |
+| 42 | Envoy tablets: a tablet booking must reach KDC Bookings (release-then-delete test) | Howard |
+| 43 | IT to confirm the old Studio E calendar id is retired | IT |
+| 38, 16 | Clear the QA test bookings (2027) before the flip (GUARDCHK, VANTEST, the music-type and request tests) | Howard, with Claude's list |
+| 114, 120, 53 | Airtable: Booking Defaults rows, the Atmos rename, the Clients cleanup | Howard |
+| 130 | QA round 4 results are not in the repo (`docs/qa/round4/` has the empty sheet) - share Camy's filled tab so nothing failed goes unfixed | Howard |
+
+**After launch (safe to wait)**
+
+| # | What |
+|---|---|
+| 131 | Main: dead chat-era paths run on every message - a Sheets read of the whole Consent Requests tab even for "hi", Slack history read twice per question, an unused data-table read; removing them speeds every reply (medium risk: nodes name each other) |
+| 132 | Consistency and speed across the Slack app: one wording for "not booked", times "2:00 PM – 4:00 PM" everywhere, room names on notices ("Likha (Big Room)"), button order, Room Check's message as a card; Change / Cancel answer after their logging and engineer lookup (make them fire-and-forget like Log Booking); `Client Names` read on every Change; the hello test form (13 nodes), an unused route, raw error JSON in three Report messages |
+
+### 🔴 Urgent before launch (the chat-era list, to 12 Oct - kept for the record; most rows are done or superseded by the Slack-app pivot, the open ones are on the launch board above)
+
 
 | # | What | Blocked on / owner |
 |---|---|---|
@@ -48,7 +96,7 @@ ones move to the bottom instead of being renumbered.
 | 42 | **Envoy studio tablets, read + write.** Tablet bookings are invisible to Jessie (double-book risk) | **Howard** (was Tel's to-do, 28 Sep; Tel left the dev team 19 Oct): confirm it works, which marks it DONE in the sprint checklist |
 | 43 | Studio E points at a dead calendar id: wrong availability, and its tablet never gets Jessie's bookings | **Applied 28 Sep 15:20 PHT** in Book Session v53, Room Availability v10, Move v21, Find v5 (main's disabled node goes with v165). IT still to confirm the old id is retired |
 
-### 🟠 Soon: before the SOP is final (by 5 Oct); behaviour real users will hit
+### 🟠 Soon (to 26 Oct - kept for the record; the open ones are on the launch board above)
 
 | # | What | Blocked on / owner |
 |---|---|---|
@@ -135,6 +183,25 @@ known constraint, not a task.
 ---
 
 ## 🔴 Urgent: details
+
+### 125-132. The launch review (27 Oct)
+
+A read-only review of every live build after QA round 4 (three passes: launch readiness, main's dead paths, the Slack app's
+coherence). Findings are on the launch board above; the evidence:
+- **125:** Slack Interactions' Execute Workflow nodes (Prepare, Book, Book Series, Move, Cancel, Room Availability), Book
+  Session's `Get Events In Window` and Open Consent Request's `Write Pending Row` stop the run on an error, and no workflow has
+  an Error Workflow - the person sits on the working message.
+- **127:** Reminders `Build Reminders` reads `team:\s*([^|]+)` (past the line into "SType … Notes …") and keeps any token
+  shaped `U…`; it also matches "(for X)", Engineer: and Arranger: anywhere. Slack Interactions `Render My Bookings` the same
+  for `team:`.
+- **128:** the Change path's `Ask Again` is a views.update with no DM fallback; `Show Step 2`, `Show Note`, `Open Cleared`,
+  `Show Change C`, `Update Cancelled` continue on error with nothing reported.
+- **129:** `notices()` in Booked Notices supports `x.line`, the Series / Change copies do not; Read Change rebuilds `team:` as
+  engineer + arranger only; Move's `Build Recipients` always says "moved" and tells the old team.
+- **131:** main v283 per message: Ack Reaction, Get Sender (users.info), **Read Pending Consent (Sheets, the whole tab)**,
+  Read Reference Cache, Get Recent Messages (12), Gate Context; a question adds **Get Transcript (25 - a second history
+  read)**, **Read Prepared (unused)** and the dead Book / Cancel / Move / Series Direct checks. Turn Log Row, Cancel Direct
+  Reply, Room Table and the prompt name those nodes literally (gotcha 25) - remove them in one build.
 
 ### 114. Airtable data check before the Slack-app build (14 Oct)
 

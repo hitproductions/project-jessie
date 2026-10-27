@@ -566,35 +566,23 @@ Known contradictions in Rooms & Studios, and which field Jessie trusts:
 
 ## Before launch
 
-Three switches flip for launch — do them together, with `./scripts/flip-launch-switches` and `./scripts/check-launch-switches` (since 20 Oct; `docs/launch-checklist.md` section 0). The YEAR_SHIFT is also in Slack Interactions (`Build Step 1`, `My Window`) and Jessie — Reminders (`Window`), and Reminders has its own DEV_REDIRECT:
+The switches flip for launch together (the launch board at the top of `PENDING.md` lists what else is open), with `./scripts/flip-launch-switches` and `./scripts/check-launch-switches` (since 20 Oct; `docs/launch-checklist.md` section 0). The YEAR_SHIFT is also in Slack Interactions (`Build Step 1`, `My Window`) and Jessie — Reminders (`Window`), and Reminders has its own DEV_REDIRECT:
 
 1. **`YEAR_SHIFT`** at the top of `Gate Context` and the **`plus({ years: 1 })`** in the system
    prompt are the QA year shift. **They must go to zero together.** Change one and the model and the
    guards will disagree about what day it is — which decides what "next Thursday" means and whether a
    date is in the past.
-2. **`DEV_REDIRECT`** in the `Build Recipients` node of **both** `Cancel Booking` and `Move Booking`.
-   It reroutes every authorized-change notification to a dev/QA inbox so real staff aren't pinged
-   while building; `ALLOW` beside it lists the ids that still get their own DMs (dev + the Sept-24 QA
-   testers). **Set `DEV_REDIRECT = ''` at launch** and the booker + assigned engineer are DM'd for
-   real (the `ALLOW` list then no longer matters). Booker id is the event `ref:`; the engineer is
-   resolved from the title initials via `Lookup Engineer`.
-   - **Slack Interactions has its OWN `DEV_REDIRECT`** (v18, 15 Oct) in `Booked Notices`, `Series Notices` and `Change
-     Notices` - the engineer / arranger notices when someone else books them or adds them in a change. One constant in
-     `NOTICE_JS` in the builder: rebuild with `DEV_REDIRECT = ''` at launch (same ALLOW roster as Cancel / Move).
-   - **Consent engine has its OWN `DEV_REDIRECT`** in `Open Consent Request` → `Build Request` (added
-     2026-09-22). It routes the row's `Approver` and `Requester` — which every consent DM downstream
-     (Open, Finalize, main router) reads — to Howard unless the recipient is on `ALLOW` (since
-     2026-09-24 the same dev + QA roster as Cancel/Move). So no real non-QA person is DM'd during
-     testing. **Set its `DEV_REDIRECT = ''` at launch too** — it was missing from
-     `docs/launch-checklist.md` until 2026-09-25. The tail hook matches on
-     `Incumbent Event Id`, not `Approver`, so the real booking is still the one moved/placed.
-3. **`TEST_COORD`** (the hard-coded Howard id) in `Check Ownership` / `Resolve Booking` — drop it once
-   the `HAIST Dev` Airtable tag is live on Howard (it's strictly broader). Weekend hard-code only.
+2. **`DEV_REDIRECT`** (13 spots, all `'U08V3CKDGJF'` = Howard while testing; `''` at launch): Cancel and Move `Build
+   Recipients`; Slack Interactions `Booked Notices`, `Series Notices`, `Change Notices` (the engineer / arranger notices)
+   and `Request Act`, `Give Up Plan`, `Build Change C` (Howard may answer a room request for anyone while testing);
+   Reminders `Build Reminders`; Request Messages `Render`. `ALLOW` beside each (Howard + Camy since 22 Oct) is inert once
+   the redirect is `''`. Open Consent Request carries no switch since v12 (the row keeps the real ids; Request Messages
+   routes the messages). `./scripts/check-launch-switches` lists every spot; `docs/launch-checklist.md` has the steps.
+3. **`TEST_COORD`** - removed 2026-09-21 (Cancel v13 / Move v12); nothing to do.
 4. **`HAIST Dev`** authority (Bookers `Authority` tag) — **god-mode**: bypasses the owner check and
    the department scope, so a holder can move/cancel *any* booking in *any* department. Dev team
-   only: **Howard, Genzo** (Tel left the dev team 19 Oct; her `HAIST Dev` tag was removed 21 Oct). Before/after launch, **decide: keep for devs or pull.** Enforced in
-   `Check Ownership` / `Resolve Booking` via `isHaistDev`. (Tara, the strategic lead rather than a
-   dev, was set up QA-style with her real Standard authority; since 22 Oct the ALLOW list is Howard + Camy only.)
+   only: **Howard, Genzo**. Decided 28 Sep to keep it as an emergency backup - **confirm before launch** (PENDING 33).
+   Enforced in `Check Ownership` / `Resolve Booking` via `isHaistDev` and in Slack Interactions' authority check.
 5. **The model (since 8 Oct).** Check the Gemini fallback once since memory was removed (PENDING 101), raise the Console
    spend limit from $50 toward the monthly credit, and delete the two Organization-scoped Anthropic keys. See
    `docs/launch-checklist.md` section 4.
