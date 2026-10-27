@@ -30,6 +30,7 @@ The older tables below are kept for the record; this board is what is open for l
 | 122 | Room requests: two answers within seconds both count | Build (after QA - now) |
 | 115 | Coordinators cannot find someone else's booking by typing | Build |
 | 126 | **No engineer / arranger notice for a booking placed by a room request** (noted 21-22 Oct, not built) | Build |
+| 133 | **A new client kept through Change is never logged** - only a new booking writes the New Clients sheet; and a row gives no hint it may be a misspelling | Build (queued 27 Oct) |
 
 **Decisions (Howard)**
 
@@ -199,6 +200,7 @@ coherence). Findings are on the launch board above; the evidence:
 - **129:** `notices()` in Booked Notices supports `x.line`, the Series / Change copies do not; Read Change rebuilds `team:` as
   engineer + arranger only; Move's `Build Recipients` always says "moved" and tells the old team.
 - **Built 27 Oct (125, 127, 128, 129):** Slack Interactions v46 - the eight calls continue on error, the usual answer says it in words, **Ops Alert** DMs Howard the error (stays Howard after launch, like Report Refused); **Ask DM** (Continue changing), **Step 2 DM** (Continue booking), **Cancel DM**; people read from the first line everywhere (Reminders v7, Cancel v33, Move v39, main v284, SI's My bookings / Series Notices); one notices(), a series' "for" person told "booked N dates for you"; Read Change's teamWas + Move v39 keep who it is for on a change; Move v39 says "changed" for a details-only change and "You were taken off this session". Left as is: `Show Note`, `Open Cleared`, `Show Change C` (an update to a window the person is looking at - a failure means it was closed or the click was slow; pressing again works), Book Session's / Open Consent Request's own error paths (their errors now reach Slack Interactions' handling), the QA-only '[DEV] would notify' vs 'Test: this is for' wording and the nav button order between the SI notices and Cancel / Move's.
+- **133 (queued 27 Oct, Slack test of SI v46):** "Jem Lin" kept through the Change form (after "Did you mean Jem Lim?") goes into the title but not the New Clients sheet - the Change path (Slack Interactions Read Change / To Move, Move Booking) checks Airtable Clients and logs nothing. Booking logs it (Book Session Build Log Row -> Log Booking). Both paths check Airtable only and nothing reads the sheet back or copies it to Airtable, so a kept misspelling is flagged again next time until someone adds it to Airtable (wanted). Build: log a client kept through Change the same way; and on both paths write the near-miss Airtable names that were offered ("Close to: Jem Lim") into the row, so review can tell a misspelling from a real new client - needs a "Close to" header in the New Clients tab first.
 - **131:** main v283 per message: Ack Reaction, Get Sender (users.info), **Read Pending Consent (Sheets, the whole tab)**,
   Read Reference Cache, Get Recent Messages (12), Gate Context; a question adds **Get Transcript (25 - a second history
   read)**, **Read Prepared (unused)** and the dead Book / Cancel / Move / Series Direct checks. Turn Log Row, Cancel Direct
