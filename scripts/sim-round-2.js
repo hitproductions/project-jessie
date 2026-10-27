@@ -93,7 +93,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   ok(sq === 'To Prepare Series | Get Source' && nx('Get Source') === 'Mark Source' && (si.nodes.some(n => n.name === 'Prepare Input')   // v20: v19's wiring here sent Slack's answer to Book Session (MISSING_DETAILS)
        ? nx('Source Shown?') === 'Show Source | Prepare Input' && nx('Show Source') === 'Prepare Input' && nx('Prepare Input') === 'Prepare'
        : nx('Source Shown?') === 'Show Source | Prepare' && nx('Show Source') === 'Prepare')
-     && /Source Done/.test(sh) && /Source Done/.test(sqq) && nx('Source Done') === 'Update Source', '7 wiring: single booking');
+     && /Source Done/.test(sh) && /Source Done/.test(sqq) && ['Update Source', 'Get Source 2'].indexOf(nx('Source Done')) !== -1 /* v49: read first */, '7 wiring: single booking');
   const MS = await j1(si, 'Mark Source Series', [{ json: { ok: true, messages: [offerMsg] } }], { 'Read Series Confirm': [{ json: { meta: { msg: { ch: 'D1', ts: '50.5' } } } }] });
   ok(MS.ok && MS.blocks[1].elements[0].text === (V25 ? '⏳ Booking…' : '⏳ Your series is being processed…'), '7: a series -> "⏳ Your series is being processed…" (v25: "⏳ Booking…")');
   const DS = await run(si, 'Source Done Series', [], { 'Mark Source Series': [{ json: MS }], 'After Book Series': [{ json: { text: '✅ *Booked 4 dates.*' } }] });

@@ -275,16 +275,16 @@ const uniq = bl => bl.every(b => { const a = (b.elements || []).map(e => e.actio
     const other = (await run(SI, 'Build Change C', [], { 'Check Signature': [{ json: { user: 'U08JL17A50A', viewId: 'V9' } }], 'Read Cleared': [{ json: rcm }], 'Read Cache C': cache, 'Read Requests C': [{ json: baseRow() }] }))[0].json;
     ok(/isn’t open any more/.test(JSON.stringify(kept.view)) && /isn’t open any more/.test(JSON.stringify(other.view)) && kept.view.callback_id === undefined,
        'v38: the booker kept it (REJECTED), or not the requester -> no Change form, "That request isn’t open any more"');
-    ok(nx(SI, 'Answer Cleared')[0] === 'Read Requests C' && nx(SI, 'Read Requests C')[0] === 'Cleared Move?' && nx(SI, 'Cleared Move?').join('|') === 'Read Cache C|Give Up Plan', 'v38 wiring: the sheet read before either choice');
+    ok(nx(SI, 'Answer Cleared')[0] === 'Read Requests C' && nx(SI, 'Read Requests C')[0] === 'Cleared Move?' && ['Read Cache C|Give Up Plan', 'Read Cache C|Claim Row'].indexOf(nx(SI, 'Cleared Move?').join('|')) !== -1 /* v49: the claim first */, 'v38 wiring: the sheet read before either choice');
   }
   const meta = JSON.parse(bcc.view.private_metadata);
   ok(bcc.view_id === 'V9' && bcc.view.callback_id === 'change_booking' && meta.as === 'U2' && meta.b.id === 'e1' && meta.ch === '' && meta.ts === '', 'their booking\'s Change form, changed as its booker', meta);
   ok(/requester: \(R\.meta && R\.meta\.as\) \|\| R\.user/.test(node(SI, 'To Move').parameters.jsCode), 'To Move: as its booker when the request says so');
   const rcg = await rc('gaveup');
   ok(!rcg.move && rcg.answer.response_action === 'clear', 'gave up -> the form closes');
-  const gp2 = (await run(SI, 'Give Up Plan', [{ json: baseRow() }], { 'Check Signature': [{ json: { user: 'U7', channel: 'D1' } }], 'Read Cleared': [{ json: rcg }] }))[0].json;
+  const gp2 = (await run(SI, 'Give Up Plan', [{ json: baseRow() }], { 'Check Signature': [{ json: { user: 'U7', channel: 'D1' } }], 'Read Cleared': [{ json: rcg }], 'Read Requests C': [{ json: baseRow() }] }))[0].json;
   ok(gp2.ok && gp2.how === 'cleared-gave-up' && gp2.by === 'Celeste Cruz' && gp2.cancel.requester === 'U2', '… cancelled as its booker, then Finalize');
-  const gp3 = (await run(SI, 'Give Up Plan', [{ json: baseRow() }], { 'Check Signature': [{ json: { user: 'U08JL17A50A', channel: 'D1' } }], 'Read Cleared': [{ json: rcg }] }))[0].json;
+  const gp3 = (await run(SI, 'Give Up Plan', [{ json: baseRow() }], { 'Check Signature': [{ json: { user: 'U08JL17A50A', channel: 'D1' } }], 'Read Cleared': [{ json: rcg }], 'Read Requests C': [{ json: baseRow() }] }))[0].json;
   ok(gp3.ok === false, 'not the requester -> nothing changed');
   const bch = (await run(SI, 'Build Change', [], { 'Check Signature': [{ json: { user: 'U2', triggerId: 'T' } }], 'Read Cache 6': cache,
     'Read Request': [{ json: { payload: { actions: [{ action_id: 'cr_move', value: a1.blocks[1].elements[0].value }], container: { channel_id: 'D1', message_ts: '1.2' } } } }] }))[0].json;
