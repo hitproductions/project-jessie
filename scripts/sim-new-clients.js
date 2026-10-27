@@ -54,12 +54,14 @@ const cache = [{ json: { cache_key: 'jessie-reference', payload: JSON.stringify(
 const RC = { user: 'U1', clientTyped: 'Jem Lin', newTitle: 'REQUEST-TEST THREE / Jem Lin / AEG', newRooms: 'Studio F', b: { id: 'e1', t: 'REQUEST-TEST THREE / Jem Lim / AEG', st: 'Celebrity Recording' },
   n: { d: '2027-10-27', s: '10:00', e: '14:00' }, d: { st: '' } };
 const nc = (A, R, names) => new Function('$', code(si, 'New Client C'))(n => n === 'After Move' ? wrap([{ json: A }]) : n === 'Read Change' ? wrap([{ json: R }])
-  : n === 'Client Names' ? wrap((names || NAMES).map(j => ({ json: j }))) : n === 'Read Cache 7' ? wrap(cache) : wrap([]));
+  : n === 'Client Names' ? wrap((names || NAMES).map(j => ({ json: j }))) : n === 'Read Cache 7' ? wrap(cache)
+  : n === 'Move' ? wrap([{ json: { status: 'MOVED', description: 'Engineer: Elijah Gan | Booked by: Howard Luistro | ref: U1 | team: U2 | Type: Advertising | Dept: Audio Post\nSType: VO Recording\n\nNotes:\nDept: Music' } }]) : wrap([]));
 let r = nc({ ok: true, nb: { id: 'e9' } }, RC);
 const row = r.length ? JSON.parse(r[0].json.client) : {};
 ok(r.length === 1 && r[0].json.log === '' && row.Client === 'Jem Lin' && row['Close to'] === 'Jem Lim' && row['Booked by'] === 'Howard Luistro' && row.Project === 'REQUEST-TEST THREE'
    && row['Calendar Title'] === RC.newTitle && row['Event ID'] === 'e9' && row['Booking Date'] === '2027-10-27' && row['Session Type'] === 'Celebrity Recording' && row.Status === 'For Review',
    '"Jem Lin" kept through Change -> its New Clients row, Close to: Jem Lim', row);
+if (/v48/.test(code(si, 'New Client C'))) ok(row.Department === 'Audio Post', 'v48: the department from the changed event\'s first line (not the note\'s "Dept: Music")', row.Department);
 ok(nc({ ok: false }, RC).length === 0, 'not changed -> nothing logged');
 ok(nc({ ok: true }, Object.assign({}, RC, { clientTyped: '' })).length === 0, 'the client not changed -> nothing logged');
 ok(nc({ ok: true }, Object.assign({}, RC, { clientTyped: 'jem lim' })).length === 0, 'a client Airtable knows -> nothing logged');
