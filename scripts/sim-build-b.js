@@ -69,7 +69,7 @@ const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: 
   const cache = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Date().toISOString(), payload: JSON.stringify({ rooms, sessionTypes: [], bookers }) } }];
   const chk = [{ json: { user: 'U1', triggerId: 'T1', channel: 'D1' } }];
   const B = { id: 'evO', d: '2027-10-16', s: '12:00', e: '14:00', r: 'Studio 7', t: 'ORANGE / Jem Lim / HL x PL' };
-  const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');
+  const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).filter(x => !/^(?:Ops Alert|Ask DM|Step 2 DM|Cancel DM)$/.test(x)).join('+')).join(' | ');   // v46: the side branches left out
 
   // the form: a details checkbox, and its fields filled in from the booking
   const bc = await j1(si, 'Build Change', [], { 'Check Signature': chk, 'Read Cache 6': cache, 'Read Request': [{ json: { payload: { actions: [{ action_id: 'bk_change', value: JSON.stringify(B) }], container: { channel_id: 'D1', message_ts: '7.7' } } } }] });
@@ -95,7 +95,7 @@ const V24 = JSON.stringify(si).indexOf('function typeRoles(') !== -1;   // v24: 
   let rc = await readC(sub({ v: det('ORANGE', 'Jem Lim', 'U1', 'U4') }));
   ok(!rc.valid && (V25 ? /^Nothing changed\.$/ : /Nothing changed - change the date, time, room or a detail/).test(rc.answer.errors.date), 'v18: details open but unchanged -> "Nothing changed"');
   rc = await readC(sub({ v: det('ORANGE', 'Jem Lim', 'U2', 'none') }));
-  ok(rc.valid && rc.newTitle === 'ORANGE / Jem Lim / DR' && JSON.stringify(rc.newDetails) === '{"Engineer":"Daryl Reyes","Arranger":"","team":"U2"}' && rc.oldTeam.join() === 'U1,U4' && !rc.clientTyped,
+  ok(rc.valid && rc.newTitle === 'ORANGE / Jem Lim / DR' && JSON.stringify(Object.assign({}, rc.newDetails, { teamWas: undefined })) === '{"Engineer":"Daryl Reyes","Arranger":"","team":"U2"}' && (rc.newDetails.teamWas === undefined || rc.newDetails.teamWas.join() === 'U1,U4') && rc.oldTeam.join() === 'U1,U4' && !rc.clientTyped,
      'v18: a new engineer, no arranger -> the new title, Engineer / Arranger / team');
   rc = await readC(sub({ v: det('', 'Jem Lim', 'U1', 'U4') }));
   ok(!rc.valid && rc.answer.errors.det_project, 'v18: no project -> asked');

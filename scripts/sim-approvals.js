@@ -20,7 +20,7 @@ const run = async (wf, name, input, outs) => {
     return { first: () => (outs[n] || [])[0], all: () => outs[n] || [] }; };
   const $input = { first: () => input[0], all: () => input };
   return new Function('$', '$input', 'return (async function(){' + node(wf, name).parameters.jsCode + '\n}).call(this);').call({ helpers: {} }, $, $input); };
-const nx = (wf, k) => ((wf.connections[k] || {}).main || []).map(o => (o || []).map(c => c.node).join('+'));
+const nx = (wf, k) => ((wf.connections[k] || {}).main || []).map(o => (o || []).map(c => c.node).filter(x => !/^(?:Ops Alert|Ask DM|Step 2 DM|Cancel DM)$/.test(x)).join('+'));   // v46: the side branches left out
 const J = x => { try { return JSON.parse(x); } catch (e) { return null; } };
 const HOWARD = 'U08V3CKDGJF';
 const B = (name, slack, info, auth, dept) => ({ id: 'b' + slack, fields: { Name: name, 'Slack User ID': slack, Info: info, Authority: auth ? [auth] : [], Department: [dept || 'Music'], Initials: 'X' } });

@@ -190,8 +190,8 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
 
   // ---- Move Booking v33: the note and the session type on the replacement
   const rb = mv.nodes.find(n => n.name === 'Resolve Booking').parameters.jsCode;
-  const k1 = rb.indexOf('let __title = title, __desc = desc;'), k2 = rb.indexOf('} catch (e) { __title = title; __desc = desc; }', k1);
-  const runDesc = (desc, nd) => new Function('desc', 'title', 'REQ', rb.slice(k1, k2) + '} catch (e) { __title = title; __desc = desc; }\nreturn __desc;')(desc, 'T', { new_details: JSON.stringify(nd) });
+  const k1 = rb.indexOf('let __title = title, __desc = desc'), k2 = rb.indexOf('} catch (e) { __title = title; __desc = desc;', k1);   // v39: + __teamChanged
+  const runDesc = (desc, nd) => new Function('desc', 'title', 'REQ', 'const team = [];\n' + rb.slice(k1, k2) + '} catch (e) { __title = title; __desc = desc; }\nreturn __desc;')(desc, 'T', { new_details: JSON.stringify(nd) });
   const desc0 = 'Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | team: U2 | Notes: old\nSType: VO Recording';
   const NB = /v37 \(26 Oct\)/.test(rb);   // Move v37: the note in its own block under the SType line
   ok(runDesc(desc0, { SType: 'Music Mixing', Arranger: 'Joaquin Santos', team: 'U2 U9' }) === (NB ? 'Arranger: Joaquin Santos | Engineer: Daryl Reyes | Booked by: Howard Luistro | ref: U1 | team: U2 U9\nSType: Music Mixing\n\nNotes:\nold'

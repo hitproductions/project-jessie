@@ -114,7 +114,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   // Book Series' own Expand Dates on those inputs: the given dates, each as a prepare call
   const occ = await run(bs, 'Expand Dates', [], { 'When Executed by Another Workflow': [{ json: tps }] });
   ok(occ.length === 3 && occ.every(o => o.json._go && o.json.mode === 'prepare' && o.json.rooms === 'Studio 8') && occ[1].json.start_iso === '2027-10-26T14:00:00+08:00', 'Book Series (live v8) expands exactly those dates');
-  const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');
+  const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).filter(x => !/^(?:Ops Alert|Ask DM|Step 2 DM|Cancel DM)$/.test(x)).join('+')).join(' | ');   // v46: the side branches left out
   ok(nx('To Prepare') === 'Series?' && ['To Prepare Series | Prepare', 'To Prepare Series | Get Source'].indexOf(nx('Series?')) !== -1 && nx('Prepare Series') === 'After Prepare Series' && nx('After Prepare Series') === 'Show Series Step'
      && si.nodes.find(n => n.name === 'Prepare Series').parameters.workflowId.value === 'UAwFoifgkfL1xNP2', 'wiring: a series goes to Book Series');
 

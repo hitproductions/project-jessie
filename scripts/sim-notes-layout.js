@@ -66,8 +66,8 @@ const descOf = (cc, tp) => { const ex = bs.nodes.find(n => n.name === 'Create Ev
   ok(!/Notes/.test(d) && /\nSType: VO Recording$/.test(d), 'no note -> no Notes block, as before', d);
   console.log('Move v37');
   const rb = mv.nodes.find(n => n.name === 'Resolve Booking').parameters.jsCode;
-  const i = rb.indexOf('let __title = title, __desc = desc;'), j = rb.indexOf("} catch (e) { __title = title; __desc = desc; }", i);
-  const rewrite = (desc, nd) => new Function('desc', 'title', 'REQ', rb.slice(i, j) + "} catch (e) { __title = title; __desc = desc; }\nreturn __desc;")(desc, 'T / HL', { new_details: nd });
+  const i = rb.indexOf('let __title = title, __desc = desc'), j = rb.indexOf("} catch (e) { __title = title; __desc = desc;", i);   // v39: + __teamChanged
+  const rewrite = (desc, nd) => new Function('desc', 'title', 'REQ', 'const team = [];\n' + rb.slice(i, j) + "} catch (e) { __title = title; __desc = desc; }\nreturn __desc;")(desc, 'T / HL', { new_details: nd });
   const NEW = 'Engineer: Howard Luistro | Booked by: Camy Caridad | ref: U08JL17A50A | team: U1 | Type: Entertainment | Dept: Localization\nSType: Localization Dubbing\n\nNotes:\nBring the script.';
   const OLD = 'Engineer: Howard Luistro | Booked by: Camy Caridad | ref: U08JL17A50A | team: U1 | Notes: Bring the script. | Type: Entertainment | Dept: Localization\nSType: Localization Dubbing';
   let r = rewrite(NEW, { Rooms: 'Studio 1, Studio A' });
@@ -80,7 +80,7 @@ const descOf = (cc, tp) => { const ex = bs.nodes.find(n => n.name === 'Create Ev
   ok(/\nSType: Localization Editing\n\nNotes:\nBring the script\.$/.test(r), 'a new type: SType changes, the note stays below', r);
   console.log('The department (Cancel v31 / Move v37)');
   for (const [wf, nm] of [[cx, 'Check Ownership'], [mv, 'Resolve Booking']]) { const js = wf.nodes.find(n => n.name === nm).parameters.jsCode;
-    const k = js.indexOf('bookingDept = ((desc.match(') + 'bookingDept = ((desc.match('.length, re = new Function('return ' + js.slice(k, js.indexOf(') || [])[1]', k)))();
+    const _a = js.indexOf('bookingDept = ((descH.match(') !== -1 ? 'bookingDept = ((descH.match(' : 'bookingDept = ((desc.match(', k = js.indexOf(_a) + _a.length, re = new Function('return ' + js.slice(k, js.indexOf(') || [])[1]', k)))();
     ok(((NEW.match(re) || [])[1] || '').toLowerCase().trim() === 'localization' && ((OLD.match(re) || [])[1] || '').toLowerCase().trim() === 'localization', nm + ': "Dept: Localization" read on its own (was "localization\\nstype: …")'); }
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

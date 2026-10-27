@@ -69,7 +69,7 @@ for X". At launch every `DEV_REDIRECT` becomes `''` and everyone gets their own.
 Since Open Consent Request v12 (21 Oct) the consent row keeps the real ids and carries no switch; the request messages
 are routed in Request Messages. `ALLOW` is inert once the redirects are `''` - leave it or delete it.
 
-Not a switch, but worth knowing: Slack Interactions' diagnostic messages (`Report Refused`, the `Report Open` fallbacks)
+Not a switch, but worth knowing: Slack Interactions' diagnostic messages (`Report Refused`, the `Report Open` fallbacks, `Ops Alert` since v46 - a failed sub-workflow call)
 and the old hello test form (`Send Button`) are hard-coded to Howard - ops alerts keep going to Howard after launch.
 
 ## 3. `HAIST Dev` - decide (keep or pull)

@@ -1,0 +1,250 @@
+{
+  "name": "Jessie — Reminders — v7 (people from the first line)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 16 * * *"
+            }
+          ]
+        }
+      },
+      "id": "f704d87c-6c2d-4293-89ce-beae94aad481",
+      "name": "Daily 4 PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        5616,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "72bdf818-6338-4199-8671-b80bbaaf2dbf",
+      "name": "Monday 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        5616,
+        1344
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Window (Reminders v1): which reminder this is, and the days it covers (Manila).\n// LAUNCH SWITCH: YEAR_SHIFT 1 during QA (bookings are a year ahead), 0 at launch - with main's Gate Context and Slack Interactions'.\nconst YEAR_SHIFT = 1;\nlet kind = 'daily'; try { const m = $('Monday 9 AM').first(); kind = (m && m.json) ? 'weekly' : 'daily'; } catch (e) { kind = 'daily'; }   // the Monday trigger ran -> weekly\nconst add = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);\nconst today0 = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);\nconst today = (Number(today0.slice(0, 4)) + YEAR_SHIFT) + today0.slice(4);\nlet start, end;\nif (kind === 'daily') { start = add(today, 1); end = add(start, 1); }\nelse { const dow = new Date(today + 'T12:00:00Z').getUTCDay(); start = add(today, -((dow + 6) % 7)); end = add(start, 7); }\nreturn [{ json: { kind, start, end, timeMin: start + 'T00:00:00+08:00', timeMax: end + 'T00:00:00+08:00', yearShift: YEAR_SHIFT } }];"
+      },
+      "id": "6ed4c2b9-0063-4ab0-ae2f-06f9beb5450e",
+      "name": "Window",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5856,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "cachedResultName": "Jessie Reference Cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        6096,
+        1232
+      ],
+      "id": "ac8c0d1f-6214-4590-9538-758820c3ea3a",
+      "name": "Read Cache R",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent($('Window').first().json.timeMin) }}&timeMax={{ encodeURIComponent($('Window').first().json.timeMax) }}&singleEvents=true&orderBy=startTime&maxResults=2500",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6336,
+        1232
+      ],
+      "id": "beddcc15-2c54-4051-94a0-e13dc9873550",
+      "name": "List Events R",
+      "executeOnce": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The newest valid row of the Jessie Reference Cache data table (same check as main's Reference Snapshot).\nfunction readCache(rows) {\n  let best = null;\n  for (const r of rows || []) {\n    if (!r || r.cache_key !== 'jessie-reference') continue;\n    let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.rooms) || !Array.isArray(d.sessionTypes) || !Array.isArray(d.bookers)) continue;\n    const at = Date.parse(r.refreshed_at || '') || 0;\n    if (!best || at > best.at) best = { at, d };\n  }\n  return best ? best.d : null;\n}\n\n// Booking rows (v11): a booking in a message is a section (block_id bk_<id>) and its Change / Cancel buttons (bka_<id>).\n// The buttons carry the booking: {id, d: YYYY-MM-DD, s / e: HH:MM (Manila), r: room, t: title}.\nconst _DS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst _DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], _ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nfunction t12(hm) { if (!hm) return ''; let [h, m] = String(hm).split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; }\nfunction dayShort(d) { const x = new Date(d + 'T12:00:00Z'); return _DS[x.getUTCDay()] + ', ' + _MS[x.getUTCMonth()] + ' ' + x.getUTCDate(); }\nfunction dayLong(d) { const x = new Date(d + 'T12:00:00Z'); return _DL[x.getUTCDay()] + ', ' + _ML[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + x.getUTCFullYear(); }\nfunction addDays(d, n) { return new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10); }\nfunction whenLine(b) { return dayShort(b.d) + ' · ' + (b.s && !(b.s === '00:00' && b.e === '00:00') ? t12(b.s) + ' – ' + t12(b.e) : 'all day') + (b.r ? ' · ' + roomMain(b.r) + (roomHold(b.r) ? ' + ' + roomHold(b.r) : '') : ''); }\nfunction bkValue(b) { return JSON.stringify({ id: b.id, d: b.d, s: b.s || '', e: b.e || '', r: b.r || '', t: String(b.t || '').slice(0, 150), st: b.st || '' }); }   // v24: st\nfunction bkButtons(b) {\n  const pt = x => ({ type: 'plain_text', text: x });\n  return { type: 'actions', block_id: 'bka_' + b.id, elements: [\n    { type: 'button', action_id: 'bk_change', value: bkValue(b), text: pt('Change') },\n    { type: 'button', action_id: 'bk_cancel', style: 'danger', value: bkValue(b), text: pt('Cancel'),\n      confirm: { title: pt('Cancel this booking?'), text: { type: 'mrkdwn', text: ('*' + b.t + '*\\n' + whenLine(b)).slice(0, 290) },\n                 confirm: pt('Cancel booking'), deny: pt('Keep it'), style: 'danger' } } ] };\n}\n// v21: a booking's rooms - the first is the studio, a later studio / M booth is its booth (\"Studio F + Studio A\"),\n// any other later room is a holding room\nfunction roomList(r) { return String(r || '').split(',').map(x => x.trim()).filter(Boolean); }\nfunction roomMain(r) { const a = roomList(r); return [a[0]].concat(a.slice(1).filter(x => /^(?:Studio\\s|M\\d)/i.test(x))).filter(Boolean).join(' + '); }\nfunction roomHold(r) { return roomList(r).slice(1).filter(x => !/^(?:Studio\\s|M\\d)/i.test(x)).join(', '); }\nfunction roomExtras(r) { return roomList(r).slice(1); }\nfunction bkCard(b, head) { return head + '\\n\\n*' + b.t + '*\\n*Date:* ' + dayLong(b.d) + '\\n*Time:* ' + (b.s && !(b.s === '00:00' && b.e === '00:00') ? t12(b.s) + ' – ' + t12(b.e) : 'All day') + '\\n*Room:* ' + (roomMain(b.r) || '-') + (roomHold(b.r) ? '\\n*Holding room:* ' + roomHold(b.r) : '') + noteLine(b.nt); }\n// a Google event -> a booking (Manila times; the room from its room attendee, else its location)\n// v19: a calendar room label (\"KDC Plaza-Top Level-Likha (Big Room)\") -> the room's own name (\"Likha\")\nfunction roomName(x) { return String(x || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/(?:\\s*\\([^)]*\\))+\\s*$/, '').trim(); }   // v22: \"Likha (Big Room) (12)\" -> Likha\nfunction evRoom(e) { const r = (e.attendees || []).filter(a => a.resource || /@resource\\.calendar\\.google\\.com$/i.test(String(a.email || '')))\n  .map(a => roomName(a.displayName)).filter(Boolean);\n  // v22: Google lists the rooms in its own order - the booking's \"Rooms:\" line keeps studio, booth, holding rooms\n  const w = (String(e.description || '').match(/(?:^|\\|)\\s*Rooms:\\s*([^|\\n]+)/i) || [])[1];\n  if (w && r.length) { const o = w.split(',').map(x => x.trim()).filter(Boolean), lc = a => a.map(x => x.toLowerCase()).sort().join();\n    if (lc(o) === lc(r)) return r.slice().sort((x, y) => o.findIndex(z => z.toLowerCase() === x.toLowerCase()) - o.findIndex(z => z.toLowerCase() === y.toLowerCase())).join(', '); }\n  return r.length ? r.join(', ') : roomName(e.location); }\nfunction evType(e) { return ((String(e.description || '').match(/\\n\\s*SType:\\s*([^\\n]+)/) || [])[1] || '').trim(); }   // v24\n// v44 / v283 / Reminders v6 (26 Oct, Howard): the booking's note in Slack - \"*Notes:*\" at the end of a card, \"📝\" and its first\n// line in a list. From the event's \"Notes:\" block (Book Session v122) or an older booking's inline \"| Notes: …\".\nfunction evNote(e) { const d = String((e && e.description) || ''); const m = d.match(/\\n\\s*\\n\\s*Notes?:\\s*([\\s\\S]*)$/i) || d.match(/(?:^|\\|)\\s*Notes?:\\s*([^|]*)$/i) || d.match(/(?:^|\\|)\\s*Notes?:\\s*([^|\\n]*)/i); return m ? m[1].trim() : ''; }\nfunction noteLine(nt) { nt = String(nt || '').trim(); if (!nt) return ''; if (nt.length > 600) nt = nt.slice(0, 600).trim() + '…'; return '\\n*Notes:*' + (/\\n/.test(nt) ? '\\n' : ' ') + nt; }\nfunction noteRow(nt) { const f = String(nt || '').split('\\n').map(x => x.trim()).find(Boolean) || ''; return f ? '\\n📝 ' + (f.length > 80 ? f.slice(0, 80).trim() + '…' : f) : ''; }\nfunction evBooking(e) {\n  const sd = e.start && e.start.dateTime, ed = e.end && e.end.dateTime;\n  const m = x => { const d = new Date(new Date(x).getTime() + 8 * 3600000); return { d: d.toISOString().slice(0, 10), hm: d.toISOString().slice(11, 16) }; };\n  if (sd) { const a = m(sd), b = m(ed); return { id: e.id, d: a.d, s: a.hm, e: b.hm, r: evRoom(e), t: e.summary || '(no title)', st: evType(e), nt: evNote(e) }; }\n  return { id: e.id, d: String((e.start && e.start.date) || ''), s: '', e: '', r: evRoom(e), t: e.summary || '(no title)', st: evType(e), nt: evNote(e) };\n}\n\n\n// ---- Build Reminders (v1, 20 Oct): one DM per person - tomorrow's studio sessions (daily) or the week's bookings (Monday)\n// LAUNCH SWITCH: DEV_REDIRECT '' at launch. During QA a reminder goes to its person only when on ALLOW, else to DEV_REDIRECT.\nconst DEV_REDIRECT = 'U08V3CKDGJF';\n// v2 (Howard, 20 Oct): during QA every reminder goes to DEV_REDIRECT, ALLOW included (inert once DEV_REDIRECT is '')\nconst ALL_TO_DEV = false;   // 21 Oct (QA, Camy testing): the QA roster (ALLOW) gets its own; everyone else still to DEV_REDIRECT\nconst ALLOW = ['U08V3CKDGJF','U08JL17A50A'];\nconst W = $('Window').first().json;\nconst res = $('List Events R').first().json || {};\nconst items = Array.isArray(res.items) ? res.items : null;\nif (!items) return [];   // the calendar could not be read - nothing sent, never a wrong reminder\nconst data = readCache($('Read Cache R').all().map(i => i.json || {})) || { bookers: [], rooms: [] };\nconst staff = (data.bookers || []).map(b => b.fields || {}).filter(f => f.Name);\nconst idOf = f => String(f['Slack User ID'] || '').split(/[\\s,]+/).filter(Boolean)[0] || '';\nconst byName = n => { const q = String(n || '').trim().toLowerCase(); if (!q) return '';\n  const h = staff.filter(f => { const full = String(f.Name).trim().toLowerCase(), fst = full.split(/\\s+/)[0];\n    const al = ((String(f.Info || '').match(/goes by\\s+([^\\n]*)/i) || [])[1] || '').split(/,|\\band\\b/).map(x => x.trim().replace(/\\.$/, '').toLowerCase()).filter(Boolean);\n    return q === full || q === fst || al.indexOf(q) !== -1; });\n  return h.length === 1 ? idOf(h[0]) : ''; };\nconst nameOf = id => { const f = staff.find(x => idOf(x) === id); return f ? String(f.Name).trim() : ''; };\nconst roomRec = n => (data.rooms || []).map(r => r.fields || {}).find(f => String(f['Room Name'] || '').trim().toLowerCase() === String(n || '').trim().toLowerCase()) || {};\nconst kindOf = n => { if (/^M\\d+$/i.test(String(n || '').trim())) return 'booth';\n  const t = [].concat(roomRec(n)['Room Type'] || []).map(x => String((x && x.name) || x).toLowerCase());\n  return t.some(x => /conference|lobby/.test(x)) ? 'common' : 'studio'; };\nconst per = {};\nfor (const e of items) {\n  if (!e || e.status === 'cancelled') continue;\n  const desc = String(e.description || '').split(/\\n|<br\\s*\\/?>/i)[0].replace(/(?:^|\\|)\\s*Notes?:.*$/i, '');   // v46 / Move v39 / Cancel v33 / Reminders v7 / main v284 (PENDING 127): the first line only - never the note\n  const ref = (desc.match(/ref:\\s*([A-Za-z0-9]+)/) || [])[1] || '';\n  if (!ref) continue;   // only bookings made through Jessie\n  const b = evBooking(e);\n  if (W.kind === 'daily' && (kindOf(roomList(b.r)[0] || '') !== 'studio' || b.d !== W.start)) continue;\n  const team = ((desc.match(/team:\\s*([^|]+)/) || [])[1] || '').split(/[\\s,]+/).filter(x => /^U[A-Z0-9]+$/.test(x));\n  const named = [(desc.match(/Engineer:\\s*([^(|]+)/) || [])[1], (desc.match(/Arranger:\\s*([^(|]+)/) || [])[1],\n    (desc.match(/\\(for\\s+([^)]+)\\)/i) || [])[1], (desc.match(/(?:^|\\|)\\s*For:\\s*([^|]+)/) || [])[1]].map(byName).filter(Boolean);\n  for (const id of [...new Set([ref].concat(team, named))]) { per[id] = per[id] || {}; per[id][b.id] = b; }\n}\nconst md = t => ({ type: 'mrkdwn', text: t });\nconst pt = t => ({ type: 'plain_text', text: t });\nconst out = [];\nfor (const id of Object.keys(per)) {\n  const rows = Object.values(per[id]).sort((x, y) => (x.d + (x.s || '00:00')).localeCompare(y.d + (y.s || '00:00')));\n  const to = DEV_REDIRECT && (ALL_TO_DEV || ALLOW.indexOf(id) === -1) ? DEV_REDIRECT : id;\n  const blocks = [], n = rows.length, one = n === 1;\n  // v3 (Howard, 21 Oct): a reminder - the bookings as cards with Change / Cancel; nothing to confirm (a booking stays by default)\n  blocks.push({ type: 'section', text: md(W.kind === 'daily'\n    ? '🔔 *REMINDER: You have ' + (one ? 'a booking' : 'bookings') + ' tomorrow*'\n    : '🔔 *REMINDER: You have ' + (one ? 'a booking' : 'bookings') + ' this week*\\n' + dayShort(W.start) + ' – ' + dayShort(addDays(W.end, -1))) });\n  rows.slice(0, 15).forEach((b, i) => {\n    if (i > 0) blocks.push({ type: 'divider' });\n    blocks.push({ type: 'section', block_id: 'bk_' + b.id, text: md(bkCard(b, '').replace(/^\\n\\n/, '')) });\n    blocks.push(bkButtons(b));\n  });\n  if (n > 15) blocks.push({ type: 'context', elements: [md('And ' + (n - 15) + ' more – see *My bookings*.')] },\n    { type: 'actions', block_id: 'rm_nav', elements: [{ type: 'button', action_id: 'my_bookings', value: 'menu', text: pt('My bookings') }] });\n  if (to !== id) blocks.push({ type: 'context', elements: [md('_Test: this reminder is for ' + (nameOf(id) || id) + '._')] });\n  out.push({ json: { channel: to, person: id, text: 'Reminder: you have ' + (one ? 'a booking' : n + ' bookings') + (W.kind === 'daily' ? ' tomorrow' : ' this week'), blocks } });\n}\nreturn out;"
+      },
+      "id": "b5cb7a10-881a-48e3-85ba-a9f1e3078907",
+      "name": "Build Reminders",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6576,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text, blocks: $json.blocks }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6816,
+        1232
+      ],
+      "id": "3fd8c3db-5e2c-42f8-8d0e-e2a00f76a071",
+      "name": "Send Reminder",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Jessie — Reminders\n4:00 PM daily: tomorrow's studio sessions. Monday 9:00 AM: the week's bookings (studios, M booths, meeting rooms). One DM per person - booker, engineer / arranger, who it is for - each booking with Still on / Keep, Change, Free up the room.\n\nLAUNCH: DEV_REDIRECT '' (Build Reminders) and YEAR_SHIFT 0 (Window) - run scripts/check-launch-switches.",
+        "width": 520
+      },
+      "id": "fb723c99-58d4-4db7-8c75-01ae3ff7a077",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        5616,
+        816
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily 4 PM": {
+      "main": [
+        [
+          {
+            "node": "Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monday 9 AM": {
+      "main": [
+        [
+          {
+            "node": "Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window": {
+      "main": [
+        [
+          {
+            "node": "Read Cache R",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cache R": {
+      "main": [
+        [
+          {
+            "node": "List Events R",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Events R": {
+      "main": [
+        [
+          {
+            "node": "Build Reminders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Reminders": {
+      "main": [
+        [
+          {
+            "node": "Send Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "b9617212-335e-45b8-89a6-4d34412506ed",
+  "meta": {
+    "instanceId": "47b8f2db30f5474de1dd72088d2efb6e9f5862c79e8ac68a94619b94d7aeb560"
+  },
+  "nodeGroups": [],
+  "id": "56EXEU8aE4OL3eM6",
+  "tags": []
+}

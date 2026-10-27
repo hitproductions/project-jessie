@@ -12,7 +12,7 @@ if (!si.nodes.some(n => n.name === 'Get Message C2')) { console.log('0 ok, 0 fai
 async function run(name, input, outs) { const js = si.nodes.find(x => x.name === name).parameters.jsCode;
   const $ = n => ({ first: () => { if (!(n in outs)) throw new Error('not run: ' + n); return outs[n][0]; }, all: () => outs[n] || [] }); const $input = { first: () => input[0], all: () => input };
   return new Function('$', '$input', 'return (async function(){' + js + '\n}).call(this);').call({ helpers: {} }, $, $input); }
-const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');
+const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).filter(x => !/^(?:Ops Alert|Ask DM|Step 2 DM|Cancel DM)$/.test(x)).join('+')).join(' | ');   // v46: the side branches left out
 const row = (id, t) => [{ type: 'section', block_id: 'bk_' + id, text: { type: 'mrkdwn', text: '*' + t + '*\nWed, Oct 27 · 2:00 PM – 4:00 PM · Studio 7' } },
   { type: 'actions', block_id: 'bka_' + id, elements: [{ type: 'button', action_id: 'bk_change', value: '{}' }, { type: 'button', action_id: 'bk_cancel', value: '{}' }] }];
 const M0 = [{ type: 'section', text: { type: 'mrkdwn', text: '*Your bookings* · Tue, Oct 26 – Mon, Nov 1' } }].concat(row('A', 'QA-POST MIXING / RG'), row('B', 'REQUEST-QA / AEG'));

@@ -36,7 +36,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(await route({ type: 'block_actions', actions: [{ action_id: 'bk_cancel' }] }) === 9 && await route({ type: 'block_actions', actions: [{ action_id: 'bk_change' }] }) === 10
      && await route({ type: 'view_submission', view: { callback_id: 'change_booking' } }) === 11 && await route({ type: 'block_actions', actions: [{ action_id: 'my_page' }] }) === 12
      && await route({ type: 'block_actions', actions: [{ action_id: 'my_bookings' }] }) === 7, 'routes: cancel 9, change 10, change submit 11, page 12, my bookings 7');
-  const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).join('+')).join(' | ');
+  const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node).filter(x => !/^(?:Ops Alert|Ask DM|Step 2 DM|Cancel DM)$/.test(x)).join('+')).join(' | ');   // v46: the side branches left out
   ok(C.Route.main[7][0].node === 'Ack My Bookings' && C.Route.main[12][0].node === 'Ack My Bookings' && nx('Page?') === 'Update List | Post List', 'wiring: My bookings posts, a page updates');
   ok(nx('To Cancel') === 'Cancel' && (nx('Cancel') === 'After Cancel' || (nx('Cancel') === 'Get Message C2' && nx('Get Message C2') === 'After Cancel')) && nx('After Cancel') === 'Update Cancelled', 'wiring: cancel');
   const V18 = si.nodes.some(n => n.name === 'Change Notices');
