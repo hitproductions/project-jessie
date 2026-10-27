@@ -29,7 +29,7 @@ The older tables below are kept for the record; this board is what is open for l
 | 121 | Room requests: a change to the booking in the way ends the request | **Built 27 Oct, import owed** - Move v40, SI v49, Sweep v4 (`scripts/build-requests-121-122.py`, sim-requests-121-122 30); needs the "Claim" column in Consent Requests first |
 | 122 | Room requests: two answers within seconds both count | **Built 27 Oct, import owed** - Move v40, SI v49, Sweep v4 (`scripts/build-requests-121-122.py`, sim-requests-121-122 30); needs the "Claim" column in Consent Requests first |
 | 115 | Coordinators cannot find someone else's booking by typing | Build |
-| 126 | **No engineer / arranger notice for a booking placed by a room request** (noted 21-22 Oct, not built) | Build |
+| 126 | **No engineer / arranger notice for a booking placed by a room request** (noted 21-22 Oct, not built) | **Built 27 Oct, import owed** - Request Messages v5 (with who the booking is for; `scripts/build-request-messages-v5.py`, sim-request-for 15) |
 | 133 | **A new client kept through Change is never logged** - only a new booking writes the New Clients sheet; and a row gives no hint it may be a misspelling | **Imported 27 Oct ~15:49-15:50** - Log Booking v3, Book Session v123, SI v47 (all confirmed; Slack test owed) (`scripts/build-new-clients-27oct.py`, sim-new-clients 14) |
 
 **Decisions (Howard)**
