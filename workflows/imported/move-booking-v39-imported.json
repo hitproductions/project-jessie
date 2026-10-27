@@ -1,0 +1,1039 @@
+{
+  "name": "Jessie — Move Booking — v39 (launch fixes)",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "title"
+            },
+            {
+              "name": "event_id"
+            },
+            {
+              "name": "booking_date"
+            },
+            {
+              "name": "new_start_iso"
+            },
+            {
+              "name": "new_end_iso"
+            },
+            {
+              "name": "requester"
+            },
+            {
+              "name": "confirmed",
+              "type": "boolean"
+            },
+            {
+              "name": "authority"
+            },
+            {
+              "name": "department"
+            },
+            {
+              "name": "new_rooms"
+            },
+            {
+              "name": "requester_name"
+            },
+            {
+              "name": "reference_data"
+            },
+            {
+              "name": "booking_time"
+            },
+            {
+              "name": "new_summary"
+            },
+            {
+              "name": "new_details"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -18496,
+        -5360
+      ],
+      "id": "f97f4bd3-111f-4d9f-965f-08983ccf40bf",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent(DateTime.fromISO((String($json.booking_date || '').match(/\\d{4}-\\d{2}-\\d{2}/) || [$json.booking_date])[0] + 'T00:00:00', { zone: 'Asia/Manila' }).toISO()) }}&timeMax={{ encodeURIComponent(DateTime.fromISO((String($json.booking_date || '').match(/\\d{4}-\\d{2}-\\d{2}/) || [$json.booking_date])[0] + 'T00:00:00', { zone: 'Asia/Manila' }).plus({ days: 1 }).toISO()) }}&singleEvents=true&maxResults=250",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -18272,
+        -5360
+      ],
+      "id": "9cdb1533-0414-43bb-977e-087c26519ce8",
+      "name": "List Day Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find the booking being moved, and decide whether this requester may move it.\n// Same shape as Cancel Booking: the calendar is read and the id is checked\n// against it, because the model has invented one before. The title it showed\n// the requester resolves the booking too, so no id is needed at all.\n// Model output occasionally carries invisible characters. On 2026-08-30 a\n// variation selector (U+FE0F) glued to the end of an ISO timestamp made Room\n// Availability answer BAD_WINDOW, and the model then presented a booking\n// summary as though the room were free. Every string the model hands this\n// workflow is scrubbed once, here, rather than at each place one is read.\n// Tabs and newlines survive - a description is allowed to contain them.\nconst clean = s => String(s == null ? '' : s)\n  .replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F\\u200B-\\u200F\\u2028\\u2029\\u202A-\\u202E\\u2060-\\u2064\\uFE00-\\uFE0F\\uFEFF]/g, '')\n  .trim();\nconst REQ = (function (o) {\n  const out = {};\n  for (const k in o) out[k] = (typeof o[k] === 'string') ? clean(o[k]) : o[k];\n  return out;\n})($('When Executed by Another Workflow').first().json || {});\n// PENDING 51 / gotcha 18 (2026-09-28): the model glues junk onto timestamps (\"...+08:00hq\", \"2027-10-07p\").\n// Keep only the ISO text, here and in the calendar query, so a padded value neither fails the lookup nor\n// reaches the calendar.\n{ const _iso = s => { const v = String(s == null ? '' : s); const m = v.match(/\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?)?/); return m ? m[0] : v; };\n  [\"new_start_iso\",\"new_end_iso\"].forEach(k => { if (typeof REQ[k] === 'string' && REQ[k]) REQ[k] = _iso(REQ[k]); });\n  [\"booking_date\"].forEach(k => { if (typeof REQ[k] === 'string' && REQ[k]) REQ[k] = _iso(REQ[k]).slice(0, 10); }); }\nconst raw = $input.first().json || {};\nconst me = String(REQ.requester || '').trim();\nconst confirmed = REQ.confirmed === true || String(REQ.confirmed).toLowerCase() === 'true';\nconst wantedId = String(REQ.event_id || '').trim();\nconst wantedTitle = String(REQ.title || '').trim();\nconst norm = s => String(s || '').toLowerCase().replace(/\\s+/g, ' ').trim();\n// Levenshtein distance, used only to recognise a title the model mistyped.\nconst dist = (a, b) => {\n  if (a === b) return 0;\n  if (!a.length || !b.length) return Math.max(a.length, b.length);\n  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);\n  for (let i = 1; i <= a.length; i++) {\n    const cur = [i];\n    for (let j = 1; j <= b.length; j++) {\n      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));\n    }\n    prev = cur;\n  }\n  return prev[b.length];\n};\n// v26/v27 (PENDING 72): two or more bookings with this title - the one starting at booking_time (the requester's answer to\n// \"Which one ...?\", or the card's Now: time at the yes); else one question, word for word\nconst __bt = (String(REQ.booking_time || '').match(/^(\\d{1,2}):(\\d{2})/) || []).slice(1).map(Number);\nconst __hm = e => { const s = e && e.start && e.start.dateTime; if (!s) return ''; const d = new Date(new Date(s).getTime() + 8 * 3600000); return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'); };\nconst __pickT = list => { if (__bt.length !== 2) return null; const k = String(__bt[0]).padStart(2, '0') + ':' + String(__bt[1]).padStart(2, '0'); const one = list.filter(e => __hm(e) === k); return one.length === 1 ? one[0] : null; };\nconst __numW2 = n => ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][n] || String(n);\nconst __whichQ = (title, list, verb) => {\n  const t = x => new Date(x).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });\n  const s0 = list[0].start && (list[0].start.dateTime || list[0].start.date);\n  const day = new Date(/^\\d{4}-\\d{2}-\\d{2}$/.test(String(s0)) ? s0 + 'T12:00:00+08:00' : s0).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric' });\n  return 'There are ' + __numW2(list.length) + ' bookings named \"' + title + '\" on ' + day + ':\\n'\n    + list.slice().sort((a, b) => String(a.start.dateTime || a.start.date).localeCompare(String(b.start.dateTime || b.start.date)))\n      .map(e => '- ' + (e.start && e.start.dateTime ? t(e.start.dateTime) + ' – ' + t(e.end.dateTime) : 'all day')).join('\\n') + '\\nWhich one should I ' + verb + '?'; };\nconst when = e => {\n  const s = (e.start && e.start.dateTime) || '';\n  if (!s) return '(all day)';\n  return '(' + new Date(s).toLocaleTimeString('en-US', { timeZone:'Asia/Manila', hour:'numeric', minute:'2-digit' }) + ')';\n};\nconst bad = (reason, human) => [{ json: { verdict:'REJECTED', reason, human } }];\n\n// v25: an unconfirmed move is answered further down, once the booking is found and theirs - with a card showing where\n// it is now and where it is going. It used to be refused here, before the booking was even looked up.\nif (!String(REQ.booking_date || '').trim()) return bad('MISSING_DATE',\n  'Nothing was moved - no booking date was given. Call Move Booking again with the date the booking is on now.');\nif (!wantedId && !wantedTitle) return bad('MISSING_DETAILS',\n  'Nothing was moved - no booking title was given. Call Move Booking again with the title exactly as you showed it.');\nconst ns = new Date(String(REQ.new_start_iso || '')).getTime();\nconst ne = new Date(String(REQ.new_end_iso || '')).getTime();\nif (!ns || !ne) return bad('MISSING_TIMES',\n  'Nothing was moved - the new start and end times were missing or unreadable. Ask the requester for the new time and try again.');\nif (ne <= ns) return bad('DURATION_INVALID',\n  'Nothing was moved - the new end time is not after the new start time. Check the times with the requester.');\n\n// A second page (nextPageToken) means this read is incomplete: refuse rather than miss a booking (review 29 Sep).\nconst items = Array.isArray(raw.items) && !raw.nextPageToken ? raw.items.filter(e => e.status !== 'cancelled') : null;\nif (!items) return bad('LOOKUP_FAILED',\n  'Nothing was moved - the calendar could not be read for that date. Tell the requester it did not go through.');\n\nlet ev = wantedId ? items.find(e => String(e.id) === wantedId) : null;\nlet how = ev ? 'id' : '';\nif (!ev && wantedTitle) {\n  const want = norm(wantedTitle);\n  // Only a titled booking can match a title: an untitled event used to match every request, because\n  // want.includes('') is always true (review 29 Sep). Only ONE exact title is acted on.\n  const titled = items.filter(e => norm(e.summary));\n  const hits = titled.filter(e => norm(e.summary) === want);\n  if (hits.length === 1) { ev = hits[0]; how = 'title'; }\n  else if (hits.length > 1 && __pickT(hits)) { ev = __pickT(hits); how = 'title + time'; }   // v27 (PENDING 72)\n  else if (hits.length > 1) { const _q = __whichQ(hits[0].summary, hits, 'move');\n    return bad('AMBIGUOUS_TITLE', 'Nothing was moved. Ask exactly this, in one message: \"' + _q.replace(/\"/g, '\\\\\"') + '\" Then call Move Booking again with the same title, date and new time.'); }\n  else {\n    // A partial or near title is shown back, never acted on. The model does corrupt titles it copies back\n    // (\"REazon1\" for \"REASON1\", 2026-08-30), but a near title can also be a different episode or project\n    // the same day - and a wrong booking cannot be un-moved.\n    const tol = Math.max(1, Math.floor(want.length * 0.15));\n    const cands = titled.filter(e => { const t = norm(e.summary); return t.includes(want) || want.includes(t) || dist(t, want) <= tol; });\n    // v26 (8 Oct, Haiku): as Cancel Booking v24 - before the yes, ONE near match is the booking and its card shows the full\n    // title (Move Direct moves exactly that title at the yes); several: one question, word for word.\n    if (cands.length === 1 && !confirmed) { ev = cands[0]; how = 'near title'; }\n    else if (cands.length) {\n      const _q = 'Which booking do you mean?\\n' + cands.map(e => '- ' + e.summary + ' ' + when(e)).join('\\n');\n      return bad('AMBIGUOUS_TITLE', 'Nothing was moved - no booking on that date is titled exactly \"' + wantedTitle + '\". Ask exactly this, in one message: \"' + _q.replace(/\"/g, '\\\\\"') + '\" Then call Move Booking again with the title they pick.');\n    }\n  }\n}\nif (!ev) return bad('NOT_ON_CALENDAR',\n  'Nothing was moved - no booking on that date matches what you gave. These are the only bookings on that date:\\n'\n  + (items.map(e => '- ' + (e.summary || '(no title)') + ' ' + when(e)).join('\\n') || '(none)'));\n\nconst desc = String(ev.description || '');\nconst _hd = x => String(x || '').split(/\\n|<br\\s*\\/?>/i)[0].replace(/(?:^|\\|)\\s*Notes?:.*$/i, '');   // v46 / Move v39 / Cancel v33 / Reminders v7 / main v284 (PENDING 127): the first line only - never the note\nconst descH = _hd(desc);\nconst ref = descH.match(/ref:\\s*([A-Za-z0-9]+)/);\nconst by = descH.match(/Booked by:\\s*([^|]+)/);\nconst title = ev.summary || '(no title)';\nif (!ref) return bad('NO_REFERENCE',\n  'BLOCKED - \"' + title + '\" carries no booker reference, so there is no way to tell whose it is. It has to be moved by hand.');\n// --- who may move this: the owner, or an authorized coordinator in the booking's department ---\n// Authorized roles are the explicit exception to Rule 1. A coordinator ('Dept Head' or\n// 'Client Booking') may move a booking in their own department; a HAIST Dev may move any booking,\n// any department (isHaistDev below). See docs/design/booking-authority.md.\nconst authStr = String(REQ.authority || '').toLowerCase();\nconst isCoord = authStr.indexOf('dept head') !== -1 || authStr.indexOf('client booking') !== -1;\nconst myDepts = String(REQ.department || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);\nconst bookingDept = ((descH.match(/Dept:\\s*([^|\\n]+)/) || [])[1] || '')   /* v31 Cancel / v37 Move: to the line's end - not the SType line */.toLowerCase().trim();\nconst owner = ref[1] === me;\n// v27/v30 (decided 14 Oct): the session's engineer and arranger (\"team:\" Slack ids, written by form bookings) may move it too\nconst team = ((descH.match(/team:\\s*([^|\\n]+)/) || [])[1] || '').split(/[\\s,]+/).filter(Boolean);\nconst onTeam = !!me && team.indexOf(me) !== -1;\nconst isHaistDev = authStr.indexOf('haist dev') !== -1;\nconst coordInDept = isCoord && !!bookingDept && myDepts.indexOf(bookingDept) !== -1;\nif (!(owner || onTeam || isHaistDev || coordInDept)) return bad('NOT_YOURS',\n  'BLOCKED - \"' + title + '\" was booked by ' + ((by && by[1].trim()) || 'someone else')\n  + ', and you do not have authority to move it. Say exactly that and stop.');\n\n// Optional room change: relocate to a different room. Empty new_rooms keeps the original room\n// (a plain time reschedule is unchanged). A room change swaps the resource attendees and the\n// location, so Check New Window then checks the NEW room and Create Replacement books it there.\nlet outLocation = ev.location || '';\nlet outAttendees = [];\nconst ROOMS = {'Studio 1':'hitproductions.net_3737303833303637363538@resource.calendar.google.com','Studio 2':'c_18871bprki2umhrkjc4qcaldse1f8@resource.calendar.google.com','Studio 3':'c_1886me03bdcrki5bhu8vddknl472k@resource.calendar.google.com','Studio 4':'c_188e94dapvbp8jvrjmuga6qbof826@resource.calendar.google.com','Studio 5':'c_18889v3glj9cqiotg8j95jaqmdhmm@resource.calendar.google.com','Studio 6':'c_18838qt2ru30ein7gcefjiarplkre@resource.calendar.google.com','Studio 7':'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com','Studio 8':'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com','Studio A':'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com','Studio B':'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com','Studio C':'c_188797f37eu9ujs6ldpf3smn78joc@resource.calendar.google.com','Studio D':'c_18801gc6ck77gho7jl0e1fug94u92@resource.calendar.google.com','Studio E':'c_1888r4bbc2lhqgndmprism70nft64@resource.calendar.google.com','Studio F':'c_188em7d58podeju3i8q6juqlufkls@resource.calendar.google.com','Studio M':'c_1885k4adm87fqjd2j3j2usqftph5c@resource.calendar.google.com','M1':'c_1889v46vd62fkjk3i7r1hsfem7tcm@resource.calendar.google.com','M2':'c_1883ui6lnfc9ogt2hrmg57a30n72q@resource.calendar.google.com','M3':'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com','M4':'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com','M5':'c_1889h30ci9noqjcbnoogad9qk75vq@resource.calendar.google.com','M6':'c_188f9gnq0a9tehf4g9ja57l83c0ts@resource.calendar.google.com','M7':'c_1880r9hhk9c2agpbko87o7fojosh0@resource.calendar.google.com','M8':'c_1884cu2cc84iujsjnu03s21f0ct9q@resource.calendar.google.com','Salin':'c_1887hh5rsv6q4gt8hnu6ered170lg@resource.calendar.google.com','Katha':'c_1881169pcpn12gsnm6i7sc0gjk7gk@resource.calendar.google.com','Likha':'c_1886t6cjgrq0ihgpime01uibcqsg6@resource.calendar.google.com','Lobby':'c_188227mpeagjuhi7gqlgns1di14be@resource.calendar.google.com'};\n// Every room on the original is kept, flagged or not: only `resource: true` attendees used to be copied, so a room\n// without the flag was dropped from the replacement (review 29 Sep). A room is a known room email or any\n// @resource.calendar.google.com address. A booking that never had a room attendee (M booth holds, some\n// Localization bookings) still moves as it is - nothing is dropped from it.\nconst ROOM_EMAILS = new Set(Object.values(ROOMS).map(e => String(e).toLowerCase()));\nconst isRoom = a => !!a && (a.resource === true || ROOM_EMAILS.has(String(a.email || '').toLowerCase())\n  || /@resource\\.calendar\\.google\\.com$/i.test(String(a.email || '')));\noutAttendees = (ev.attendees || []).filter(isRoom).map(a => ({ email: a.email }));\nconst newRooms = String(REQ.new_rooms || '').split(/,|\\band\\b|&|\\+/i).map(r => r.trim()).filter(Boolean);\nif (newRooms.length) {\n  const keys = Object.keys(ROOMS); const emails = [], names = [];\n  for (const r of newRooms) {\n    const hit = keys.find(k => k.toLowerCase() === r.toLowerCase());\n    if (!hit) return bad('UNKNOWN_ROOM', 'Nothing was moved - \"' + r + '\" is not a room I recognise. Check the room name and try again.');\n    emails.push(ROOMS[hit]); names.push(hit);\n  }\n  outLocation = names.join(', '); outAttendees = emails.map(e => ({ email: e }));\n}\n// Notify the booker (and assigned engineer, resolved downstream) when a coordinator\n// - not the owner - moves their booking. Composition + dev redirect live in Build\n// Recipients so they are unit-testable. See EOD-2026-09-19.\nconst engInitials0 = (title.split('/').pop() || '').trim(), engName0 = ((descH.match(/Engineer:\\s*([^(|]+)/) || [])[1] || '').trim();\n// v28 / v31 (decided 15 Oct): anyone else on the session is told - the booker when someone else acts, each team\n// member (or an older booking's engineer, by initials) except the person who acted\nconst notify = !owner || team.some(id => id !== me) || (!team.length && !!(engInitials0 || engName0));\nconst bookerRef = ref[1];\nconst bookerName = (by && by[1] && by[1].trim()) || 'the booker';\nconst engInitials = (title.split('/').pop() || '').trim();\nconst engName = ((descH.match(/Engineer:\\s*([^(|]+)/) || [])[1] || '').trim();\nconst _q = s => String(s).replace(/\"/g, '');\nconst _p = [];\nif (engInitials) _p.push('{Initials} = \"' + _q(engInitials) + '\"');\nif (engName) _p.push('LOWER({Name}) = \"' + _q(engName).toLowerCase() + '\"');\nconst engFilter = _p.length === 0 ? 'FALSE()' : (_p.length === 1 ? _p[0] : 'OR(' + _p.join(', ') + ')');\nconst roomNote = outLocation ? (' to ' + outLocation) : '';\nif (!confirmed) {\n  const _day = iso => { const d = /^\\d{4}-\\d{2}-\\d{2}$/.test(iso) ? new Date(iso + 'T12:00:00+08:00') : new Date(iso);\n    return new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(d); };\n  const _hm = iso => new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' }).format(new Date(iso));\n  const _names = (atts, loc) => { const em = (atts || []).map(a => String(a.email || '').toLowerCase()), lc = String(loc || '').toLowerCase();\n    const k = Object.keys(ROOMS).filter(r => em.indexOf(ROOMS[r].toLowerCase()) !== -1);\n    return (k.length ? k : Object.keys(ROOMS).filter(r => new RegExp('(^|[^a-z0-9])' + r.toLowerCase() + '(?![a-z0-9])').test(lc))).join(', '); };\n  const os = (ev.start && (ev.start.dateTime || ev.start.date)) || '', oe = (ev.end && (ev.end.dateTime || ev.end.date)) || '';\n  const _when = (s, e) => /^\\d{4}-\\d{2}-\\d{2}$/.test(s) ? _day(s) + ', all day' : _day(s) + ', ' + _hm(s) + ' – ' + _hm(e);\n  const nowRoom = _names(ev.attendees, ev.location), newRoom = newRooms.length ? outLocation : nowRoom;\n  const card = '*' + title + '*\\n*Now:* ' + _when(os, oe) + (nowRoom ? ', ' + nowRoom : '')\n    + '\\n*Moving to:* ' + _when(REQ.new_start_iso, REQ.new_end_iso) + (newRoom ? ', ' + newRoom : '') + '\\n\\nConfirm to move.';\n  // v29 (live 12 Oct 13:27): the card waits for the new window to be checked (Check New Window hands it back when free)\n  var __previewCard = card;\n}\n// v31: a new title and details from the Change form - the replacement gets them; the other segments (Booked by, ref,\n// Notes, Type, Dept) stay the booker's\nlet __title = title, __desc = desc, __teamChanged = false;   // v39\ntry {\n  if (String(REQ.new_summary || '').trim()) __title = String(REQ.new_summary).trim();\n  const nd = typeof REQ.new_details === 'string' ? (REQ.new_details ? JSON.parse(REQ.new_details) : null) : REQ.new_details;\n  if (nd && typeof nd === 'object') {\n    // v37 (26 Oct): the note's own block (\"\\n\\nNotes:\\n…\", Book Session v122) comes off first, then the SType line\n    const _nbM = desc.match(/\\n\\s*\\n\\s*Notes?:\\s*([\\s\\S]*)$/i), _descN = _nbM ? desc.slice(0, _nbM.index) : desc;\n    const _stM = _descN.match(/\\n\\s*SType:\\s*([^\\n]*)\\s*$/), _desc0 = _stM ? _descN.slice(0, _stM.index) : _descN;   // v33: the SType line after the technical line\n    let segs = _desc0.split('|').map(s => s.trim()).filter(Boolean);\n    let _notes = _nbM ? _nbM[1].trim() : '';\n    { const _ni = segs.findIndex(s => /^Notes?:/i.test(s)); if (_ni !== -1) { if (!_notes) _notes = segs[_ni].replace(/^Notes?:\\s*/i, '').trim(); segs.splice(_ni, 1); } }   // an older booking's inline note\n    const put = (key, val, front) => { segs = segs.filter(s => !new RegExp('^' + key + ':', 'i').test(s));\n      if (String(val || '').trim()) { const seg = key + ': ' + String(val).trim(); if (front) segs.unshift(seg); else segs.push(seg); } };\n    if ('Arranger' in nd) put('Arranger', nd.Arranger, true);\n    if ('Engineer' in nd) put('Engineer', nd.Engineer, true);\n    if ('team' in nd) { const _was = Array.isArray(nd.teamWas) ? nd.teamWas : null;   // v39 (PENDING 129): who it is for stays on the booking\n      const _keep = _was ? team.filter(id => _was.indexOf(id) === -1) : [];\n      put('team', String(nd.team || '').split(/\\s+/).concat(_keep).filter((x, i, a) => x && a.indexOf(x) === i).join(' '), false); __teamChanged = true; }\n    if ('Rooms' in nd) put('Rooms', nd.Rooms, false);   // v32: studio, booth, holding rooms in order (Slack Interactions v22)\n    if ('Notes' in nd) _notes = String(nd.Notes || '').trim() || _notes;   // v33: a new note from the Change form (v37: in its own block)\n    __desc = segs.join(' | ');\n    const _st = 'SType' in nd ? String(nd.SType || '').trim() : (_stM ? _stM[1].trim() : '');   // v33: a new session type\n    if (_st) __desc += '\\nSType: ' + _st;\n    if (_notes) __desc += '\\n\\nNotes:\\n' + _notes;   // v37\n  }\n} catch (e) { __title = title; __desc = desc; __teamChanged = false; }\nreturn [{ json: { verdict:'CLEAR', matched_on: how, original_id: ev.id, title: __title, team,   // v31: team for the notices\n  description: __desc, location: outLocation, attendees: outAttendees,\n  old_start: (ev.start && (ev.start.dateTime || ev.start.date)) || '',\n  old_end: (ev.end && (ev.end.dateTime || ev.end.date)) || '', old_location: ev.location || '',   // v39: moved or only changed\n  new_team: ((_hd(__desc).match(/team:\\s*([^|\\n]+)/) || [])[1] || '').split(/[\\s,]+/).filter(Boolean), team_changed: __teamChanged,   // v39: taken off\n  new_start: REQ.new_start_iso, new_end: REQ.new_end_iso,\n  notify, bookerRef, bookerName, engInitials, engFilter, roomNote,\n  preview_card: typeof __previewCard === 'string' ? __previewCard : '' } }];   // v29\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -18048,
+        -5360
+      ],
+      "id": "1a6602d6-5a0b-4b6e-916f-2c44cf7ec4f8",
+      "name": "Resolve Booking"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a1",
+              "leftValue": "={{ $json.verdict }}",
+              "rightValue": "CLEAR",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -17824,
+        -5360
+      ],
+      "id": "0f61d0c0-dbeb-4b87-987b-695588de6c88",
+      "name": "Allowed?"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events?timeMin={{ encodeURIComponent((() => { const a = String($json.new_start || '').slice(0, 10) + 'T08:00:00+08:00'; return new Date($json.new_start).getTime() < new Date(a).getTime() ? $json.new_start : a; })()) }}&timeMax={{ encodeURIComponent((() => { const b = String($json.new_start || '').slice(0, 10) + 'T22:00:00+08:00'; return new Date($json.new_end).getTime() > new Date(b).getTime() ? $json.new_end : b; })()) }}&singleEvents=true&maxResults=250",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -17600,
+        -5440
+      ],
+      "id": "0c314eda-fb0f-4981-b4db-0d9f7d148d4f",
+      "name": "Get New Window",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Google gives an all-day event as a bare date (\"2026-10-06\", end exclusive). new Date() reads that as UTC\n// midnight - 08:00 in Manila - so a 6-7 AM booking slipped past an all-day hold (review 29 Sep). A bare date\n// is Manila midnight; a dateTime keeps its own offset.\nconst evMs = v => { const s = String(v || ''); return /^\\d{4}-\\d{2}-\\d{2}$/.test(s) ? Date.parse(s + 'T00:00:00+08:00') : new Date(s).getTime(); };\n// The new window has to be free for the same rooms - excluding the booking\n// being moved, which would otherwise collide with itself.\nconst R = $('Resolve Booking').first().json;\nconst raw = $input.first().json || {};\n// PENDING 51 (2026-09-28): a failed read of the new window used to count as \"no events\" - the move then went\n// ahead into a room nobody had checked. A read that did not return a calendar is a refusal.\nif (!Array.isArray(raw.items) || raw.nextPageToken) {\n  return [{ json: { verdict:'REJECTED', reason:'LOOKUP_FAILED',\n    human:'Nothing was moved - the calendar could not be read for the new time, so it could not be checked for clashes. The original booking is unchanged. Tell the requester and offer to try again.' } }];\n}\nconst items = raw.items.filter(e => e.status !== 'cancelled');\nconst mine = R.attendees.map(a => String(a.email).toLowerCase());\nconst loc = String(R.location || '').toLowerCase();\nconst ns = new Date(R.new_start).getTime(), ne = new Date(R.new_end).getTime();\n\nconst clashes = [];\nfor (const e of items) {\n  if (String(e.id) === String(R.original_id)) continue;\n  const s = evMs(e.start && (e.start.dateTime || e.start.date));\n  const t = evMs(e.end && (e.end.dateTime || e.end.date));\n  if (!(s < ne && t > ns)) continue;\n  const emails = (e.attendees || []).map(a => String(a.email || '').toLowerCase());\n  const sameRoom = mine.some(m => emails.indexOf(m) !== -1)\n    || (loc && String(e.location || '').toLowerCase() === loc);\n  if (sameRoom) clashes.push({ summary: e.summary || '(no title)', id: e.id || '', description: e.description || '' });\n}\n// v28 (PENDING 102): the new day is read 8 AM - 10 PM, so a clash comes with the room's nearest free times that day\nlet __sameDay = [], __gaps = [];   // v31: and every free stretch\nif (clashes.length) {\n  try {\n    const D = ne - ns, day = new Date(ns + 8 * 3600000).toISOString().slice(0, 10);\n    const lo = Date.parse(day + 'T08:00:00+08:00'), hi = Date.parse(day + 'T22:00:00+08:00');\n    const blk = items.filter(e => String(e.id) !== String(R.original_id)).map(e => {\n      const emails = (e.attendees || []).map(a => String(a.email || '').toLowerCase());\n      const same = mine.some(m => emails.indexOf(m) !== -1) || (loc && String(e.location || '').toLowerCase() === loc);\n      const noRoom = !emails.some(x => /resource\\.calendar\\.google\\.com$/.test(x)) && !String(e.location || '').trim();\n      return { s: evMs(e.start && (e.start.dateTime || e.start.date)), e: evMs(e.end && (e.end.dateTime || e.end.date)), hit: same || noRoom }; })\n      .filter(b => b.hit && b.s < hi && b.e > lo);\n    const c = new Set(); for (let t = lo; t + D <= hi; t += 30 * 60000) c.add(t);\n    for (const b of blk) { c.add(b.e); c.add(b.s - D); }\n    const okT = [...c].filter(t => t >= lo && t + D <= hi && t !== ns && blk.every(b => !(b.s < t + D && b.e > t)));\n    const b4 = okT.filter(t => t < ns).sort((x, y) => y - x)[0], af = okT.filter(t => t > ns).sort((x, y) => x - y)[0];\n    const iso = ms => new Date(ms + 8 * 3600000).toISOString().slice(0, 19) + '+08:00';\n    // v31 (Slack 15 Oct): every free stretch that day at least the session's length (the booking being moved does not block)\n    { const iv = blk.map(b => [Math.max(b.s, lo), Math.min(b.e, hi)]).filter(x => x[0] < x[1]).sort((x, y) => x[0] - y[0]);\n      let cur = lo; const isoG = ms => new Date(ms + 8 * 3600000).toISOString().slice(0, 19) + '+08:00';\n      for (const [a, b] of iv) { if (a - cur >= D) __gaps.push({ start: isoG(cur), end: isoG(a) }); cur = Math.max(cur, b); }\n      if (hi - cur >= D) __gaps.push({ start: isoG(cur), end: isoG(hi) }); }\n    __sameDay = [b4, af].filter(t => t !== undefined).sort((x, y) => Math.abs(x - ns) - Math.abs(y - ns) || x - y).map(t => ({ start: iso(t), end: iso(t + D) }));\n  } catch (e) { __sameDay = []; }\n}\nif (clashes.length) {\n  return [{ json: { verdict:'REJECTED', reason:'ROOM_OCCUPIED', conflicts: clashes, same_day_slots: __sameDay, free_gaps: __gaps,\n    human: 'Nothing was moved - that room is taken in the new window by \"' + clashes.map(c => c.summary).join('\", \"')\n         + '\". The original booking is untouched. Tell the requester and offer another time.' } }];\n}\n// v29: before the yes, a free new time gives the move card; nothing is moved yet\nif (R.preview_card) return [{ json: { verdict:'REJECTED', reason:'NOT_CONFIRMED', title: R.title, card_text: R.preview_card,\n  human: 'Nothing was moved yet. The move card is sent to the requester automatically - do not write one. When they reply yes, '\n       + 'call Move Booking again with exactly the same title, booking date and new times.' } }];\nreturn [{ json: Object.assign({}, R, { verdict:'CLEAR' }) }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -17376,
+        -5440
+      ],
+      "id": "c3e9b281-293b-46f0-a0ba-fb9a2480c863",
+      "name": "Check New Window"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a1",
+              "leftValue": "={{ $json.verdict }}",
+              "rightValue": "CLEAR",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -17152,
+        -5440
+      ],
+      "id": "ffce00ca-48bc-40cc-9043-01bb4e2a37ce",
+      "name": "Free?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ summary: $json.title, description: $json.description, location: $json.location, attendees: $json.attendees, start: { dateTime: $json.new_start, timeZone: 'Asia/Manila' }, end: { dateTime: $json.new_end, timeZone: 'Asia/Manila' } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -16928,
+        -5536
+      ],
+      "id": "c448fb96-f56b-4d47-a160-b745b674fcf3",
+      "name": "Create Replacement",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent($('Resolve Booking').first().json.original_id) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -16704,
+        -5600
+      ],
+      "id": "5cc2ef5d-d1b2-4a83-90e2-e842d680fb0f",
+      "name": "Delete Original",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const R = $('Resolve Booking').first().json;\nconst created = $('Create Replacement').first().json || {};\nreturn [{ json: { status:'MOVED', event_id: created.id || '', description: created.description || R.description || '',   /* v38: the Changed card's note */ title: R.title,\n  from: R.old_start, to: R.new_start,\n  human: 'Moved \"' + R.title + '\" to the new time. Tell the requester the new date and time.' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -14240,
+        -5648
+      ],
+      "id": "45eaf4e1-a38b-4e2e-bbf7-85832a45432f",
+      "name": "Return Moved",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// The replacement exists but the original could not be removed, so the room is\n// now double-booked. Say so plainly - this is the one outcome nobody should\n// discover from the calendar a week later.\nconst R = $('Resolve Booking').first().json;\nconst created = $('Create Replacement').first().json || {};\nreturn [{ json: { status:'PARTIAL', reason:'ORIGINAL_NOT_REMOVED', event_id: created.id || '', description: created.description || R.description || '',   /* v38: the Changed card's note */\n  human: 'The booking was created at the new time, but the original at ' + R.old_start + ' could NOT be '\n       + 'removed, so \"' + R.title + '\" is now on the calendar twice. Tell the requester exactly that and '\n       + 'say the old one has to be deleted by hand.' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16480,
+        -5456
+      ],
+      "id": "13c6014e-5d7e-4645-921f-9686285ee7fe",
+      "name": "Return Delete Failed"
+    },
+    {
+      "parameters": {
+        "jsCode": "const v = $input.first().json || {};\nreturn [{ json: { status:'REJECTED', reason: v.reason || 'FAILED', card_text: v.card_text || undefined,   // v25: the move card\n  same_day_slots: Array.isArray(v.same_day_slots) ? v.same_day_slots : undefined,   // v28: the room's nearest free times that day\n  free_gaps: Array.isArray(v.free_gaps) ? v.free_gaps : undefined,   // v31: every free stretch that day\n  human: v.human || 'Nothing was moved and the reason is unclear. Tell the requester it did not go through.' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16480,
+        -5216
+      ],
+      "id": "8bbde698-fce5-4517-8048-9206aee504aa",
+      "name": "Return Rejection"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "n1",
+              "leftValue": "={{ $('Resolve Booking').first().json.notify }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -15136,
+        -5648
+      ],
+      "id": "feb209f0-6184-4558-b49c-53b0aa0642d2",
+      "name": "Notify?"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app8GQxEInqJi1NRP",
+          "mode": "list",
+          "cachedResultName": "Project Jessie Knowledge Base"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbllRId3gq1auTA64",
+          "mode": "list",
+          "cachedResultName": "Bookers"
+        },
+        "filterByFormula": "={{ $('Resolve Booking').first().json.engFilter }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -14912,
+        -5728
+      ],
+      "id": "07b31776-4d6f-47bc-8e9a-6c8a0ddbaeba",
+      "name": "Lookup Engineer",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Notification recipients (v28 Cancel / v31 Move, decided 15 Oct): everyone on the session except the person who made the\n// change - the booker (when someone else did it) and each team member (\"team:\" ids; an older booking's engineer by its\n// title's initials). DEV_REDIRECT reroutes to one dev inbox while building; ALLOW = ids that receive their OWN real DM.\n// At launch DEV_REDIRECT='' -> all real. Never returns nothing: a \"skip\" item keeps the reply flowing.\nconst DEV_REDIRECT = 'U08V3CKDGJF';                 // '' at launch\nconst ALLOW = ['U08V3CKDGJF','U08JL17A50A'] /* QA roster since 22 Oct: Howard, Camy. Launch bypass = DEV_REDIRECT='' (ALLOW then moot). */ ;\nconst route = (id, honorAllow) => (!DEV_REDIRECT || (honorAllow && ALLOW.indexOf(id) !== -1)) ? id : DEV_REDIRECT;\nconst co = $('Resolve Booking').first().json;\nconst trig = $('When Executed by Another Workflow').first().json;\nconst actor = String(trig.requester_name || 'someone');\nconst actorId = String(trig.requester || '');\nconst dateStr = String(trig.booking_date || '');\nconst title = co.title;\nlet VERB = 'moved';   // v39: 'changed' below when only the details changed\nconst roomNote = co.roomNote || '';\nconst S = String(co.new_start || ''), E = String(co.new_end || '');   // v36: where it is now\n\n// v30 Cancel / v36 Move (26 Oct, Howard: \"clearer and simpler\"): who did it, then the booking as a card - *title*, Date, Time,\n// Room - and buttons, like the other cards. While testing a redirected notice says who it is for on a small line at the end.\nconst _DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], _ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nconst _mnl = iso => new Date((/^\\d{4}-\\d{2}-\\d{2}$/.test(String(iso || '')) ? Date.parse(iso + 'T00:00:00+08:00') : Date.parse(iso)) + 8 * 3600000);\nconst _t12 = iso => { const x = _mnl(iso); if (isNaN(x)) return ''; let h = x.getUTCHours(); const m = x.getUTCMinutes(), ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + String(m).padStart(2, '0') + ' ' + ap; };\nconst _allDay = (s, e) => /^\\d{4}-\\d{2}-\\d{2}$/.test(String(s || '')) || (_t12(s) === '12:00 AM' && _t12(e) === '12:00 AM');\nconst _day = iso => { const x = _mnl(iso); return isNaN(x) ? String(dateStr || '') : _DL[x.getUTCDay()] + ', ' + _ML[x.getUTCMonth()] + ' ' + x.getUTCDate() + ', ' + x.getUTCFullYear(); };\nconst _room = r => String(r || '').split(',').map(x => x.replace(/^KDC Plaza-Top Level-/i, '').replace(/\\s*\\(\\d+\\)\\s*$/, '').trim()).filter(Boolean).join(' + ');\n// v39 (27 Oct, PENDING 129): \"changed\" when the date, time and rooms stayed - only the details (title, people, type, note) changed\n{ const _t = x => { const d = _mnl(x); return isNaN(d) ? NaN : d.getTime(); };\n  const _rs = r => String(r || '').split(',').map(x => x.replace(/^KDC Plaza-Top Level-/i, '').replace(/(?:\\s*\\([^)]*\\))+\\s*$/, '').trim().toLowerCase()).filter(Boolean).sort().join('|');\n  if (co.old_end !== undefined && _t(co.old_start) === _t(co.new_start) && _t(co.old_end) === _t(co.new_end) && _rs(co.old_location) === _rs(co.location || trig.new_rooms)) VERB = 'changed'; }\nconst card = lead => lead + '\\n\\n*' + title + '*\\n*Date:* ' + _day(S || dateStr) + (S && E ? '\\n*Time:* ' + (_allDay(S, E) ? 'All day' : _t12(S) + ' – ' + _t12(E)) : '') + (ROOM ? '\\n*Room:* ' + ROOM : '') + (() => {   // v32 Cancel / v38 Move: the note\n  const d = String(co.description || co.notes_desc || ''), m = d.match(/\\n\\s*\\n\\s*Notes?:\\s*([\\s\\S]*)$/i) || d.match(/(?:^|\\|)\\s*Notes?:\\s*([^|\\n]*)/i);\n  let nt = (m ? m[1] : '').trim(); if (!nt) return ''; if (nt.length > 600) nt = nt.slice(0, 600).trim() + '…'; return '\\n*Notes:*' + (/\\n/.test(nt) ? '\\n' : ' ') + nt; })();\nconst _btn = (aid, text) => ({ type: 'button', action_id: aid, value: 'menu', text: { type: 'plain_text', text } });\nconst BUTTONS = { type: 'actions', elements: VERB === 'cancelled' ? [_btn('open_book', 'Book a room'), _btn('my_bookings', 'My bookings')] : [_btn('my_bookings', 'My bookings')] };\nconst ROOM = _room(co.location || trig.new_rooms);\nconst out = [], told = new Set();\nconst push = (id, name, body) => {\n  if (!id || id === actorId || told.has(id)) return;\n  told.add(id);\n  const to = route(id, true); const redirected = to !== id;\n  const blocks = [{ type: 'section', text: { type: 'mrkdwn', text: card(body).slice(0, 2900) } }, BUTTONS]\n    .concat(redirected ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: '_Test: this is for ' + name + ' (' + id + ')._' }] }] : []);   // v30 / v36: was \"[DEV] would notify …\"\n  out.push({ to, text: body + ' ' + title, blocks });\n};\nconst bookerId = co.bookerRef;\npush(bookerId, co.bookerName || 'the booker', 'Your booking was ' + VERB + ' by ' + actor + ':');\nconst names = {};\nlet eng = {};\ntry { eng = $('Lookup Engineer').first().json || {}; } catch (e) {}\nconst ef = eng.fields || {};\nif (ef['Slack User ID']) names[String(ef['Slack User ID']).split(/[\\s,]+/)[0]] = ef['Name'] || '';\nconst team = [].concat(co.team || []);\nconst engId = String(ef['Slack User ID'] || '').split(/[\\s,]+/).filter(Boolean)[0] || '';\nif (!team.length && engId) team.push(engId);\nconst _off = id => co.team_changed === true && Array.isArray(co.new_team) && co.new_team.indexOf(id) === -1;   // v39 (PENDING 129): taken off in a change\nfor (const id of team) push(id, names[id] || 'a team member', _off(id) ? 'You were taken off this session by ' + actor + ':' : 'A session you are on was ' + VERB + ' by ' + actor + ':');\nif (!out.length) return [{ json: { to: '', text: '', skip: true } }];\nreturn out.map(o => ({ json: o }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -14688,
+        -5728
+      ],
+      "id": "be99e39d-ba16-49e4-a541-245e62d21250",
+      "name": "Build Recipients"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.to, text: $json.text, blocks: $json.blocks }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -14464,
+        -5728
+      ],
+      "id": "87b36b64-4c66-4f54-a431-a8ef85cbce98",
+      "name": "Send DMs",
+      "webhookId": "75bf22f0-2d32-4665-8b39-157560b437c5",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nfunction manila(iso){ const d=iso?new Date(iso):new Date();\n  const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(d).reduce((o,x)=>(o[x.type]=x.value,o),{});\n  return p.year+'-'+p.month+'-'+p.day+' '+p.hour+':'+p.minute; }\nfunction dateOnly(iso){ try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(iso)); }catch(e){ return ''; } }\nfunction timeRange(a,b){ const f=iso=>{ try{ return new Date(iso).toLocaleTimeString('en-US',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } };\n  const s=f(a),e=f(b); return (s&&e)?(s+' \\u2013 '+e):''; }\n\nconst RB = $('Resolve Booking').first().json || {};\nconst CR = $('Create Replacement').first().json || {};\nconst REQ = $('When Executed by Another Workflow').first().json || {};\nreturn [{ json: {\n  'Timestamp': manila(),\n  'Action': 'MOVED',\n  'Title': String(RB.title || ''),\n  'Room(s)': String(RB.location || ''),\n  'Date': dateOnly(RB.new_start),\n  'Time': timeRange(RB.new_start, RB.new_end),\n  'Department': '',\n  'Booker': String(RB.bookerName || ''),\n  'Done by': String(REQ.requester_name || RB.bookerName || ''),\n  'Event ID': String(CR.id || ''),\n  'Note': RB.roomNote ? ('moved' + RB.roomNote) : 'rescheduled'\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16480,
+        -5648
+      ],
+      "id": "acc61747-97cc-47b5-8981-d9042fd60dcf",
+      "name": "Build Log Row",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Log"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -16256,
+        -5648
+      ],
+      "id": "c1b6d655-b9c6-47cc-a51e-43de65256b85",
+      "name": "Log to Sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decide Preempt (Move) - inlined from workflows/drafts/preempt/{decide-move,branch,decide,logic}.js (12/12).\nconst cnw = $input.first().json || {};\nconst R = $('Resolve Booking').first().json || {};\nconst REQ = $('When Executed by Another Workflow').first().json || {};\nfunction normType(s){ return String(s==null?'':s).trim().toLowerCase().replace(/\\s+/g,' '); }\nfunction rankOf(m,t){ const n=m[normType(t)]; return Number.isFinite(n)?n:undefined; }\nfunction decidePreempt(rq,inc,m,opts){ const au=!!(opts&&opts.authorized); const a=rankOf(m,rq),b=rankOf(m,inc); const r=(a===undefined?0:a);\n  if(!au) return {preempt:false,reason:'NOT_AUTHORIZED',rq:r,inc:(b===undefined?null:b)};\n  if(b===undefined) return {preempt:false,reason:'INCUMBENT_RANK_UNKNOWN',rq:r,inc:null};\n  if(r>b) return {preempt:true,reason:'OUTRANKS',rq:r,inc:b};\n  return {preempt:false,reason:(r===b?'EQUAL_RANK':'LOWER_RANK'),rq:r,inc:b}; }\nfunction parseSType(x){ const m=String(x||'').match(/SType:\\s*([^\\n|]+)/i); return m?m[1].trim():null; }\nfunction parseRef(x){ const m=String(x||'').match(/ref:\\s*([A-Z0-9]+)/i); return m?m[1].trim():null; }\nfunction isAuth(a){ return /(dept head|client booking|haist dev)/i.test(String(a||'')); }\nfunction ranksFromRef(rd){ let ref={}; try{ ref=(rd&&typeof rd==='object')?rd:JSON.parse(rd||'{}'); }catch(_){ref={};} const raw=ref.preemptionRanks||{}; const m={}; for(const k in raw){ const n=Number(raw[k]); if(Number.isFinite(n)) m[normType(k)]=n; } return m; }\nconst eligible = cnw && cnw.reason==='ROOM_OCCUPIED' && Array.isArray(cnw.conflicts) && cnw.conflicts.length===1;\nif(!eligible) return [{ json: Object.assign({}, cnw, { offer:false, preemptReason:'NOT_ELIGIBLE' }) }];\nconst inc = cnw.conflicts[0] || {};\nconst approver = parseRef(inc.description);\nconst requesterType = parseSType(R.description);\nconst d = decidePreempt(requesterType, parseSType(inc.description), ranksFromRef(REQ.reference_data), { authorized:isAuth(REQ.authority) });\nif(!d.preempt) return [{ json: Object.assign({}, cnw, { offer:false, preemptReason:d.reason }) }];\nif(!approver) return [{ json: Object.assign({}, cnw, { offer:false, preemptReason:'NO_INCUMBENT_BOOKER' }) }];\n// PENDING 28 (2026-09-28): moving into a slot you already hold yourself is not a preemption.\nconst room = REQ.new_rooms || inc.room;\nif(approver === String(REQ.requester||'').trim() || approver === String(R.bookerRef||'').trim()) return [{ json: Object.assign({}, cnw, { offer:false, preemptReason:'SELF_BOOKING', human:'You already have ' + (room) + ' booked then (' + '\"' + (inc.summary||'your booking') + '\"' + '). Nothing was changed - if you want that booking moved or changed, say so; or pick another room or time.' }) }];\nconst reqPayload = JSON.stringify({ kind:'move', title:R.title, event_id:R.original_id, booking_date:REQ.booking_date, new_start_iso:R.new_start, new_end_iso:R.new_end, new_rooms:room, requester:R.bookerRef, requester_name:R.bookerName, confirmed:true });\nconst open = { requester:R.bookerRef||'', requesterName:R.bookerName||'', approver:approver, approverName:'', room:room, reqStart:R.new_start, reqEnd:R.new_end, incumbentEventId:inc.id||'', incumbentTitle:inc.summary||'', reqType:requesterType||'', reqPriority:d.rq, incPriority:d.inc, reqPayload:reqPayload, requesterDM:'', approverDM:'' };\n// v29: before the yes, an outranking move still gets its card - the request to the incumbent is opened at the yes, as before\nif (R.preview_card) return [{ json: { verdict:'REJECTED', reason:'NOT_CONFIRMED', title: R.title, card_text: R.preview_card, offer:false,\n  human: 'Nothing was moved yet. The move card is sent to the requester automatically - do not write one. When they reply yes, '\n       + 'call Move Booking again with exactly the same title, booking date and new times.' } }];\nreturn [{ json:{ offer:true, reason:'OUTRANKS', open:open } }];"
+      },
+      "name": "Decide Preempt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16928,
+        -5152
+      ],
+      "id": "960a11f4-70e2-4139-b69f-974140a21021"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "of1",
+              "leftValue": "={{ $json.offer }}",
+              "operator": {
+                "name": "filter.operator.true",
+                "operation": "true",
+                "type": "boolean",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "name": "Offer?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -16704,
+        -5152
+      ],
+      "id": "3b691fc6-ce75-48d6-ac33-245b62ac7270"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "nEHnCMMXS0am59Zy",
+          "mode": "id",
+          "cachedResultName": "Open Consent Request"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "requester": "={{ $json.open.requester }}",
+            "requesterName": "={{ $json.open.requesterName }}",
+            "approver": "={{ $json.open.approver }}",
+            "approverName": "={{ $json.open.approverName }}",
+            "room": "={{ $json.open.room }}",
+            "reqStart": "={{ $json.open.reqStart }}",
+            "reqEnd": "={{ $json.open.reqEnd }}",
+            "incumbentEventId": "={{ $json.open.incumbentEventId }}",
+            "incumbentTitle": "={{ $json.open.incumbentTitle }}",
+            "reqType": "={{ $json.open.reqType }}",
+            "requesterDM": "={{ $json.open.requesterDM }}",
+            "approverDM": "={{ $json.open.approverDM }}",
+            "reqPriority": "={{ $json.open.reqPriority }}",
+            "incPriority": "={{ $json.open.incPriority }}",
+            "reqPayload": "={{ $json.open.reqPayload }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "name": "Open Consent Request",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -16480,
+        -5008
+      ],
+      "id": "38176deb-a860-461e-a1d3-8833be750c0b"
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json || {};\nreturn [{ json: { status:'PREEMPT_PENDING', request_id: r.request_id || '',\n  human: r.message || 'I have asked the current holder of that room for their OK, and will confirm once they reply.' } }];\n"
+      },
+      "name": "Return Offer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16256,
+        -5008
+      ],
+      "id": "0d4c4b16-e27b-4ecf-9660-851e2393ed2d"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "431550013",
+          "cachedResultName": "Consent Requests"
+        },
+        "options": {}
+      },
+      "name": "Read Consent Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -16032,
+        -5648
+      ],
+      "id": "23f1897e-576c-4c87-b8d7-a3cd150f23dc",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Move tail hook - after a successful move, place a requester whose consent request this move freed.\n// Inlined from workflows/drafts/consent/hook.js (5/5). Fail-safe: the move already succeeded.\nconst rows = $input.all().map(i => (i && i.json) || {});\nconst origId = String((($('Resolve Booking').first().json) || {}).original_id || '').trim();\nfunction findConsentForMove(id, rows){ if(!id) return null; for(const r of (rows||[])){ if(!r) continue; if(String(r['Status']||'').toUpperCase()!=='PENDING') continue; const inc=String(r['Incumbent Event Id']||'').trim(); if(inc && inc===id) return r; } return null; }\nconst matched = findConsentForMove(origId, rows);\nreturn [{ json: { hasMatch: !!matched, matched: matched || {} } }];\n"
+      },
+      "name": "Consent Hook",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -15808,
+        -5648
+      ],
+      "id": "5237b34e-c2e9-47e3-9ac0-399bfc69bce3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "h1",
+              "leftValue": "={{ $json.hasMatch }}",
+              "operator": {
+                "name": "filter.operator.true",
+                "operation": "true",
+                "type": "boolean",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "name": "Place If Consent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -15584,
+        -5648
+      ],
+      "id": "742cd392-d3c2-49bc-b475-8d561356f94a"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "TO1UnZTZ2LhtE9J3",
+          "mode": "id",
+          "cachedResultName": "Finalize Consent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row": "={{ JSON.stringify($json.matched) }}",
+            "resolvedVia": "move-hook",
+            "attestedBy": ""
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "name": "Call Finalize",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -15360,
+        -5584
+      ],
+      "id": "7e4e0a6b-8f60-4c67-9f6b-f8318412a94e",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "CB3JPU052OfHFIQr",
+          "cachedResultName": "Jessie — Room Check"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "event_id": "={{ ($('Create Replacement').first().json || {}).id || '' }}",
+            "title": "={{ ($('Create Replacement').first().json || {}).summary || $('Resolve Booking').first().json.title || '' }}",
+            "rooms": "={{ $('Resolve Booking').first().json.location || $('When Executed by Another Workflow').first().json.new_rooms || '' }}",
+            "requester": "={{ $('When Executed by Another Workflow').first().json.requester || '' }}",
+            "start_iso": "={{ $('Resolve Booking').first().json.new_start || '' }}",
+            "end_iso": "={{ $('Resolve Booking').first().json.new_end || '' }}",
+            "all_day": "={{ String(!/T\\d/.test(String($('Resolve Booking').first().json.new_start || ''))) }}",
+            "session_type": "={{ ((String($('Resolve Booking').first().json.description || '').match(/SType:\\s*([^\\n|]+)/i) || [])[1] || '').trim() }}",
+            "kind": "move"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "56054201-b4c0-4fbe-ad8d-307038529e61",
+      "name": "Room Check",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -14448,
+        -5488
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "List Day Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Day Events": {
+      "main": [
+        [
+          {
+            "node": "Resolve Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Booking": {
+      "main": [
+        [
+          {
+            "node": "Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Get New Window",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get New Window": {
+      "main": [
+        [
+          {
+            "node": "Check New Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check New Window": {
+      "main": [
+        [
+          {
+            "node": "Free?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Free?": {
+      "main": [
+        [
+          {
+            "node": "Create Replacement",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Decide Preempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Replacement": {
+      "main": [
+        [
+          {
+            "node": "Delete Original",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Original": {
+      "main": [
+        [
+          {
+            "node": "Build Log Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Delete Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify?": {
+      "main": [
+        [
+          {
+            "node": "Lookup Engineer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Room Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Engineer": {
+      "main": [
+        [
+          {
+            "node": "Build Recipients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Recipients": {
+      "main": [
+        [
+          {
+            "node": "Send DMs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send DMs": {
+      "main": [
+        [
+          {
+            "node": "Room Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Log Row": {
+      "main": [
+        [
+          {
+            "node": "Log to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Read Consent Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide Preempt": {
+      "main": [
+        [
+          {
+            "node": "Offer?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Offer?": {
+      "main": [
+        [
+          {
+            "node": "Open Consent Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open Consent Request": {
+      "main": [
+        [
+          {
+            "node": "Return Offer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Consent Rows": {
+      "main": [
+        [
+          {
+            "node": "Consent Hook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consent Hook": {
+      "main": [
+        [
+          {
+            "node": "Place If Consent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Place If Consent?": {
+      "main": [
+        [
+          {
+            "node": "Call Finalize",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Finalize": {
+      "main": [
+        [
+          {
+            "node": "Notify?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Room Check": {
+      "main": [
+        [
+          {
+            "node": "Return Moved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "df381af6-66ee-4250-bf3b-010a22030c17",
+  "meta": {
+    "instanceId": "47b8f2db30f5474de1dd72088d2efb6e9f5862c79e8ac68a94619b94d7aeb560"
+  },
+  "nodeGroups": [],
+  "id": "t7lwR2km4tfN8DbM",
+  "tags": []
+}
