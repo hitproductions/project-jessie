@@ -1,0 +1,334 @@
+{
+  "name": "Jessie — Consent Sweep — v4 (waits for an answer in progress)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "54fdf1b0-0685-4b40-815b-60fb7e35a900",
+      "name": "Every 10 min",
+      "position": [
+        -112,
+        -64
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "cachedResultName": "Consent Requests",
+          "mode": "list",
+          "value": "431550013"
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true,
+      "id": "babdb3b4-71bb-42b8-b8d7-640023b1be3e",
+      "name": "Read Pending Rows",
+      "position": [
+        112,
+        -64
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sweep: for each PENDING consent row past its deadline, MBOOTH -> book (via Finalize, timeout=book),\n// PREEMPT/other -> EXPIRE (mark row; never auto-move). sweepAction mirrors mbooth/logic.js (tested).\nfunction sweepAction(row, nowISO){ const status=String((row&&row.Status)||'').toUpperCase(); if(status!=='PENDING') return 'skip'; const _cl=String((row&&row.Claim)||''), _at=Date.parse(_cl.split('@')[1]||''); if(_cl && Number.isFinite(_at) && new Date(nowISO).getTime()-_at<120000) return 'wait'; /* v4 (PENDING 122): an answer is being acted on */ const now=new Date(nowISO).getTime(); const dl=(row&&row.Deadline)?new Date(row.Deadline).getTime():NaN; if(!Number.isFinite(dl)) return 'skip'; if(now<dl) return 'wait'; const kind=String((row&&row.Kind)||'').toUpperCase(); return (kind==='MBOOTH')?'book':'expire'; }\nconst now=new Date().toISOString(); const out=[];\nfor(const it of $input.all()){ const r=(it&&it.json)||{}; if(!r['Request ID']) continue; const a=sweepAction(r, now);\n  if(a==='book'){ out.push({ json: { _sweepAction:'book', _row:r } }); }\n  else if(a==='expire'){ out.push({ json: { 'Request ID':r['Request ID'], 'Status':'EXPIRED', 'Resolved Via':'sweep-expired', 'Decided At':now, _sweepAction:'expire', _row:r /* v3: for its messages */ } }); }\n}\nreturn out;\n"
+      },
+      "id": "66cb338a-3759-4bec-9c76-ba7e678fd443",
+      "name": "Sweep Decide",
+      "position": [
+        336,
+        -64
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "sb",
+              "leftValue": "={{ $json._sweepAction }}",
+              "operator": {
+                "name": "filter.operator.equals",
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "book"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "id": "a8a15e2e-b31a-44d5-9fcf-f72ea03c038d",
+      "name": "Sweep Route?",
+      "position": [
+        544,
+        -64
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "Finalize Consent",
+          "mode": "id",
+          "value": "TO1UnZTZ2LhtE9J3"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [],
+          "value": {
+            "attestedBy": "",
+            "resolvedVia": "sweep-timeout",
+            "row": "={{ JSON.stringify($json._row) }}"
+          }
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "a11bac39-faa9-42d1-a539-11a8c39b6393",
+      "name": "Sweep Book",
+      "position": [
+        784,
+        -176
+      ],
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "cachedResultName": "Consent Requests",
+          "mode": "list",
+          "value": "431550013"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "Request ID"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "559d4577-98ba-4005-9e00-499ce64782a0",
+      "name": "Mark Expired",
+      "position": [
+        1008,
+        32
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// v3: only the sheet's columns\nreturn $input.all().map(i => ({ json: { 'Request ID': i.json['Request ID'], 'Status': 'EXPIRED', 'Resolved Via': 'sweep-expired', 'Decided At': i.json['Decided At'] } }));\n"
+      },
+      "id": "7ff63898-c461-4e12-ab12-cce1312905f8",
+      "name": "Expire Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// v3: each request that ran out - its messages say so (Jessie — Request Messages, mode end)\nreturn $('Sweep Decide').all().map(i => i.json || {}).filter(j => j._sweepAction === 'expire' && j._row)\n  .map(j => ({ json: { row: JSON.stringify(Object.assign({}, j._row, { 'Status': 'EXPIRED', 'Resolved Via': 'sweep-expired', 'Decided At': j['Decided At'] })),\n    extra: JSON.stringify({ how: 'sweep-expired' }) } }));\n"
+      },
+      "id": "f9529d99-f5ae-413a-97c3-afc66633ed6a",
+      "name": "Expire Info",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "wyrOstv3g0BcIzdV",
+          "cachedResultName": "Jessie — Request Messages"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "mode": "end",
+            "row": "={{ $json.row }}",
+            "extra": "={{ $json.extra }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "5e5c8645-4576-4267-9b72-e52c103e848e",
+      "name": "Expire Messages",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1456,
+        32
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 10 min": {
+      "main": [
+        [
+          {
+            "node": "Read Pending Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Pending Rows": {
+      "main": [
+        [
+          {
+            "node": "Sweep Decide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sweep Decide": {
+      "main": [
+        [
+          {
+            "node": "Sweep Route?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sweep Route?": {
+      "main": [
+        [
+          {
+            "node": "Sweep Book",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Expire Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expire Row": {
+      "main": [
+        [
+          {
+            "node": "Mark Expired",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Expired": {
+      "main": [
+        [
+          {
+            "node": "Expire Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expire Info": {
+      "main": [
+        [
+          {
+            "node": "Expire Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0a80e949-47c2-427c-9bc8-a720971a2523",
+  "meta": {
+    "instanceId": "47b8f2db30f5474de1dd72088d2efb6e9f5862c79e8ac68a94619b94d7aeb560"
+  },
+  "nodeGroups": [],
+  "id": "QHHDevaWhMk8gSBX",
+  "tags": []
+}
