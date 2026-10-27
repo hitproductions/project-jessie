@@ -56,7 +56,8 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   let q = await run('Question DM', [{ json: { ok: false, error: 'not_found' } }], { 'Read Step 2': [{ json: r }], 'After Prepare': [{ json: AP }] });
   ok(q.length === 1 && q[0].json.channel === 'U026N6E1R' && q[0].json.blocks[0].text.text === '⚠️ *Not booked yet.* Which department is this booking for?', 'Show Question not_found (Tara, 16:07) -> "Not booked yet." in the DM', q[0] && q[0].json);
   const btn = q[0].json.blocks[1].elements[0];
-  ok(btn.action_id === 'open_book' && JSON.parse(btn.value).p === 'Celebrity Recording' && JSON.parse(btn.value).r === 'Studio F', '"Book a room" opens the form filled in');
+  ok((btn.action_id === 'open_book' || (btn.action_id === 'book_continue' && btn.text.text === 'Continue booking')) && JSON.parse(btn.value).p === 'Celebrity Recording' && JSON.parse(btn.value).r === 'Studio F',
+     '"Book a room" opens the form filled in (v45: "Continue booking" - step 2 again)');
   const s1 = await j1('Build Step 1', [], { 'Check Signature': [{ json: { user: 'U026N6E1R', triggerId: 'T', channel: 'D1' } }], 'Read Cache': cacheRow, 'Read Request': [{ json: { payload: { actions: [{ action_id: 'open_book', value: btn.value }], container: { channel_id: 'D1', message_ts: '9.9' } } } }] });
   const pb = s1.view.blocks.find(b => b.block_id === 'purpose');
   ok(pb.element.initial_option.value === 'Celebrity Recording' && s1.view.blocks.find(b => b.block_id === 'date').element.initial_date === '2027-10-19'
