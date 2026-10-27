@@ -159,7 +159,7 @@ const ctx = v => (v.blocks.find(b => b.type === 'context') || { elements: [{}] }
      && lnp.parameters.documentId.value === lncl.parameters.documentId.value && JSON.stringify(lnp.credentials) === JSON.stringify(lncl.credentials) && lnp.onError === 'continueRegularOutput',
      'Log New Project: the New Projects tab of the Jessie Log sheet, one row per code, like New Clients');
   const LC = lb.connections, lx = k => ((LC[k] || {}).main || []).map(o => (o || []).map(c => c.node).join('+')).join(' | ');
-  ok(lx('When Executed by Another Workflow') === 'Log Row+Project Row' && lx('Log Row') === 'Log to Sheet' && lx('Client Row') === 'Log New Client' && lx('Project Row') === 'Find Project'
+  ok(['Log Row+Project Row', 'Log Row+Project Row+Client Row'].indexOf(lx('When Executed by Another Workflow')) !== -1 /* v3: Client Row from the trigger */ && lx('Log Row') === 'Log to Sheet' && lx('Client Row') === 'Log New Client' && lx('Project Row') === 'Find Project'
      && lx('Find Project') === 'New Project?' && lx('New Project?') === 'Log New Project', 'Log Booking wiring: the log branch as before, the project branch beside it');
 
   console.log('\n' + pass + ' ok, ' + fail + ' failed');

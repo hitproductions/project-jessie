@@ -30,7 +30,7 @@ The older tables below are kept for the record; this board is what is open for l
 | 122 | Room requests: two answers within seconds both count | Build (after QA - now) |
 | 115 | Coordinators cannot find someone else's booking by typing | Build |
 | 126 | **No engineer / arranger notice for a booking placed by a room request** (noted 21-22 Oct, not built) | Build |
-| 133 | **A new client kept through Change is never logged** - only a new booking writes the New Clients sheet; and a row gives no hint it may be a misspelling | Build (queued 27 Oct) |
+| 133 | **A new client kept through Change is never logged** - only a new booking writes the New Clients sheet; and a row gives no hint it may be a misspelling | **Built 27 Oct, import owed** - Log Booking v3, Book Session v123, SI v47 (`scripts/build-new-clients-27oct.py`, sim-new-clients 14) |
 
 **Decisions (Howard)**
 

@@ -1,0 +1,353 @@
+{
+  "name": "Jessie — Log Booking — v3 (a client row on its own)",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "log"
+            },
+            {
+              "name": "client"
+            },
+            {
+              "name": "project"
+            }
+          ]
+        }
+      },
+      "id": "29087e85-f37b-4527-a170-61838dcb81bc",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        512,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log Row: the Jessie Log row Book Session made (Build Log Row), as one item for Log to Sheet.\nlet r = null; try { r = JSON.parse(String($('When Executed by Another Workflow').first().json.log || '')); } catch (e) { r = null; }\nreturn r && typeof r === 'object' ? [{ json: r }] : [];"
+      },
+      "id": "21b02c7a-9d5d-4838-ad45-7e893a84253a",
+      "name": "Log Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        336
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "cachedResultName": "Log",
+          "mode": "list",
+          "value": "gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [],
+          "schema": [],
+          "value": {}
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true,
+      "id": "8cc9e5ab-c6da-4d8e-9982-a45de8a521a6",
+      "name": "Log to Sheet",
+      "position": [
+        960,
+        336
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Client Row: the New Clients row, only for a client the Clients table did not know - none, no item, nothing written.\n// v3 (27 Oct, PENDING 133): straight from the trigger - a client kept through Change comes with no log row\nlet r = null; try { r = JSON.parse(String($('When Executed by Another Workflow').first().json.client || '')); } catch (e) { r = null; }\nreturn r && typeof r === 'object' && r['Client'] ? [{ json: r }] : [];"
+      },
+      "id": "54b8a7fd-2c43-4403-801e-a6f0af58aeb7",
+      "name": "Client Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        336
+      ],
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "New Clients"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "Client"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "3b3baeae-733d-4cd8-8ec4-f5302c728138",
+      "name": "Log New Client",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1408,
+        336
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Jessie — Log Booking\nWrites a booking's rows to the Jessie Log spreadsheet after the reply has gone. Called by Book Session (v112+) without waiting. A failed write never touches the booking.\n\nv2: a Localization / QC project code not in Airtable Localization Projects -> the New Projects tab (For Review).",
+        "width": 420
+      },
+      "id": "6dfb933c-dd5b-4b19-b39f-f1749c1ad261",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        512,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Project Row (v2): a Localization / QC booking's project code, handed over by Book Session (v115+) - none, no item, nothing\n// looked up or written.\nlet r = null; try { r = JSON.parse(String($('When Executed by Another Workflow').first().json.project || '')); } catch (e) { r = null; }\nconst code = r && typeof r === 'object' ? String(r['Code'] || '').trim().toUpperCase() : '';\nreturn code ? [{ json: Object.assign({}, r, { Code: code }) }] : [];"
+      },
+      "id": "64e92aad-d5a6-4812-b5db-f36af42323e3",
+      "name": "Project Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "cachedResultName": "Project Jessie Knowledge Base",
+          "mode": "list",
+          "value": "app8GQxEInqJi1NRP"
+        },
+        "table": {
+          "__rl": true,
+          "cachedResultName": "Localization Projects",
+          "mode": "list",
+          "value": "tbljkG6z7odPUtTIf"
+        },
+        "filterByFormula": "={{ (function(){\n  var c = String(($('Project Row').first().json || {})['Code'] || '').trim().toUpperCase();\n  if (!c) { return 'FALSE()'; }   // gotcha 7: an empty value would match every row\n  return \"UPPER(TRIM({Project Code})) = '\" + c.replace(/'/g, \"\\\\'\") + \"'\";\n})() }}",
+        "options": {
+          "fields": [
+            "Project Code"
+          ]
+        }
+      },
+      "id": "1dfbd3d3-a7ec-421c-b0de-ec9f1d796adb",
+      "name": "Find Project",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        544
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "S0hmu58Rb55jqAv0",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// New Project? (v2): the code is new only when the lookup answered and found no record. A lookup that errored is not evidence\n// either way - nothing is written.\nconst rows = $('Find Project').all().map(i => i.json || {});\nif (rows.some(r => r.error)) return [];\nif (rows.some(r => r.id)) return [];\nreturn [{ json: $('Project Row').first().json }];"
+      },
+      "id": "4a361b97-de87-4c1b-95ac-e6075eb15d9a",
+      "name": "New Project?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "New Projects"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "Code"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "a7d4acbb-015e-4173-89b7-bc8fee2c4bcb",
+      "name": "Log New Project",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1408,
+        544
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Log Row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Project Row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Client Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Row": {
+      "main": [
+        [
+          {
+            "node": "Log to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client Row": {
+      "main": [
+        [
+          {
+            "node": "Log New Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Project Row": {
+      "main": [
+        [
+          {
+            "node": "Find Project",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Project": {
+      "main": [
+        [
+          {
+            "node": "New Project?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New Project?": {
+      "main": [
+        [
+          {
+            "node": "Log New Project",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "089e5031-e2c6-497f-8025-eba3dfd3c3e2",
+  "meta": {
+    "instanceId": "47b8f2db30f5474de1dd72088d2efb6e9f5862c79e8ac68a94619b94d7aeb560"
+  },
+  "nodeGroups": [],
+  "id": "vmmb0fDD0PXd9443",
+  "tags": []
+}

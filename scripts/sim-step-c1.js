@@ -40,7 +40,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   ok(C.Route.main[7][0].node === 'Ack My Bookings' && C.Route.main[12][0].node === 'Ack My Bookings' && nx('Page?') === 'Update List | Post List', 'wiring: My bookings posts, a page updates');
   ok(nx('To Cancel') === 'Cancel' && (nx('Cancel') === 'After Cancel' || (nx('Cancel') === 'Get Message C2' && nx('Get Message C2') === 'After Cancel')) && nx('After Cancel') === 'Update Cancelled', 'wiring: cancel');
   const V18 = si.nodes.some(n => n.name === 'Change Notices');
-  ok(nx('Change OK?') === (V18 ? 'Client Names' : V17 ? 'Get Message Before' : 'Read Cache 7') && nx('After Move') === 'Show Change Result'
+  ok(nx('Change OK?') === (V18 ? 'Client Names' : V17 ? 'Get Message Before' : 'Read Cache 7') && nx('After Move').replace('+New Client C', '') === 'Show Change Result' /* v47 */
      && nx('Moved?').replace(' | Get Message R', ' | Restore Message') === (si.nodes.some(n => n.name === 'DM Changed') ? 'Get Message+Change Notices+DM Changed | Restore Message' : V18 ? 'Get Message+Change Notices | Restore Message' : V17 ? 'Get Message | Restore Message' : 'Get Message') && nx('Fix Message') === 'Update Changed', 'wiring: change');
   if (V17) ok((nx('Ack Cancel') === 'Mark Cancelling' || (nx('Ack Cancel') === 'Get Message C' && nx('Get Message C') === 'Mark Cancelling')) && nx('Cancelling Shown?') === 'Show Cancelling | Read Cache 5' && nx('Show Cancelling') === 'Read Cache 5'
      && nx('Get Message Before') === 'Mark Changing' && nx('Changing Shown?') === 'Show Changing | Read Cache 7' && nx('Show Changing') === 'Read Cache 7' && nx('Restore Message') === 'Update Restored', 'v17 wiring: processing lines, restore');
