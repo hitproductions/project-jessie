@@ -85,7 +85,7 @@ try {
   const g = $('Gate Context').first().json || {};
   const trig = $('Slack Trigger').first().json || {};
   fc.channel = String(trig.channel || '');
-  const raw = String(trig.text || '').replace(/\*sent using\*[\s\S]*$/i, '').replace(/<[^>]+>/g, ' ');
+  const raw = String(trig.text || '').slice(0, 500).replace(/\*sent using\*[\s\S]*$/i, '').replace(/<[^>]+>/g, ' ');
   const t = raw.toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9.+&!\s\/-]/g, ' ').replace(/\s+/g, ' ').replace(/[.!]+$/, '').trim();
   const rooms = [];
   for (const it of $('All Rooms').all()) { const f = ((it && it.json) || {}).fields || {}; const nm = String(f['Room Name'] || '').trim(); if (nm) rooms.push({ name: nm, facts: factsOf(f) }); }
@@ -111,7 +111,9 @@ try {
     const m = re.exec(x.text); if (!m) return false;
     return !/\b(?:no|without|not)\s+(?:an?\s+)?$/i.test(x.text.slice(0, m.index + m[1].length));
   });
-  const line = x => (x.label === 'Equipment' ? '' : x.label + ': ') + x.text;
+  // v286: Slack's three escapes on everything printed - Airtable text and the typed term never become a mention or a link
+  const se = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const line = x => se((x.label === 'Equipment' ? '' : x.label + ': ') + x.text);
   const nat = (a, b) => a.localeCompare(b, undefined, { numeric: true });
   // rooms named in the message
   const named = rooms.filter(r => {
@@ -150,7 +152,7 @@ try {
           fc.shape = 'which rooms'; fc.go = true;
           const m = re.exec(found[0].h[0].text); const shown = m ? m[2] : term;
           fc.rooms = found.map(x => x.r.name);
-          fc.text = '*Rooms with ' + shown + ':*\n' + found.slice(0, 30).map(x => '• *' + x.r.name + '* – ' + x.h.slice(0, 2).map(line).join(' · ')).join('\n');
+          fc.text = '*Rooms with ' + se(shown) + ':*\n' + found.slice(0, 30).map(x => '• *' + se(x.r.name) + '* – ' + x.h.slice(0, 2).map(line).join(' · ')).join('\n');
         }
       }
     } else if (named.length === 1) {
@@ -167,12 +169,12 @@ try {
         if (term && term.split(' ').length <= 4 && !/^(?:it|anything|what)$/.test(term)) {
           fc.term = term;
           const h = hitsIn(r, termRe(term), FORMAT.test(term) ? ['Formats'] : null);
-          if (h.length) out.push('*' + r.name + '* has ' + term + ':\n' + h.slice(0, 4).map(x => '• ' + line(x)).join('\n'));
-          else out.push('Airtable doesn’t list *' + term + '* for *' + r.name + '*.');
+          if (h.length) out.push('*' + se(r.name) + '* has ' + se(term) + ':\n' + h.slice(0, 4).map(x => '• ' + line(x)).join('\n'));
+          else out.push('Airtable doesn’t list *' + se(term) + '* for *' + se(r.name) + '*.');
           out.push('');
         }
-        out.push('*' + r.name + '*');
-        for (const [label, texts] of groupsOf(r.facts)) out.push('*' + label + ':* ' + texts.join(label === 'Equipment' ? '. ' : ', '));
+        out.push('*' + se(r.name) + '*');
+        for (const [label, texts] of groupsOf(r.facts)) out.push('*' + se(label) + ':* ' + se(texts.join(label === 'Equipment' ? '. ' : ', ')));
         if (r.facts.length === 0) out.push('Airtable lists no details for this room yet.');
         fc.shape = 'one room'; fc.go = true; fc.rooms = [r.name];
         fc.text = out.join('\n');

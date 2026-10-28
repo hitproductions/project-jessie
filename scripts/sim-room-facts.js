@@ -99,6 +99,16 @@ for (const [q, d, why] of [['is studio 7 free tomorrow?', '2027-10-29', 'availab
 const bad = run('Facts Check', [{ json: {} }], { 'Slack Trigger': [{ json: { text: 'what rooms have symphony?' } }], 'Gate Context': [{ json: {} }] })[0].json;
 ok(bad.factsCheck.go === false, 'no rooms read -> never throws, the AI answers', bad.factsCheck);
 
+console.log('Facts Check - safe output');
+const evil = rooms.concat([R('Studio Z', { Equipment: 'Symphony <!channel> <https://x.example|click> & <@U123>' })]);
+const fz = run('Facts Check', [{ json: {} }], { 'Slack Trigger': [{ json: { text: 'what rooms have symphony?', channel: 'D1' } }], 'Gate Context': [{ json: {} }], 'All Rooms': evil, 'All Session Types': types })[0].json.factsCheck;
+ok(fz.go && !/<!channel>|<https|<@U/.test(fz.text) && /&lt;!channel&gt;/.test(fz.text) && /&amp;/.test(fz.text), 'Airtable text is escaped: no @channel, link or mention can be posted', fz.text);
+for (const q of ['does studio 8 have <!channel>?', 'does studio 8 have @here?', 'which rooms have <@U08V3CKDGJF>?'])
+  { const x = facts(q).factsCheck; ok(!/<|@/.test(x.text), 'a typed mention is never echoed: ' + q, x.text); }
+ok(facts('what rooms have symphony?').factsCheck.channel === 'D1', 'answers only in the DM it came from');
+let t0 = Date.now(); const long = facts('which rooms have ' + 'a'.repeat(39000) + '?'); ok(Date.now() - t0 < 200 && !long.factsCheck.go, 'a 39,000-character message: read capped, fast, no answer', Date.now() - t0);
+t0 = Date.now(); facts('which rooms have ' + 'symphony '.repeat(4000)); ok(Date.now() - t0 < 200, 'a repeated term: no slow regex', Date.now() - t0);
+
 console.log('Room Table - the details in the prompt');
 const rt = node('Room Table').parameters.jsCode;
 const i = rt.indexOf('// v286 (28 Oct): what each room has'), j = rt.indexOf('const preemptionRanks = {};');
