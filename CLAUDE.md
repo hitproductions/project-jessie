@@ -88,6 +88,10 @@ fine with it; it needs a fine-grained GitHub token for the org and an n8n API ke
 
 **What is lost:** reading executions (`health`, tool calls, timings) - ask the person testing to paste or download an
 execution, or add an n8n workflow that writes run summaries to the repo; and `eval-run`, until it runs inside n8n.
+Timings without n8n access: typed messages are in the Jessie Booking Log sheet's **Turn Log** tab (main only, Seconds =
+Slack message -> reply); form submissions are not - they are in the n8n data table **Jessie Timings** (one running figure
+per scenario) and in each Slack Interactions run's **Timing Sample** node (`per`). Where each is and what it measures:
+`docs/eod/EOD-2026-10-29.md`.
 
 ## Where things stand
 

@@ -4,7 +4,7 @@ What is live, what was checked, and what is left before the flip. Steps for the 
 
 ## What is live
 
-main v287 · Book Session v124 · Slack Interactions v55 · Move v41 · Cancel v33 · Room Availability v24 · Reminders v8 ·
+main v287 · Book Session v124 · Slack Interactions v56 (29 Oct ~01:30: All day + Repeats) · Move v41 · Cancel v33 · Room Availability v24 · Reminders v8 ·
 Request Messages v5 · Consent Sweep v4 · Log Booking v3 · Room Check v2 · Find v8 · Book Series v8 · Open Consent Request v12 ·
 Finalize v11. Every import this week matched its build before and after.
 
@@ -57,6 +57,8 @@ so **every Approve / Give it up / Keep does nothing** (PENDING 121 / 122). Fix: 
 6. **No ref:** (124): a hand-made booking with only "Booked by: <name>" -> Booked – ask to use offers it; an M booth hold reads
    "M6 · Marketing".
 7. **Continue booking** (SI v45): close the window at step 2's question -> the DM reopens step 2.
+8. **Since the review** (28-29 Oct): two rooms in one question (main v287); several studios on one booking, Change take off / add
+   back, a meeting in Likha + Katha, two vocal booths (SI v53-v55, Reminders v8); an M booth All day + Repeats (SI v56).
 
 QA round 4's own results are still not in the repo (PENDING 130) - if anything on Camy's sheet failed and was not reported, it is
 not fixed.
@@ -69,6 +71,9 @@ not fixed.
 - **118** Cancel a whole repeating booking at once - after launch is fine (each date can be cancelled now).
 
 ## Not code, still open
+
+**End User SOP v1.9** is behind the live build in four places (booth / holding fields, + Multiple studios, "Choose a different
+room", Change's details shown at once, the typed examples) - list in `eod/EOD-2026-10-29.md`.
 
 15 uptime monitor · 21 Cloudflare late deliveries (watch the first days) · 42 Envoy tablets · 43 the old Studio E calendar id
 (IT) · 114 / 53 Airtable cleanup.
