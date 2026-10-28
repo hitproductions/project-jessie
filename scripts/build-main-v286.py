@@ -93,7 +93,8 @@ try {
   try { for (const it of $('All Session Types').all()) { const ty = String((((it && it.json) || {}).fields || {})['Type'] || '').trim().toLowerCase(); if (ty) types.push(ty); } } catch (e) {}
   const asks = /\?/.test(raw) || /^(?:what|whats|which|where|wheres|does|do|is|are|any|list|show|tell|how|can|got)\b/.test(t) || /\brooms? with\b/.test(t);
   const when = !!String(g.datesInMessage || '').trim()
-    || /\b(?:free|available|availability|vacant|open|booked|book|booking|reserve|schedule|calendar|today|tomorrow|tonight|now|later|week|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun|noon|cancel|move|change)\b/.test(t)
+    || /\b(?:free|available|availability|vacant|open|booked|book|booking|reserve|schedule|calendar|today|tomorrow|tonight|now|later|week|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun|noon|cancel|move|change|taken|busy|occupied|reserved|left|sessions?|bookings?|meetings?|slots?|someone|anyone|anybody|who|whos|client|engineer|arranger|project)\b/.test(t)
+    || /\b(?:at|from|until|till|by|on|before|after)\s+\d/.test(t)
     || /\b\d{1,2}(?::\d{2})?\s*(?:am|pm|nn)\b/.test(t) || /\bmy\b/.test(t);
   const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const FORMAT = /^(?:5\.1|7\.1|atmos|dolby(?: atmos)?|stereo(?: with sub)?|surround|mono)(?: (?:mixing|format|sound))?$/;
@@ -136,7 +137,7 @@ try {
     if (m1 && !named.length) {
       const term = tidy(m1[1]);
       fc.term = term;
-      if (!term || term.split(' ').length > 4) fc.why = 'no clear thing to look for';
+      if (!term || term.split(' ').length > 4 || /\d|\b(?:people|pax|persons?|space|seats?|capacity|most|best|biggest|smallest|more|less)\b/.test(term)) fc.why = 'no clear thing to look for';
       else if (FORMAT.test(term)) fc.why = 'a format (Rooms and Studios answers it)';
       else if (isType(term) || /\b(?:vocal|booths?|session|sessions)\b/.test(term)) fc.why = 'a session type or a booth (the AI answers it)';
       else {
@@ -144,17 +145,18 @@ try {
         const found = [];
         for (const r of rooms) { const h = hitsIn(r, re); if (h.length) found.push({ r, h }); }
         found.sort((a, b) => nat(a.r.name, b.r.name));
-        fc.shape = 'which rooms'; fc.go = true;
-        if (found.length) {
+        if (!found.length) fc.why = 'no room lists it (the AI answers, from the details)';
+        else {
+          fc.shape = 'which rooms'; fc.go = true;
           const m = re.exec(found[0].h[0].text); const shown = m ? m[2] : term;
           fc.rooms = found.map(x => x.r.name);
           fc.text = '*Rooms with ' + shown + ':*\n' + found.slice(0, 30).map(x => '• *' + x.r.name + '* – ' + x.h.slice(0, 2).map(line).join(' · ')).join('\n');
-        } else fc.text = 'Airtable doesn’t list *' + term + '* for any room.';
+        }
       }
     } else if (named.length === 1) {
       // shape 2: one room's setup
       const r = named[0], nm = r.name.toLowerCase().replace(/^studio\s+/, 'studio\\s*');
-      const gear = /\b(?:equipment|gear|setup|set up|specs?|specifications|features|inside|interfaces?|preamps?|speakers?|monitors?|mics?|microphones?|console|workstation|computer|mac|laptop|capacity|fit|size|big|paired|pair|details?|about|have|has|got|in it|whats in|what is in|whats inside)\b/.test(t);
+      const gear = /\b(?:equipment|gear|setup|set up|specs?|specifications|features|inside|interfaces?|preamps?|speakers?|monitors?|mics?|microphones?|console|workstation|computer|mac|laptop|capacity|fit|size|big|paired|pair|details?|tell me about|have|has|got|in it|whats inside|what is inside)\b/.test(t);
       if (!gear) fc.why = 'a room named, but not its setup';
       else {
         const m2 = t.match(new RegExp('^(?:does|do|is there|has)\\s+(?:the\\s+)?' + nm + '\\s+(?:have|has|got|come with|use)\\s+(.+)$'))
@@ -226,7 +228,8 @@ js = sub(js, "const preemptionRanks = {};\n",
     "let gearAsk = false;\n"
     "try {\n"
     "  const tq = String(($('Slack Trigger').first().json || {}).text || '').toLowerCase();\n"
-    "  gearAsk = /\\b(?:rooms?|studios?|booths?|m[1-8]|likha|salin|katha|lobby|equipment|gear|setup|set up|specs?|features|interfaces?|preamps?|speakers?|monitors?|mics?|microphones?|console|workstation|computer|mac|laptop|capacity|fit|size|big|paired|pair|dante|symphony)\\b/.test(tq);\n"
+    "  gearAsk = /\\b(?:equipment|gear|setup|set up|specs?|features|interfaces?|preamps?|speakers?|monitors?|mics?|microphones?|console|workstation|computer|mac|laptop|capacity|how many people|fit|size|how big|paired|pair|dante|symphony)\\b/.test(tq)\n"
+    "    || /\\b(?:rooms?|studios?|booths?)\\s+(?:with|that have|have|has)\\b|\\bdoes\\s+(?:studio\\s*\\w+|m[1-8]|likha|salin|katha|lobby)\\s+have\\b/.test(tq);\n"
     "} catch (e) { gearAsk = false; }\n"
     "try {\n"
     "  if (!gearAsk) throw new Error('not about rooms');\n"
@@ -264,7 +267,8 @@ p["jsCode"] = sub(p["jsCode"], "if (agent && BOOKING_ASK.test(text)) text = 'Use
     "  const keep = s => !BOOKING_ASK.test(s) && !/\\?\\s*$/.test(s) && !/^\\(.*\\)$/.test(s.trim()) && !/\\b(?:yes or no|yes\\/no)\\b/i.test(s);\n"
     "  const kept = text.split('\\n').map(l => l.split(/(?<=[.!?])\\s+/).filter(keep).join(' ').trimEnd());\n"
     "  const left = kept.join('\\n').replace(/\\n{3,}/g, '\\n\\n').trim();\n"
-    "  text = (left.match(/[a-z0-9]+/gi) || []).length >= 3 ? left : 'Use *Book a room* or *My bookings* below.';   // v275\n"
+    "  const collecting = /\\*?(?:project|client|engineer|arranger|session type|date|time|room|booked by|department):\\*?\\s/i.test(left) || /\\b(?:noted|so far|got it|i(?:’|')?ll book|i can book|let me book|i(?:’|')?ve (?:added|put|set|noted))\\b/i.test(left);\n"
+    "  text = (left.match(/[a-z0-9]+/gi) || []).length >= 3 && !collecting ? left : 'Use *Book a room* or *My bookings* below.';   // v275\n"
     "}\n")
 
 wf["name"] = "Project Jessie — v286 (room details)"

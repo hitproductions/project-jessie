@@ -61,15 +61,15 @@ ok(f.factsCheck.go && f.factsCheck.rooms.includes('Studio 8') && f.factsCheck.ro
 f = facts('where is the hear system?');
 ok(f.factsCheck.go && f.factsCheck.rooms.includes('Studio F') && f.factsCheck.rooms.includes('Studio C'), 'where is the Hear system', f.factsCheck.rooms);
 f = facts('which rooms have a theremin?');
-ok(f.factsCheck.go && /Airtable doesn’t list \*theremin\* for any room\./.test(f.factsCheck.text), 'nothing lists it -> said so', f.factsCheck.text);
+ok(!f.factsCheck.go, 'nothing lists it -> the AI says so from the details (no code guess on a stray term)', f.factsCheck);
 f = facts('what rooms have symphony setup?');
 ok(f.factsCheck.go && f.factsCheck.rooms.length === 4, '"symphony setup" -> Symphony', f.factsCheck);
 
 console.log('Facts Check - one room');
-f = facts('what\'s in studio f?');
+f = facts('tell me about studio f');
 ok(f.factsCheck.go && /^\*Studio F\*\n/.test(f.factsCheck.text) && /\*Audio interfaces:\* 2 Focusrite RED 8Pre, Symphony, Hear System/.test(f.factsCheck.text)
   && /\*Preamps:\* Portico 5012/.test(f.factsCheck.text) && /\*Size:\* Large · up to 12 people/.test(f.factsCheck.text) && /\*Workstation:\* Mac Studio, Laptop Ready/.test(f.factsCheck.text),
-  'what\'s in Studio F -> its details', f.factsCheck.text);
+  'tell me about Studio F -> its details', f.factsCheck.text);
 f = facts('does studio 8 have a mac studio?');
 ok(f.factsCheck.go && /^Airtable doesn’t list \*mac studio\* for \*Studio 8\*\./.test(f.factsCheck.text) && /\*Studio 8\*\n/.test(f.factsCheck.text), 'Studio 8 + Mac Studio -> not listed, then its details', f.factsCheck.text);
 f = facts('does studio 7 have a mac studio?');
@@ -89,7 +89,10 @@ console.log('Facts Check - left to the AI');
 for (const [q, d, why] of [['is studio 7 free tomorrow?', '2027-10-29', 'availability'], ['which rooms have atmos?', '', 'a format across rooms (the tool)'],
   ['which rooms are used for vo recording?', '', 'session type ranking'], ['book studio f tomorrow 2-4pm', '2027-10-29', 'a booking'], ['what do i have this week', '', 'my bookings'],
   ['which rooms have vocal booths?', '', 'vocal booths (the tool)'], ['who is the engineer for loc?', '', 'people'], ['studio 7 and studio 8 - which has more speakers?', '', 'two rooms'],
-  ['thanks', '', 'not a question'], ['what time does studio c open?', '', 'a time']]) {
+  ['thanks', '', 'not a question'], ['what time does studio c open?', '', 'a time'],
+  ['what about studio f?', '', 'a follow-up about a room (could be its schedule)'], ['whats in studio 4?', '', '"whats in" can mean its schedule'],
+  ['does studio 7 have a session at 3?', '', 'a booking question with no am/pm'], ['which rooms have space for 10 people?', '', 'capacity across rooms (the AI, with the details)'],
+  ['which studios have engineers?', '', 'people'], ['which rooms are taken?', '', 'taken = a booking question'], ['does studio 8 have anyone in it?', '', 'someone in it']]) {
   f = facts(q, d);
   ok(!f.factsCheck.go, why + ': "' + q + '" -> the AI', f.factsCheck);
 }
@@ -102,8 +105,10 @@ const i = rt.indexOf('// v286 (28 Oct): what each room has'), j = rt.indexOf('co
 const piece = new Function('$', rt.slice(i, j) + '\nreturn roomDetails;');
 const detFor = q => piece(n => ({ all: () => n === 'All Rooms' ? rooms : [], first: () => ({ json: n === 'Slack Trigger' ? { text: q } : {} }) }));
 const det = detFor('which rooms have symphony?');
-ok(detFor('thanks') === '(not needed for this message)' && detFor('who is the engineer for loc?') === '(not needed for this message)', 'not about rooms -> no details in the prompt (no extra tokens)');
-ok(detFor('is there a good mic in salin') !== '(not needed for this message)', 'about a room or gear -> the details');
+for (const q of ['thanks', 'who is the engineer for loc?', 'is studio 7 free tomorrow?', 'book studio 8 friday 2-4pm', 'what do i have in studio c this week'])
+  ok(detFor(q) === '(not needed for this message)', 'no details in the prompt: "' + q + '"');
+for (const q of ['is there a good mic in salin', 'which rooms have a theremin?', 'does likha have a tv?', 'how many people fit in katha'])
+  ok(detFor(q) !== '(not needed for this message)', 'the details in the prompt: "' + q + '"');
 ok(/^- Likha - /.test(det) && /\n- Studio F - Room type: Recording Control Room, Editing, Stereo Mixing; Size: Large · up to 12 people;[^\n]*Audio interfaces: 2 Focusrite RED 8Pre, Symphony, Hear System; Preamps: Portico 5012/.test(det),
   'one line per room, every field, in order', det.split('\n').slice(0, 3));
 ok(det.split('\n').length === rooms.length && !/\*\*/.test(det), 'every room, no Airtable bold marks');
@@ -117,7 +122,7 @@ ok(br('Studio 7, Studio 8, Studio C and Studio F have Symphony. Which room would
 ok(br('Which session type is it?') === 'Use *Book a room* or *My bookings* below.', 'only a booking question -> the pointer, as before');
 ok(br('*Studio F*\nGenelec speakers.\nWhich studio do you want?') === '*Studio F*\nGenelec speakers.', 'lines kept, the question line dropped');
 ok(br('Studio F is a large room.') === 'Studio F is a large room.', 'no booking question -> unchanged');
-for (const t of ['What would you like to do? What’s the project?', 'Who’s the arranger? (or "none")', 'Cancel it? Reply yes or no.', 'Which room?'])
+for (const t of ['I’ve noted the project as ORANGE. Who’s the client?', 'Got it, Studio 7 on Friday. Which session type is it?', '*Project:* ORANGE\n*Client:* Jem Lim\nConfirm to book. (yes/no)', 'What would you like to do? What’s the project?', 'Who’s the arranger? (or "none")', 'Cancel it? Reply yes or no.', 'Which room?'])
   ok(br(t) === 'Use *Book a room* or *My bookings* below.', 'nothing but questions -> the pointer: ' + t, br(t));
 
 console.log('Wiring');
