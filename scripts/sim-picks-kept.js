@@ -86,6 +86,30 @@ const blkOf = (v, re) => (v.blocks || []).find(b => re.test(b.block_id || ''));
   ok(picked(blkOf(bc.view, /^studios_c$/)).join() === 'Studio 8,Studio F', '...and the form it opens has them picked');
   const tmv = code('To Move');
   ok(/view: changeView\(R\.b, Object\.assign\(\{\}, R\.n, R\.newRooms \? \{ r: R\.newRooms \} : \{\}\), warn,/.test(tmv), 'To Move\'s client question redraws with every room');
+  if (/v55: the note saved from an earlier try/.test(JSON.stringify(si.nodes))) {
+    console.log('v55: the note');
+    const nb = blocks.concat([{ type: 'input', block_id: 'notes', optional: true, label: { type: 'plain_text', text: 'Note' }, element: { type: 'plain_text_input', action_id: 'notes_in', multiline: true } }]);
+    const st2 = Object.assign({}, state, { notes: { notes_in: { type: 'plain_text_input', value: 'bring the USB\nand cans' } } });
+    const fa = await j1('After Prepare', [{ json: { status: 'REJECTED', reason: 'CLIENT_CHECK', human: 'x', suggestions: ['Y'] } }], Object.assign({}, outs, {
+      'Read Request': [{ json: { payload: { view: { id: 'V1', private_metadata: JSON.stringify(S), blocks: nb, state: { values: st2 } } } } }] }));
+    ok(blkOf(fa.view, /^notes$/).element.initial_value === 'bring the USB\nand cans', 'the window still open (formAgain): the note kept (as before)');
+    ok(/nt: notes\.slice\(0, 600\)/.test(rs2), 'Read Step 2: the saved answers carry the note (at most 600 characters)');
+    v = await step2(Object.assign({}, S, { pre: { r: 'Studio 7', nt: 'bring the USB\nand cans' } }), { free_priority: ['Studio 7', 'Studio 8'], free_rooms: FREE });
+    ok(blkOf(v, /^notes$/).element.initial_value === 'bring the USB\nand cans', 'Continue booking / Book a room from the DM: the Note filled in again');
+    v = await step2(Object.assign({}, S, {}), { free_priority: ['Studio 7'], free_rooms: FREE });
+    ok(!blkOf(v, /^notes$/).element.initial_value, 'nothing saved -> the Note empty, as before');
+    const R0 = { channel: 'U1', calTitle: 'KUBA / HL', again: { d: '2027-10-29', s: '13:00', e: '16:00', p: 'VO Recording', r: 'Studio 7', pj: 'KUBA', mr: 'Studio 8', nt: 'bring the USB' } };
+    for (const nm of ['Question DM', 'Result DM']) {
+      const q = await j1(nm, [{ json: { ok: false, error: 'not_found' } }], { 'Read Step 2': [{ json: R0 }], 'After Prepare': [{ json: { warn: 'Did you mean *Jem Lim*?' } }], 'After Book': [{ json: { ok: false, warn: 'x' } }] });
+      const val = q && JSON.parse(JSON.stringify(q.blocks)).map(b => (b.elements || [])).flat().find(e => e.action_id === 'book_continue' || e.action_id === 'open_book');
+      ok(val && JSON.parse(val.value).nt === 'bring the USB' && JSON.parse(val.value).mr === 'Studio 8', nm + ': the button carries the note and the rooms', val && val.value);
+      const long = Object.assign({}, R0, { again: Object.assign({}, R0.again, { pj: 'P'.repeat(1200), nt: 'n'.repeat(600) }) });
+      const q2 = await j1(nm, [{ json: { ok: false, error: 'not_found' } }], { 'Read Step 2': [{ json: long }], 'After Prepare': [{ json: { warn: 'x' } }], 'After Book': [{ json: { ok: false, warn: 'x' } }] });
+      const v2 = q2.blocks.map(b => (b.elements || [])).flat().find(e => e.action_id === 'book_continue' || e.action_id === 'open_book');
+      const g2 = JSON.parse(v2.value);
+      ok(v2.value.length <= 1900 && !g2.nt && g2.pj && g2.mr === 'Studio 8', nm + ': too long for the button -> the note left off, the rest kept (was: nothing kept)', v2.value.length);
+    }
+  }
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.log('FAIL crashed: ' + e.stack); process.exit(1); });
