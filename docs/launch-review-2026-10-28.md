@@ -26,7 +26,7 @@ main ~v190), not the live downloads. Not a live problem; run `test-nodes` with t
 ahead, a message redirected to Howard / marked "Test: …", the year shift in the prompt): build-b 3, step-c1 1, slice1-a 1,
 round-3 1, every-message 1, request-for 1, reminders 3, approvals 6. Anything else failing on the launch builds is real.
 
-## Blocker found
+## Blocker found - fixed 28 Oct afternoon (Howard added AD1 Claim; read back and confirmed)
 
 **The Consent Requests tab still has no Claim column** (read 28 Oct: headers end at AC `_sweepAction`). Since Slack Interactions
 v49 / Sweep v4 every request answer writes a claim to that column and reads it back; without the header nothing is read back,
