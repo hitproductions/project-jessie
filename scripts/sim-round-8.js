@@ -6,6 +6,9 @@
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v25.json', 'utf8'));
 const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
+// v53 (28 Oct): the Vocal booth(s) is a multi-select - no "No booth" item; the picked booths read the same on either shape
+const V53 = JSON.stringify(si.nodes).indexOf("label: pt('Vocal booths')") !== -1;
+const bPick = bl => (bl && bl.element ? [].concat(bl.element.initial_options || (bl.element.initial_option ? [bl.element.initial_option] : [])) : []).map(o => o.value).filter(x => x !== 'none');
 const main = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/project-jessie-v275.json', 'utf8'));
 // v40 / v280 (22 Oct): the summary on separate lines - read back as the one " · " line these checks were written for
 const one40 = s => String(s).replace(/🗓️ \*([^*\n]+)\*((?:\n\*[^*\n]+\*)+)/g, (m, a, b) => '🗓️ *' + [a].concat(b.split('\n').filter(Boolean).map(x => x.slice(1, -1))).join(' · ') + '*');
@@ -106,17 +109,17 @@ const views = [];
   v = await step2(S('Celebrity Recording', 'studio'), { free_priority: ['Studio F', 'Likha', 'Katha', 'Salin', 'Studio C'], busy: ['Salin (TEAM)'] });
   views.push(v);
   let bt = blkRe(v, /^booth~\d+$/), hb = blk(v, 'holding');
-  ok(bt && bt.label.text === 'Vocal booth' && bt.optional && bt.element.type === 'static_select' && (V26 ? (V39 ? bt.element.options.slice(-1)[0].value === 'none' : !bt.element.options.some(o => o.value === 'none')) && bt.element.placeholder.text === 'No booth' : bt.element.options[0].value === 'none' && bt.element.placeholder.text === 'Select a booth') && !bt.element.initial_option && !bt.hint, '21: Celebrity Recording (records in the room) - Vocal booth, optional, "No booth", nothing picked, no hint');
+  ok(bt && bt.label.text === (V53 ? 'Vocal booths' : 'Vocal booth') && bt.optional && bt.element.type === (V53 ? 'multi_static_select' : 'static_select') && (V26 ? (V39 && !V53 ? bt.element.options.slice(-1)[0].value === 'none' : !bt.element.options.some(o => o.value === 'none')) && bt.element.placeholder.text === 'No booth' : bt.element.options[0].value === 'none' && bt.element.placeholder.text === 'Select a booth') && !bPick(bt).length && !bt.hint, '21: Celebrity Recording (records in the room) - Vocal booth, optional, "No booth", nothing picked, no hint');
   ok(hb && hb.element.type === 'multi_static_select' && hb.optional && hb.element.options.map(o => o.value).join() === 'Katha,Likha' && hb.element.placeholder.text === 'Select holding rooms',
      '21: Holding rooms - a dropdown, several can be picked (Salin taken)');
   ok(!blk(v, 'add_booth') && !blk(v, 'add_holding'), '21: no tick boxes');
   v = await step2(S('Localization Dubbing', 'loc'), { free_priority: ['Studio 1', 'Studio 2', 'Studio A', 'Studio B'] });
   bt = blkRe(v, /^booth~\d+$/);
-  ok(!bt.optional && bt.element.initial_option.value === 'Studio A' && bt.element.options[0].text.text === 'Studio A (usual)' && bt.element.options[0].value === 'Studio A'
+  ok(!bt.optional && bPick(bt).join() === 'Studio A' && bt.element.options[0].text.text === 'Studio A (usual)' && bt.element.options[0].value === 'Studio A'
      && !bt.element.options.some(o => o.value === 'none'), '21: Localization Dubbing (a booth is needed) - set to the usual one, "Studio A (usual)", required');
   t = await toggle(v, 'room_radio', { selected_option: { value: 'Studio 2' } }, { room: { room_radio: tv('Studio 2') } });
   bt = blkRe(t.view, /^booth~\d+$/);
-  ok(bt && bt.element.initial_option.value === 'Studio B' && bt.element.options[0].text.text === 'Studio B (usual)', '21: Studio 2 ticked -> the booth follows (Studio B, its usual)');
+  ok(bt && bPick(bt).join() === 'Studio B' && bt.element.options[0].text.text === 'Studio B (usual)', '21: Studio 2 ticked -> the booth follows (Studio B, its usual)');
   views.push(v, t.view);
   r = await read2({ room: { room_radio: tv('Studio F') }, 'booth~1': { booth_pick: tv('none') }, holding: { holding_pick: { selected_options: [{ value: 'Likha' }, { value: 'Katha' }] } },
     project: { project_in: { value: 'celeb' } }, engineer: { engineer_pick: tv('U1') } }, M('Celebrity Recording', 'studio'));
@@ -268,7 +271,7 @@ const views = [];
   ok(blk(cv, 'room').element.options.map(o => o.value).join() === 'Studio C' && blk(cv, 'det_project').label.text === 'Project title or code' && blk(cv, 'det_engineer') && !blk(cv, 'det_client'),
      '18: Change an Atmos booking - Studio C only; Project title or code + Engineer');
   cv = await buildChange({ id: 'ev5', d: '2027-10-16', s: '11:00', e: '14:00', r: 'Studio F, Studio D, Likha, Katha', t: 'CELEB / Jem Lim / HL', st: 'Celebrity Recording' });
-  ok(blk(cv, 'holding_c').element.type === 'multi_static_select' && blk(cv, 'holding_c').element.initial_options.map(o => o.value).join() === 'Katha,Likha' && blk(cv, 'booth_c').label.text === 'Vocal booth',
+  ok(blk(cv, 'holding_c').element.type === 'multi_static_select' && blk(cv, 'holding_c').element.initial_options.map(o => o.value).join() === 'Katha,Likha' && blk(cv, 'booth_c').label.text === (V53 ? 'Vocal booths' : 'Vocal booth'),
      '21: Change - Holding rooms a dropdown (Likha, Katha picked), Vocal booth');
   const MC = await j1('Mark Changing', [{ json: { messages: [{ ts: '7.7', text: 'x', blocks: [{ type: 'section', block_id: 'bk_ev1', text: { type: 'mrkdwn', text: '*OLD / HL*\nWed, Oct 20 · 4:00 PM – 6:00 PM · Studio 8' } },
     { type: 'actions', block_id: 'bka_ev1', elements: [] }] }] } }], { 'Read Change': [{ json: { b: { id: 'ev1', t: 'OLD / HL' }, n: { d: '2027-10-21', s: '10:00', e: '12:00' }, newTitle: 'NEW / HL', newRooms: 'Studio 7', meta: { ts: '7.7', ch: 'D1' } } }] });

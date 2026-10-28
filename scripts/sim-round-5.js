@@ -6,6 +6,9 @@
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v22.json', 'utf8'));
 const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
+// v53 (28 Oct): the Vocal booth(s) is a multi-select - no "No booth" item; the picked booths read the same on either shape
+const V53 = JSON.stringify(si.nodes).indexOf("label: pt('Vocal booths')") !== -1;
+const bPick = bl => (bl && bl.element ? [].concat(bl.element.initial_options || (bl.element.initial_option ? [bl.element.initial_option] : [])) : []).map(o => o.value).filter(x => x !== 'none');
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: room labels, no descriptions, no "No …" options (sim-round-9)
 const mv = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/move-booking-v32.json', 'utf8'));
 const FX = require('./sim-fixture-rooms.js');
@@ -43,7 +46,7 @@ const V25 = JSON.stringify(si).indexOf('function onlyRoom(') !== -1;   // v25: b
   // ---- 1: booths
   let v = await step2(S('Localization Dubbing', 'loc'), { free_priority: ['Studio 1', 'Studio 2', 'Studio A', 'Studio B', 'Studio D'] });
   let bt = v.blocks.find(b => /^booth(~\d+)?$/.test(b.block_id || ''));
-  if (V25) ok(bt.element.type === 'static_select' && bt.element.options[0].text.text === 'Studio A (usual)' && bt.element.initial_option.value === 'Studio A' && !bt.hint && !/engineer patches/.test(JSON.stringify(v)),
+  if (V25) ok(bt.element.type === (V53 ? 'multi_static_select' : 'static_select') && bt.element.options[0].text.text === 'Studio A (usual)' && bPick(bt).join() === 'Studio A' && !bt.hint && !/engineer patches/.test(JSON.stringify(v)),
     '1 (v25): the booth a dropdown, the usual one first and set, "(usual)", no hint - ' + bt.element.options[0].text.text);
   else {
   ok(bt.element.options[0].description.text === 'Studio 1’s usual booth' && bt.element.options.slice(1).every(o => !o.description) && !/engineer patches/.test(JSON.stringify(v)),
@@ -139,7 +142,7 @@ const V25 = JSON.stringify(si).indexOf('function onlyRoom(') !== -1;   // v25: b
   ok(/Now: Sat, Oct 16 · 11:00 AM – 2:00 PM · Studio F \+ Studio D \+ Likha, Katha/.test(cv.blocks[0].text.text), '6: Now: Studio F + Studio D + Likha, Katha - ' + cv.blocks[0].text.text.split('\n')[1]);
   ok(sel('room').label.text === 'Studio' && sel('room').element.initial_option.value === 'Studio F' && sel('room').element.options.every(o => ['Studio A', 'Studio B', 'Studio D', 'Likha', 'Katha', 'Salin'].indexOf(o.value) === -1),
      '6: Studio = Studio F (was "Room: Studio D"), studios only');
-  ok(sel('booth_c').element.initial_option.value === 'Studio D' && (V26 ? sel('booth_c').optional && sel('booth_c').element.placeholder.text === 'No booth' && (V39 ? sel('booth_c').element.options.slice(-1)[0].value === 'none' : !sel('booth_c').element.options.some(o => o.value === 'none')) : sel('booth_c').element.options[0].value === 'none'), '6: Booth = Studio D, or No booth (v26: empty = No booth)');
+  ok(bPick(sel('booth_c')).join() === 'Studio D' && (V26 ? sel('booth_c').optional && sel('booth_c').element.placeholder.text === 'No booth' && (V39 && !V53 ? sel('booth_c').element.options.slice(-1)[0].value === 'none' : !sel('booth_c').element.options.some(o => o.value === 'none')) : sel('booth_c').element.options[0].value === 'none'), '6: Booth = Studio D, or No booth (v26: empty = No booth)');
   ok(sel('holding_c').element.initial_options.map(o => o.value).join() === 'Katha,Likha' && sel('holding_c').element.options.map(o => o.value).join() === 'Katha,Likha,Salin', '6: Holding rooms - Likha, Katha ticked, Salin offered');
   const ccm = JSON.parse(cv.private_metadata);
   ok(ccm.b.r === 'Studio F, Studio D, Likha, Katha', '6: the form works on the rooms in order');

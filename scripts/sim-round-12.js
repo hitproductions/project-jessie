@@ -36,6 +36,9 @@ const cacheRow = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Dat
 const chk = u => ({ json: { user: u || 'U1', triggerId: 'T1', channel: 'D1' } });
 const tv = v => ({ selected_option: { value: v } });
 const blk = (v, id) => v.blocks.find(b => b.block_id === id);
+// v53: the Vocal booth(s) is a multi-select - the picked booths / the booths offered, read the same on either shape
+const bPick = bl => (bl && bl.element ? [].concat(bl.element.initial_options || (bl.element.initial_option ? [bl.element.initial_option] : [])) : []).map(o => o.value).filter(x => x !== 'none');
+const bOpts = bl => ((bl && bl.element && bl.element.options) || []).map(o => o.value).filter(x => x !== 'none');
 const ids = v => v.blocks.map(b => b.block_id).filter(Boolean);
 const buildChange = async (b) => (await j1('Build Change', [], { 'Check Signature': [chk()], 'Read Request': [{ json: { payload: { actions: [{ value: JSON.stringify(b) }], container: { channel_id: 'D1', message_ts: '1' } } } }], 'Read Cache 6': cacheRow })).view;
 const rcv = async (cv, vals) => j1('Read Change', [], { 'Check Signature': [chk()], 'Read Request': [{ json: { payload: { view: { id: 'V1', private_metadata: cv.private_metadata, state: { values: vals } } } } }], 'Read Cache 10': cacheRow });
@@ -50,14 +53,14 @@ const BK = (st, r, t) => ({ id: 'e1', d: '2027-10-21', s: '13:00', e: '16:00', r
   console.log('2: the Change form - Vocal booth / Holding rooms when the type offers them');
   let cv = await buildChange(BK('Band Recording', 'Studio F', 'BAND REC TEST / Sasa Abella / HL x BPV'));   // Howard's screenshot
   let bc = blk(cv, 'booth_c');
-  ok(bc && bc.optional && !bc.element.initial_option && bc.element.placeholder.text === 'No booth' && bc.element.options.map(o => o.value).join() === 'Studio A,Studio B,Studio D' + (V39 ? ',none' : ''),
+  ok(bc && bc.optional && !bPick(bc).length && bc.element.placeholder.text === 'No booth' && bOpts(bc).join() === 'Studio A,Studio B,Studio D',
      'Band Recording in Studio F, no booth -> Vocal booth offered, empty ("No booth")', bc);
   ok(blk(cv, 'room').label.text === 'Studio' && ids(cv).indexOf('booth_c') === ids(cv).indexOf('room') + 1 && !blk(cv, 'holding_c'), 'right under Studio; no Holding rooms for Band Recording');
   cv = await buildChange(BK('Celebrity Recording', 'Studio F', 'CELEB / Jem Lim / HL'));
   ok(blk(cv, 'booth_c') && blk(cv, 'holding_c') && !blk(cv, 'holding_c').element.initial_options && blk(cv, 'holding_c').element.options.map(o => o.value).join() === 'Katha,Likha,Salin',
      'Celebrity Recording, no booth / holding rooms -> both offered, empty', blk(cv, 'holding_c'));
   cv = await buildChange(BK('Celebrity Recording', 'Studio F, Studio A, Likha', 'CELEB / Jem Lim / HL'));
-  ok(blk(cv, 'booth_c').element.initial_option.value === 'Studio A' && blk(cv, 'holding_c').element.initial_options.map(o => o.value).join() === 'Likha', 'a booking with a booth and Likha -> both set as now (unchanged)');
+  ok(bPick(blk(cv, 'booth_c')).join() === 'Studio A' && blk(cv, 'holding_c').element.initial_options.map(o => o.value).join() === 'Likha', 'a booking with a booth and Likha -> both set as now (unchanged)');
   for (const [st, r, t] of [['Meeting', 'Likha', 'LIKHA - Weekly sync'], ['Van Recording', 'Studio M', 'VAN / HL'], ['Atmos Mixing', 'Studio C', 'ATMOS / HL'], ['Post Mixing', 'Studio 7', 'MIX / HL'], ['Post Processing', 'Studio E', 'TRAILER / DD']]) {
     cv = await buildChange(BK(st, r, t));
     ok(!blk(cv, 'booth_c') && !blk(cv, 'holding_c') && blk(cv, 'room').label.text === 'Room', st + ' -> neither (Room)');
@@ -76,7 +79,7 @@ const BK = (st, r, t) => ({ id: 'e1', d: '2027-10-21', s: '13:00', e: '16:00', r
   const md = cv.private_metadata;
   let t = await toggle({ blocks: cv.blocks, private_metadata: md, callback_id: 'change_booking' }, 'purpose_c', { selected_option: { value: 'Celebrity Recording' } }, { booth_c: { booth_c_pick: tv('Studio B') } });
   let nv = t[0].json.view;
-  ok(blk(nv, 'booth_c') && blk(nv, 'booth_c').element.initial_option.value === 'Studio B' && blk(nv, 'holding_c') && ids(nv).filter(x => x === 'booth_c').length === 1,
+  ok(blk(nv, 'booth_c') && bPick(blk(nv, 'booth_c')).join() === 'Studio B' && blk(nv, 'holding_c') && ids(nv).filter(x => x === 'booth_c').length === 1,
      'Band -> Celebrity Recording: Holding rooms added, the booth pick kept (Studio B)', ids(nv));
   t = await toggle({ blocks: nv.blocks, private_metadata: md, callback_id: 'change_booking' }, 'purpose_c', { selected_option: { value: 'Post Mixing' } }, {});
   nv = t[0].json.view;
@@ -84,7 +87,7 @@ const BK = (st, r, t) => ({ id: 'e1', d: '2027-10-21', s: '13:00', e: '16:00', r
   cv = await buildChange(BK('VO Recording', 'Studio 7, Studio A', 'VO / HL'));
   t = await toggle({ blocks: cv.blocks, private_metadata: cv.private_metadata, callback_id: 'change_booking' }, 'purpose_c', { selected_option: { value: 'Post Mixing' } }, {});
   nv = t[0].json.view;
-  ok(blk(nv, 'booth_c') && blk(nv, 'booth_c').element.initial_option.value === 'Studio A', 'a booking that has a booth keeps showing it, whatever the type');
+  ok(blk(nv, 'booth_c') && bPick(blk(nv, 'booth_c')).join() === 'Studio A', 'a booking that has a booth keeps showing it, whatever the type');
 
   console.log('3: the project code - no Enter');
   let v = await step2(S('QC', 'loc'), { free_priority: ['Studio 3', 'Studio 5'] });

@@ -4,6 +4,9 @@
 // Usage: node scripts/sim-v39-dropdowns.js [slack-interactions]
 const path = require('path'); const P = path.join(__dirname, '..') + '/';
 const si = require(P + (process.argv[2] || 'workflows/slack-interactions-v39.json'));
+// v53 (28 Oct): the Vocal booth(s) is a multi-select - no "No booth" item; the picked booths read the same on either shape
+const V53 = JSON.stringify(si.nodes).indexOf("label: pt('Vocal booths')") !== -1;
+const bPick = bl => (bl && bl.element ? [].concat(bl.element.initial_options || (bl.element.initial_option ? [bl.element.initial_option] : [])) : []).map(o => o.value).filter(x => x !== 'none');
 const FX = require(P + 'scripts/sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('FAIL ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
@@ -37,10 +40,11 @@ const last = b => b.element.options[b.element.options.length - 1].value;
   e = blk(v, /^engineer$/);
   ok(!e.optional && !e.element.options.some(o => o.value === 'none') && e.element.initial_option.value === 'U1', 'VO Recording: Engineer required, no "No engineer" (as before)');
   let bt = blk(v, /^booth~/);
-  ok(bt && !bt.optional && last(bt) === 'none' && bt.element.initial_option.value === 'none', 'VO Recording: Vocal booth required, "No booth" picked', bt && bt.element);
+  ok(bt && (V53 ? bt.optional && bt.element.type === 'multi_static_select' && !bPick(bt).length && !bt.element.options.some(o => o.value === 'none') : !bt.optional && last(bt) === 'none' && bt.element.initial_option.value === 'none'),
+     V53 ? 'VO Recording: Vocal booths optional, nothing picked, no "No booth" item (v53)' : 'VO Recording: Vocal booth required, "No booth" picked', bt && bt.element);
   v = await step2('Localization Dubbing', 'U4', ['Studio 1']);
   bt = blk(v, /^booth~/);
-  ok(bt && !bt.optional && !bt.element.options.some(o => o.value === 'none') && bt.element.initial_option.value !== 'none', 'Localization Dubbing (a booth is needed): the usual booth, no "No booth"');
+  ok(bt && !bt.optional && !bt.element.options.some(o => o.value === 'none') && bPick(bt).length === 1, 'Localization Dubbing (a booth is needed): the usual booth, no "No booth"');
   ok(!v.blocks.some(b => b.type === 'input' && b.optional && b.element && b.element.type === 'static_select' && b.block_id !== 'room_other'), 'no optional single dropdown left in step 2 (but Choose a different room)');
   console.log('Read Step 2: "none" is empty');
   v = await step2('Music Mixing', 'U3', ['Studio F']);
@@ -54,11 +58,12 @@ const last = b => b.element.options[b.element.options.length - 1].value;
     'Read Request': [{ json: { payload: { actions: [{ action_id: 'bk_change', value: JSON.stringify(bk) }], container: { channel_id: 'D1', message_ts: '1' } } } }] }))[0].json.view;
   let cv = await bc({ id: 'e1', d: '2027-10-25', s: '10:00', e: '12:00', r: 'Studio F, Studio A', t: 'SONG / RG', st: 'Music Mixing' });
   const bcB = blk(cv, /^booth_c$/), de = blk(cv, /^det_engineer$/), da = blk(cv, /^det_arranger$/);
-  ok(bcB && !bcB.optional && bcB.element.initial_option.value === 'Studio A' && last(bcB) === 'none', 'Change: Vocal booth required, set to the booking\'s, "No booth" there', bcB && bcB.element.initial_option);
+  ok(bcB && bPick(bcB).join() === 'Studio A' && (V53 ? bcB.optional && !bcB.element.options.some(o => o.value === 'none') : !bcB.optional && last(bcB) === 'none'),
+     V53 ? 'Change: Vocal booths, the booking\'s picked, can be emptied (v53)' : 'Change: Vocal booth required, set to the booking\'s, "No booth" there', bcB && bcB.element);
   ok(de && !de.optional && de.element.initial_option && last(de) === 'none', 'Change: Engineer (either) required, "No engineer" there', de && de.element.initial_option);
   ok(da && !da.optional && da.element.initial_option.value === 'none', 'Change: Arranger required, "No arranger" when there is none');
   cv = await bc({ id: 'e2', d: '2027-10-25', s: '10:00', e: '12:00', r: 'Studio 7', t: 'SPOT / HL', st: 'VO Recording' });
-  ok(blk(cv, /^booth_c$/) && blk(cv, /^booth_c$/).element.initial_option.value === 'none', 'Change: a VO Recording with no booth -> Vocal booth offered, "No booth" picked');
+  ok(blk(cv, /^booth_c$/) && (V53 ? !bPick(blk(cv, /^booth_c$/)).length : blk(cv, /^booth_c$/).element.initial_option.value === 'none'), 'Change: a VO Recording with no booth -> Vocal booth offered, "No booth" picked');
   console.log('Repeats');
   const b1 = si.nodes.find(n => n.name === 'Build Step 1').parameters.jsCode;
   ok(/counts\.push\(\{ text: pt\('Use the end date'\), value: '0' \}\)/.test(b1), 'How many times: "Use the end date" (a phone cannot clear a number)');
