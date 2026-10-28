@@ -4,7 +4,7 @@ What is live, what was checked, and what is left before the flip. Steps for the 
 
 ## What is live
 
-main v287 · Book Session v124 · Slack Interactions v54 · Move v41 · Cancel v33 · Room Availability v24 · Reminders v8 ·
+main v287 · Book Session v124 · Slack Interactions v55 · Move v41 · Cancel v33 · Room Availability v24 · Reminders v8 ·
 Request Messages v5 · Consent Sweep v4 · Log Booking v3 · Room Check v2 · Find v8 · Book Series v8 · Open Consent Request v12 ·
 Finalize v11. Every import this week matched its build before and after.
 
