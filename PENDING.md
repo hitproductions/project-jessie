@@ -185,6 +185,7 @@ The older tables below are kept for the record; this board is what is open for l
 | 40 | Leftover snapshot files from renames in `workflows/live/` | **Done 28 Sep:** approved; current snapshots refreshed first, then the 5 old-name files removed (all 5 ids still active under their current names) |
 | 41 | `Booked For` notice quotes three words instead of the name | **LIVE 28 Sep 16:28 PHT** (main v166) |
 | 67 | **Day-by-day availability layout:** a blank line between days, and within each day the studios, the M booths and the vocal booths on separate lines | Build (Room Availability + Guard Probe); parked 30 Sep |
+| 142 | **SType onto the first line of the event description** (Howard, 28 Oct: why is it on a line of its own?) - after launch, one round: readers first (Slack Interactions' `evType` in 15 nodes, Reminders, main's Mine / Change Reply: accept the tag in the first line as well as on its own line), then Move (Resolve Booking reads either, writes it into the first line), then Book Session (Check Conflicts adds `SType: …` after Dept; Create Event stops the separate line). Already fine: Room Availability, Open Consent Request, both Decide Preempt, Move's Room Check, Cancel (they stop at `|` / a line break). Keep the label `SType:` (renaming it adds four more workflows). Sims that check a new event's description need updating; old-form events stay readable | Build - after launch |
 
 **Resolved** (details at the bottom): 5, 6, 8, 9, 12, 17, 19, 20, 24, 25, 31, 32, 45. **Item 14** is a permanent
 known constraint, not a task.
