@@ -1344,7 +1344,13 @@ suite('Check Conflicts — department, booking type, Localization title (v52)', 
     check('d53','a genuinely new name is not second-guessed',!run3(Object.assign({},P,{client:'Brightline Media',requester_text:'external'}),[],ALL).reason);
     check('d53','nor a new name that only shares a first name',!run3(Object.assign({},P,{client:'Jen Park',requester_text:'external'}),[],ALL).reason);
     check('d53','exact duplicates (two identical records) are one client',!run3(Object.assign({},P,{client:'Ino Magno'}),[{id:'x',fields:{Name:'Ino Magno','Client Type':['External']}},{id:'y',fields:{Name:'Ino Magno','Client Type':['External']}}]).reason);
-    check('d53','a new client with no type said: ask External or Personal once',run3(Object.assign({},P,{client:'Brightline Media'}),[],ALL).reason==='NEED_BOOKING_TYPE');
+    const V124=whole.indexOf('PENDING 135')>=0;   // v124 (decided 28 Oct): a new client is client work - no booking-type question
+    if(V124){ const r124=run3(Object.assign({},P,{client:'Brightline Media'}),[],ALL);
+      check('v124','a new client with no type said: client work (Advertising), not asked',!r124.reason&&r124.REQ.bookingType==='Advertising',JSON.stringify(r124.REQ?{t:r124.REQ.bookingType}:r124));
+      const r124l=run3(Object.assign({},P,{client:'Brightline Media',department:'Localization'}),[],ALL);
+      check('v124','a new client on a Localization booking: Entertainment',!r124l.reason&&r124l.REQ.bookingType==='Entertainment',JSON.stringify(r124l.REQ?{t:r124l.REQ.bookingType}:r124l));
+      check('v124','a client Airtable types Internal stays Internal',run3(Object.assign({},P,{client:'Hit Productions'}),[{id:'h',fields:{Name:'Hit Productions','Client Type':['Internal']}}]).REQ.bookingType==='Internal');
+    } else check('d53','a new client with no type said: ask External or Personal once',run3(Object.assign({},P,{client:'Brightline Media'}),[],ALL).reason==='NEED_BOOKING_TYPE');
     check('d53','no client and no type said: ask too',run3(Object.assign({},P,{client:''}),[],ALL).reason==='NEED_BOOKING_TYPE');
     if(whole.indexOf('askClient')>=0){
       r=run3(Object.assign({},P,{client:'',summary:'ORANGE / TL'}),[],ALL);
@@ -1352,7 +1358,7 @@ suite('Check Conflicts — department, booking type, Localization title (v52)', 
       r=run3(Object.assign({},P,{client:'',summary:'ORANGE / TL',requester_text:'no client'}),[],ALL);
       check('v55','"no client" said: only the booking type is asked',r.reason==='NEED_BOOKING_TYPE'&&r.askClient===false);
       r=run3(Object.assign({},P,{client:'Brightline Media'}),[],ALL);
-      check('v55','a client given: only the booking type is asked',r.askClient===false);
+      check('v55','a client given: only the booking type is asked'+(V124?' (v124: a new client is not asked at all)':''),V124?!r.reason:r.askClient===false);
     }
     check('d53','"my own project" means Personal',run3(Object.assign({},P,{client:'',requester_text:'this is my own project'}),[],ALL).REQ.bookingType==='Personal');
     check('d53','a type they gave is kept',T73?run3(Object.assign({},P,{client:'Brightline Media',bookingType:'Entertainment',requester_text:'film dubbing'}),[],ALL).REQ.bookingType==='Entertainment':run3(Object.assign({},P,{client:'Brightline Media',bookingType:'External'}),[],ALL).REQ.bookingType==='External');

@@ -90,7 +90,7 @@ const tv = v => ({ selected_option: { value: v } });
   const st = JSON.stringify(main.nodes.find(n => n.name === 'Session Types').parameters);
   ok(/Music Arranging, Music Mixing, Music Presentation, Music Recording/.test(st) && !/Music Vocal Recording/.test(st), 'main: the Session Types lookup lists the new Music types');
   const cc = bs.nodes.find(n => n.name === 'Check Conflicts').parameters.jsCode;
-  ok(/'music': \['Music Recording', 'Music Vocal Recording', 'Band Recording', 'Music Mixing', 'Music Arranging', 'Music Presentation'\]/.test(cc), 'Book Session: the Music types, the old name kept for old bookings');
+  ok(/'music': \['Music Recording', 'Music Vocal Recording', 'Band Recording', 'Music Mixing', 'Music Arranging', 'Music Presentation'(?:, 'Atmos Mixing')?\]/.test(cc), 'Book Session: the Music types, the old name kept for old bookings');
 
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
