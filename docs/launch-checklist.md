@@ -39,7 +39,8 @@ Sections 1 and 2 are switched together by script, so no constant is missed and n
 Expected after the flip: `./scripts/test-forms` on the launch builds fails only the checks that assert QA mode (a date a
 year ahead, a notice redirected to Howard - recount them on the launch builds before importing: run `test-forms` on the
 QA builds and on the launch builds and compare the lists) and `./scripts/test-gate` expects 2027 dates; anything else
-failing is a real problem. Going back to QA = re-importing the builds the flip started from (they stay in the repo).
+failing is a real problem. Recounted 28 Oct on a trial flip of the live downloads: **17 checks in 8 sims** (build-b 3, step-c1 1, slice1-a 1, round-3 1,
+every-message 1, request-for 1, reminders 3, approvals 6) - `docs/launch-review-2026-10-28.md`. Going back to QA = re-importing the builds the flip started from (they stay in the repo).
 
 ## 1. Year shift → 0 (flip together)
 
