@@ -53,6 +53,7 @@ const txt = v => v.blocks.map(b => (b.text && b.text.text) || (b.elements || [])
   ok(/\*HOLD\*\n\*Time:\* All day/.test(txt(v)), 'an all-day booking -> "All day"');
   v = await step2(S('VO Recording', 'studio', { requester: 'U1' }), [{ status: 'OK', free_priority: ['Studio 7'], free_last_resort: [], busy: [], busy_detail: [] }]);
   ok(!/bookings that day/.test(txt(v)), 'other types unchanged');
+  for (const nm of ['Build Step 2', 'Note Toggle']) ok(!/’s standing hold'/.test(node(nm).parameters.jsCode) && /text: \(room \+ ' · ' \+ who\)\.slice/.test(node(nm).parameters.jsCode), nm + ': an M booth hold reads "M6 · Marketing"');
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.log('FAIL crashed: ' + e.stack); process.exit(1); });

@@ -200,7 +200,7 @@ const uniq = bl => bl.every(b => { const a = (b.elements || []).map(e => e.actio
   const sB = { date: '2027-10-22', t0: '10:00', t1: '12:00', purpose: '__booth', kind: 'booth', requester: 'U08JL17A50A', channel: 'D1', ext: 'x' };
   v = await step2(sB, Object.assign(RAres([], [det('M4', [{ id: 'h1_x', title: 'M4 - Jem', start: '2027-10-22T09:00:00+08:00', end: '2027-10-22T18:00:00+08:00', ref: 'U9', recurring: true }])]), { free_rooms: ['M1'] }));
   const bg = (v.blocks.find(b => b.block_id === 'room_other') || { element: {} }).element.option_groups || [];
-  ok(bg.length && bg[bg.length - 1].options[0].value === 'ask:M|M4' && /M4 · Jem’s standing hold/.test(bg[bg.length - 1].options[0].text.text), 'an M booth during a standing hold - anyone can ask', bg);
+  ok(bg.length && bg[bg.length - 1].options[0].value === 'ask:M|M4' && /^M4 · Jem(’s standing hold)?$/.test(bg[bg.length - 1].options[0].text.text), 'an M booth during a standing hold - anyone can ask', bg);
 
   console.log('Slack Interactions v37: picking one');
   const view = await step2(s, RAres(['Studio 7'], [vo]));

@@ -9,7 +9,8 @@ in the usual card lines (title, then Time), earliest first.
 How: To Room Availability asks Room Availability once more for a one-room type - the whole day (00:00-23:59), as a second item
 (single date, not all day, not a series). Build Step 2 takes that second answer off before anything else reads the answers, so
 the free / busy logic for the asked window is unchanged, and reads that room's bookings from its busy_detail. One extra
-calendar read on Atmos / Van Recording only. Built on workflows/imported/slack-interactions-v51-imported.json (the live download).
+calendar read on Atmos / Van Recording only. Also (Howard, 28 Oct): an M booth hold in "Booked – ask to use" reads
+"M6 · Marketing" (no "'s standing hold"). Built on workflows/imported/slack-interactions-v51-imported.json (the live download).
 """
 import json
 import os
@@ -58,6 +59,12 @@ js = sub(js, "  blocks.push({ type: 'section', text: md(note || ('Nothing that d
     "    }\n"
     "  }\n")
 p["jsCode"] = js
+
+# Howard, 28 Oct: "Booked – ask to use" lists an M booth hold as "M6 · Marketing" (was "M6 · Marketing's standing hold")
+for nm in ("Build Step 2", "Note Toggle"):
+    p = by[nm]["parameters"]
+    p["jsCode"] = sub(p["jsCode"], "out.push({ k: 'M', room, text: (room + ' · ' + who + '’s standing hold').slice(0, 75) });",
+        "out.push({ k: 'M', room, text: (room + ' · ' + who).slice(0, 75) /* v52 (Howard, 28 Oct): no standing-hold words */ });")
 
 wf["name"] = "Jessie — Slack Interactions — v52 (the one room's day)"
 out = os.path.join(ROOT, "workflows", "slack-interactions-v52.json")
