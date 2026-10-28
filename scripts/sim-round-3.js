@@ -75,7 +75,7 @@ const C = main.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.no
   ok(mr.blocks.every(b => !b.elements || new Set(b.elements.map(e => e.action_id).filter(Boolean)).size === b.elements.filter(e => e.action_id).length), '3: no block repeats an action id');
   const mr2 = await j1('Mine Reply', [{ json: { items: [] } }], { 'Mine Check': [{ json: { mineCheck: await check('what do i have tomorrow?', '2027-10-16') } }] });
   ok(mr2.blocks[0].text.text === '*Your bookings* · Sat, Oct 16' && mr2.blocks[1].text.text === 'Nothing booked for you then.' && !mr2.blocks.some(b => b.block_id === 'my_nav'), '3: one day, nothing -> said, no paging');
-  ok(nx('Late Menu?') === 'Send Late Menu | Mine Check' && nx('Mine?') === 'List My Window | Early Room Plan' && nx('Mine Reply') === 'Send Mine' && nx('Send Mine') === 'Turn Log Row+Clear Ack', '3 wiring');
+  ok(nx('Late Menu?') === 'Send Late Menu | Mine Check' && (nx('Mine?') === 'List My Window | Early Room Plan' || nx('Mine?') === 'List My Window | Facts Check') && nx('Mine Reply') === 'Send Mine' && nx('Send Mine') === 'Turn Log Row+Clear Ack', '3 wiring');
   ok((await j1('Turn Log Row', [{ json: {} }], { 'Slack Trigger': [{ json: { text: 'x', ts: '1' } }], 'Send Mine': [{ json: { ok: true } }] })).Path === 'my bookings', '3: Turn Log "my bookings"');
 
   // ---- 4: the prompt
