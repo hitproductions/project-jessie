@@ -1,5 +1,7 @@
 # Pre-launch review - 28 Oct 2026 (afternoon)
 
+**29 Oct: approved for launch** (management, "JESSIE Launch Update 1029"); roll-out items PENDING 143-146.
+
 What is live, what was checked, and what is left before the flip. Steps for the flip itself: [`launch-checklist.md`](launch-checklist.md).
 
 ## What is live

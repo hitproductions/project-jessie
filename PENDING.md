@@ -7,6 +7,8 @@ known behaviour gaps, and pre-launch work. Each item says how it was found and w
 **Item numbers are permanent**; other docs cite "PENDING 15". New items get the next number, and resolved
 ones move to the bottom instead of being renumbered.
 
+**29 Oct: approved for launch** by management, on the "JESSIE Launch Update 1029" deck (`docs/eod/EOD-2026-10-29.md`); launch date to be set. The roll-out items from that deck are 143-146 on the launch board.
+
 **27 Oct:** QA round 4 is done and every fix from it is live; the launch review's findings are on the **launch board** at the top of the triage. (Earlier status lines live in git history and the EODs.)
 
 ---
@@ -39,6 +41,15 @@ The older tables below are kept for the record; this board is what is open for l
 | 139 | **Questions about what the rooms have go unanswered** (Howard's Slack test 28 Oct ~10:31: "what rooms have symphony?" -> only "Use Book a room or My bookings below.") - the AI cannot see Equipment / Workstation / Paired with / Capacity, and Build Reply threw away a whole answer that ended with a booking question | **Built 28 Oct** - main v286 (`scripts/build-main-v286.py`, sim-room-facts 72): answered in code from the cached Airtable fields; the details in the prompt only for room / gear messages; Build Reply keeps the answer. **Imported 28 Oct ~12:09** (confirmed); Slack test owed |
 | 140 | **Two rooms asked about, one answered** (Howard's Slack test of v286, 28 Oct 1:40 PM: "is studio f and c free tomorrow?" -> "✅ Studio C is free all day.", F only in the free list) - which rooms Room Availability is asked about was the AI's choice; a room booked all day would have been left out of the answer | **Built 28 Oct afternoon** - main v287 (`scripts/build-main-v287.py`, sim-asked-rooms 66): the rooms typed (two or more) go to Room Availability whatever the AI passes; one room or none as before. **Imported 28 Oct ~13:51** (confirmed); Slack test owed |
 | 141 | **One project in several studios can't be one booking** (Howard, 28 Oct): the form offered one studio and one vocal booth, so it took duplicate bookings; on Change a second studio was read as a holding room and could be dropped | **Built 28 Oct afternoon** - Slack Interactions v53 + Reminders v8 (sim-multiple-rooms 65): "+ Multiple studios" / "+ Multiple rooms" on Book and Change, every room on one calendar event; Vocal booths a multi-select. **Imported 28 Oct ~14:12** (both confirmed). Slack test 28 Oct: picks lost when step 2 came back with a problem -> **SI v54 built** (picks kept on every path back; Change keeps every room). **Imported 28 Oct ~14:24** (confirmed). Slack test: every pick kept, the Note lost on the DM's Continue booking -> **SI v55 built** (the note on the button). **Imported 28 Oct ~14:31** (confirmed); Slack test owed |
+
+**From the approval deck (29 Oct)**
+
+| # | What | Owner |
+|---|---|---|
+| 143 | **Google Calendar permissions to view-only** for staff once Jessie takes the bookings ("GCalendar permissions: View-only" on the deck) - so the calendar stops being overwritten by hand. Jessie's own write access (the service account / credential behind Book Session, Move, Cancel, Room Check) must stay; check Envoy's and Zapier's access too (PENDING 42, 123) before narrowing anyone's | Howard / Google Workspace admin |
+| 144 | **Roll-out shape** - the deck's "Consider: beta period (limited users)": a dual run of Jessie + Google Calendar for about two weeks. The backfill issue: bookings still made by hand during a dual run carry no `ref:` / `Booked by:` / `SType:` (PENDING 137 - they block their rooms, and since v124 can be asked for by a typed "Booked by" name, but not otherwise). Decide: beta group or everyone; how long; whether hand bookings are backfilled during it or once at the end | Howard / management |
+| 145 | **Video tutorial** - listed with the End-user Manual and the Quick Start under User Adoption; not made yet. Also the SOP's four gaps to the live build (EOD 29 Oct) | Howard |
+| 146 | **Usage at full-scale volume** (the deck's first challenge: simultaneous bookings, many users). Only small overlapping bursts were ever measured (8 Sep: 10 messages at once doubled reply times, Airtable reads the slow part); the forms and the room-request Claim (122) were never run by several people at once. A short simultaneous test with a few testers before or during the beta | Howard + testers |
 
 **Decisions (Howard)**
 

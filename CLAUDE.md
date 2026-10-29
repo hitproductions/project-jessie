@@ -46,7 +46,7 @@ else, unprompted:
 
 Then orient them, in plain language, drawing on *Where things stand* below:
 
-- what Jessie is, and that it is still in testing (no real bookings by staff yet; no launch date is set)
+- what Jessie is, and that it was approved for launch on 29 Oct (still testing-only until the flip; the date is to be set)
 - the live versions, and whether anything is failing (`./scripts/health`)
 - what changed since the last commit (`git log`)
 - the biggest open risk (the outages - a Cloudflare exemption rule for the webhooks went in on 1 Oct; being watched, see
@@ -95,7 +95,9 @@ per scenario) and in each Slack Interactions run's **Timing Sample** node (`per`
 
 ## Where things stand
 
-Jessie is live but used for testing only (no real bookings by staff yet). No launch date is set. A second bot, Posty (release
+Jessie is live but used for testing only (no real bookings by staff yet). **Approved for launch on 29 Oct** by management (the
+"JESSIE Launch Update 1029" deck, `docs/eod/EOD-2026-10-29.md`); the date is to be set, and the roll-out items from the deck are
+PENDING 143-146 on the launch board. A second bot, Posty (release
 announcements — Google Sheets and Slack, no Airtable), runs on the same n8n instance.
 
 **Working, and proven live:** the main workflow and every sub-workflow are active and

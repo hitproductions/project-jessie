@@ -1,6 +1,6 @@
 # Launch checklist — QA/dev switches to flip for go-live
 
-No launch date is set. This is the list of every QA/dev scaffold that must be turned off (or decided) before Jessie
+**Approved for launch 29 Oct** (management, on the "JESSIE Launch Update 1029" deck); the date is to be set. This is the list of every QA/dev scaffold that must be turned off (or decided) before Jessie
 serves real bookings, and how to do it. **Rewritten 27 Oct** against the live downloads: `./scripts/check-launch-switches`
 reports 15 switch spots in 6 workflows (main, Slack Interactions, Cancel, Move, Reminders, Request Messages); Book
 Session, Book Series, Room Availability, Find, Expand Series, Open Consent Request, Finalize, Sweep, Room Check, Log
@@ -17,6 +17,9 @@ Also in CLAUDE.md → *Before launch*; this doc is the reviewable detail.
 4. Pick a time **away from the reminder runs** (4:00 PM daily, Monday 9:00 AM) - main, Slack Interactions and Reminders
    disagree about the year until all three are in.
 5. Say it in Slack: nobody imports anything else while the flip is going in.
+6. **From the approval deck (PENDING 143-146):** backfill the hand-made bookings that matter (137 - at least a `Booked by:` line),
+   agree the roll-out (a beta group / a two-week dual run with Google Calendar, 144), and plan the calendar going view-only for
+   staff without touching Jessie's own write access (143).
 
 ## 0. The flip, in one go (since 20 Oct)
 
