@@ -9,7 +9,7 @@ ones move to the bottom instead of being renumbered.
 
 **29 Oct: approved for launch** by management, on the "JESSIE Launch Update 1029" deck (`docs/eod/EOD-2026-10-29.md`); launch date to be set. The roll-out items from that deck are 143-146 on the launch board.
 
-**27 Oct:** QA round 4 is done and every fix from it is live; the launch review's findings are on the **launch board** at the top of the triage. (Earlier status lines live in git history and the EODs.)
+**27 Oct:** QA round 4 is done and every fix from it is live; the launch review's findings are on the **launch board** at the top of the triage. **29 Oct: approved for launch; the launch builds (switches flipped) are written and wait for the flip - `docs/launch-checklist.md`.** (Earlier status lines live in git history and the EODs.)
 
 ---
 
@@ -47,7 +47,7 @@ The older tables below are kept for the record; this board is what is open for l
 | # | What | Owner |
 |---|---|---|
 | 143 | **Google Calendar permissions to view-only** for staff once Jessie takes the bookings ("GCalendar permissions: View-only" on the deck) - so the calendar stops being overwritten by hand. Jessie's own write access (the service account / credential behind Book Session, Move, Cancel, Room Check) must stay; check Envoy's and Zapier's access too (PENDING 42, 123) before narrowing anyone's | Howard / Google Workspace admin |
-| 144 | **Roll-out shape** - the deck's "Consider: beta period (limited users)": a dual run of Jessie + Google Calendar for about two weeks. The backfill issue: bookings still made by hand during a dual run carry no `ref:` / `Booked by:` / `SType:` (PENDING 137 - they block their rooms, and since v124 can be asked for by a typed "Booked by" name, but not otherwise). Decide: beta group or everyone; how long; whether hand bookings are backfilled during it or once at the end | Howard / management |
+| 144 | **Roll-out shape** - the deck's "Consider: beta period (limited users)": a dual run of Jessie + Google Calendar for about two weeks. The backfill issue: bookings still made by hand during a dual run carry no `ref:` / `Booked by:` / `SType:` (PENDING 137 - they block their rooms, and since v124 can be asked for by a typed "Booked by" name, but not otherwise). Decide: beta group or everyone; how long; whether hand bookings are backfilled during it or once at the end. **29 Oct: Localization first, then Audio Post and Music; no announcement yet; no department gate in Jessie (open to anyone, the roll-out is who is onboarded) - `docs/launch-checklist.md` *Roll-out*.** Still open: how long, and the backfill timing | Howard / management |
 | 145 | **Video tutorial** - listed with the End-user Manual and the Quick Start under User Adoption; not made yet. Also the SOP's four gaps to the live build (EOD 29 Oct) | Howard |
 | 146 | **Usage at full-scale volume** (the deck's first challenge: simultaneous bookings, many users). Only small overlapping bursts were ever measured (8 Sep: 10 messages at once doubled reply times, Airtable reads the slow part); the forms and the room-request Claim (122) were never run by several people at once. A short simultaneous test with a few testers before or during the beta | Howard + testers |
 
@@ -69,7 +69,7 @@ The older tables below are kept for the record; this board is what is open for l
 | 21 | Cloudflare: deliveries still 66-97 s late after the 1 Oct rule; the Security -> Events check was never recorded | Howard / Cloudflare |
 | 42 | Envoy tablets: a tablet booking must reach KDC Bookings (release-then-delete test) | Howard |
 | 43 | IT to confirm the old Studio E calendar id is retired | IT |
-| 38, 16 | Clear the QA test bookings (2027) before the flip (GUARDCHK, VANTEST, the music-type and request tests) | Howard, with Claude's list |
+| 38, 16 | Clear the QA test bookings (2027) before the flip (GUARDCHK, VANTEST, the music-type and request tests). **Refreshed 29 Oct: 109 one-off bookings** (local `docs/qa/test-bookings-to-clear-2027.md`; refresh again on the flip day), plus the Booking Log sheet's test rows | Howard, with Claude's list |
 | 114, 120, 53 | Airtable: Booking Defaults rows, the Atmos rename, the Clients cleanup | Howard |
 | 130 | QA round 4 results are not in the repo (`docs/qa/round4/` has the empty sheet) - share Camy's filled tab so nothing failed goes unfixed | Howard |
 

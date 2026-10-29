@@ -1,0 +1,596 @@
+{
+  "name": "Jessie — Open Consent Request — v14 (launch switches)",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "requester"
+            },
+            {
+              "name": "requesterName"
+            },
+            {
+              "name": "approver"
+            },
+            {
+              "name": "approverName"
+            },
+            {
+              "name": "room"
+            },
+            {
+              "name": "reqStart"
+            },
+            {
+              "name": "reqEnd"
+            },
+            {
+              "name": "incumbentEventId"
+            },
+            {
+              "name": "incumbentTitle"
+            },
+            {
+              "name": "reqType"
+            },
+            {
+              "name": "requesterDM"
+            },
+            {
+              "name": "approverDM"
+            },
+            {
+              "name": "reqPriority",
+              "type": "number"
+            },
+            {
+              "name": "incPriority",
+              "type": "number"
+            },
+            {
+              "name": "reqPayload"
+            },
+            {
+              "name": "kind"
+            }
+          ]
+        }
+      },
+      "id": "16ae98b8-bf4f-4678-b6dc-245896e6f3c5",
+      "name": "When Executed by Another Workflow",
+      "position": [
+        2336,
+        -224
+      ],
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Request (v12, slice 2): the row for a room request - real Slack ids, names from Bookers, the booking's engineer as a\n// second approver (priority requests), and the same request asked again returns the open one. Deadlines as since 25 Sep.\nconst c = $('When Executed by Another Workflow').first().json || {};\n\nfunction computeDeadline(now,start,cfg){const n=new Date(now).getTime();const s=new Date(start).getTime();const w=(cfg&&cfg.maxWindowH?cfg.maxWindowH:24)*3600*1000;const l=(cfg&&cfg.minLeadMin?cfg.minLeadMin:60)*60*1000;return new Date(Math.max(n,Math.min(n+w,s-l))).toISOString();}\nconst MNL_TZ = 8 * 3600 * 1000;\nfunction manilaDayIndex(ms) { return Math.floor((ms + MNL_TZ) / 86400000); }\n// v58 (decided 29 Oct): an all-day request is settled before its day starts - 2+ days ahead 24 h (never past the day's 12:00 AM),\n// tomorrow 6:00 PM the evening before (at least 1 h, never past midnight), today 1 h (the day has begun; before v58 an all-day\n// start of 12:00 AM capped it at \"now\", and the Sweep handed the booth over within minutes). Timed requests as before.\nfunction mboothDeadline(nowISO, startISO, cfg, allDay) {\n  const k = cfg || {};\n  const sameDayH = k.sameDayH == null ? 3 : k.sameDayH;\n  const farWindowH = k.farWindowH == null ? 24 : k.farWindowH;\n  const dayBeforeHour = k.dayBeforeHour == null ? 10 : k.dayBeforeHour;\n  const H = 3600 * 1000;\n  const now = new Date(nowISO).getTime();\n  let start = new Date(startISO).getTime();\n  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(String(startISO || '').trim())) { start = Date.parse(String(startISO).trim() + 'T00:00:00+08:00'); allDay = true; }   // a date-only start is all day\n  const daysAhead = manilaDayIndex(start) - manilaDayIndex(now);\n  let deadline;\n  if (allDay) {\n    const day0 = manilaDayIndex(start) * 86400000 - MNL_TZ;   // 12:00 AM of the booked day, Manila\n    if (daysAhead >= 2) deadline = Math.min(now + farWindowH * H, day0);\n    else if (daysAhead === 1) deadline = Math.min(Math.max(day0 - 6 * H, now + H), day0);   // 6:00 PM the evening before\n    else deadline = now + H;\n    return new Date(Math.max(now, deadline)).toISOString();\n  }\n  if (daysAhead >= 2) deadline = now + farWindowH * H;\n  else if (daysAhead === 1) deadline = (manilaDayIndex(start) * 86400000 - MNL_TZ) + dayBeforeHour * H;\n  else deadline = now + sameDayH * H;\n  deadline = Math.max(now, Math.min(deadline, start));\n  return new Date(deadline).toISOString();\n}\n// LAUNCH SWITCH (v58): YEAR_SHIFT 1 while testing, 0 at launch (scripts/flip-launch-switches). The booking is a year ahead while\n// the clock is real, so the deadline is worked out on its real-year date - otherwise every request looks 2+ days away (24 h).\nconst YEAR_SHIFT = 0;\nfunction realYear(iso, nowISO) {\n  const s = String(iso || '').trim();\n  if (!YEAR_SHIFT || !/^\\d{4}-/.test(s)) return s;\n  const back = String(Number(s.slice(0, 4)) - YEAR_SHIFT) + s.slice(4);\n  const b = /^\\d{4}-\\d{2}-\\d{2}$/.test(back) ? Date.parse(back + 'T00:00:00+08:00') : Date.parse(back);\n  return manilaDayIndex(b) >= manilaDayIndex(new Date(nowISO).getTime()) ? back : s;   // already past in the real year -> as is\n}\nfunction requestDeadline(kind, nowISO, startISO, allDay) {\n  const st = realYear(startISO, nowISO);\n  return String(kind || '').toUpperCase() === 'MBOOTH' ? mboothDeadline(nowISO, st, null, !!allDay) : computeDeadline(nowISO, st, { maxWindowH: 24, minLeadMin: 60 });\n}\n\nfunction readCache(rows) { let best = null;\n  for (const r of rows || []) { if (!r || r.cache_key !== 'jessie-reference') continue; let d; try { d = JSON.parse(r.payload); } catch (e) { continue; }\n    if (!d || !Array.isArray(d.bookers)) continue; const at = Date.parse(r.refreshed_at || '') || 0; if (!best || at > best.at) best = { at, d }; }\n  return best ? best.d : null; }\nconst data = readCache($('Read Cache').all().map(i => i.json || {})) || { bookers: [] };\nconst staff = (data.bookers || []).map(b => b.fields || {}).map(f => ({ name: String(f.Name || '').trim(),\n  slack: String(f['Slack User ID'] || '').split(/[\\s,]+/).filter(Boolean)[0] || '' })).filter(p => p.name && p.slack);\nconst nameOf = id => (staff.find(p => p.slack === String(id || '')) || {}).name || '';\nconst kind = String(c.kind || 'PREEMPT').toUpperCase() === 'MBOOTH' ? 'MBOOTH' : 'PREEMPT';\n// the booking in the way, read from the calendar (its engineer, times and rooms)\nlet ev = {}; try { ev = $('Get Incumbent').first().json || {}; } catch (e) { ev = {}; }\nif (!ev || !ev.id || ev.error) ev = {};\nconst desc = String(ev.description || '');\nconst roomName = x => String(x || '').replace(/^KDC Plaza-Top Level-/i, '').replace(/(?:\\s*\\([^)]*\\))+\\s*$/, '').trim();\nconst evRooms = (ev.attendees || []).filter(a => a.resource || /@resource\\.calendar\\.google\\.com$/i.test(String(a.email || ''))).map(a => roomName(a.displayName)).filter(Boolean);\nconst mnl = x => new Date(new Date(x).getTime() + 8 * 3600000).toISOString();\nconst sd = ev.start && ev.start.dateTime, ed = ev.end && ev.end.dateTime;\nconst inc = ev.id ? { id: ev.id, d: sd ? mnl(sd).slice(0, 10) : String((ev.start && ev.start.date) || ''), s: sd ? mnl(sd).slice(11, 16) : '', e: ed ? mnl(ed).slice(11, 16) : '',\n  r: (evRooms.length ? evRooms : [c.room]).join(', '), t: String(ev.summary || c.incumbentTitle || ''), st: ((desc.match(/SType:\\s*([^\\n|]+)/i) || [])[1] || '').trim() }\n  : { id: String(c.incumbentEventId || ''), d: '', s: '', e: '', r: String(c.room || ''), t: String(c.incumbentTitle || ''), st: '' };\n// PENDING 80: the booking's engineer answers too (priority requests) - its Engineer line in Bookers, else its team ids\nconst engName = ((desc.match(/Engineer:\\s*([^(|\\n]+)/) || [])[1] || '').trim().toLowerCase();\nconst team = ((desc.match(/team:\\s*([^|\\n]+)/) || [])[1] || '').split(/[\\s,]+/).filter(Boolean);\nlet eng = (staff.find(p => p.name.toLowerCase() === engName) || {}).slack || '';\nif (!eng) eng = team.find(x => x !== c.approver && x !== c.requester) || '';\nconst approver2 = kind === 'PREEMPT' && eng && eng !== c.approver && eng !== c.requester ? eng : '';\n// PENDING 27: the same requester, room and time asked again -> the open request, not a second one\nconst rows = $('Read Requests').all().map(i => i.json || {}).filter(r => r['Request ID']);\nconst same = rows.find(r => String(r['Status'] || '').toUpperCase() === 'PENDING' && String(r['Requester'] || '') === String(c.requester || '')\n  && String(r['Room/Booth'] || '') === String(c.room || '') && Date.parse(r['Req Start']) === Date.parse(c.reqStart));\nconst now = new Date().toISOString();\nconst id = now.replace(/[-:T.]/g, '').slice(0, 14) + '-' + String(c.requester || 'unknown');\n// v58: all day - the booking's own flag, a date-only start, or 12:00 AM to 12:00 AM (whole days)\nconst _allDay = (() => { let pl = {}; try { pl = JSON.parse(c.reqPayload || '{}') || {}; } catch (e) { pl = {}; }\n  if (pl.all_day === true || String(pl.all_day) === 'true') return true;\n  const s = String(c.reqStart || '').trim(), e = String(c.reqEnd || '').trim();\n  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return true;\n  const a = Date.parse(s), b = Date.parse(e), mid = x => ((x + MNL_TZ) % 86400000) === 0;\n  return Number.isFinite(a) && Number.isFinite(b) && b > a && mid(a) && mid(b); })();\nconst deadline = requestDeadline(kind, now, c.reqStart, _allDay);\nconst holdName = (String(c.incumbentTitle || '').match(/^\\s*M\\d+\\s*-\\s*(.+?)\\s*$/i) || [])[1] || '';\nconst row = {\n  'Request ID': id, 'Status': 'PENDING', 'Kind': kind,\n  'Requester': String(c.requester || ''), 'Requester Name': nameOf(c.requester) || String(c.requesterName || ''),\n  'Approver': String(c.approver || ''), 'Approver Name': nameOf(c.approver) || String(c.approverName || '') || holdName,\n  'Room/Booth': String(c.room || ''), 'Req Start': String(c.reqStart || ''), 'Req End': String(c.reqEnd || ''),\n  'Incumbent Event Id': String(c.incumbentEventId || ''), 'Incumbent Title': String(c.incumbentTitle || ''),\n  'Incumbent New Start': '', 'Incumbent New End': '',\n  'Req Priority': (c.reqPriority == null ? '' : c.reqPriority), 'Inc Priority': (c.incPriority == null ? '' : c.incPriority),\n  'Deadline': deadline, 'Requester DM': '', 'Approver DM': '', 'Log Thread TS': '', 'Resolved Via': '', 'Attested By': '', 'Decided At': '',\n  'Req Payload': (c.reqPayload == null ? '' : (typeof c.reqPayload === 'string' ? c.reqPayload : JSON.stringify(c.reqPayload))),\n  'Approver 2': approver2, 'Approver 2 Name': nameOf(approver2), 'Messages': JSON.stringify({ m: [], inc }), 'Withdrawn At': ''\n};\nconst R = same || row;\nconst asked = kind === 'MBOOTH' ? (R['Approver Name'] || 'the holder')\n  : [R['Approver Name'] ? R['Approver Name'] + ' (booker)' : '', R['Approver 2 Name'] ? R['Approver 2 Name'] + ' (engineer)' : ''].filter(Boolean).join(' and ');\nreturn [{ json: { dup: !!same, row, existing: same || null, inc, asked } }];\n"
+      },
+      "id": "77fc136e-e672-4c2f-b032-fb25cf964781",
+      "name": "Build Request",
+      "position": [
+        3216,
+        -224
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "cachedResultName": "Consent Requests",
+          "mode": "list",
+          "value": "431550013"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [],
+          "schema": [],
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "37363515-1da9-418f-a5f1-426d0f09d0fc",
+      "name": "Write Pending Row",
+      "position": [
+        3872,
+        -224
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Inlined from workflows/drafts/consent/open-request.js + M-Booth wording (Kind=MBOOTH).\nconst c = $('When Executed by Another Workflow').first().json || {};\nconst R = $('Build Request').first().json.row || {};\nfunction whenPhrase(s,e){try{if(/^\\d{4}-\\d{2}-\\d{2}$/.test(String(s||''))){return new Date(s+'T00:00:00+08:00').toLocaleDateString('en-US',{timeZone:'Asia/Manila',month:'short',day:'numeric'})+' (all day)';}const o={timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'};const a=new Date(s).toLocaleString('en-US',o);const b=e?new Date(e).toLocaleTimeString('en-US',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'}):'';return b?(a+'\\u2013'+b):a;}catch(_){return String(s||'');}}\nconst when = c.reqStart ? whenPhrase(c.reqStart, c.reqEnd) : 'the requested time';\nconst isMB = String(c.kind||'PREEMPT').toUpperCase()==='MBOOTH';\nlet incumbentDM, requesterReply, approvalsLog;\nif(isMB){\n  incumbentDM = `Hi ${c.approverName||'there'} \\u2014 ${c.requesterName||'someone'} would like to use ${c.room} on ${when}. ${c.room} is your standing booth, so I'm checking with you first. OK to let them use it this once? Reply here with yes or no.`;\n  requesterReply = `${c.room} is ${c.approverName||'the holder'}'s standing booth, so I've asked ${c.approverName||'them'} whether you can use it on ${when} \\u2014 I'll confirm once they reply. If you've already cleared it with them, reply \\\"cleared with ${c.approverName||'them'}\\\".`;\n  approvalsLog = `[MBOOTH] ${R['Request ID']} \\u2014 PENDING\\n${c.requesterName} wants ${c.room} (${when}) for ${c.reqType}. Asked holder ${c.approverName} by DM. Deadline ${R['Deadline']}.`;\n} else {\n  incumbentDM = `Hi ${c.approverName||'there'} \\u2014 ${c.requesterName||'someone'} needs ${c.room} on ${when} for a higher-priority ${c.reqType||'session'}, which would mean moving your \\\"${c.incumbentTitle}\\\". Are you OK to move it? If yes, just tell me what time works for your session and I'll sort it out. Reply here with yes or no.`;\n  requesterReply = `${c.room} is held by \\\"${c.incumbentTitle}\\\" (${c.approverName}) at ${when}. Your ${c.reqType||'session'} outranks it, so I've asked ${c.approverName} to move \\u2014 I'll confirm once they reply. If you've already cleared it with them, reply \\\"cleared with ${c.approverName}\\\".`;\n  approvalsLog = `[PREEMPT] ${R['Request ID']} \\u2014 PENDING\\n${c.requesterName} wants ${c.room} (${when}) for ${c.reqType} (rank ${R['Req Priority']}) over \\\"${c.incumbentTitle}\\\" / ${c.approverName} (rank ${R['Inc Priority']}).\\nAsked ${c.approverName} by DM. Deadline ${R['Deadline']}.`;\n}\nreturn [{ json: { incumbentDM, requesterReply, approvalsLog, approver: c.approver||'', approverDM: c.approverDM||'' } }];\n"
+      },
+      "id": "e9e7e3c7-6bcb-4203-be33-2fe82a6faf77",
+      "name": "Build Messages",
+      "position": [
+        4752,
+        -224
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "C0C34UMFXGD"
+        },
+        "text": "={{ $('Build Messages').first().json.approvalsLog }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "eda34831-92be-474b-8f73-c92ecd04dbcd",
+      "name": "Post to Approvals",
+      "position": [
+        4976,
+        -224
+      ],
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "webhookId": "249a49ef-1ad6-4be0-b669-c5c9af6c8500",
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// v12: the request id, its deadline and who was asked - for the form's \"Request sent\" (Book Session v120)\nconst B = $('Build Request').first().json;\nreturn [{ json: { status: 'PENDING', request_id: B.row['Request ID'], deadline: B.row['Deadline'], asked: B.asked || '',\n  message: 'Asked ' + (B.asked || 'the holder') + ' for ' + B.row['Room/Booth'] + '.' } }];\n"
+      },
+      "id": "ed51d00f-22b2-4f47-a7cf-f5892a5b307c",
+      "name": "Return",
+      "position": [
+        5200,
+        -224
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "content": "## Open Consent Request (v12, slice 2)\nWrites a PENDING row to the Consent Requests tab (real Slack ids; the booking's engineer as Approver 2 for a priority request; the same request asked again returns the open one), then Jessie — Request Messages posts the requester's card and the request with buttons, and where they went is kept on the row (Messages). An audit line still goes to #jessie-approvals. Called by Book Session (and Move Booking) at the ROOM_OCCUPIED + request point.",
+        "height": 260,
+        "width": 420
+      },
+      "id": "aee0e4a4-98fe-4be2-be9f-a460600df0e2",
+      "name": "About",
+      "position": [
+        2768,
+        -544
+      ],
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "cachedResultName": "Consent Requests",
+          "mode": "list",
+          "value": "431550013"
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true,
+      "id": "fae87443-4f3a-4f0d-bd5a-7382b85cb5eb",
+      "name": "Read Requests",
+      "position": [
+        2560,
+        -224
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent('c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com') }}/events/{{ encodeURIComponent($('When Executed by Another Workflow').first().json.incumbentEventId || 'none') }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2768,
+        -224
+      ],
+      "id": "0e701cda-ff3f-4586-91ed-3acbda7c2778",
+      "name": "Get Incumbent",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6D1r3kaq6KaFdL0a",
+          "name": "Google Calendar account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CsdJhgDxCsqq9K9j",
+          "mode": "list",
+          "cachedResultName": "Jessie Reference Cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cache_key",
+              "keyValue": "jessie-reference"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        2992,
+        -224
+      ],
+      "id": "dbc46b2b-266d-4110-bea2-880b54d1062d",
+      "name": "Read Cache",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.dup }}",
+              "operator": {
+                "name": "filter.operator.true",
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "id": "5c496bea-1236-4c30-b321-470d9e8625fc",
+      "name": "Again?",
+      "position": [
+        3440,
+        -224
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "parameters": {
+        "jsCode": "// The same request is already open (PENDING 27) - nothing new is written or sent.\nconst B = $('Build Request').first().json, R = B.existing || {};\nreturn [{ json: { status: 'PENDING', existing: true, request_id: R['Request ID'] || '', deadline: R['Deadline'] || '', asked: B.asked || '',\n  message: 'You already asked for ' + (R['Room/Booth'] || 'this room') + ' then - that request is still open.' } }];\n"
+      },
+      "id": "6541f11c-0d30-497b-a274-599f6e0531e5",
+      "name": "Return Existing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3648,
+        -432
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// the row exactly as the sheet's columns\nreturn [{ json: $('Build Request').first().json.row }];\n"
+      },
+      "id": "611edde6-f96c-45c9-b4d7-fdb3dd6211cf",
+      "name": "Row Only",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3648,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "wyrOstv3g0BcIzdV",
+          "cachedResultName": "Jessie — Request Messages"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "mode": "open",
+            "row": "={{ JSON.stringify($('Build Request').first().json.row) }}",
+            "extra": "={{ JSON.stringify({ inc: $('Build Request').first().json.inc }) }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "b7258c7c-e71d-44ab-88f2-0ed48d8bcb02",
+      "name": "Post Messages",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        4096,
+        -224
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// where each message went - kept on the row so they can be updated when the request ends\nconst B = $('Build Request').first().json;\nconst r = $input.first().json || {};\nreturn [{ json: { 'Request ID': B.row['Request ID'], 'Messages': JSON.stringify({ m: Array.isArray(r.messages) ? r.messages : [], inc: B.inc }) } }];\n"
+      },
+      "id": "a18fcc47-a980-43e7-b675-aa338abadf0d",
+      "name": "Save Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4320,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1vIQ_cf2jJJ_WKpwFfnZQjQeKg2cxQz4tXGS6RZTEMwo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "cachedResultName": "Consent Requests",
+          "mode": "list",
+          "value": "431550013"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "Request ID"
+          ],
+          "schema": [],
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "74ca4f31-25b9-4a86-b7ae-dc32581c1922",
+      "name": "Update Row",
+      "position": [
+        4528,
+        -224
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleApi": {
+          "id": "DU75rLW4KHlVhcK1",
+          "name": "Google Sheets - Jessie Log"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Read Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Requests": {
+      "main": [
+        [
+          {
+            "node": "Get Incumbent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Incumbent": {
+      "main": [
+        [
+          {
+            "node": "Read Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cache": {
+      "main": [
+        [
+          {
+            "node": "Build Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Request": {
+      "main": [
+        [
+          {
+            "node": "Again?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Again?": {
+      "main": [
+        [
+          {
+            "node": "Return Existing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Row Only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Row Only": {
+      "main": [
+        [
+          {
+            "node": "Write Pending Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Pending Row": {
+      "main": [
+        [
+          {
+            "node": "Post Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Messages": {
+      "main": [
+        [
+          {
+            "node": "Save Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Messages": {
+      "main": [
+        [
+          {
+            "node": "Update Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Row": {
+      "main": [
+        [
+          {
+            "node": "Build Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Messages": {
+      "main": [
+        [
+          {
+            "node": "Post to Approvals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Approvals": {
+      "main": [
+        [
+          {
+            "node": "Return",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b9136e25-3b37-4798-842e-fda3582d72e3",
+  "meta": {
+    "instanceId": "47b8f2db30f5474de1dd72088d2efb6e9f5862c79e8ac68a94619b94d7aeb560"
+  },
+  "nodeGroups": [],
+  "id": "nEHnCMMXS0am59Zy",
+  "tags": []
+}

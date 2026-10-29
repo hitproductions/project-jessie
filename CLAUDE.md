@@ -97,7 +97,10 @@ per scenario) and in each Slack Interactions run's **Timing Sample** node (`per`
 
 Jessie is live but used for testing only (no real bookings by staff yet). **Approved for launch on 29 Oct** by management (the
 "JESSIE Launch Update 1029" deck, `docs/eod/EOD-2026-10-29.md`); the date is to be set, and the roll-out items from the deck are
-PENDING 143-146 on the launch board. A second bot, Posty (release
+PENDING 143-146 on the launch board. **Roll-out: Localization first, then Audio Post and Music** (no announcement yet; no
+department gate in Jessie). **The launch builds are written** (29 Oct, switches only: main v288, Slack Interactions v59,
+Cancel v34, Move v42, Reminders v9, Request Messages v6, Open Consent Request v14) and wait for the flip -
+`docs/launch-checklist.md`; any other import first makes them stale (re-run `flip-launch-switches`). A second bot, Posty (release
 announcements — Google Sheets and Slack, no Airtable), runs on the same n8n instance.
 
 **Working, and proven live:** the main workflow and every sub-workflow are active and
@@ -586,13 +589,13 @@ Known contradictions in Rooms & Studios, and which field Jessie trusts:
 
 ## Before launch
 
-The switches flip for launch together (the launch board at the top of `PENDING.md` lists what else is open), with `./scripts/flip-launch-switches` and `./scripts/check-launch-switches` (since 20 Oct; `docs/launch-checklist.md` section 0). The YEAR_SHIFT is also in Slack Interactions (`Build Step 1`, `My Window`, and since v58 `Build Step 2` / `Note Toggle` for request deadlines), Open Consent Request (`Build Request`, since v13) and Jessie — Reminders (`Window`), and Reminders has its own DEV_REDIRECT:
+The switches flip for launch together (the launch board at the top of `PENDING.md` lists what else is open), with `./scripts/flip-launch-switches` and `./scripts/check-launch-switches` (since 20 Oct; `docs/launch-checklist.md` section 0). Before the flip, clear the 2027 test bookings (109 on 29 Oct; the list is local, `docs/qa/test-bookings-to-clear-2027.md` - ask for a refresh on the day) and the Booking Log sheet's test rows. The YEAR_SHIFT is also in Slack Interactions (`Build Step 1`, `My Window`, and since v58 `Build Step 2` / `Note Toggle` for request deadlines), Open Consent Request (`Build Request`, since v13) and Jessie — Reminders (`Window`), and Reminders has its own DEV_REDIRECT:
 
 1. **`YEAR_SHIFT`** at the top of `Gate Context` and the **`plus({ years: 1 })`** in the system
    prompt are the QA year shift. **They must go to zero together.** Change one and the model and the
    guards will disagree about what day it is — which decides what "next Thursday" means and whether a
    date is in the past.
-2. **`DEV_REDIRECT`** (13 spots, all `'U08V3CKDGJF'` = Howard while testing; `''` at launch): Cancel and Move `Build
+2. **`DEV_REDIRECT`** (10 spots, all `'U08V3CKDGJF'` = Howard while testing; `''` at launch): Cancel and Move `Build
    Recipients`; Slack Interactions `Booked Notices`, `Series Notices`, `Change Notices` (the engineer / arranger notices)
    and `Request Act`, `Give Up Plan`, `Build Change C` (Howard may answer a room request for anyone while testing);
    Reminders `Build Reminders`; Request Messages `Render`. `ALLOW` beside each (Howard + Camy since 22 Oct) is inert once
