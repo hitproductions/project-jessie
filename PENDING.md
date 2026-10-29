@@ -9,7 +9,7 @@ ones move to the bottom instead of being renumbered.
 
 **29 Oct: approved for launch** by management, on the "JESSIE Launch Update 1029" deck (`docs/eod/EOD-2026-10-29.md`); launch date to be set. The roll-out items from that deck are 143-146 on the launch board.
 
-**27 Oct:** QA round 4 is done and every fix from it is live; the launch review's findings are on the **launch board** at the top of the triage. **29 Oct: approved for launch; the launch builds (switches flipped) are written and wait for the flip - `docs/launch-checklist.md`.** (Earlier status lines live in git history and the EODs.)
+**27 Oct:** QA round 4 is done and every fix from it is live; the launch review's findings are on the **launch board** at the top of the triage. **29 Oct: approved for launch; the launch switches were flipped ~17:48-17:55 PHT (all seven builds live, OK: LAUNCH) - real year, real recipients. Roll-out: Localization first. Post-flip checks: `docs/launch-checklist.md` *After flipping*.** (Earlier status lines live in git history and the EODs.)
 
 ---
 

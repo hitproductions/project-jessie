@@ -98,9 +98,9 @@ per scenario) and in each Slack Interactions run's **Timing Sample** node (`per`
 Jessie is live but used for testing only (no real bookings by staff yet). **Approved for launch on 29 Oct** by management (the
 "JESSIE Launch Update 1029" deck, `docs/eod/EOD-2026-10-29.md`); the date is to be set, and the roll-out items from the deck are
 PENDING 143-146 on the launch board. **Roll-out: Localization first, then Audio Post and Music** (no announcement yet; no
-department gate in Jessie). **The launch builds are written** (29 Oct, switches only: main v288, Slack Interactions v59,
-Cancel v34, Move v42, Reminders v9, Request Messages v6, Open Consent Request v14) and wait for the flip -
-`docs/launch-checklist.md`; any other import first makes them stale (re-run `flip-launch-switches`). A second bot, Posty (release
+department gate in Jessie). **The launch switches are flipped** (29 Oct ~17:48-17:55 PHT: main v288, Slack Interactions v59,
+Cancel v34, Move v42, Reminders v9, Request Messages v6, Open Consent Request v14 - all before / after MATCH, OK: LAUNCH):
+real year, real recipients. Post-flip checks: `docs/launch-checklist.md` *After flipping*. A second bot, Posty (release
 announcements — Google Sheets and Slack, no Airtable), runs on the same n8n instance.
 
 **Working, and proven live:** the main workflow and every sub-workflow are active and
@@ -224,7 +224,8 @@ knowledge accumulates.
   no restorable history on the free plan. Run `./scripts/backup-live` after every
   import to snapshot the live workflows into `workflows/live/`, and commit your own
   changes so the folder never falls behind what n8n runs.
-- Bookings in the live calendar are real. QA runs on year-shifted dates (2027) on purpose.
+- Bookings in the live calendar are real. Since the flip (29 Oct ~17:55) there is no year shift: every test books a real date
+  and notifies real people - test with a willing colleague and cancel what you book. (QA ran on 2027 dates until then.)
 
 ## The stack
 

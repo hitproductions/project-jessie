@@ -1,6 +1,6 @@
 # Launch checklist — QA/dev switches to flip for go-live
 
-**Approved for launch 29 Oct** (management, on the "JESSIE Launch Update 1029" deck); the date is to be set. This is the list of every QA/dev scaffold that must be turned off (or decided) before Jessie
+**Approved for launch 29 Oct** (management, on the "JESSIE Launch Update 1029" deck). **Flipped 29 Oct ~17:48-17:55 PHT:** all seven launch builds imported and confirmed (before / after MATCH, ids checked), `check-launch-switches` on the after downloads **OK: LAUNCH**. What is left is the *After flipping - verify* list below. This is the list of every QA/dev scaffold that must be turned off (or decided) before Jessie
 serves real bookings, and how to do it. **Rewritten 27 Oct** against the live downloads; since SI v58 / OCR v13 (29 Oct)
 `./scripts/check-launch-switches` reports **18 switch spots in 7 workflows** (main, Slack Interactions, Cancel, Move,
 Reminders, Request Messages, Open Consent Request); Book Session, Book Series, Room Availability, Find, Expand Series,
