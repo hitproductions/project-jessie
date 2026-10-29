@@ -208,7 +208,7 @@ const FREE = ['Studio 1', 'Studio 2', 'Studio 3', 'Studio 5', 'Studio 6', 'Studi
   const changed = Object.keys(B).filter(k => !A[k] || JSON.stringify(A[k].parameters) !== JSON.stringify(B[k].parameters)).sort();
   const V53N = ['After Book', 'After Book Series', 'After Cancel', 'After Move', 'Booked Notices', 'Build Change', 'Build Change C', 'Build Step 1', 'Build Step 2', 'Change Notices',
     'Fix Message', 'My Window', 'Note Toggle', 'Read Change', 'Read Step 2', 'Render My Bookings', 'Series Notices', 'To Move'];
-  const V54N = ['After Prepare', 'After Prepare Series', 'Ask DM', 'Question DM', 'Result DM', 'Series DM', 'After Book Series', 'Mark Source Series', 'To Prepare Series', 'Read Step 1'];   // v56: all day repeats (sim-allday-series)   // v55: the note on the DM's button   // v54: picks kept when a form comes back (sim-picks-kept)
+  const V54N = ['After Prepare', 'After Prepare Series', 'Ask DM', 'Question DM', 'Result DM', 'Series DM', 'After Book Series', 'Mark Source Series', 'To Prepare Series', 'Read Step 1', 'Check Signature'];   // v57: How often ticks its days (sim-repeat-days)   // v56: all day repeats (sim-allday-series)   // v55: the note on the DM's button   // v54: picks kept when a form comes back (sim-picks-kept)
   ok(V53N.every(n => changed.indexOf(n) !== -1) && changed.every(n => V53N.indexOf(n) !== -1 || V54N.indexOf(n) !== -1), 'only the form, Change and card nodes changed (since v52)', changed);
   ok(JSON.stringify(SI.connections) === JSON.stringify(OLD.connections) && SI.nodes.length === OLD.nodes.length, 'wiring unchanged, no node added or removed');
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
