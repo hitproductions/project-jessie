@@ -52,6 +52,7 @@ QA runs on year-shifted 2027 dates. The model, the forms and the reminders must 
 | main → agent system prompt (`Today's date is …`) | `.plus({ years: 1 })` | `+1 yr` | remove |
 | Slack Interactions → `Build Step 1` (the form's dates), `My Window` (My bookings) | `const YEAR_SHIFT = 1;` | `1` | `0` |
 | Reminders → `Window` (which day / week the reminders read) | `const YEAR_SHIFT = 1;` | `1` | `0` |
+| Slack Interactions → `Build Step 2`, `Note Toggle` (the deadline the form shows for a room request) and Open Consent Request → `Build Request` (the deadline stored and acted on) - since SI v58 / OCR v13, 29 Oct | `const YEAR_SHIFT = 1;` | `1` | `0` |
 
 ## 2. Notifications → real people
 

@@ -106,7 +106,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const old = JSON.parse(fs.readFileSync('workflows/imported/slack-interactions-v55-imported.json', 'utf8'));
   const OB = Object.fromEntries(old.nodes.map(n => [n.name, JSON.stringify(n.parameters)]));
   const changed = si.nodes.filter(n => OB[n.name] !== JSON.stringify(n.parameters)).map(n => n.name).sort();
-  const V56N = ['After Book Series', 'After Prepare Series', 'Mark Source Series', 'Read Step 1', 'To Prepare Series'], V57N = ['Build Step 1', 'Check Signature', 'Note Toggle'];   // v57: How often ticks its days (sim-repeat-days)
+  const V56N = ['After Book Series', 'After Prepare Series', 'Mark Source Series', 'Read Step 1', 'To Prepare Series'], V57N = ['Build Step 1', 'Check Signature', 'Note Toggle', 'Build Step 2'];   // v58: the deadline (sim-ticks-deadlines)   // v57: How often ticks its days (sim-repeat-days)
   ok(V56N.every(n => changed.indexOf(n) !== -1) && changed.every(n => V56N.indexOf(n) !== -1 || V57N.indexOf(n) !== -1) && si.nodes.length === old.nodes.length
      && JSON.stringify(si.connections) === JSON.stringify(old.connections), 'only the v56 nodes (and v57\'s) changed, wiring the same: ' + changed.join(', '));
 
