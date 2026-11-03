@@ -26,7 +26,7 @@ ok(cache({ client: 'Pael', client_cache: cc() }).use === false, 'a different cli
 ok(cache({ client: '', client_cache: cc({ client: 'None' }) }).use === true, 'no client on both ("None" on the card) -> use');
 ok(cache({ client: 'Jem Lim' }).use === false, 'no cache (chat, Book Series, consent) -> the lookups run');
 ok(cache({ client: 'Jem Lim', client_cache: '{bad' }).use === false, 'an unreadable cache -> the lookups run');
-ok(to(B, 'All Bookers')[0] === 'Client Cache' && to(B, 'Client Cache')[0] === 'Cached?' && to(B, 'Cached?', 0)[0] === 'Get Events In Window'
+ok(to(B, 'All Bookers')[0] === 'Client Cache' && to(B, 'Client Cache')[0] === 'Cached?' && (to(B, 'Cached?', 0)[0] === 'Get Events In Window' || (to(B, 'Cached?', 0)[0] === 'Room Free Busy' && to(B, 'Room Free Busy')[0] === 'Get Events In Window'))   // v125: Room Free Busy first
    && to(B, 'Cached?', 1)[0] === 'Get Client', 'All Bookers -> Client Cache -> Cached? -> (cached) Get Events In Window / Get Client');
 ok(node(B, 'When Executed by Another Workflow').parameters.workflowInputs.values.some(v => v.name === 'client_cache'), 'client_cache is a Book Session input');
 const CCjs = code(B, 'Check Conflicts');

@@ -58,6 +58,6 @@ for (const n of ['Render Summary', 'Prepared Out', 'Build Log Row']) {
   ok(plain === 0 || /try \{[^}]*\$\('(Get Client|Client Aliases|All Client Names)'\)/.test(t) || /Array\.isArray\(c\.gc\)\) return c\.gc\.map/.test(t), n + ': its reads of the lookups are inside try or through the cache switch');
 }
 const C = B.connections, nx = k => ((C[k] || {}).main || []).map(o => (o || []).map(c => c.node).join('+')).join(' | ');
-ok(nx('Client Cache') === 'Cached?' && nx('Cached?') === 'Get Events In Window | Get Client', 'Cached? (yes) goes straight to the calendar read');
+ok(nx('Client Cache') === 'Cached?' && (nx('Cached?') === 'Get Events In Window | Get Client' || (nx('Cached?') === 'Room Free Busy | Get Client' && nx('Room Free Busy') === 'Get Events In Window')), 'Cached? (yes) goes straight to the calendar read (v125: through Room Free Busy)');
 console.log('\n' + pass + ' ok, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
