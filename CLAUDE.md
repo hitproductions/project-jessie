@@ -98,7 +98,7 @@ per scenario) and in each Slack Interactions run's **Timing Sample** node (`per`
 Jessie is live but used for testing only (no real bookings by staff yet). **Approved for launch on 29 Oct** by management (the
 "JESSIE Launch Update 1029" deck, `docs/eod/EOD-2026-10-29.md`); the date is to be set, and the roll-out items from the deck are
 PENDING 143-146 on the launch board. **Roll-out: Localization first, then Audio Post and Music** (no announcement yet; no
-department gate in Jessie). **The launch switches are flipped** (29 Oct ~17:48-17:55 PHT; Slack Interactions v63 since 3 Nov ~14:02 - repeats counted live, problems in the Repeats line: main v288, Slack Interactions v59,
+department gate in Jessie). **The launch switches are flipped** (29 Oct ~17:48-17:55 PHT; Slack Interactions v63 since 3 Nov ~14:02 - repeats counted live, problems in the Repeats line; at the flip: main v288, Slack Interactions v59,
 Cancel v34, Move v42, Reminders v9, Request Messages v6, Open Consent Request v14 - all before / after MATCH, OK: LAUNCH):
 real year, real recipients. Post-flip checks: `docs/launch-checklist.md` *After flipping*. A second bot, Posty (release
 announcements — Google Sheets and Slack, no Airtable), runs on the same n8n instance.
