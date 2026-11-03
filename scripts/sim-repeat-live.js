@@ -5,7 +5,7 @@
 // Build Step 1, Note Toggle and Read Step 1.
 // Usage: node scripts/sim-repeat-live.js [slack interactions]
 const fs = require('fs');
-const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v62.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v63.json', 'utf8'));
 const VER = Number((String(si.name || '').match(/— v(\d+)/) || [])[1] || 0);   // v61: How many times / Or until / On re-keyed on every redraw
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
@@ -56,7 +56,13 @@ const j1 = async (...a) => { const r = await run(...a); return r && r[0] ? r[0].
   ok(r.ok && note(r.view) === '🔁 *Books 4 dates:* Tue 2, Wed 3, Thu 4, Fri 5 Nov', 'Nov 2 - 5, Weekdays: ' + note(r.view));
   ok(!('errors' in r) && !('errors' in r.view), 'a redraw carries no error (the old "more than 16" is gone)');
   ok(blk(r.view, /^rep_until(~\d+)?$/).element.initial_date === '2027-11-05', 'the picked end date kept');
-  if (VER >= 61) {   // v61: new ids on every redraw, values kept, strictly increasing
+  if (VER >= 63) {   // v63: the ids stay (v61 / v62's new ids left a picked end date empty in Slack)
+    const ids = view => ['rep_count', 'rep_until', 'rep_days'].map(k => blk(view, new RegExp('^' + k + '(~\\d+)?$')).block_id);
+    ok(ids(r.view).slice(0, 2).join() === 'rep_count,rep_until', 'v63: How many times / Or until keep their ids: ' + ids(r.view).join(', '));
+    const r2 = await act({ action_id: 'rep_until_pick', selected_date: '2027-11-05' }, r.view.blocks, state(r.view, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-05' } } }));
+    ok(ids(r2.view).join() === ids(r.view).join(), 'v63: a second redraw keeps the same ids');
+  }
+  if (VER >= 61 && VER < 63) {   // v61 / v62: new ids on every redraw, values kept, strictly increasing
     const ids = view => ['rep_count', 'rep_until', 'rep_days'].map(k => blk(view, new RegExp('^' + k + '(~\\d+)?$')).block_id);
     const a1 = ids(r.view);
     ok(a1.every(x => /~\d+$/.test(x)), 'v61: How many times / Or until / On redrawn under new ids: ' + a1.join(', '));
@@ -113,7 +119,7 @@ const j1 = async (...a) => { const r = await run(...a); return r && r[0] ? r[0].
   ok(DS(await read1('2027-11-02', 'weekly', ['MO', 'WE'], { rep_count: { rep_count_pick: { selected_option: { value: '4' } } } })) === '2027-11-02,2027-11-03,2027-11-08,2027-11-10', 'Find rooms: chosen date first');
   ok(DS(await read1('2027-11-05', 'weekly', ['FR'], { rep_count: { rep_count_pick: { selected_option: { value: '3' } } } })) === '2027-11-05,2027-11-12,2027-11-19', 'a Friday start on Fridays: as before');
   ok(DS(await read1('2027-11-05', 'weekdays', WD, { rep_count: { rep_count_pick: { selected_option: { value: '5' } } } })) === '2027-11-05,2027-11-08,2027-11-09,2027-11-10,2027-11-11', 'Weekdays from a Friday: as before (Fri, Mon-Thu)');
-  if (VER >= 61) {
+  if (VER >= 61) {   // the stems still read (windows opened on v61 / v62)
     ok(DS(await read1('2027-11-02', 'weekdays', WD, { 'rep_until~1730000000009': { rep_until_pick: { selected_date: '2027-11-05' } } })) === '2027-11-02,2027-11-03,2027-11-04,2027-11-05', 'v61: Find rooms reads a re-keyed Or until');
     ok(DS(await read1('2027-11-02', 'weekdays', WD, { 'rep_count~1730000000008': { rep_count_pick: { selected_option: { value: '3' } } } })) === '2027-11-02,2027-11-03,2027-11-04', 'v61: Find rooms reads a re-keyed How many times');
     const e2 = await read1('2027-11-05', 'weekdays', WD, { 'rep_until~1730000000009': { rep_until_pick: { selected_date: '2027-11-03' } } });
@@ -122,15 +128,35 @@ const j1 = async (...a) => { const r = await run(...a); return r && r[0] ? r[0].
     ok(!e3.valid && e3.answer.errors['rep_count~1730000000008'] === 'How many times - or pick an end date.', 'v61: nothing picked -> the error on the drawn How many times');
   }
 
+  if (VER >= 63) {
+    const read1b = async (d, vals, view) => j1(si, 'Read Step 1', [], { 'Check Signature': chk, 'Read Request': [{ json: { payload: { view: Object.assign({}, view, {
+      private_metadata: JSON.stringify({ requester: 'U1', channel: 'D1' }), state: { values: vals } }) } } }] });
+    const fv = (await act({ action_id: 'rep_freq_pick', selected_option: { value: 'weekdays' } }, (await act({ action_id: 'repeat_toggle', selected_options: [{ value: 'rep' }] }, s1.blocks, base('2027-11-02'))).view.blocks,
+      state((await act({ action_id: 'repeat_toggle', selected_options: [{ value: 'rep' }] }, s1.blocks, base('2027-11-02'))).view, '2027-11-02', 'weekdays', ['TU']))).view;
+    const st30 = state(fv, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-30' } } });
+    const u = await read1b('2027-11-02', st30, fv);
+    ok(!u.valid && u.answer.response_action === 'update' && !u.answer.errors, 'v63: a Repeats problem at Find rooms -> the same form back, no red error');
+    ok(blk(u.answer.view, /^rep_note$/).elements[0].text === '⚠️ That’s 21 dates – the most is 16. Pick an earlier end date or a number.', 'v63: the problem in the line: ' + blk(u.answer.view, /^rep_note$/).elements[0].text);
+    ok(blk(u.answer.view, /^rep_until(~\d+)?$/).element.initial_date === '2027-11-30' && blk(u.answer.view, /^date$/).element.initial_date === '2027-11-02'
+       && (blk(u.answer.view, /^rep_days(~\d+)?$/).element.initial_options || []).map(o => o.value).join() === 'MO,TU,WE,TH,FR' && u.answer.view.submit && u.answer.view.callback_id === 'book_step1',
+       'v63: every pick written into the form that comes back; still step 1 with Find rooms');
+    ok(blk(u.answer.view, /^rep_until(~\d+)?$/).block_id === blk(fv, /^rep_until(~\d+)?$/).block_id, 'v63: the ids unchanged');
+    const mixed = Object.assign({}, st30, { end: { end_pick: { selected_option: { value: '09:00' } } } });
+    const m2 = await read1b('2027-11-02', mixed, fv);
+    ok(!m2.valid && m2.answer.response_action === 'errors' && !Object.keys(m2.answer.errors).some(k => /^rep_/.test(k)) && Object.keys(m2.answer.errors).length > 0,
+       'v63: with another problem (end before start) -> that field\'s error only, none on the Repeats fields: ' + JSON.stringify(m2.answer.errors));
+    const okv = await read1b('2027-11-02', state(fv, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-05' } } }), fv);
+    ok(okv.valid && okv.answer.response_action === 'push' && okv.s.series.dates.length === 4, 'v63: Nov 2 - 5 -> Find rooms goes on (4 dates)');
+  }
   // the line and the check share one rule (same code in all three nodes)
   const fn = n => { const s = jsOf(si, n); const i = s.indexOf('function repSeries'); return s.slice(i, s.indexOf('function repNote', i)); };
   ok(fn('Build Step 1') === fn('Note Toggle') && fn('Note Toggle') === fn('Read Step 1'), 'one rule in Build Step 1, Note Toggle and Read Step 1');
 
   // only these nodes changed since v59, wiring the same
-  const old = JSON.parse(fs.readFileSync(VER >= 62 ? 'workflows/imported/slack-interactions-v61-imported.json' : VER >= 61 ? 'workflows/imported/slack-interactions-v60-imported.json' : 'workflows/imported/slack-interactions-v59-imported.json', 'utf8'));
+  const old = JSON.parse(fs.readFileSync(VER >= 63 ? 'workflows/imported/slack-interactions-v62-imported.json' : VER >= 62 ? 'workflows/imported/slack-interactions-v61-imported.json' : VER >= 61 ? 'workflows/imported/slack-interactions-v60-imported.json' : 'workflows/imported/slack-interactions-v59-imported.json', 'utf8'));
   const OB = Object.fromEntries(old.nodes.map(n => [n.name, JSON.stringify(n.parameters)]));
   const changed = si.nodes.filter(n => OB[n.name] !== JSON.stringify(n.parameters)).map(n => n.name).sort();
-  ok(changed.join() === (VER >= 62 ? 'Note Toggle' : VER >= 61 ? 'Note Toggle,Read Step 1' : 'Build Step 1,Check Signature,Note Toggle,Read Step 1') && JSON.stringify(si.connections) === JSON.stringify(old.connections), 'only this build\'s nodes changed, wiring the same: ' + changed.join(', '));
+  ok(changed.join() === (VER >= 63 ? 'Note Toggle,Read Step 1' : VER >= 62 ? 'Note Toggle' : VER >= 61 ? 'Note Toggle,Read Step 1' : 'Build Step 1,Check Signature,Note Toggle,Read Step 1') && JSON.stringify(si.connections) === JSON.stringify(old.connections), 'only this build\'s nodes changed, wiring the same: ' + changed.join(', '));
 
   console.log(pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

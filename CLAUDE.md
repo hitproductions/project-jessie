@@ -98,7 +98,7 @@ per scenario) and in each Slack Interactions run's **Timing Sample** node (`per`
 Jessie is live but used for testing only (no real bookings by staff yet). **Approved for launch on 29 Oct** by management (the
 "JESSIE Launch Update 1029" deck, `docs/eod/EOD-2026-10-29.md`); the date is to be set, and the roll-out items from the deck are
 PENDING 143-146 on the launch board. **Roll-out: Localization first, then Audio Post and Music** (no announcement yet; no
-department gate in Jessie). **The launch switches are flipped** (29 Oct ~17:48-17:55 PHT; Slack Interactions v61 since 3 Nov ~13:33 - repeats counted live, old errors cleared: main v288, Slack Interactions v59,
+department gate in Jessie). **The launch switches are flipped** (29 Oct ~17:48-17:55 PHT; Slack Interactions v62 since 3 Nov ~13:56 - repeats counted live (v63 owed: the end-date pick): main v288, Slack Interactions v59,
 Cancel v34, Move v42, Reminders v9, Request Messages v6, Open Consent Request v14 - all before / after MATCH, OK: LAUNCH):
 real year, real recipients. Post-flip checks: `docs/launch-checklist.md` *After flipping*. A second bot, Posty (release
 announcements — Google Sheets and Slack, no Airtable), runs on the same n8n instance.
@@ -905,7 +905,10 @@ the task runner), for whoever has shell access to the box.
     SI v60 redrew step 1 with a correct live Repeats line and the old red "The end date has to be after the first date." stayed. To
     clear it, redraw the field under a new block_id (values kept) and read it, and put errors, by stem. And take the value of the
     field that sent the action from the action itself: the modal's saved state does not have it yet, so a re-keyed date picker
-    filled from state came back blank (SI v61 -> v62).
+    filled from state came back blank (SI v61 -> v62). **And a picker redrawn under a new block_id showed empty in Slack anyway**
+    (v62 live, 3 Nov): re-keying a date picker to clear its error loses the pick on screen. What held: keep the ids, and never put a
+    red error on a field the person keeps changing - say the problem in a context line on the same form (response_action update,
+    picks written in), SI v63.
 48. **A sub-workflow hands back its last node's output, so it cannot reply first and work after** (19 Oct). To write the log
     sheets after "Booked.", Book Session v112 calls a separate workflow (Jessie — Log Booking) with Execute Workflow's
     `options.waitForSubWorkflow: false`; the call returns at once and the writes happen on their own. A new workflow has no id
