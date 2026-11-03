@@ -35,7 +35,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
     view: { id: 'V1', hash: 'h', callback_id: 'book_step1', title: s1.title, close: s1.close, submit: s1.submit, private_metadata: s1.private_metadata, blocks, state: { values } } } } }] })).view;
   const blk = (view, re) => view.blocks.find(b => re.test(b.block_id || ''));
   let v = await act({ action_id: 'repeat_toggle', selected_options: [{ value: 'rep' }] }, s1.blocks, vals);
-  ok(blk(v, /^rep_days$/).dispatch_action === true, 'On sends each tick (dispatch_action)');
+  ok(blk(v, /^rep_days(~\d+)?$/).dispatch_action === true, 'On sends each tick (dispatch_action)');
   const freqOf = view => blk(view, /^rep_freq(~\d+)?$/).element.initial_option.value;
   const state = (view, freq, days) => Object.assign({}, vals, { repeat_toggle: { repeat_toggle: { selected_options: [{ value: 'rep' }] } },
     [blk(view, /^rep_freq(~\d+)?$/).block_id]: { rep_freq_pick: { selected_option: { value: freq } } },

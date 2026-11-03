@@ -43,10 +43,10 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const vals1 = { date: { date_pick: { selected_date: '2027-10-19' } }, start: { start_pick: { selected_option: { value: '14:00' } } }, end: { end_pick: { selected_option: { value: '16:00' } } },
     purpose: { purpose_pick: { selected_option: { value: 'Localization Dubbing' } } } };
   let tg = await tog(true, s1.blocks, vals1);
-  const ids = tg.view.blocks.map(b => b.block_id);
+  const ids = tg.view.blocks.map(b => String(b.block_id || '').split('~')[0]);   // v61: re-keyed Repeats fields
   ok(ids.slice(ids.indexOf('repeat_toggle')).join() === 'repeat_toggle,rep_freq,rep_days,rep_count,rep_until,rep_note' && tg.view.callback_id === 'book_step1' && tg.view.submit.text === 'Find rooms',
      'ticked -> How often, On, How many times, Or until under it; still step 1');
-  const B = id => tg.view.blocks.find(b => b.block_id === id);
+  const B = id => tg.view.blocks.find(b => b.block_id === id) || tg.view.blocks.find(b => String(b.block_id || '').split('~')[0] === id);
   ok(B('rep_days').element.initial_options.map(o => o.value).join() === 'TU' && B('rep_freq').element.initial_option.value === 'weekly', 'On: the first date\'s day (Tue) ticked; every week');
   ok(B('date').element.initial_date === '2027-10-19' && B('start').element.initial_option.value === '14:00' && B('purpose').element.initial_option.value === 'Localization Dubbing'
      && B('repeat_toggle').elements[0].initial_options.length === 1, 'entries kept; the box stays ticked');
@@ -71,7 +71,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
     ok((await read1(F('weekly', ['TU'], 3, '2027-12-31'))).s.series.dates.length === 3, 'v15: both set -> How many times wins');
     ok((await read1(F('weekly', ['TU'], 3, '2027-10-10'))).valid, 'v15: an end date before the start is ignored when How many times is set');
     const tgu = await tog(true, s1.blocks, vals1);
-    ok((V60 ? !tgu.view.blocks.find(b => b.block_id === 'rep_until').element.initial_date : tgu.view.blocks.find(b => b.block_id === 'rep_until').element.initial_date === '2027-11-16') && (V17 ? tgu.view.blocks.find(b => b.block_id === 'rep_until').hint.text === 'Only applies if "How many times" is empty.' : /How many times is empty/.test(tgu.view.blocks.find(b => b.block_id === 'rep_until').hint.text)),
+    ok((V60 ? !tgu.view.blocks.find(b => /^rep_until(~\d+)?$/.test(b.block_id || '')).element.initial_date : tgu.view.blocks.find(b => /^rep_until(~\d+)?$/.test(b.block_id || '')).element.initial_date === '2027-11-16') && (V17 ? tgu.view.blocks.find(b => /^rep_until(~\d+)?$/.test(b.block_id || '')).hint.text === 'Only applies if "How many times" is empty.' : /How many times is empty/.test(tgu.view.blocks.find(b => /^rep_until(~\d+)?$/.test(b.block_id || '')).hint.text)),
        'v15: Or until starts 4 weeks after the first date (v60: empty), and says when it is used');
     const pur = s1.blocks.find(b => b.block_id === 'purpose');
     ok((V25 ? pur.hint.text === 'You’ll get a recommendation based on the booking details.' : pur.hint.text === 'A room will be recommended to you based on your session details.') && pur.element.option_groups.map(g => g.label.text).join() === 'Sessions,Other bookings', 'v15: step 1 wording');

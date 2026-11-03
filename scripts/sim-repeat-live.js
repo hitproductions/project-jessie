@@ -5,7 +5,8 @@
 // Build Step 1, Note Toggle and Read Step 1.
 // Usage: node scripts/sim-repeat-live.js [slack interactions]
 const fs = require('fs');
-const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v60.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v61.json', 'utf8'));
+const VER = Number((String(si.name || '').match(/— v(\d+)/) || [])[1] || 0);   // v61: How many times / Or until / On re-keyed on every redraw
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
@@ -38,21 +39,32 @@ const j1 = async (...a) => { const r = await run(...a); return r && r[0] ? r[0].
   // Repeats ticked on Tue 2 Nov 2027: no pre-filled end date, both end fields send their pick, the line asks for an end
   let r = await act({ action_id: 'repeat_toggle', selected_options: [{ value: 'rep' }] }, s1.blocks, base('2027-11-02'));
   let v = r.view;
-  ok(r.ok && !blk(v, /^rep_until$/).element.initial_date, 'Or until is empty (no four-week default)');
-  ok(blk(v, /^rep_count$/).dispatch_action === true && blk(v, /^rep_until$/).dispatch_action === true, 'How many times / Or until send their pick');
+  ok(r.ok && !blk(v, /^rep_until(~\d+)?$/).element.initial_date, 'Or until is empty (no four-week default)');
+  ok(blk(v, /^rep_count(~\d+)?$/).dispatch_action === true && blk(v, /^rep_until(~\d+)?$/).dispatch_action === true, 'How many times / Or until send their pick');
   ok(/Pick \*How many times\* or an end date/.test(note(v)), 'the line asks for a number or an end date: ' + note(v));
 
   // Howard's case: Weekdays, Mon-Fri ticked, Or until Fri 5 Nov -> Tue-Fri, 4 dates, no error on the redrawn form
-  const state = (view, d, freq, days, extra) => Object.assign(base(d), { repeat_toggle: { repeat_toggle: { selected_options: [{ value: 'rep' }] } },
+  const state = (view, d, freq, days, extra) => { const st = Object.assign(base(d), { repeat_toggle: { repeat_toggle: { selected_options: [{ value: 'rep' }] } },
     [blk(view, /^rep_freq(~\d+)?$/).block_id]: { rep_freq_pick: { selected_option: { value: freq } } },
-    [blk(view, /^rep_days(~\d+)?$/).block_id]: { rep_days_pick: { selected_options: days.map(x => ({ value: x })) } } }, extra || {});
+    [blk(view, /^rep_days(~\d+)?$/).block_id]: { rep_days_pick: { selected_options: days.map(x => ({ value: x })) } } });
+    for (const [k, val] of Object.entries(extra || {})) { const b = blk(view, new RegExp('^' + k + '(~\\d+)?$')); st[b ? b.block_id : k] = val; }   // Slack keys state by the drawn block_id
+    return st; };
   const WD = ['MO', 'TU', 'WE', 'TH', 'FR'];
   r = await act({ action_id: 'rep_freq_pick', selected_option: { value: 'weekdays' } }, v.blocks, state(v, '2027-11-02', 'weekdays', ['TU']));
   v = r.view;
   r = await act({ action_id: 'rep_until_pick', selected_date: '2027-11-05' }, v.blocks, state(v, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-05' } } }));
   ok(r.ok && note(r.view) === '🔁 *Books 4 dates:* Tue 2, Wed 3, Thu 4, Fri 5 Nov', 'Nov 2 - 5, Weekdays: ' + note(r.view));
   ok(!('errors' in r) && !('errors' in r.view), 'a redraw carries no error (the old "more than 16" is gone)');
-  ok(blk(r.view, /^rep_until$/).element.initial_date === '2027-11-05', 'the picked end date kept');
+  ok(blk(r.view, /^rep_until(~\d+)?$/).element.initial_date === '2027-11-05', 'the picked end date kept');
+  if (VER >= 61) {   // v61: new ids on every redraw, values kept, strictly increasing
+    const ids = view => ['rep_count', 'rep_until', 'rep_days'].map(k => blk(view, new RegExp('^' + k + '(~\\d+)?$')).block_id);
+    const a1 = ids(r.view);
+    ok(a1.every(x => /~\d+$/.test(x)), 'v61: How many times / Or until / On redrawn under new ids: ' + a1.join(', '));
+    const r2 = await act({ action_id: 'rep_until_pick', selected_date: '2027-11-05' }, r.view.blocks, state(r.view, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-05' } } }));
+    const a2 = ids(r2.view);
+    ok(r2.ok && a2.every((x, i) => Number(x.split('~')[1]) > Number(a1[i].split('~')[1])), 'v61: a second redraw at once gets newer ids still (an old error never reattaches)');
+    ok(blk(r2.view, /^rep_until(~\d+)?$/).element.initial_date === '2027-11-05' && (blk(r2.view, /^rep_days(~\d+)?$/).element.initial_options || []).map(o => o.value).join() === 'MO,TU,WE,TH,FR', 'v61: values kept across re-keys');
+  }
   v = r.view;
   // the end date moved out -> the line says it in words; back -> fine again
   r = await act({ action_id: 'rep_until_pick', selected_date: '2027-11-30' }, v.blocks, state(v, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-30' } } }));
@@ -90,16 +102,24 @@ const j1 = async (...a) => { const r = await run(...a); return r && r[0] ? r[0].
   ok(DS(await read1('2027-11-02', 'weekly', ['MO', 'WE'], { rep_count: { rep_count_pick: { selected_option: { value: '4' } } } })) === '2027-11-02,2027-11-03,2027-11-08,2027-11-10', 'Find rooms: chosen date first');
   ok(DS(await read1('2027-11-05', 'weekly', ['FR'], { rep_count: { rep_count_pick: { selected_option: { value: '3' } } } })) === '2027-11-05,2027-11-12,2027-11-19', 'a Friday start on Fridays: as before');
   ok(DS(await read1('2027-11-05', 'weekdays', WD, { rep_count: { rep_count_pick: { selected_option: { value: '5' } } } })) === '2027-11-05,2027-11-08,2027-11-09,2027-11-10,2027-11-11', 'Weekdays from a Friday: as before (Fri, Mon-Thu)');
+  if (VER >= 61) {
+    ok(DS(await read1('2027-11-02', 'weekdays', WD, { 'rep_until~1730000000009': { rep_until_pick: { selected_date: '2027-11-05' } } })) === '2027-11-02,2027-11-03,2027-11-04,2027-11-05', 'v61: Find rooms reads a re-keyed Or until');
+    ok(DS(await read1('2027-11-02', 'weekdays', WD, { 'rep_count~1730000000008': { rep_count_pick: { selected_option: { value: '3' } } } })) === '2027-11-02,2027-11-03,2027-11-04', 'v61: Find rooms reads a re-keyed How many times');
+    const e2 = await read1('2027-11-05', 'weekdays', WD, { 'rep_until~1730000000009': { rep_until_pick: { selected_date: '2027-11-03' } } });
+    ok(!e2.valid && e2.answer.errors['rep_until~1730000000009'] === 'The end date has to be after the first date.' && !('rep_until' in e2.answer.errors), 'v61: the error lands on the field as drawn (rep_until~…)');
+    const e3 = await read1('2027-11-02', 'weekdays', WD, { 'rep_count~1730000000008': {} });
+    ok(!e3.valid && e3.answer.errors['rep_count~1730000000008'] === 'How many times - or pick an end date.', 'v61: nothing picked -> the error on the drawn How many times');
+  }
 
   // the line and the check share one rule (same code in all three nodes)
   const fn = n => { const s = jsOf(si, n); const i = s.indexOf('function repSeries'); return s.slice(i, s.indexOf('function repNote', i)); };
   ok(fn('Build Step 1') === fn('Note Toggle') && fn('Note Toggle') === fn('Read Step 1'), 'one rule in Build Step 1, Note Toggle and Read Step 1');
 
   // only these nodes changed since v59, wiring the same
-  const old = JSON.parse(fs.readFileSync('workflows/imported/slack-interactions-v59-imported.json', 'utf8'));
+  const old = JSON.parse(fs.readFileSync(VER >= 61 ? 'workflows/imported/slack-interactions-v60-imported.json' : 'workflows/imported/slack-interactions-v59-imported.json', 'utf8'));
   const OB = Object.fromEntries(old.nodes.map(n => [n.name, JSON.stringify(n.parameters)]));
   const changed = si.nodes.filter(n => OB[n.name] !== JSON.stringify(n.parameters)).map(n => n.name).sort();
-  ok(changed.join() === 'Build Step 1,Check Signature,Note Toggle,Read Step 1' && JSON.stringify(si.connections) === JSON.stringify(old.connections), 'only the v60 nodes changed, wiring the same: ' + changed.join(', '));
+  ok(changed.join() === (VER >= 61 ? 'Note Toggle,Read Step 1' : 'Build Step 1,Check Signature,Note Toggle,Read Step 1') && JSON.stringify(si.connections) === JSON.stringify(old.connections), 'only this build\'s nodes changed, wiring the same: ' + changed.join(', '));
 
   console.log(pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

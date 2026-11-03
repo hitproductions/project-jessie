@@ -52,7 +52,7 @@ const tv = v => ({ selected_option: { value: v } });
 const S = (purpose, kind, extra) => Object.assign({ date: '2027-10-20', t0: '16:00', t1: '18:00', purpose, kind, requester: 'U1', channel: 'D1', ext: 'x' }, extra || {});
 const step2 = async (s, ra) => (await j1('Build Step 2', [{ json: Object.assign({ status: 'OK', busy: [] }, ra) }],
   { 'Read Step 1': [{ json: { s } }], 'Read Cache 2': cacheRow, 'Loc Projects 2': LOC })).view;
-const blk = (v, id) => v.blocks.find(b => b.block_id === id);
+const blk = (v, id) => v.blocks.find(b => b.block_id === id) || (/^rep_/.test(id) ? v.blocks.find(b => String(b.block_id || '').split('~')[0] === id) : undefined);   // v61: Repeats fields re-keyed on redraw
 const blkRe = (v, re) => v.blocks.find(b => re.test(b.block_id || ''));
 const ids = v => v.blocks.map(b => b.block_id).filter(Boolean);
 const radioOf = v => { const b = blkRe(v, /^room(~\d+)?$/); return b && (b.element || (b.elements || [])[0]); };

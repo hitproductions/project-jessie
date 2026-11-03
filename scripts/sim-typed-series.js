@@ -70,7 +70,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const step1 = async (pre) => (await j1(si, 'Build Step 1', [], { 'Check Signature': [{ json: { user: 'U1', triggerId: 'T1', channel: 'D1' } }], 'Read Cache': cache,
     'Read Request': [{ json: { payload: { actions: [{ action_id: 'open_book', value: pre ? JSON.stringify(pre) : 'menu' }] } } }] })).view;
   let V = await step1({ d: '2027-10-18', s: '14:00', e: '16:00', r: 'Studio 7', rep: { f: 'weekly', days: ['MO', 'WE'], n: 4 } });
-  const B = id => V.blocks.find(b => b.block_id === id);
+  const B = id => V.blocks.find(b => b.block_id === id) || V.blocks.find(b => String(b.block_id || '').split('~')[0] === id);   // v61
   ok(B('repeat_toggle').elements[0].initial_options.length === 1 && B('rep_freq').element.initial_option.value === 'weekly'
      && B('rep_days').element.initial_options.map(o => o.value).join() === 'MO,WE' && B('rep_count').element.initial_option.value === '4' && (V60 ? !B('rep_until').element.initial_date : B('rep_until').element.initial_date === '2027-11-15'),
      'step 1: Repeats ticked - every week, Mon and Wed, 4 times (Or until starts 4 weeks out, in 2027)');
@@ -83,7 +83,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   // the ticked box still builds the same fields
   const t = await j1(si, 'Note Toggle', [], { 'Read Request': [{ json: { payload: { type: 'block_actions', actions: [{ action_id: 'repeat_toggle', selected_options: [{ value: 'rep' }] }],
     view: { id: 'V', callback_id: 'book_step1', title: V.title, close: V.close, submit: V.submit, blocks: V.blocks, state: { values: { date: { date_pick: { selected_date: '2027-10-21' } } } } } } } }] });
-  ok(t.view.blocks.find(b => b.block_id === 'rep_days').element.initial_options.map(o => o.value).join() === 'TH', 'ticking the box: the first date\'s day (Thu)');
+  ok(t.view.blocks.find(b => /^rep_days(~\d+)?$/.test(b.block_id || '')).element.initial_options.map(o => o.value).join() === 'TH', 'ticking the box: the first date\'s day (Thu)');
 
   // step 1 read: the filled-in pattern gives the dates
   V = await step1({ d: '2027-10-18', s: '14:00', e: '16:00', p: 'VO Recording', r: 'Studio 7', rep: { f: 'weekly', days: ['MO'], n: 4 } });
