@@ -903,7 +903,9 @@ the task runner), for whoever has shell access to the box.
     ones carry no "No …" options; their placeholder says it ("No booth") so Slack's clearing line reads "--No booth--" (19 Oct).
     **Errors too** (3 Nov, SI v61): a field's error from a submit stays on screen across views.update while its block_id is the same -
     SI v60 redrew step 1 with a correct live Repeats line and the old red "The end date has to be after the first date." stayed. To
-    clear it, redraw the field under a new block_id (values kept) and read it, and put errors, by stem.
+    clear it, redraw the field under a new block_id (values kept) and read it, and put errors, by stem. And take the value of the
+    field that sent the action from the action itself: the modal's saved state does not have it yet, so a re-keyed date picker
+    filled from state came back blank (SI v61 -> v62).
 48. **A sub-workflow hands back its last node's output, so it cannot reply first and work after** (19 Oct). To write the log
     sheets after "Booked.", Book Session v112 calls a separate workflow (Jessie — Log Booking) with Execute Workflow's
     `options.waitForSubWorkflow: false`; the call returns at once and the writes happen on their own. A new workflow has no id

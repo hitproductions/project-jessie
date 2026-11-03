@@ -5,7 +5,7 @@
 // Build Step 1, Note Toggle and Read Step 1.
 // Usage: node scripts/sim-repeat-live.js [slack interactions]
 const fs = require('fs');
-const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v61.json', 'utf8'));
+const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v62.json', 'utf8'));
 const VER = Number((String(si.name || '').match(/— v(\d+)/) || [])[1] || 0);   // v61: How many times / Or until / On re-keyed on every redraw
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
@@ -66,6 +66,17 @@ const j1 = async (...a) => { const r = await run(...a); return r && r[0] ? r[0].
     ok(blk(r2.view, /^rep_until(~\d+)?$/).element.initial_date === '2027-11-05' && (blk(r2.view, /^rep_days(~\d+)?$/).element.initial_options || []).map(o => o.value).join() === 'MO,TU,WE,TH,FR', 'v61: values kept across re-keys');
   }
   v = r.view;
+  if (VER >= 62) {   // v62: the pick arrives on the action only (the saved state does not have it yet) - kept on screen and counted
+    const e0 = (await act({ action_id: 'repeat_toggle', selected_options: [{ value: 'rep' }] }, s1.blocks, base('2027-11-02'))).view;   // Or until still empty
+    const e1 = (await act({ action_id: 'rep_freq_pick', selected_option: { value: 'weekdays' } }, e0.blocks, state(e0, '2027-11-02', 'weekdays', ['TU']))).view;
+    ok(!blk(e1, /^rep_until(~\d+)?$/).element.initial_date, 'v62 setup: Or until empty before the pick');
+    const r3 = await act({ action_id: 'rep_until_pick', selected_date: '2027-11-05' }, e1.blocks, state(e1, '2027-11-02', 'weekdays', WD));
+    ok(blk(r3.view, /^rep_until(~\d+)?$/).element.initial_date === '2027-11-05' && note(r3.view) === '🔁 *Books 4 dates:* Tue 2, Wed 3, Thu 4, Fri 5 Nov', 'v62: an end date only on the action stays picked: ' + note(r3.view));
+    const r4 = await act({ action_id: 'rep_count_pick', selected_option: { value: '3' } }, v.blocks, state(v, '2027-11-02', 'weekdays', WD));
+    ok(((blk(r4.view, /^rep_count(~\d+)?$/).element.initial_option) || {}).value === '3' && note(r4.view) === '🔁 *Books 3 dates:* Tue 2, Wed 3, Thu 4 Nov', 'v62: How many times only on the action stays picked');
+    const r5 = await act({ action_id: 'date_pick', selected_date: '2027-11-03' }, v.blocks, state(v, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-05' } } }));
+    ok(blk(r5.view, /^date$/).element.initial_date === '2027-11-03' && note(r5.view) === '🔁 *Books 3 dates:* Wed 3, Thu 4, Fri 5 Nov', 'v62: a new first date only on the action counts');
+  }
   // the end date moved out -> the line says it in words; back -> fine again
   r = await act({ action_id: 'rep_until_pick', selected_date: '2027-11-30' }, v.blocks, state(v, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-30' } } }));
   ok(note(r.view) === '⚠️ That’s 21 dates – the most is 16. Pick an earlier end date or a number.', 'too many, counted: ' + note(r.view));
@@ -116,10 +127,10 @@ const j1 = async (...a) => { const r = await run(...a); return r && r[0] ? r[0].
   ok(fn('Build Step 1') === fn('Note Toggle') && fn('Note Toggle') === fn('Read Step 1'), 'one rule in Build Step 1, Note Toggle and Read Step 1');
 
   // only these nodes changed since v59, wiring the same
-  const old = JSON.parse(fs.readFileSync(VER >= 61 ? 'workflows/imported/slack-interactions-v60-imported.json' : 'workflows/imported/slack-interactions-v59-imported.json', 'utf8'));
+  const old = JSON.parse(fs.readFileSync(VER >= 62 ? 'workflows/imported/slack-interactions-v61-imported.json' : VER >= 61 ? 'workflows/imported/slack-interactions-v60-imported.json' : 'workflows/imported/slack-interactions-v59-imported.json', 'utf8'));
   const OB = Object.fromEntries(old.nodes.map(n => [n.name, JSON.stringify(n.parameters)]));
   const changed = si.nodes.filter(n => OB[n.name] !== JSON.stringify(n.parameters)).map(n => n.name).sort();
-  ok(changed.join() === (VER >= 61 ? 'Note Toggle,Read Step 1' : 'Build Step 1,Check Signature,Note Toggle,Read Step 1') && JSON.stringify(si.connections) === JSON.stringify(old.connections), 'only this build\'s nodes changed, wiring the same: ' + changed.join(', '));
+  ok(changed.join() === (VER >= 62 ? 'Note Toggle' : VER >= 61 ? 'Note Toggle,Read Step 1' : 'Build Step 1,Check Signature,Note Toggle,Read Step 1') && JSON.stringify(si.connections) === JSON.stringify(old.connections), 'only this build\'s nodes changed, wiring the same: ' + changed.join(', '));
 
   console.log(pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
