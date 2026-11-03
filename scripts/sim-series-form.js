@@ -6,6 +6,7 @@
 // Usage: node scripts/sim-series-form.js [slack interactions v13] [book series]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v17.json', 'utf8'));
+const V60 = /v(\d+)/.test(String(si.name || '')) && Number(String(si.name).match(/v(\d+)/)[1]) >= 60;   // v60: no pre-filled Or until; the live Repeats line
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: room labels, no descriptions, no "No …" options (sim-round-9)
 const V25 = JSON.stringify(si.nodes).indexOf('function onlyRoom(') !== -1;   // v25: step 1 / room wording, the list an actions block
 const V15 = si.nodes.some(n => n.name === 'Read Cache 8'), V17 = si.nodes.some(n => n.name === 'Mark Cancelling');
@@ -70,8 +71,8 @@ const j1 = async (...a) => (await run(...a))[0].json;
     ok((await read1(F('weekly', ['TU'], 3, '2027-12-31'))).s.series.dates.length === 3, 'v15: both set -> How many times wins');
     ok((await read1(F('weekly', ['TU'], 3, '2027-10-10'))).valid, 'v15: an end date before the start is ignored when How many times is set');
     const tgu = await tog(true, s1.blocks, vals1);
-    ok(tgu.view.blocks.find(b => b.block_id === 'rep_until').element.initial_date === '2027-11-16' && (V17 ? tgu.view.blocks.find(b => b.block_id === 'rep_until').hint.text === 'Only applies if "How many times" is empty.' : /How many times is empty/.test(tgu.view.blocks.find(b => b.block_id === 'rep_until').hint.text)),
-       'v15: Or until starts 4 weeks after the first date (2027, not the real year), and says when it is used');
+    ok((V60 ? !tgu.view.blocks.find(b => b.block_id === 'rep_until').element.initial_date : tgu.view.blocks.find(b => b.block_id === 'rep_until').element.initial_date === '2027-11-16') && (V17 ? tgu.view.blocks.find(b => b.block_id === 'rep_until').hint.text === 'Only applies if "How many times" is empty.' : /How many times is empty/.test(tgu.view.blocks.find(b => b.block_id === 'rep_until').hint.text)),
+       'v15: Or until starts 4 weeks after the first date (v60: empty), and says when it is used');
     const pur = s1.blocks.find(b => b.block_id === 'purpose');
     ok((V25 ? pur.hint.text === 'You’ll get a recommendation based on the booking details.' : pur.hint.text === 'A room will be recommended to you based on your session details.') && pur.element.option_groups.map(g => g.label.text).join() === 'Sessions,Other bookings', 'v15: step 1 wording');
   }
@@ -79,7 +80,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   await err(F('weekly', [], 4), 'rep_days', /at least one day/);
   await err(F('weekly', ['TU']), 'rep_count', /How many times/);
   await err(F('weekly', ['TU'], null, '2027-10-10'), 'rep_until', /after the first date/);
-  await err(F('daily', null, null, '2027-12-31'), 'rep_until', /more than 16/);
+  await err(F('daily', null, null, '2027-12-31'), 'rep_until', /more than 16|the most is 16/);   // v60 names the count
   await err(F('weekly', ['TU'], null, '2027-10-20'), 'rep_until', /only one date/);
 
   // ---- Room Availability once per date; step 2

@@ -5,6 +5,7 @@
 // Usage: node scripts/sim-round-8.js [slack-interactions v25] [main v275] [book-session v112]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v25.json', 'utf8'));
+const V60 = /v(\d+)/.test(String(si.name || '')) && Number(String(si.name).match(/v(\d+)/)[1]) >= 60;   // v60: no pre-filled Or until; the live Repeats line
 const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 // v53 (28 Oct): the Vocal booth(s) is a multi-select - no "No booth" item; the picked booths read the same on either shape
 const V53 = JSON.stringify(si.nodes).indexOf("label: pt('Vocal booths')") !== -1;
@@ -71,7 +72,7 @@ const views = [];
   ok(pur.hint.text === 'You’ll get a recommendation based on the booking details.' && pur.element.placeholder.text === 'Select a booking type', '3 / 14: the hint and "Select a booking type"');
   ok(blk(s1, 'start').element.placeholder.text === 'Select a start time' && blk(s1, 'end').element.placeholder.text === 'Select an end time' && blk(s1, 'date').element.placeholder.text === 'Select a date', '15: Select a start time / an end time / a date');
   const rep = await toggle(s1, 'repeat_toggle', { selected_options: [{ value: 'rep' }] }, { date: { date_pick: { selected_date: '2027-10-20' } } });
-  ok(!blk(rep.view, 'rep_days').hint && blk(rep.view, 'rep_note').elements[0].text === 'Up to 16 dates.' && blk(rep.view, 'rep_freq').element.placeholder.text === 'Select how often'
+  ok(!blk(rep.view, 'rep_days').hint && (V60 ? /Up to 16 dates\./.test(blk(rep.view, 'rep_note').elements[0].text) : blk(rep.view, 'rep_note').elements[0].text === 'Up to 16 dates.') && blk(rep.view, 'rep_freq').element.placeholder.text === 'Select how often'
      && blk(rep.view, 'rep_count').element.placeholder.text === 'Select a number' && blk(rep.view, 'rep_until').hint.text === 'Only applies if "How many times" is empty.', '8a / 8b / 15: Repeats - no "For every week…", "Up to 16 dates.", Select … ; "Or until" keeps its hint');
   views.push(rep.view);
 

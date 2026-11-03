@@ -7,6 +7,7 @@ const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v269.json', 'utf8'));
 const V275 = /Hi, I’m Jessie!/.test(JSON.stringify(main.nodes));   // main v275: short menu lines, "Your booking details so far:"
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v17.json', 'utf8'));
+const V60 = /v(\d+)/.test(String(si.name || '')) && Number(String(si.name).match(/v(\d+)/)[1]) >= 60;   // v60: no pre-filled Or until; the live Repeats line
 // v40 / v280 (22 Oct): the summary on separate lines - read back as the one " · " line these checks were written for
 const one40 = s => String(s).replace(/🗓️ \*([^*\n]+)\*((?:\n\*[^*\n]+\*)+)/g, (m, a, b) => '🗓️ *' + [a].concat(b.split('\n').filter(Boolean).map(x => x.slice(1, -1))).join(' · ') + '*');
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9 (SI v26)
@@ -71,7 +72,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   let V = await step1({ d: '2027-10-18', s: '14:00', e: '16:00', r: 'Studio 7', rep: { f: 'weekly', days: ['MO', 'WE'], n: 4 } });
   const B = id => V.blocks.find(b => b.block_id === id);
   ok(B('repeat_toggle').elements[0].initial_options.length === 1 && B('rep_freq').element.initial_option.value === 'weekly'
-     && B('rep_days').element.initial_options.map(o => o.value).join() === 'MO,WE' && B('rep_count').element.initial_option.value === '4' && B('rep_until').element.initial_date === '2027-11-15',
+     && B('rep_days').element.initial_options.map(o => o.value).join() === 'MO,WE' && B('rep_count').element.initial_option.value === '4' && (V60 ? !B('rep_until').element.initial_date : B('rep_until').element.initial_date === '2027-11-15'),
      'step 1: Repeats ticked - every week, Mon and Wed, 4 times (Or until starts 4 weeks out, in 2027)');
   V = await step1({ d: '2027-10-18', rep: { f: 'weekdays', u: '2027-11-30' } });
   ok(B('rep_freq').element.initial_option.value === 'weekdays' && B('rep_until').element.initial_date === '2027-11-30' && !B('rep_count').element.initial_option, 'every weekday until Nov 30');
