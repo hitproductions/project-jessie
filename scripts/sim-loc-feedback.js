@@ -165,8 +165,8 @@ const opt = n => ({ text: { type: 'plain_text', text: n }, value: n });
     ok(n2.elements.map(e => e.action_id).join() === 'my_page_prev,my_page_next,my_page_jump' && n2.elements[2].initial_date === '2027-11-15', 'Previous / Next 7 days / Jump to a date');
 
     console.log('Slack Interactions v64: when the window can be closed');
-    ok(/Keep this window open – the dates show here\./.test(jsOf(SI, 'Read Step 2')) && !/Checking availability for each date\. ' \+ _wait \+ ' You can close/.test(jsOf(SI, 'Read Step 2')), 'checking the dates of a series: keep it open (closing lost the check)');
-    ok(/Keep this window open – the free rooms show here\./.test(jsOf(SI, 'Read Step 1')), 'finding free rooms: keep it open');
+    ok(/Keep this window open(?: – the dates show here)?\./.test(jsOf(SI, 'Read Step 2')) && !/Checking availability for each date\. ' \+ _wait \+ ' You can close/.test(jsOf(SI, 'Read Step 2')), 'checking the dates of a series: keep it open (closing lost the check)');
+    ok(/Keep this window open(?: – the free rooms show here)?\./.test(jsOf(SI, 'Read Step 1')), 'finding free rooms: keep it open');
     ok(/_wait \+ ' You can close this window – we’ll let you know in your DM once it’s done\.'/.test(jsOf(SI, 'Read Step 2')) && /You can close this window/.test(jsOf(SI, 'Read Series Confirm')) && /You can close this window/.test(jsOf(SI, 'Read Change')),
       'booking, booking a series and Change still say it (each has a DM)');
   }

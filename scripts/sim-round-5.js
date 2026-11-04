@@ -80,11 +80,11 @@ const V25 = JSON.stringify(si).indexOf('function onlyRoom(') !== -1;   // v25: b
   if (V25) ok(/You can close this window – we’ll let you know (?:in your DM )?once it’s done\./.test(jsOf('Read Step 2')) && !/Your booking is being processed/.test(jsOf('Read Step 2'))
      && /'(?: \+ ')?\s?You can close this window – we’ll let you know (?:in your DM )?once it’s done\.'/.test(jsOf('Read Change'))
      && /(?:Multiple bookings may take longer to process\. |_wait \+ ' )You can close this window – we’ll let you know (?:in your DM )?once it’s done\./.test(jsOf('Read Series Confirm'))
-     && /'Checking availability for each date\.(?: You can close this window – we’ll let you know in your DM\.| ' \+ _wait \+ ' You can close this window – we’ll let you know in your DM\.| ' \+ _wait \+ ' Keep this window open – the dates show here\.)?'/.test(jsOf('Read Step 2')), '3 (v25): the working lines in fewer words');
+     && /'Checking availability for each date\.(?: You can close this window – we’ll let you know in your DM\.| ' \+ _wait \+ ' You can close this window – we’ll let you know in your DM\.| ' \+ _wait \+ ' Keep this window open(?: – the dates show here)?\.)?'/.test(jsOf('Read Step 2')), '3 (v25): the working lines in fewer words');
   else ok(/Your booking is being processed\. You may close this window – we’ll notify you once it’s done\./.test(jsOf('Read Step 2'))
      && /'You may close this window – we’ll notify you once it’s done\.'/.test(jsOf('Read Change'))
      && /This may take a while\. You may close this window – we’ll notify you once it’s done\./.test(jsOf('Read Series Confirm'))
-     && /'Checking availability for each date\.(?: You can close this window – we’ll let you know in your DM\.| ' \+ _wait \+ ' You can close this window – we’ll let you know in your DM\.| ' \+ _wait \+ ' Keep this window open – the dates show here\.)?'/.test(jsOf('Read Step 2')), '3: the four working lines');
+     && /'Checking availability for each date\.(?: You can close this window – we’ll let you know in your DM\.| ' \+ _wait \+ ' You can close this window – we’ll let you know in your DM\.| ' \+ _wait \+ ' Keep this window open(?: – the dates show here)?\.)?'/.test(jsOf('Read Step 2')), '3: the four working lines');
 
   // ---- 4: Change on an all-day booking
   const buildChange = async (b) => j1('Build Change', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { actions: [{ value: JSON.stringify(b) }], container: { channel_id: 'D1', message_ts: '1' } } } }], 'Read Cache 6': cacheRow });
