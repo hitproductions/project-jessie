@@ -53,6 +53,20 @@ const opt = n => ({ text: { type: 'plain_text', text: n }, value: n });
     ok(F.prefill.r === 'Studio E' && F.prefill.p === 'Post Processing', 'Studio E alone -> Post Processing, as before', F.prefill);
     for (const [l, k, room] of [['b', 'bo', 'Studio B'], ['c', 'mr', 'Studio C'], ['d', 'bo', 'Studio D'], ['e', 'bo', 'Studio E'], ['f', 'mr', 'Studio F']]) {
       const G = await offer('book studio 1 and ' + l); ok(G.prefill.r === 'Studio 1' && G.prefill[k] === room, '"book studio 1 and ' + l + '" -> Studio 1 + ' + room + (k === 'bo' ? ' (booth)' : ' (+ Multiple studios)'), G.prefill); }
+    if (has(MAIN, 'v290 (Howard, 4 Nov)')) {   // main v290: Studio M is only for Van Recording - said, not dropped silently
+      rooms.push({ id: 'rm', fields: { 'Room Name': 'Studio M' } });
+      let G = await offer('book studio 1 and m tomorrow 2-4pm');
+      ok(G.prefill.r === 'Studio 1' && !G.prefill.mr && !G.prefill.bo && /⚠️ Studio M is only for Van Recording, so it’s left off\./.test(G.text), '"studio 1 and m" -> Studio 1, and the offer says Studio M is only for Van Recording', G);
+      G = await offer('book studio m and 1 tomorrow 2-4pm');
+      ok(G.prefill.r === 'Studio 1' && /Studio M is only for Van Recording/.test(G.text), '"studio m and 1" -> the same (Studio M typed first)', G.prefill);
+      G = await offer('book studio m and studio 1 for van recording tomorrow 2-4pm');
+      ok(G.prefill.r === 'Studio M' && !G.prefill.mr && /Van Recording is in Studio M only/.test(G.text), 'Van Recording with another room -> Studio M only, said', G);
+      G = await offer('book studio m tomorrow 2-4pm');
+      ok(G.prefill.r === 'Studio M' && G.prefill.p === 'Van Recording' && !/⚠️/.test(G.text), 'Studio M alone -> Van Recording, no note (as before)', G);
+      G = await offer('book studio 1 and b tomorrow 2-4pm');
+      ok(!/⚠️/.test(G.text), 'no Studio M -> no note');
+      rooms.pop();
+    }
     F = await offer('book studio 1 or a tomorrow 2-4pm');
     ok(!F.prefill.r && !F.prefill.bo, '"studio 1 or a" -> a choice, left to the form (as before)', F.prefill);
     F = await offer('book studio 7 tomorrow 2-4pm');
