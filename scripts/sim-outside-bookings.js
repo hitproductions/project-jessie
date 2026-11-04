@@ -61,7 +61,7 @@ ok(det('Studio 7').length === 1 && det('Studio 7')[0].start === '2026-10-30T14:0
 r = ra(RA, 'Studio 7', FB, ['2026-10-30T09:00:00+08:00', '2026-10-30T11:00:00+08:00']);
 ok(!(r.busy || []).some(b => /^Studio 7/.test(b)), 'Studio 7 in the morning (outside the 2-4 PM) -> still free', r.busy);
 // a failed read = the v24 answer exactly
-const strip = o => JSON.stringify(o);
+const strip = o => JSON.stringify(Object.assign({}, o, { final_color: undefined }));   // Book Session v127 adds the colour (sim-colours)
 for (const fb of [{}, { error: { message: 'Forbidden' } }, { calendars: { [RES.M4]: { errors: [{ reason: 'notFound' }] } } }]) {
   ok(strip(ra(RA, 'M4', fb)) === strip(ra(RA0, 'M4', fb)), 'free/busy ' + JSON.stringify(fb).slice(0, 60) + ' -> exactly v24\'s answer');
 }
