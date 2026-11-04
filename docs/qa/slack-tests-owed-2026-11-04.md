@@ -20,6 +20,7 @@ colleague, and cancel what you book.
 
 1. A weekly series over a date where the room is taken -> the review shows that date in another room ("Studio 6 instead of Studio 1").
 2. A date where every usual studio is taken then -> a required pick (earlier / later / skip).
+   A moved date is a dropdown set to Jessie's room - change it to another free studio, a nearest free time, or skip (v67).
 3. 20 dates or more -> "Are you sure? You're about to book N appointments."; a six-month series is accepted, seven months is not.
 4. Book all -> the DM lists what was booked; a skipped date has Find another time, which opens Book a room filled in for that date.
 5. Note how long Find rooms and the review take for a long series (they should not grow with the number of dates).
