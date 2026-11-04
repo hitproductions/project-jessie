@@ -51,6 +51,8 @@ const opt = n => ({ text: { type: 'plain_text', text: n }, value: n });
     ok(F.prefill.r === 'Studio 2' && F.prefill.bo === 'Studio E' && F.prefill.p !== 'Post Processing', 'Studio 2 + Studio E -> E is the booth, not Post Processing', F.prefill);
     F = await offer('book studio e tomorrow 2-4pm');
     ok(F.prefill.r === 'Studio E' && F.prefill.p === 'Post Processing', 'Studio E alone -> Post Processing, as before', F.prefill);
+    for (const [l, k, room] of [['b', 'bo', 'Studio B'], ['c', 'mr', 'Studio C'], ['d', 'bo', 'Studio D'], ['e', 'bo', 'Studio E'], ['f', 'mr', 'Studio F']]) {
+      const G = await offer('book studio 1 and ' + l); ok(G.prefill.r === 'Studio 1' && G.prefill[k] === room, '"book studio 1 and ' + l + '" -> Studio 1 + ' + room + (k === 'bo' ? ' (booth)' : ' (+ Multiple studios)'), G.prefill); }
     F = await offer('book studio 1 or a tomorrow 2-4pm');
     ok(!F.prefill.r && !F.prefill.bo, '"studio 1 or a" -> a choice, left to the form (as before)', F.prefill);
     F = await offer('book studio 7 tomorrow 2-4pm');
@@ -71,6 +73,13 @@ const opt = n => ({ text: { type: 'plain_text', text: n }, value: n });
     ok(mc.start === '2027-03-01', '"march" -> next March (as before)', mc);
     mc = await mine('my bookings nov 4');
     ok(mc.start === '2026-11-04' || mc.week === true, '"nov 4" is a date, not the month (as before)', mc);
+    // Howard's Slack test, 4 Nov 3:56 PM: "show me bookings i made on december 2027" reached the AI (a list in words, no buttons)
+    for (const [q, st] of [['show me bookings i made on december 2027', '2027-12-01'], ['bookings i made in december', '2026-12-01'], ['what bookings do i have in december 2027', '2027-12-01'],
+      ['sessions i booked next month', '2026-12-01'], ['what have i booked for december', '2026-12-01'], ['bookings ive made', '2026-11-04'], ['bookings under my name', '2026-11-04'],
+      ['list everything i booked', '2026-11-04'], ['what sessions am i in this week', '2026-11-04'], ['what are my reservations', '2026-11-04'], ['bookings ko sa december', '2026-12-01']]) {
+      const m = await mine(q); ok(m.go && m.start === st, JSON.stringify(q) + ' -> my bookings from ' + st, m); }
+    for (const q of ['is studio 7 free tomorrow', 'cancel my booking tomorrow', 'book studio 1 and b', 'what rooms have symphony', 'is anything free tomorrow'])
+      ok(!(await mine(q)).go, JSON.stringify(q) + ' -> not my bookings');
     mc = await mine('what are my bookings for november next year');
     const mr = await j1(MAIN, 'Mine Reply', [{ json: { items: [{ id: 'a', summary: 'KUBA / HL', start: { dateTime: '2027-11-10T13:00:00+08:00' }, end: { dateTime: '2027-11-10T15:00:00+08:00' }, description: 'ref: U1' }] } }],
       { 'Mine Check': [{ json: { mineCheck: Object.assign({}, mc, { channel: 'D1', user: 'U1' }) } }] });

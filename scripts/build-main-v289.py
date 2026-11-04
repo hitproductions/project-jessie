@@ -76,6 +76,19 @@ js = sub(js, "      const y = mo < mo0 ? y0 + 1 : y0;\n",
 js = sub(js, "      if (start < today && mo === mo0) start = today;", "      if (start < today && mo === mo0 && y === y0) start = today;")
 p["jsCode"] = js
 
+# "show me bookings i made on december 2027" reached the AI (Howard's Slack test, 4 Nov 3:56 PM): a list in words, no Change / Cancel.
+# More ways to ask: "bookings (that) i made / booked / have", "what bookings do i have", "what have i booked"; and "next month".
+js = p["jsCode"]
+js = sub(js, "    || (/\\bdid i (?:book|reserve)\\b|",
+    "    || /\\b(?:bookings?|sessions?|reservations?)(?: (?:that|which))? (?:i|ive|i have) (?:made|booked|have|did|reserved|set up)\\b|\\bwhat (?:bookings?|sessions?) (?:do|did|have) i\\b|\\bwhat (?:have|did) i (?:booked|book|reserved)\\b/.test(t)   // v289: \"bookings i made\"\n"
+    "    || /\\b(?:booked|bookings?|sessions?|reservations?) under (?:my name|me)\\b|\\b(?:everything|all|anything) (?:that )?i (?:booked|reserved|made)\\b|\\bwhat (?:sessions?|bookings?) am i (?:in|on)\\b|\\bmy reservations?\\b|\\b(?:bookings?|booking|sessions?|schedule|sched|reservations?) ko\\b/.test(t)   // v289: under my name, everything i booked, \"bookings ko\"\n"
+    "    || (/\\bdid i (?:book|reserve)\\b|")
+js = sub(js, "    else if (/\\bnext week\\b/.test(t)) { start = add(today, 7); end = add(today, 14); }\n",
+    "    else if (/\\bnext week\\b/.test(t)) { start = add(today, 7); end = add(today, 14); }\n"
+    "    else if (/\\bnext month\\b/.test(t) && !mm) { const _y = +today.slice(0, 4), _m = +today.slice(5, 7);   // v289\n"
+    "      start = new Date(Date.UTC(_y, _m, 1)).toISOString().slice(0, 10); end = new Date(Date.UTC(_y, _m + 1, 1)).toISOString().slice(0, 10); week = false; }\n")
+p["jsCode"] = js
+
 # ---- Mine Reply: the headline, Jump to a date
 p = by["Mine Reply"]["parameters"]
 js = p["jsCode"]
