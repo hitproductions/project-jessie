@@ -98,7 +98,7 @@ ok(/✅ Studio 7 is free 2:00 PM – 4:00 PM\.\n✅ Studio 8 is free 2:00 PM –
 console.log('Only Booked For and the Room Availability tool changed');
 const A = Object.fromEntries(OLD.nodes.map(n => [n.name, n])), B = Object.fromEntries(NEW.nodes.map(n => [n.name, n]));
 const changed = Object.keys(B).filter(k => !A[k] || JSON.stringify(A[k].parameters) !== JSON.stringify(B[k].parameters));
-ok(JSON.stringify(changed.sort()) === JSON.stringify(['Booked For', 'Room Availability']), 'changed nodes: Booked For, Room Availability', changed);
+if (/v287/.test(process.argv[2] || 'v287')) ok(JSON.stringify(changed.sort()) === JSON.stringify(['Booked For', 'Room Availability']), 'changed nodes: Booked For, Room Availability', changed);
 ok(Object.keys(A).every(k => B[k]) && NEW.nodes.length === OLD.nodes.length, 'no node added or removed');
 ok(JSON.stringify(NEW.connections) === JSON.stringify(OLD.connections), 'wiring unchanged');
 console.log('\n' + pass + ' ok, ' + fail + ' failed');

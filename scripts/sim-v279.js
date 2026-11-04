@@ -32,7 +32,7 @@ const ev = (id, room, ref) => ({ id, summary: 'T' + id, start: { dateTime: '2027
 const reply = mc => new Function('$', '$input', code('Mine Reply'))(n => ({ first: () => ({ json: { mineCheck: mc } }) }),
   { first: () => ({ json: { items: [ev('a', 'Studio 8', 'U1'), ev('b', 'Studio 7', 'U1'), ev('c', 'Studio 8', 'U9')] } }) })[0].json;
 let r = reply(Object.assign(mine('do i have studio 8 bookings'), { start: '2027-10-22', end: '2027-10-29' }));
-ok(/\*Your bookings in Studio 8\*/.test(r.blocks[0].text.text) && r.blocks.filter(b => /^bk_/.test(b.block_id || '')).map(b => b.block_id).join() === 'bk_a', 'only mine, only Studio 8', r.blocks.map(b => b.block_id || b.type));
+ok(/\*Your bookings in Studio 8:?\*/.test(r.blocks[0].text.text) && r.blocks.filter(b => /^bk_/.test(b.block_id || '')).map(b => b.block_id).join() === 'bk_a', 'only mine, only Studio 8', r.blocks.map(b => b.block_id || b.type));
 r = reply(Object.assign(mine('do i have m4 bookings'), { start: '2027-10-22', end: '2027-10-29' }));
 ok(/Nothing booked for you in M4 then\./.test(JSON.stringify(r.blocks)), 'none there -> "Nothing booked for you in M4 then."');
 console.log('Guard Probe leak filter');

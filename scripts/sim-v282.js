@@ -27,6 +27,6 @@ ok(win(mine('my bookings nov 4-1', '2027-11-04')) === '2027-11-04..2027-11-05' &
 console.log('Mine Reply');
 const reply = mc => new Function('$', '$input', code('Mine Reply'))(n => ({ first: () => ({ json: { mineCheck: mc } }) }), { first: () => ({ json: { items: [] } }) })[0].json;
 const r = reply(mine('what are my bookings nov 1-4', '2027-11-01'));
-ok(/\*Your bookings\* · Mon, Nov 1 – Thu, Nov 4/.test(r.blocks[0].text.text), 'the header says Mon, Nov 1 – Thu, Nov 4', r.blocks[0].text.text);
+ok(/\*Your bookings\* · Mon, Nov 1 – Thu, Nov 4|\*Your bookings:\*\n\*Nov 1 – Nov 4(?:, 2027)?\*/.test(r.blocks[0].text.text), 'the header says Mon, Nov 1 – Thu, Nov 4', r.blocks[0].text.text);
 console.log('\n' + pass + ' ok, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

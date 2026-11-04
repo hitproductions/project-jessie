@@ -79,7 +79,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const secs = L.blocks.filter(b => /^bk_/.test(b.block_id || ''));
   ok(secs.map(b => b.block_id).join() === 'bk_a,bk_b,bk_h', 'mine and the team\'s, in time order; not someone else\'s, not cancelled - ' + secs.map(b => b.block_id).join());
   ok(secs[0].text.text === '*T-a*\nFri, Oct 22 · 2:00 PM – 4:00 PM · Studio 7' && /_You’re engineering_/.test(secs[1].text.text) && /all day · M4/.test(secs[2].text.text), 'rows: title, when, room; "You’re engineering"; all day');
-  ok(L.blocks.filter(b => /^bka_/.test(b.block_id || '')).length === 3 && /\*Your bookings\* · Fri, Oct 22 – Thu, Oct 28/.test(L.blocks[0].text.text), 'each with Change / Cancel; the week in the header');
+  ok(L.blocks.filter(b => /^bka_/.test(b.block_id || '')).length === 3 && /\*Your bookings\* · Fri, Oct 22 – Thu, Oct 28|\*Your bookings:\*\n\*Oct 22 – Oct 28(?:, 2027)?\*/.test(L.blocks[0].text.text), 'each with Change / Cancel; the week in the header');
   const nav = L.blocks.find(b => b.block_id === 'my_nav').elements;
   ok(nav[0].value === '2027-10-15' && nav[1].value === '2027-10-29' && nav[0].text.text === '← Previous 7 days' && L.page && L.ts === '5.5', 'Previous / Next 7 days');
   // v16 (live: My bookings never showed): Slack refuses a block whose elements repeat an action_id

@@ -48,7 +48,7 @@ const ctx = v => (v.blocks.find(b => b.type === 'context') || { elements: [{}] }
   ];
   for (const [rows, want, label] of cases) { const r = await read2(rows); ok(ctx(r.answer.view).indexOf(want + ' You can close this window') === 0, label, ctx(r.answer.view)); }
   let r = await read2([T('check', 4, 8)], M({ series: { freq: 'weekly', days: ['TH'], dates: ['2027-10-21', '2027-10-28', '2027-11-04'] } }));
-  ok(/^Checking availability for each date\. Usually under 20 seconds\. You can close/.test(ctx(r.answer.view)), 'checking 3 dates at 4 s each -> under 20 seconds', ctx(r.answer.view));
+  ok(/^Checking availability for each date\. Usually under 20 seconds\. (?:You can close|Keep this window open)/.test(ctx(r.answer.view)), 'checking 3 dates at 4 s each -> under 20 seconds', ctx(r.answer.view));
   const rsc = async (tim, n) => j1('Read Series Confirm', [], { 'Check Signature': [chk], 'Timings 13': tim, 'Read Request': [{ json: { payload: { type: 'view_submission', view: { id: 'V3', private_metadata: JSON.stringify({ key: 'k', n, title: 'X' }) } } } }] });
   for (const [tim, n, want] of [[[], 4, 'Usually under 2 minutes.'], [[T('series', 25, 6)], 4, 'Usually under 2 minutes.'], [[T('series', 25, 6)], 16, 'Usually under 7 minutes.'], [[T('series', 8, 6)], 3, 'Usually under 30 seconds.']]) {
     const x = await rsc(tim, n); ok(ctx(x.answer.view).indexOf(want + ' You can close this window') === 0, 'booking ' + n + ' dates' + (tim.length ? ' at ' + tim[0].json.seconds + ' s each' : ', nothing learned (30 s a date)') + ' -> ' + want, ctx(x.answer.view));
@@ -57,9 +57,9 @@ const ctx = v => (v.blocks.find(b => b.type === 'context') || { elements: [{}] }
   const read1 = async (tim, extra) => j1('Read Step 1', [], { 'Check Signature': [chk], 'Timings 1': tim, 'Read Request': [{ json: { payload: { type: 'view_submission', view: { private_metadata: JSON.stringify({ requester: 'U1', channel: 'D1' }),
     state: { values: Object.assign({ date: { date_pick: { selected_date: '2027-10-21' } }, start: { start_pick: tv('13:00') }, end: { end_pick: tv('15:00') }, purpose: { purpose_pick: tv('VO Recording') } }, extra || {}) } } } } }] });
   let r1 = await read1([]);
-  ok(r1.valid && ctx(r1.answer.view) === 'Usually under 10 seconds.' && /Finding free rooms/.test(JSON.stringify(r1.answer.view)), 'Finding free rooms… - "Usually under 10 seconds."', r1.answer && r1.answer.view);
+  ok(r1.valid && /^Usually under 10 seconds\.(?: Keep this window open – the free rooms show here\.)?$/.test(ctx(r1.answer.view)) && /Finding free rooms/.test(JSON.stringify(r1.answer.view)), 'Finding free rooms… - "Usually under 10 seconds."', r1.answer && r1.answer.view);
   r1 = await read1([T('rooms', 3.2, 12)]);
-  ok(ctx(r1.answer.view) === 'Usually under 10 seconds.', 'rooms 3.2 s -> under 10 seconds (never less than 10)');
+  ok(/^Usually under 10 seconds\.(?: Keep this window open – the free rooms show here\.)?$/.test(ctx(r1.answer.view)), 'rooms 3.2 s -> under 10 seconds (never less than 10)');
   const rch = await j1('Read Change', [], { 'Check Signature': [chk], 'Timings 10': [T('change', 14, 7)], 'Read Cache 10': cacheRow,
     'Read Request': [{ json: { payload: { view: { id: 'V1', private_metadata: JSON.stringify({ b: { id: 'e1', d: '2027-10-21', s: '13:00', e: '15:00', r: 'Studio 7', t: 'VO / HL', st: 'VO Recording' } }),
       state: { values: { date: { date_pick: { selected_date: '2027-10-22' } }, start: { start_pick: tv('13:00') }, end: { end_pick: tv('15:00') }, room: { room_pick: tv('Studio 7') } } } } } } }] });

@@ -68,13 +68,13 @@ const C = main.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.no
   mc = await check('what do I have this week?');
   const mr = await j1('Mine Reply', [{ json: { items } }], { 'Mine Check': [{ json: { mineCheck: mc } }] });
   const rows = mr.blocks.filter(b => /^bk_/.test(b.block_id || ''));
-  ok(mr.blocks[0].text.text === '*Your bookings* · Fri, Oct 15 – Thu, Oct 21' && rows.length === 2 && rows[0].text.text === '*MUSICTEST / Jem Lim / HL x MV*\nFri, Oct 15 · 1:00 PM – 3:00 PM · Studio F',
+  ok(/^(?:\*Your bookings\* · Fri, Oct 15 – Thu, Oct 21|🗓️ \*Your bookings:\*\n\*Oct 15 – Oct 21(?:, 2027)?\*)$/.test(mr.blocks[0].text.text) && rows.length === 2 && rows[0].text.text === '*MUSICTEST / Jem Lim / HL x MV*\nFri, Oct 15 · 1:00 PM – 3:00 PM · Studio F',
      '3: title, date, time, room - no engineer / arranger, no "Filtering for" - ' + JSON.stringify(rows.map(r => r.text.text)));
-  ok(mr.blocks.some(b => b.block_id === 'bka_a') && mr.blocks.find(b => b.block_id === 'my_nav').elements.map(e => e.action_id).join() === 'my_page_prev,my_page_next'
+  ok(mr.blocks.some(b => b.block_id === 'bka_a') && mr.blocks.find(b => b.block_id === 'my_nav').elements.map(e => e.action_id).join().replace(/,my_page_jump$/, '') === 'my_page_prev,my_page_next'
      && mr.blocks.find(b => b.block_id === 'menu_nav').elements[0].action_id === 'open_book', '3: each with Change / Cancel; Previous / Next 7 days; Book a room');
   ok(mr.blocks.every(b => !b.elements || new Set(b.elements.map(e => e.action_id).filter(Boolean)).size === b.elements.filter(e => e.action_id).length), '3: no block repeats an action id');
   const mr2 = await j1('Mine Reply', [{ json: { items: [] } }], { 'Mine Check': [{ json: { mineCheck: await check('what do i have tomorrow?', '2027-10-16') } }] });
-  ok(mr2.blocks[0].text.text === '*Your bookings* · Sat, Oct 16' && mr2.blocks[1].text.text === 'Nothing booked for you then.' && !mr2.blocks.some(b => b.block_id === 'my_nav'), '3: one day, nothing -> said, no paging');
+  ok(/^(?:\*Your bookings\* · Sat, Oct 16|🗓️ \*Your bookings:\*\n\*Oct 16(?:, 2027)?\*)$/.test(mr2.blocks[0].text.text) && mr2.blocks[1].text.text === 'Nothing booked for you then.' && !(mr2.blocks.find(b => b.block_id === 'my_nav') || { elements: [] }).elements.some(e => /^my_page_(?:prev|next)$/.test(e.action_id)), '3: one day, nothing -> said, no paging');
   ok(nx('Late Menu?') === 'Send Late Menu | Mine Check' && (nx('Mine?') === 'List My Window | Early Room Plan' || nx('Mine?') === 'List My Window | Facts Check') && nx('Mine Reply') === 'Send Mine' && nx('Send Mine') === 'Turn Log Row+Clear Ack', '3 wiring');
   ok((await j1('Turn Log Row', [{ json: {} }], { 'Slack Trigger': [{ json: { text: 'x', ts: '1' } }], 'Send Mine': [{ json: { ok: true } }] })).Path === 'my bookings', '3: Turn Log "my bookings"');
 

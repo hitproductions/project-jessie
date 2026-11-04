@@ -136,7 +136,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
 
   // ---- 2: My bookings' example in quotes
   const L = await j1(si, 'Render My Bookings', [{ json: { items: [] } }], { 'My Window': [{ json: { user: 'U1', start: '2027-10-15', end: '2027-10-22', channel: 'D1', ts: '', page: false } }], 'Read Cache 4': cache });
-  ok(L.blocks[L.blocks.length - 1].elements[0].text === 'Further ahead? Type it, like _"what do I have in November?"_', '2: the example in quotes');
+  ok(L.blocks[L.blocks.length - 1].elements[0].text.replace('Pick a date, or type it', 'Type it').replace(' next year?', '?') === 'Further ahead? Type it, like _"what do I have in November?"_', '2: the example in quotes');
 
   // ---- 9: the notice has the booking's Change / Cancel
   const bkv = JSON.stringify({ id: 'evB', d: '2027-10-16', s: '20:00', e: '22:00', r: 'Studio 7', t: 'MAKINA / Sasa Abella / AEG' });

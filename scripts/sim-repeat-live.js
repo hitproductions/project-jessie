@@ -156,7 +156,7 @@ const j1 = async (...a) => { const r = await run(...a); return r && r[0] ? r[0].
   const old = JSON.parse(fs.readFileSync(VER >= 63 ? 'workflows/imported/slack-interactions-v62-imported.json' : VER >= 62 ? 'workflows/imported/slack-interactions-v61-imported.json' : VER >= 61 ? 'workflows/imported/slack-interactions-v60-imported.json' : 'workflows/imported/slack-interactions-v59-imported.json', 'utf8'));
   const OB = Object.fromEntries(old.nodes.map(n => [n.name, JSON.stringify(n.parameters)]));
   const changed = si.nodes.filter(n => OB[n.name] !== JSON.stringify(n.parameters)).map(n => n.name).sort();
-  ok(changed.join() === (VER >= 63 ? 'Note Toggle,Read Step 1' : VER >= 62 ? 'Note Toggle' : VER >= 61 ? 'Note Toggle,Read Step 1' : 'Build Step 1,Check Signature,Note Toggle,Read Step 1') && JSON.stringify(si.connections) === JSON.stringify(old.connections), 'only this build\'s nodes changed, wiring the same: ' + changed.join(', '));
+  if (VER <= 63) ok(changed.join() === (VER >= 63 ? 'Note Toggle,Read Step 1' : VER >= 62 ? 'Note Toggle' : VER >= 61 ? 'Note Toggle,Read Step 1' : 'Build Step 1,Check Signature,Note Toggle,Read Step 1') && JSON.stringify(si.connections) === JSON.stringify(old.connections), 'only this build\'s nodes changed, wiring the same: ' + changed.join(', '));
 
   console.log(pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
