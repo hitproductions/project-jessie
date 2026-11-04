@@ -65,6 +65,20 @@ let B2 = agg({ status: 'REJECTED', reason: 'NEED_DEPARTMENT', human: 'Which depa
 ok(B2.status === 'REJECTED' && B2.reason === 'NEED_DEPARTMENT', 'Book Session asks something -> that question, as before');
 B2 = agg(BSRES, { status: 'CALENDAR_ERROR', span: true, per_date: [] }, FD);
 ok(B2.status === 'REJECTED' && B2.reason === 'CALENDAR_ERROR', 'the span read failed -> nothing prepared (CALENDAR_ERROR), never "free"');
+// Howard's Slack test 4 Nov (Book Series v10): Mon 9 Nov, Studio 6 taken 9 AM - 10 PM -> the later option ends at 11:59 PM, never "24:00"
+if (/v10 \(v9 fixed\)/.test(JSON.stringify(BSR.nodes))) {
+  const D9 = ['2026-11-05', '2026-11-09'], P9 = Object.assign({}, PREP, { dates: D9.join(','), rooms: 'Studio 6', summary: 'NET-TESTT / HL' });
+  const it9 = runC(BSR, 'Expand Dates', [], { 'When Executed by Another Workflow': [{ json: P9 }] });
+  const cal9 = [ev('ISLA6', ['Studio 6'], '2026-11-09', '09:00', '22:00'), ev('B6', ['Studio 2'], '2026-11-09', '09:00', '21:00'), ev('BG', ['Studio 1'], '2026-11-09', '10:00', '22:00')];
+  const sp9 = runC(RA, 'Compute Availability', [{ json: { items: cal9 } }], { 'When Executed by Another Workflow': [{ json: { dates: D9.join(','), t0: '14:00', t1: '16:00', start_iso: '2026-11-05T14:00:00+08:00', end_iso: '2026-11-09T16:00:00+08:00',
+    session_type: 'Localization Dubbing', room: '', scope: '', hours: '', reference_data: REF, watch: 'Studio 6' } }], 'Room Free Busy': [{ json: {} }] })[0].json;
+  const fd9 = j1(BSR, 'First Date', [], { 'Expand Dates': it9, 'Span Check': [{ json: sp9 }], 'When Executed by Another Workflow': [{ json: P9 }] });
+  const a9 = j1(BSR, 'Aggregate', [{ json: Object.assign({}, BSRES, { prep_payload: JSON.stringify({ F: Object.assign({}, F, { Title: 'NET-TESTT / HL', Room: 'Studio 6' }), ref: 'U1' }) }) }],
+    { 'Expand Dates': it9, 'Span Check': [{ json: sp9 }], 'First Date': [{ json: fd9 }], 'When Executed by Another Workflow': [{ json: P9 }] });
+  const k9 = (a9.review.items.find(x => x.d === '2026-11-09') || {}), o9 = JSON.parse(JSON.parse(a9.prep_payload).inputs.choices)['2026-11-09'] || [];
+  ok(k9.kind === 'choose' && k9.options.map(o => o.label).join(' | ') === '7:00 AM – 9:00 AM (earlier) | 10:00 PM – 11:59 PM (later) | Skip – find another time later' && o9[1].end === '23:59',
+    'v10: Mon 9 Nov (Studio 6 taken 9 AM - 10 PM) -> 7-9 AM or 10 PM - 11:59 PM (never "24:00")', { opts: k9.options, stored: o9 });
+}
 console.log('Book Series v9 - six months');
 const ex = d => runC(BSR, 'Expand Dates', [], { 'When Executed by Another Workflow': [{ json: Object.assign({}, PREP, { dates: d.join(',') }) }] })[0].json;
 const wk = n => Array.from({ length: n }, (_, i) => new Date(Date.parse('2026-11-05T12:00:00Z') + i * 7 * 86400000).toISOString().slice(0, 10));
