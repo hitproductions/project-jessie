@@ -72,7 +72,7 @@ const views = [];
   ok(pur.hint.text === 'You’ll get a recommendation based on the booking details.' && pur.element.placeholder.text === 'Select a booking type', '3 / 14: the hint and "Select a booking type"');
   ok(blk(s1, 'start').element.placeholder.text === 'Select a start time' && blk(s1, 'end').element.placeholder.text === 'Select an end time' && blk(s1, 'date').element.placeholder.text === 'Select a date', '15: Select a start time / an end time / a date');
   const rep = await toggle(s1, 'repeat_toggle', { selected_options: [{ value: 'rep' }] }, { date: { date_pick: { selected_date: '2027-10-20' } } });
-  ok(!blk(rep.view, 'rep_days').hint && (V60 ? /Up to 16 dates\./.test(blk(rep.view, 'rep_note').elements[0].text) : blk(rep.view, 'rep_note').elements[0].text === 'Up to 16 dates.') && blk(rep.view, 'rep_freq').element.placeholder.text === 'Select how often'
+  ok(!blk(rep.view, 'rep_days').hint && (V60 ? /Up to (?:16 dates|6 months)\./.test(blk(rep.view, 'rep_note').elements[0].text) : blk(rep.view, 'rep_note').elements[0].text === 'Up to 16 dates.') && blk(rep.view, 'rep_freq').element.placeholder.text === 'Select how often'
      && blk(rep.view, 'rep_count').element.placeholder.text === 'Select a number' && blk(rep.view, 'rep_until').hint.text === 'Only applies if "How many times" is empty.', '8a / 8b / 15: Repeats - no "For every week…", "Up to 16 dates.", Select … ; "Or until" keeps its hint');
   views.push(rep.view);
 

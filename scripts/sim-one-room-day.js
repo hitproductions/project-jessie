@@ -31,7 +31,9 @@ const txt = v => v.blocks.map(b => (b.text && b.text.text) || (b.elements || [])
   ok((await toRA(S('Van Recording', 'studio'))).length === 2, 'Van Recording (Studio M) too');
   ok((await toRA(S('VO Recording', 'studio'))).length === 1, 'other types: one call, as before');
   ok((await toRA(S('Atmos Mixing', 'atmos', { allDay: true }))).length === 1, 'all day: one call (the window is the day)');
-  ok((await toRA(S('Atmos Mixing', 'atmos', { series: { dates: ['2027-10-28', '2027-11-04'] } }))).length === 2, 'a series: one call per date, no day call');
+  { const _x = await toRA(S('Atmos Mixing', 'atmos', { series: { dates: ['2027-10-28', '2027-11-04'] } }));
+    if (SI.nodes.some(n => n.name === 'Spread Dates')) ok(_x.length === 1 && _x[0].dates === '2027-10-28,2027-11-04', 'a series: one call for every date (v66), no day call', _x);
+    else ok(_x.length === 2, 'a series: one call per date, no day call'); }
 
   console.log('Build Step 2');
   const win = (free) => ({ status: 'OK', window: { start: 'a', end: 'b' }, free_priority: free ? ['Studio C'] : [], free_last_resort: [], free_rooms: free ? ['Studio C'] : [], busy: free ? [] : ['Studio C (x)'], busy_detail: [] });

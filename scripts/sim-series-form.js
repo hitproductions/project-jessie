@@ -80,13 +80,15 @@ const j1 = async (...a) => (await run(...a))[0].json;
   await err(F('weekly', [], 4), 'rep_days', /at least one day/);
   await err(F('weekly', ['TU']), 'rep_count', /How many times/);
   await err(F('weekly', ['TU'], null, '2027-10-10'), 'rep_until', /after the first date/);
-  await err(F('daily', null, null, '2027-12-31'), 'rep_until', /more than 16|the most is 16/);   // v60 names the count
+  if (si.nodes.some(n => n.name === 'Spread Dates')) await err(F('daily', null, null, '2028-06-30'), 'rep_until', /past 6 months/);   // v66: six months, not 16 dates
+  else await err(F('daily', null, null, '2027-12-31'), 'rep_until', /more than 16|the most is 16/);   // v60 names the count
   await err(F('weekly', ['TU'], null, '2027-10-20'), 'rep_until', /only one date/);
 
   // ---- Room Availability once per date; step 2
   r1 = await read1(F('weekly', ['TU'], 3));
   const ra = await run(si, 'To Room Availability', [], { 'Read Step 1': [{ json: r1 }], 'Read Cache 2': cache });
-  ok(ra.length === 3 && ra.map(x => x.json.start_iso).join() === '2027-10-19T14:00:00+08:00,2027-10-26T14:00:00+08:00,2027-11-02T14:00:00+08:00', 'one Room Availability call per date');
+  if (si.nodes.some(n => n.name === 'Spread Dates')) ok(ra.length === 1 && ra[0].json.dates === '2027-10-19,2027-10-26,2027-11-02' && ra[0].json.t0 === '14:00' && ra[0].json.start_iso === '2027-10-19T14:00:00+08:00' && ra[0].json.end_iso === '2027-11-02T16:00:00+08:00', 'v66: ONE Room Availability call for every date (dates, t0 / t1, the span)', ra.map(x => x.json));
+  else ok(ra.length === 3 && ra.map(x => x.json.start_iso).join() === '2027-10-19T14:00:00+08:00,2027-10-26T14:00:00+08:00,2027-11-02T14:00:00+08:00', 'one Room Availability call per date');
   const step2 = async (answers, s) => j1(si, 'Build Step 2', answers.map(a => ({ json: a })), { 'Read Step 1': [{ json: { s: s || r1.s } }], 'Read Cache 2': cache });
   let s2 = await step2([{ status: 'OK', free_priority: ['Studio 7', 'Studio 8'], free_last_resort: ['Studio 4'] }, { status: 'OK', free_priority: ['Studio 8'], free_last_resort: ['Studio 4'] },
     { status: 'OK', free_priority: ['Studio 7', 'Studio 8', 'Studio F'], free_last_resort: ['Studio 4'] }]);

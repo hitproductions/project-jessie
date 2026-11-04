@@ -84,13 +84,16 @@ const j1 = async (...a) => { const r = await run(...a); return r && r[0] ? r[0].
     ok(blk(r5.view, /^date$/).element.initial_date === '2027-11-03' && note(r5.view) === '🔁 *Books 3 dates:* Wed 3, Thu 4, Fri 5 Nov', 'v62: a new first date only on the action counts');
   }
   // the end date moved out -> the line says it in words; back -> fine again
-  r = await act({ action_id: 'rep_until_pick', selected_date: '2027-11-30' }, v.blocks, state(v, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-30' } } }));
-  ok(note(r.view) === '⚠️ That’s 21 dates – the most is 16. Pick an earlier end date or a number.', 'too many, counted: ' + note(r.view));
+  const UL = VER >= 66 ? '2028-06-30' : '2027-11-30';   // v66: six months, not 16 dates
+  r = await act({ action_id: 'rep_until_pick', selected_date: UL }, v.blocks, state(v, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: UL } } }));
+  ok(note(r.view) === (VER >= 66 ? '⚠️ That runs past 6 months – the most is 6 months from the first date. Pick an earlier end date or fewer times.' : '⚠️ That’s 21 dates – the most is 16. Pick an earlier end date or a number.'), 'too many, counted: ' + note(r.view));
+  if (VER >= 66) { const r21 = await act({ action_id: 'rep_until_pick', selected_date: '2027-11-30' }, v.blocks, state(v, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-30' } } }));
+    ok(note(r21.view) === '🔁 *Books 21 dates:* Tue 2 Nov – Tue 30 Nov', 'v66: 21 weekdays in November are fine now: ' + note(r21.view)); }
   // the first date changed (2026 -> 2027 was the likely cause): redrawn with the new count
   r = await act({ action_id: 'date_pick', selected_date: '2027-11-03' }, v.blocks, state(v, '2027-11-03', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-05' } } }));
   ok(r.ok && note(r.view) === '🔁 *Books 3 dates:* Wed 3, Thu 4, Fri 5 Nov', 'a new first date re-counts: ' + note(r.view));
   r = await act({ action_id: 'date_pick', selected_date: '2026-11-02' }, v.blocks, state(v, '2026-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-05' } } }));
-  ok(/That’s \d+ dates – the most is 16/.test(note(r.view)), 'first date a year before the end -> too many, said in the line');
+  ok(VER >= 66 ? /past 6 months/.test(note(r.view)) : /That’s \d+ dates – the most is 16/.test(note(r.view)), 'first date a year before the end -> too many, said in the line');
   // How many times wins over the end date
   r = await act({ action_id: 'rep_count_pick', selected_option: { value: '3' } }, v.blocks, state(v, '2027-11-02', 'weekdays', WD,
     { rep_count: { rep_count_pick: { selected_option: { value: '3' } } }, rep_until: { rep_until_pick: { selected_date: '2027-11-30' } } }));
@@ -114,8 +117,8 @@ const j1 = async (...a) => { const r = await run(...a); return r && r[0] ? r[0].
       'rep_days~2': { rep_days_pick: { selected_options: days.map(x => ({ value: x })) } } }, extra) } } } } }] });
   const DS = x => (x.s && x.s.series ? x.s.series.dates.join() : 'invalid ' + JSON.stringify((x.answer || {}).errors || ''));
   ok(DS(await read1('2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-05' } } })) === '2027-11-02,2027-11-03,2027-11-04,2027-11-05', 'Find rooms: Nov 2 - 5 -> Tue-Fri');
-  const e = await read1('2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-30' } } });
-  ok(!e.valid && e.answer.errors.rep_until === 'That’s 21 dates – the most is 16. Pick an earlier end date or a number.', 'Find rooms backstop says the count');
+  const e = await read1('2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: VER >= 66 ? '2028-06-30' : '2027-11-30' } } });
+  ok(!e.valid && e.answer.errors.rep_until === (VER >= 66 ? 'That runs past 6 months – the most is 6 months from the first date. Pick an earlier end date or fewer times.' : 'That’s 21 dates – the most is 16. Pick an earlier end date or a number.'), 'Find rooms backstop says the count');
   ok(DS(await read1('2027-11-02', 'weekly', ['MO', 'WE'], { rep_count: { rep_count_pick: { selected_option: { value: '4' } } } })) === '2027-11-02,2027-11-03,2027-11-08,2027-11-10', 'Find rooms: chosen date first');
   ok(DS(await read1('2027-11-05', 'weekly', ['FR'], { rep_count: { rep_count_pick: { selected_option: { value: '3' } } } })) === '2027-11-05,2027-11-12,2027-11-19', 'a Friday start on Fridays: as before');
   ok(DS(await read1('2027-11-05', 'weekdays', WD, { rep_count: { rep_count_pick: { selected_option: { value: '5' } } } })) === '2027-11-05,2027-11-08,2027-11-09,2027-11-10,2027-11-11', 'Weekdays from a Friday: as before (Fri, Mon-Thu)');
@@ -133,11 +136,12 @@ const j1 = async (...a) => { const r = await run(...a); return r && r[0] ? r[0].
       private_metadata: JSON.stringify({ requester: 'U1', channel: 'D1' }), state: { values: vals } }) } } }] });
     const fv = (await act({ action_id: 'rep_freq_pick', selected_option: { value: 'weekdays' } }, (await act({ action_id: 'repeat_toggle', selected_options: [{ value: 'rep' }] }, s1.blocks, base('2027-11-02'))).view.blocks,
       state((await act({ action_id: 'repeat_toggle', selected_options: [{ value: 'rep' }] }, s1.blocks, base('2027-11-02'))).view, '2027-11-02', 'weekdays', ['TU']))).view;
-    const st30 = state(fv, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: '2027-11-30' } } });
+    const U30 = VER >= 66 ? '2028-06-30' : '2027-11-30';   // v66: six months, not 16 dates
+    const st30 = state(fv, '2027-11-02', 'weekdays', WD, { rep_until: { rep_until_pick: { selected_date: U30 } } });
     const u = await read1b('2027-11-02', st30, fv);
     ok(!u.valid && u.answer.response_action === 'update' && !u.answer.errors, 'v63: a Repeats problem at Find rooms -> the same form back, no red error');
-    ok(blk(u.answer.view, /^rep_note$/).elements[0].text === '⚠️ That’s 21 dates – the most is 16. Pick an earlier end date or a number.', 'v63: the problem in the line: ' + blk(u.answer.view, /^rep_note$/).elements[0].text);
-    ok(blk(u.answer.view, /^rep_until(~\d+)?$/).element.initial_date === '2027-11-30' && blk(u.answer.view, /^date$/).element.initial_date === '2027-11-02'
+    ok(blk(u.answer.view, /^rep_note$/).elements[0].text === (VER >= 66 ? '⚠️ That runs past 6 months – the most is 6 months from the first date. Pick an earlier end date or fewer times.' : '⚠️ That’s 21 dates – the most is 16. Pick an earlier end date or a number.'), 'v63: the problem in the line: ' + blk(u.answer.view, /^rep_note$/).elements[0].text);
+    ok(blk(u.answer.view, /^rep_until(~\d+)?$/).element.initial_date === U30 && blk(u.answer.view, /^date$/).element.initial_date === '2027-11-02'
        && (blk(u.answer.view, /^rep_days(~\d+)?$/).element.initial_options || []).map(o => o.value).join() === 'MO,TU,WE,TH,FR' && u.answer.view.submit && u.answer.view.callback_id === 'book_step1',
        'v63: every pick written into the form that comes back; still step 1 with Find rooms');
     ok(blk(u.answer.view, /^rep_until(~\d+)?$/).block_id === blk(fv, /^rep_until(~\d+)?$/).block_id, 'v63: the ids unchanged');

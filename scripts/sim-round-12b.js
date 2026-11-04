@@ -68,8 +68,8 @@ const ctx = v => (v.blocks.find(b => b.type === 'context') || { elements: [{}] }
   console.log('which row each loading view reads');
   const RQ = p => ({ 'Read Request': [{ json: { payload: p } }] });
   ok(expr(node(si, 'Timings 1').parameters.filters.conditions[0].keyValue, RQ({ view: { state: { values: { date: {} } } } })) === 'rooms', 'step 1, no Repeats -> rooms');
-  ok(expr(node(si, 'Timings 1').parameters.filters.conditions[0].keyValue, RQ({ view: { state: { values: { rep_freq: {} } } } })) === 'rooms-series', 'step 1 with Repeats -> rooms-series');
-  ok(expr(node(si, 'Timings 2').parameters.filters.conditions[0].keyValue, RQ({ view: { private_metadata: JSON.stringify({ series: { dates: ['a', 'b'] } }) } })) === 'check', 'step 2 of a series -> check');
+  ok(expr(node(si, 'Timings 1').parameters.filters.conditions[0].keyValue, RQ({ view: { state: { values: { rep_freq: {} } } } })) === (si.nodes.some(n => n.name === 'Spread Dates') ? 'rooms-span' : 'rooms-series'), 'step 1 with Repeats -> rooms-series (v66: rooms-span)');
+  ok(expr(node(si, 'Timings 2').parameters.filters.conditions[0].keyValue, RQ({ view: { private_metadata: JSON.stringify({ series: { dates: ['a', 'b'] } }) } })) === (si.nodes.some(n => n.name === 'Spread Dates') ? 'check-span' : 'check'), 'step 2 of a series -> check (v66: check-span)');
   ok(expr(node(si, 'Timings 2').parameters.filters.conditions[0].keyValue, RQ({ view: { private_metadata: '{bad' } })) === 'book', 'step 2, unreadable metadata -> book (no crash)');
   ok(node(si, 'Timings 13').parameters.filters.conditions[0].keyValue === 'series' && node(si, 'Timings 10').parameters.filters.conditions[0].keyValue === 'change', 'series confirm -> series; change -> change');
   for (const n of ['Timings 1', 'Timings 2', 'Timings 13', 'Timings 10', 'Read Timing', 'Save Timing']) {
@@ -86,7 +86,8 @@ const ctx = v => (v.blocks.find(b => b.type === 'context') || { elements: [{}] }
   let s = await samp(6, { 'Read Step 2': [{ json: { s: { kind: 'studio' } } }] });
   ok(s.length === 1 && s[0].json.scenario === 'book' && Math.abs(s[0].json.per - 21) < 1, 'route 6, one date -> book, ~21 s', s[0] && s[0].json);
   s = await samp(6, { 'Read Step 2': [{ json: { s: { series: { dates: ['a', 'b', 'c'] } } } }] }, 30000);
-  ok(s[0].json.scenario === 'check' && Math.abs(s[0].json.per - 10) < 1 && s[0].json.n === 3, 'route 6, 3 dates in 30 s -> check, 10 s a date');
+  if (si.nodes.some(n => n.name === 'Spread Dates')) ok(s[0].json.scenario === 'check-span' && Math.abs(s[0].json.per - 30) < 1 && s[0].json.n === 1, 'route 6, 3 dates in 30 s -> check-span, 30 s (v66: one check for every date)', s[0].json);
+  else ok(s[0].json.scenario === 'check' && Math.abs(s[0].json.per - 10) < 1 && s[0].json.n === 3, 'route 6, 3 dates in 30 s -> check, 10 s a date');
   s = await samp(13, { 'Read Series Confirm': [{ json: { meta: { n: 4 } } }] }, 100000);
   ok(s[0].json.scenario === 'series' && Math.abs(s[0].json.per - 25) < 1, 'route 13, 4 dates in 100 s -> series, 25 s a date');
   s = await samp(5, { 'Read Step 1': [{ json: { s: { kind: 'studio' } } }] }, 4000);

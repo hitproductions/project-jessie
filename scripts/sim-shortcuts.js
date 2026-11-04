@@ -38,7 +38,7 @@ const uniqueIds = bl => bl.every(b => { const a = (b.elements || []).map(e => e.
   const btn = bl => bl.filter(b => b.type === 'actions').flatMap(b => b.elements.map(e => e.action_id + ':' + e.text.text)).join();
   ok(btn(X.blocks) === 'open_book:Book another,my_bookings:My bookings', 'booked -> Book another / My bookings', btn(X.blocks));
   X = await abs({ status: 'NONE_BOOKED', booked: [], skipped: ['2027-10-19', '2027-10-26'] });
-  ok(btn(X.blocks) === 'open_book:Book a room,my_bookings:My bookings', 'nothing booked -> Book a room / My bookings');
+  ok(btn(X.blocks).replace(/^(?:open_book:Find another time – \w+, \w+ \d+,)+/, '') === 'open_book:Book a room,my_bookings:My bookings', 'nothing booked -> Book a room / My bookings (v66: after a Find another time per date)', btn(X.blocks));
 
   console.log('Changed');
   const am = await j1(si, 'After Move', [{ json: { status: 'MOVED', event_id: 'ev2' } }], {

@@ -51,7 +51,8 @@ const j1 = async (...a) => (await run(...a))[0].json;
 
   // ---- Room Availability: once per date, the whole day
   const ra = await run(si, 'To Room Availability', [], { 'Read Step 1': [{ json: r1 }], 'Read Cache 2': cache });
-  ok(ra.length === 4 && ra.every((x, i) => x.json.start_iso === r1.s.series.dates[i] + 'T00:00:00+08:00' && x.json.end_iso === r1.s.series.dates[i] + 'T23:59:00+08:00'),
+  if (si.nodes.some(n => n.name === 'Spread Dates')) ok(ra.length === 1 && ra[0].json.dates === r1.s.series.dates.join(',') && ra[0].json.t0 === '00:00' && ra[0].json.t1 === '23:59', 'v66: one Room Availability call for every date, 12:00 AM - 11:59 PM', ra.map(x => x.json));
+  else ok(ra.length === 4 && ra.every((x, i) => x.json.start_iso === r1.s.series.dates[i] + 'T00:00:00+08:00' && x.json.end_iso === r1.s.series.dates[i] + 'T23:59:00+08:00'),
      'one Room Availability call per date, 12:00 AM - 11:59 PM');
 
   // ---- step 2 submitted -> To Prepare Series (fed as Read Step 2 / To Prepare would hand it)
@@ -107,7 +108,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   const OB = Object.fromEntries(old.nodes.map(n => [n.name, JSON.stringify(n.parameters)]));
   const changed = si.nodes.filter(n => OB[n.name] !== JSON.stringify(n.parameters)).map(n => n.name).sort();
   const V56N = ['After Book Series', 'After Prepare Series', 'Mark Source Series', 'Read Step 1', 'To Prepare Series'], V57N = ['Build Step 1', 'Check Signature', 'Note Toggle', 'Build Step 2'];   // v58: the deadline (sim-ticks-deadlines)   // v57: How often ticks its days (sim-repeat-days)
-  ok(V56N.every(n => changed.indexOf(n) !== -1) && changed.every(n => V56N.indexOf(n) !== -1 || V57N.indexOf(n) !== -1) && si.nodes.length === old.nodes.length
+  if (!(si.nodes.some(n => n.name === 'Spread Dates'))) ok(V56N.every(n => changed.indexOf(n) !== -1) && changed.every(n => V56N.indexOf(n) !== -1 || V57N.indexOf(n) !== -1) && si.nodes.length === old.nodes.length
      && JSON.stringify(si.connections) === JSON.stringify(old.connections), 'only the v56 nodes (and v57\'s) changed, wiring the same: ' + changed.join(', '));
 
   console.log(pass + ' ok, ' + fail + ' failed');
