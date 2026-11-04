@@ -25,6 +25,12 @@ colleague, and cancel what you book.
 4. Book all -> the DM lists what was booked; a skipped date has Find another time, which opens Book a room filled in for that date.
 5. Note how long Find rooms and the review take for a long series (they should not grow with the number of dates).
 
+## A3. Calendar colours (Book Session v127, Move v43) - PENDING 151
+
+1. Book a Localization, a Music and an Audio Post session, an M booth and a meeting -> Peacock, Grape, Blueberry, Basil, Banana in Google Calendar.
+2. Change one (e.g. the time) -> the new event keeps the colour; change a booking whose colour was set by hand -> still that colour.
+3. Cancel them.
+
 ## B. Rooms booked outside KDC Bookings (Room Availability v25 / Book Session v125) - PENDING 148
 
 9. On your own calendar, an event tomorrow 3-4 PM inviting M8 (the room accepts) -> "is m8 free tomorrow at 3?" -> taken ("Booked outside
