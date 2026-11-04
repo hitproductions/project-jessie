@@ -16,6 +16,14 @@ colleague, and cancel what you book.
 7. A Repeats booking (3 dates) -> "Checking 3 dates…" says "Keep this window open – the dates show here."
 8. Post Processing -> Studio E still offered as the room.
 
+## A2. The series review (Room Availability v26, Book Series v9, Slack Interactions v66) - PENDING 150
+
+1. A weekly series over a date where the room is taken -> the review shows that date in another room ("Studio 6 instead of Studio 1").
+2. A date where every usual studio is taken then -> a required pick (earlier / later / skip).
+3. 20 dates or more -> "Are you sure? You're about to book N appointments."; a six-month series is accepted, seven months is not.
+4. Book all -> the DM lists what was booked; a skipped date has Find another time, which opens Book a room filled in for that date.
+5. Note how long Find rooms and the review take for a long series (they should not grow with the number of dates).
+
 ## B. Rooms booked outside KDC Bookings (Room Availability v25 / Book Session v125) - PENDING 148
 
 9. On your own calendar, an event tomorrow 3-4 PM inviting M8 (the room accepts) -> "is m8 free tomorrow at 3?" -> taken ("Booked outside
