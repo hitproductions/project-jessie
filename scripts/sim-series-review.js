@@ -79,6 +79,19 @@ if (/v10 \(v9 fixed\)/.test(JSON.stringify(BSR.nodes))) {
   ok(k9.kind === 'choose' && k9.options.map(o => o.label).join(' | ') === '7:00 AM – 9:00 AM (earlier) | 10:00 PM – 11:59 PM (later) | Skip – find another time later' && o9[1].end === '23:59',
     'v10: Mon 9 Nov (Studio 6 taken 9 AM - 10 PM) -> 7-9 AM or 10 PM - 11:59 PM (never "24:00")', { opts: k9.options, stored: o9 });
 }
+if (/v11 \(Howard, 4 Nov/.test(JSON.stringify(BSR.nodes))) {   // Howard's Tue 10 Nov: Studio 6 taken -> every other usual studio free then is offered
+  const D10 = ['2026-11-05', '2026-11-10'], P10 = Object.assign({}, PREP, { dates: D10.join(','), rooms: 'Studio 6', summary: 'NET-TESTT / HL' });
+  const it10 = runC(BSR, 'Expand Dates', [], { 'When Executed by Another Workflow': [{ json: P10 }] });
+  const cal10 = [ev('T6', ['Studio 6'], '2026-11-10', '13:00', '17:00')];
+  const sp10 = runC(RA, 'Compute Availability', [{ json: { items: cal10 } }], { 'When Executed by Another Workflow': [{ json: { dates: D10.join(','), t0: '14:00', t1: '16:00', start_iso: '2026-11-05T14:00:00+08:00', end_iso: '2026-11-10T16:00:00+08:00',
+    session_type: 'Localization Dubbing', room: '', scope: '', hours: '', reference_data: REF, watch: 'Studio 6' } }], 'Room Free Busy': [{ json: {} }] })[0].json;
+  const fd10 = j1(BSR, 'First Date', [], { 'Expand Dates': it10, 'Span Check': [{ json: sp10 }], 'When Executed by Another Workflow': [{ json: P10 }] });
+  const a10 = j1(BSR, 'Aggregate', [{ json: Object.assign({}, BSRES, { prep_payload: JSON.stringify({ F: Object.assign({}, F, { Title: 'NET-TESTT / HL', Room: 'Studio 6' }), ref: 'U1' }) }) }],
+    { 'Expand Dates': it10, 'Span Check': [{ json: sp10 }], 'First Date': [{ json: fd10 }], 'When Executed by Another Workflow': [{ json: P10 }] });
+  const k10 = a10.review.items.find(x => x.d === '2026-11-10') || {};
+  ok(k10.kind === 'moved' && k10.dflt === 'r0' && k10.options.map(o => o.label).join(' | ') === 'Studio 1 instead of Studio 6 | Studio 2 instead of Studio 6 | Studio 6 · 11:00 AM – 1:00 PM (earlier) | Studio 6 · 5:00 PM – 7:00 PM (later) | Skip – find another time later',
+    'v11: Tue 10 Nov (Studio 6 taken) -> Studio 1 picked, Studio 2 offered too, Studio 6 at 11-1 or 5-7, or skip', k10.options);
+}
 console.log('Book Series v9 - six months');
 const ex = d => runC(BSR, 'Expand Dates', [], { 'When Executed by Another Workflow': [{ json: Object.assign({}, PREP, { dates: d.join(',') }) }] })[0].json;
 const wk = n => Array.from({ length: n }, (_, i) => new Date(Date.parse('2026-11-05T12:00:00Z') + i * 7 * 86400000).toISOString().slice(0, 10));
@@ -106,7 +119,14 @@ const V = ap.view, bid = id => V.blocks.find(b => b.block_id === id);
 ok(V.callback_id === 'series_confirm' && V.submit.text === 'Book all', 'the review: "Book all"');
 ok(/^\*NET-KUBA \/ JL\*\n2:00 PM – 4:00 PM · Studio 1 \+ Studio A$/.test(V.blocks[0].text.text), 'the title, the time and the rooms on top', V.blocks[0].text.text);
 ok(/✅ \*Free \(2\):\*\n\*Nov:\* Thu 12, Thu 19/.test(bid('free').text.text), '"✅ Free (2): Nov: Thu 12, Thu 19"', bid('free').text.text);
-ok(/🔄 \*Another room \(1\):\*\n- Thu 5 Nov · Studio 6 instead of Studio 1, Studio B instead of Studio A/.test(bid('moved').text.text), '"🔄 Another room (1): Thu 5 Nov · Studio 6 instead of Studio 1, …"', bid('moved').text.text);
+const V67 = SI.nodes.some(n => /v67 \(Howard, 4 Nov/.test(n.parameters.jsCode || '')) && /v11 \(Howard, 4 Nov/.test(JSON.stringify(BSR.nodes));
+if (!V67) ok(/🔄 \*Another room \(1\):\*\n- Thu 5 Nov · Studio 6 instead of Studio 1, Studio B instead of Studio A/.test(bid('moved').text.text), '"🔄 Another room (1): Thu 5 Nov · Studio 6 instead of Studio 1, …"', bid('moved').text.text);
+else { const mv = bid('mv_2026-11-05');
+  ok(/Another room \(1\) – change it if you like/.test(bid('moved').text.text) && mv && mv.type === 'input' && mv.element.initial_option.value === 'r0'
+    && mv.element.initial_option.text.text === 'Studio 6 instead of Studio 1, Studio B instead of Studio A' && mv.label.text === 'Thu 5 Nov – Studio 1 and Studio A are taken then',
+    'v67: Thu 5 Nov - a dropdown set to Jessie\'s rooms ("Studio 6 instead of Studio 1, Studio B instead of Studio A")', mv);
+  ok(mv.element.options.map(o => o.text.text).join(' | ') === 'Studio 6 instead of Studio 1, Studio B instead of Studio A | Studio 1 + Studio A · 9:00 AM – 11:00 AM (earlier) | Studio 1 + Studio A · 5:00 PM – 7:00 PM (later) | Skip – find another time later',
+    'v67: the other choices - the rooms asked at the nearest free times, or skip', mv.element.options.map(o => o.text.text)); }
 const ch = bid('ch_2026-11-26');
 ok(ch && ch.type === 'input' && !ch.optional && ch.element.action_id === 'ch_pick' && ch.element.options.map(o => o.value).join() === 'a,b,skip' && /Thu 26 Nov – Studio 1 is taken then/.test(ch.label.text),
   'Nov 26: a required pick - earlier, later or skip', ch);
@@ -131,6 +151,22 @@ const bk = runC(BSR, 'Expand Dates', [], { 'When Executed by Another Workflow': 
 const b26 = bk.find(x => x._date === '2026-11-26'), b05 = bk.find(x => x._date === '2026-11-05');
 ok(bk.length === 4 && b26.start_iso === '2026-11-26T17:00:00+08:00' && b26.end_iso === '2026-11-26T19:00:00+08:00' && b05.rooms === 'Studio 6, Studio B' && b05.start_iso === '2026-11-05T14:00:00+08:00',
   'Book Series books Nov 26 at 5-7 PM and Nov 5 in Studio 6 + Studio B', bk.map(x => x._date + ' ' + x.start_iso.slice(11, 16) + ' ' + x.rooms));
+if (V67) {   // v67: a moved date's pick
+  const cf = (vals) => j1(SI, 'Read Series Confirm', [], { 'Check Signature': [{ json: { user: 'U1' } }], 'Timings 13': [],
+    'Read Request': [{ json: { payload: { view: { id: 'V1', private_metadata: V.private_metadata, state: { values: vals } } } } }] });
+  const sel = v => ({ ch_pick: { selected_option: { value: v } } });
+  let c2 = cf({ 'mv_2026-11-05': sel('b'), 'ch_2026-11-26': sel('skip') }), t2 = toBook(c2);
+  ok(t2.go && JSON.parse(t2.per_date)['2026-11-05'].start === '17:00' && JSON.parse(t2.per_date)['2026-11-05'].rooms === 'Studio 1, Studio A' && t2.dates === '2026-11-05,2026-11-12,2026-11-19' && /Booking 3 dates/.test(JSON.stringify(c2.answer)),
+    'v67: Thu 5 Nov changed to Studio 1 + A at 5-7 PM; Nov 26 skipped - 3 dates', { per: t2.per_date, d: t2.dates });
+  const bk2 = runC(BSR, 'Expand Dates', [], { 'When Executed by Another Workflow': [{ json: Object.assign({}, t2, { mode: '' }) }] }).map(i => i.json).find(x => x._date === '2026-11-05');
+  ok(bk2.rooms === 'Studio 1, Studio A' && bk2.start_iso === '2026-11-05T17:00:00+08:00' && bk2.end_iso === '2026-11-05T19:00:00+08:00', 'v67: booked in the rooms asked at 5-7 PM', bk2);
+  c2 = cf({ 'mv_2026-11-05': sel('skip'), 'ch_2026-11-26': sel('a') }); t2 = toBook(c2);
+  ok(t2.go && t2.dates === '2026-11-12,2026-11-19,2026-11-26' && t2.skipped_review.join() === '2026-11-05' && /Booking 3 dates/.test(JSON.stringify(c2.answer)), 'v67: a moved date skipped -> taken out, in the DM', t2.skipped_review);
+  c2 = cf({ 'ch_2026-11-26': sel('skip') }); t2 = toBook(c2);
+  ok(JSON.parse(t2.per_date)['2026-11-05'].rooms === 'Studio 6, Studio B' && t2.dates.split(',').length === 3, 'v67: no pick on a moved date -> Jessie\'s rooms, as before');
+  t2 = toBook(Object.assign({}, c2, { choices: { '2026-11-05': 'r9', '2026-11-26': 'skip' } }));
+  ok(JSON.parse(t2.per_date)['2026-11-05'].rooms === 'Studio 6, Studio B', 'v67: a room the review never offered -> Jessie\'s rooms, never that room');
+}
 C1 = confirm('skip'); TB = toBook(C1);
 ok(TB.go && TB.dates === '2026-11-05,2026-11-12,2026-11-19' && TB.skipped_review.join() === '2026-11-26', 'Skip -> three dates booked, Nov 26 skipped', TB.skipped_review);
 TB = toBook(Object.assign({}, C1, { choices: { '2026-11-26': 'z' } }));
