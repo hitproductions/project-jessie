@@ -136,6 +136,18 @@ const opt = n => ({ text: { type: 'plain_text', text: n }, value: n });
     ok(bb && bb.dispatch_action === true && (bb.element.initial_options || []).map(o => o.value).join() === 'Studio A,Studio E', 'Localization Dubbing in Studio 1: Studio A + Studio E picked as booths (E is a booth now)', bb);
     const bi = v.blocks.indexOf(bb);
     ok(v.blocks[bi + 1] && v.blocks[bi + 1].block_id === 'booth_picked' && v.blocks[bi + 1].elements[0].text === 'Picked: Studio A, Studio E', 'drawn with two picks -> the line is there from the start', v.blocks[bi + 1]);
+    if (has(SI, 'v65 (Howard')) {   // v65: Howard's Slack test 4 Nov - Studio 1 + Studio A both held by an 11 AM - 5 PM booking
+      const FREE2 = FREE.filter(n => n !== 'Studio 1' && n !== 'Studio A' && n !== 'Studio 2');
+      const note = v => (v.blocks.find(b => b.block_id === 'pre_note') || { text: {} }).text.text;
+      let w = await step2(Object.assign({}, S, { pre: { r: 'Studio 1', bo: 'Studio A' } }), { free_priority: ['Studio 6'], free_rooms: FREE2, busy: ['Studio 1 (NRT-BONJOUR6)', 'Studio A (NRT-BONJOUR6)', 'Studio 2 (X)'] });
+      ok(note(w) === '⚠️ Studio 1 and Studio A are taken then. These are free:', 'room and booth taken -> "Studio 1 and Studio A are taken then. These are free:"', note(w));
+      w = await step2(Object.assign({}, S, { pre: { r: 'Studio 1', bo: 'Studio A,Studio B' } }), { free_priority: ['Studio 1'], free_rooms: FREE.filter(n => n !== 'Studio A'), busy: ['Studio A (X)'] });
+      ok(note(w) === '⚠️ Studio A is taken then.' && /"value":"Studio 1"/.test(JSON.stringify(w.blocks)), 'room free, one booth taken -> "Studio A is taken then." (no "These are free:")', note(w));
+      w = await step2(Object.assign({}, S, { pre: { r: 'Studio 1', bo: 'Studio A' } }), { free_priority: ['Studio 1'], free_rooms: FREE });
+      ok(!note(w), 'everything free -> no line (as before)', note(w));
+      w = await step2(Object.assign({}, S, { pre: { r: 'Studio 1' } }), { free_priority: ['Studio 6'], free_rooms: FREE2, busy: ['Studio 1 (X)'] });
+      ok(note(w) === '⚠️ Studio 1 is taken then. These are free:', 'one room taken -> as before', note(w));
+    }
     const mrb = v.blocks.find(b => b.block_id === 'more_rooms');
     ok(!mrb || mrb.dispatch_action === true, '+ Multiple studios sends its changes too');
     const ro = v.blocks.find(b => b.block_id && /^room/.test(b.block_id) && b.elements);
