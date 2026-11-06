@@ -20,7 +20,9 @@ function norm39(x, wf) { if (!V39B(wf)) return x; const walk = o => { if (Array.
       o.optional = true; if (o.element.initial_option && o.element.initial_option.value === 'none') delete o.element.initial_option; }
     for (const k of Object.keys(o)) walk(o[k]); };
   walk(x); return x; }
-async function run(wf, name, input, outs) {
+const { adapt: __adapt } = require('./sim-people-adapter.js');   // v70: one pick read as before
+const run = async (...a) => __adapt(await __run0(...a));
+async function __run0(wf, name, input, outs) {
   const js = wf.nodes.find(x => x.name === name).parameters.jsCode;
   const $ = n => ({ first: () => (outs[n] || [])[0], all: () => outs[n] || [] });
   const $input = { first: () => input[0], all: () => input };

@@ -18,7 +18,9 @@ let pass = 0, fail = 0;
 const M264 = /Project: /.test(main.nodes.find(n => n.name === 'Form Offer').parameters.jsCode), V10 = si.nodes.some(n => n.name === 'Note Toggle');
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
-async function run(wf, name, input, outs) {
+const { adapt: __adapt } = require('./sim-people-adapter.js');   // v70: one pick read as before
+const run = async (...a) => __adapt(await __run0(...a));
+async function __run0(wf, name, input, outs) {
   const $ = n => ({ first: () => { if (!(n in outs)) throw new Error('not run: ' + n); return outs[n][0]; }, all: () => outs[n] || [] });
   const $input = { first: () => input[0], all: () => input };
   return new Function('$', '$input', 'return (async function(){' + jsOf(wf, name) + '\n}).call(this);').call({ helpers: {} }, $, $input);

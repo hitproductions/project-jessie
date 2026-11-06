@@ -6,6 +6,7 @@
 // Usage: node scripts/sim-round-9.js [slack-interactions v26] [main v276] [book-session v113]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v26.json', 'utf8'));
+const V70 = JSON.stringify(si.nodes).indexOf('v70 (Howard, 6 Nov)') !== -1;   // people multi-selects (sim-several-engineers)
 const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 // v53 (28 Oct): the Vocal booth(s) is a multi-select - no "No booth" item; the picked booths read the same on either shape
 const V53 = JSON.stringify(si.nodes).indexOf("label: pt('Vocal booths')") !== -1;
@@ -25,7 +26,9 @@ function norm39(x, wf) { if (!V39B(wf)) return x; const walk = o => { if (Array.
       o.optional = true; if (o.element.initial_option && o.element.initial_option.value === 'none') delete o.element.initial_option; }
     for (const k of Object.keys(o)) walk(o[k]); };
   walk(x); return x; }
-async function runIn(wf, name, input, outs) {
+const { adapt: __adapt } = require('./sim-people-adapter.js');   // v70: one pick read as before
+const runIn = async (...a) => __adapt(await __runIn0(...a));
+async function __runIn0(wf, name, input, outs) {
   const js = wf.nodes.find(x => x.name === name).parameters.jsCode;
   const $ = n => ({ first: () => (outs[n] || [])[0], all: () => outs[n] || [] });
   const $input = { first: () => input[0], all: () => input };
@@ -115,12 +118,12 @@ const views = [];
   v = await step2(S('Music Vocal Recording', 'studio'), { free_priority: ['Studio F', 'Studio C'] });
   views.push(v);
   const eng = blk(v, 'engineer'), arr = blk(v, 'arranger'), bt = blkRe(v, /^booth~\d+$/);
-  ok(eng.optional && eng.element.placeholder.text === 'No engineer' && (V39 ? eng.element.options.slice(-1)[0].value === 'none' : !eng.element.options.some(o => o.value === 'none')), 'Engineer (an arranger also counts) - optional, empty reads "No engineer", no "No engineer" option');
-  ok(arr.optional && arr.element.placeholder.text === 'No arranger' && (V39 ? arr.element.options.slice(-1)[0].value === 'none' : !arr.element.options.some(o => o.value === 'none')) && !arr.element.initial_option, 'Arranger - empty reads "No arranger"');
+  if (!V70) ok(eng.optional && eng.element.placeholder.text === 'No engineer' && (V39 ? eng.element.options.slice(-1)[0].value === 'none' : !eng.element.options.some(o => o.value === 'none')), 'Engineer (an arranger also counts) - optional, empty reads "No engineer", no "No engineer" option');
+  if (!V70) ok(arr.optional && arr.element.placeholder.text === 'No arranger' && (V39 ? arr.element.options.slice(-1)[0].value === 'none' : !arr.element.options.some(o => o.value === 'none')) && !arr.element.initial_option, 'Arranger - empty reads "No arranger"');
   ok(bt.optional && bt.element.placeholder.text === 'No booth' && (V39 && !V53 ? bt.element.options.slice(-1)[0].value === 'none' : !bt.element.options.some(o => o.value === 'none')), 'Vocal booth - empty reads "No booth"');
   ok(!blk(v, 'team_note') && !/pick one or both/.test(JSON.stringify(v)), 'no "Engineer and arranger: pick one or both."');
   v = await step2(S('VO Recording', 'studio'), { free_priority: ['Studio 7'] });
-  ok(!blk(v, 'engineer').optional && blk(v, 'engineer').element.placeholder.text === 'Select an engineer', 'VO Recording - the engineer still required, "Select an engineer"');
+  if (!V70) ok(!blk(v, 'engineer').optional && blk(v, 'engineer').element.placeholder.text === 'Select an engineer', 'VO Recording - the engineer still required, "Select an engineer"');
   v = await step2(S('Localization Dubbing', 'loc'), { free_priority: ['Studio 1', 'Studio A'] });
   ok(!blkRe(v, /^booth~\d+$/).optional && blkRe(v, /^booth~\d+$/).element.placeholder.text === 'Select a booth', 'a booth the session needs - still required, set to the usual one');
   const mv = M('Music Vocal Recording', 'studio');
@@ -135,8 +138,8 @@ const views = [];
   // the Change form
   cv = await buildChange({ id: 'e2', d: '2027-10-19', s: '08:00', e: '10:00', r: 'Studio F, Studio A', t: 'SONG / DR', st: 'Music Vocal Recording' });
   const de = blk(cv, 'det_engineer'), da = blk(cv, 'det_arranger'), bc = blk(cv, 'booth_c');
-  ok(de.optional && de.element.placeholder.text === 'No engineer' && de.element.initial_option.value === 'U2' && (V39 ? de.element.options.slice(-1)[0].value === 'none' : !de.element.options.some(o => o.value === 'none')), 'Change: Engineer - the booking\'s, empty reads "No engineer"');
-  ok(da.element.placeholder.text === 'No arranger' && (V39 ? (!da.element.initial_option || da.element.initial_option.value === 'none') : !da.element.initial_option) && (V39 ? da.element.options.slice(-1)[0].value === 'none' : !da.element.options.some(o => o.value === 'none')), 'Change: Arranger - none on the booking -> empty, "No arranger"');
+  if (!V70) ok(de.optional && de.element.placeholder.text === 'No engineer' && de.element.initial_option.value === 'U2' && (V39 ? de.element.options.slice(-1)[0].value === 'none' : !de.element.options.some(o => o.value === 'none')), 'Change: Engineer - the booking\'s, empty reads "No engineer"');
+  if (!V70) ok(da.element.placeholder.text === 'No arranger' && (V39 ? (!da.element.initial_option || da.element.initial_option.value === 'none') : !da.element.initial_option) && (V39 ? da.element.options.slice(-1)[0].value === 'none' : !da.element.options.some(o => o.value === 'none')), 'Change: Arranger - none on the booking -> empty, "No arranger"');
   ok(bc.optional && bc.element.placeholder.text === 'No booth' && bPick(bc).join() === 'Studio A' && (V39 && !V53 ? bc.element.options.slice(-1)[0].value === 'none' : !bc.element.options.some(o => o.value === 'none')), 'Change: Vocal booth - Studio A, can be emptied');
   ok(!blk(cv, 'team_note'), 'Change: no "pick one or both"');
   const rcv = async (m, vals) => j1('Read Change', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { view: { id: 'V1', private_metadata: JSON.stringify(m), state: { values: vals } } } } }], 'Read Cache 10': cacheRow });

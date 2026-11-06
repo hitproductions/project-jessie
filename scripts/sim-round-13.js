@@ -12,7 +12,9 @@ const FX = require('./sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('FAIL ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
 const jsOf = (wf, n) => wf.nodes.find(x => x.name === n).parameters.jsCode;
-async function run(wf, name, input, outs) {
+const { adapt: __adapt } = require('./sim-people-adapter.js');   // v70: one pick read as before
+const run = async (...a) => __adapt(await __run0(...a));
+async function __run0(wf, name, input, outs) {
   const $ = n => ({ first: () => { if (!(n in outs)) throw new Error('not run: ' + n); return outs[n][0]; }, all: () => outs[n] || [] });
   const $input = { first: () => input[0], all: () => input };
   return new Function('$', '$input', 'return (async function(){' + jsOf(wf, name) + '\n}).call(this);').call({ helpers: {} }, $, $input);

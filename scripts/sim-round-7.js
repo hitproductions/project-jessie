@@ -4,6 +4,7 @@
 // Usage: node scripts/sim-round-7.js [slack-interactions v24] [move-booking v33] [main v274]
 const fs = require('fs');
 const si = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/slack-interactions-v24.json', 'utf8'));
+const V70 = JSON.stringify(si.nodes).indexOf('v70 (Howard, 6 Nov)') !== -1;   // people multi-selects (sim-several-engineers)
 const V39 = JSON.stringify(si.nodes).indexOf('a phone shows no') !== -1;   // v39: "No booth / engineer / arranger" back, last (phones cannot clear a pick)
 const V26 = /function roomAllowed\(/.test(JSON.stringify(si.nodes));   // round 9: no "No …" options, no "pick one or both", room labels (sim-round-9)
 const mv = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/move-booking-v33.json', 'utf8'));
@@ -22,7 +23,9 @@ function norm39(x, wf) { if (!V39B(wf)) return x; const walk = o => { if (Array.
       o.optional = true; if (o.element.initial_option && o.element.initial_option.value === 'none') delete o.element.initial_option; }
     for (const k of Object.keys(o)) walk(o[k]); };
   walk(x); return x; }
-async function runIn(wf, name, input, outs) {
+const { adapt: __adapt } = require('./sim-people-adapter.js');   // v70: one pick read as before
+const runIn = async (...a) => __adapt(await __runIn0(...a));
+async function __runIn0(wf, name, input, outs) {
   const js = wf.nodes.find(x => x.name === name).parameters.jsCode;
   const $ = n => ({ first: () => (outs[n] || [])[0], all: () => outs[n] || [] });
   const $input = { first: () => input[0], all: () => input };
@@ -65,7 +68,7 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
   v = await step2(S('Music Mixing', 'studio'), { free_priority: ['Studio F'] });
   ok((V26 ? !blk(v, 'team_note') : blk(v, 'team_note') && ids(v).indexOf('team_note') < ids(v).indexOf('engineer') && /pick one or both/.test(blk(v, 'team_note').elements[0].text))
      && blk(v, 'engineer').optional && blk(v, 'arranger').optional, '6: Music Mixing - "Engineer and arranger: pick one or both.", both optional');
-  ok(V26 ? (V39 ? blk(v, 'engineer').element.options.slice(-1)[0].value === 'none' : !blk(v, 'engineer').element.options.some(o => o.value === 'none')) && (V39 ? blk(v, 'arranger').element.options.slice(-1)[0].value === 'none' : !blk(v, 'arranger').element.options.some(o => o.value === 'none')) && blk(v, 'engineer').element.placeholder.text === 'No engineer' && blk(v, 'arranger').element.placeholder.text === 'No arranger'
+  if (!V70) ok(V26 ? (V39 ? blk(v, 'engineer').element.options.slice(-1)[0].value === 'none' : !blk(v, 'engineer').element.options.some(o => o.value === 'none')) && (V39 ? blk(v, 'arranger').element.options.slice(-1)[0].value === 'none' : !blk(v, 'arranger').element.options.some(o => o.value === 'none')) && blk(v, 'engineer').element.placeholder.text === 'No engineer' && blk(v, 'arranger').element.placeholder.text === 'No arranger'
      : blk(v, 'engineer').element.options[0].value === 'none' && blk(v, 'arranger').element.options[0].value === 'none', '6: "No engineer" / "No arranger" first - a picked Slack dropdown cannot be emptied otherwise');
   ok(!(await step2(S('VO Recording', 'studio'))).blocks.find(b => b.block_id === 'engineer').element.options.some(o => o.value === 'none'), '5: VO Recording - no "No engineer"');
   v = await step2(S('Music Mixing', 'studio', { requester: 'U9' }), { free_priority: ['Studio F'] });

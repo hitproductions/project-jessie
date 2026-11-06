@@ -10,9 +10,11 @@ const bPick = bl => (bl && bl.element ? [].concat(bl.element.initial_options || 
 const FX = require(P + 'scripts/sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('FAIL ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 400))); } };
-const run = (name, input, outs) => new Function('$', '$input', 'return (async function(){' + si.nodes.find(x => x.name === name).parameters.jsCode + '\n})();')(
+const __run0 = (name, input, outs) => new Function('$', '$input', 'return (async function(){' + si.nodes.find(x => x.name === name).parameters.jsCode + '\n})();')(
   n => { if (outs[n] === undefined) { const e = () => { throw new Error(n + ' not executed'); }; return { first: e, all: e }; } return { first: () => (outs[n] || [])[0], all: () => outs[n] || [] }; },
   { first: () => input[0], all: () => input });
+const { adapt: __adapt } = require('./sim-people-adapter.js');   // v70: one pick read as before
+const run = async (...a) => __adapt(await __run0(...a));
 const ST = (t, roles, pri, req) => ({ id: 'st-' + t, fields: { Type: t, Priority: pri, 'Last Resort': [], 'Engineer Role Required': roles, 'Room Requirements': req || '' } });
 const types = [ST('VO Recording', ['Post Engineer'], ['r7']), ST('Music Mixing', ['Music Engineer', 'Music Arranger'], ['rf']), ST('Music Arranging', ['Music Arranger'], ['rf']),
   ST('Celebrity Recording', ['Music Engineer', 'Post Engineer', 'Music Arranger'], ['rf'], 'Large'), ST('Localization Dubbing', ['Loc Engineer'], ['r1'], 'Separate vocal booth')];
@@ -26,6 +28,7 @@ const blk = (v, re) => v.blocks.find(b => re.test(b.block_id || ''));
 const last = b => b.element.options[b.element.options.length - 1].value;
 (async () => {
   if (JSON.stringify(si.nodes).indexOf('required (no Slack') === -1) { console.log('0 ok, 0 failed (an older build: v39 not in it)'); process.exit(0); }
+  if (JSON.stringify(si.nodes).indexOf('v70 (Howard, 6 Nov)') !== -1) { console.log('0 ok, 0 failed (v70: Engineer / Arranger are multi-selects, no "No …" options - see sim-several-engineers)'); process.exit(0); }
   console.log('Book');
   let v = await step2('Music Mixing', 'U3', ['Studio F']);
   let e = blk(v, /^engineer$/), a = blk(v, /^arranger$/);
