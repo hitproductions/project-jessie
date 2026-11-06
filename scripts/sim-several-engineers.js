@@ -30,13 +30,20 @@ const blk = (v, id) => (v.blocks || []).find(b => b.block_id === id);
   const step2 = async (s, ra) => (await j1(SI, 'Build Step 2', [{ json: Object.assign({ status: 'OK', busy: [], free_priority: ['Studio 7'] }, ra) }], { 'Read Step 1': [{ json: { s } }], 'Read Cache 2': cacheRow, 'Loc Projects 2': [] })).view;
   const V71 = /v71 \(Howard, 6 Nov\)/.test(JSON.stringify(SI.nodes));   // one engineer + "Add more engineers"
   let v, e;
+  const V74 = /v74 \(Howard\): not people/.test(JSON.stringify(SI.nodes));   // no Picked: line under people / + Multiple studios, no dispatch
   if (!V71) {
     v = await step2(S('VO Recording', 'studio'));
     e = blk(v, 'engineer');
-    ok(e && e.element.type === 'multi_static_select' && e.dispatch_action === true && (e.element.initial_options || []).map(o => o.value).join() === 'U1' && !e.element.options.some(o => o.value === 'none'),
+    ok(e && e.element.type === 'multi_static_select' && (V74 ? !e.dispatch_action : e.dispatch_action === true) && (e.element.initial_options || []).map(o => o.value).join() === 'U1' && !e.element.options.some(o => o.value === 'none'),
       'VO Recording: Engineer is a multi-select, you picked (as before), no "No engineer" option (a phone can clear it)', e && e.element);
     v = await step2(S('VO Recording', 'studio', { pre: { en: 'U1,U5' } }));
-    ok((blk(v, 'engineer').element.initial_options || []).map(o => o.value).sort().join() === 'U1,U5' && /Picked: Elijah Gan, Howard Luistro/.test(JSON.stringify(v.blocks)), 'saved answers "U1,U5" -> both picked, "Picked: Elijah Gan, Howard Luistro"');
+    ok((blk(v, 'engineer').element.initial_options || []).map(o => o.value).sort().join() === 'U1,U5' && (V74 ? !/Picked:/.test(JSON.stringify(v.blocks)) : /Picked: Elijah Gan, Howard Luistro/.test(JSON.stringify(v.blocks))),
+      'saved answers "U1,U5" -> both picked' + (V74 ? ', no "Picked:" line (v74)' : ', "Picked: Elijah Gan, Howard Luistro"'));
+    if (V74) {
+      const w = await step2(S('Music Recording', 'studio', { pre: { en: 'U1', ar: 'U6,U7' } }));
+      ok(!blk(w, 'engineer_picked') && !blk(w, 'arranger_picked') && !blk(w, 'arranger').dispatch_action && !blk(w, 'engineer').dispatch_action,
+        'v74 Music: Engineer and Arranger with no "Picked:" line and no dispatch', w.blocks.map(b => b.block_id));
+    }
   } else {
     v = await step2(S('VO Recording', 'studio')); e = blk(v, 'engineer');
     const tk = blk(v, 'more_eng_toggle');

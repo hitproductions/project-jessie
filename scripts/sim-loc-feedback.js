@@ -149,7 +149,8 @@ const opt = n => ({ text: { type: 'plain_text', text: n }, value: n });
       ok(note(w) === '⚠️ Studio 1 is taken then. These are free:', 'one room taken -> as before', note(w));
     }
     const mrb = v.blocks.find(b => b.block_id === 'more_rooms');
-    ok(!mrb || mrb.dispatch_action === true, '+ Multiple studios sends its changes too');
+    if (/v74 \(Howard\): not people/.test(JSON.stringify(SI.nodes))) ok(!mrb || (!mrb.dispatch_action && !v.blocks.some(b => b.block_id === 'more_rooms_picked')), 'v74: + Multiple studios - no "Picked:" line, no dispatch');
+    else ok(!mrb || mrb.dispatch_action === true, '+ Multiple studios sends its changes too');
     const ro = v.blocks.find(b => b.block_id && /^room/.test(b.block_id) && b.elements);
     ok(!ro || !JSON.stringify(ro).includes('"Studio E"'), 'Studio E is not offered as the room for Localization Dubbing', ro);
     v = await step2({ date: '2026-11-05', t0: '13:00', t1: '16:00', kind: 'post', purpose: 'Post Processing', requester: 'U1', when: 'x' }, { free_priority: ['Studio E'], free_rooms: FREE });
