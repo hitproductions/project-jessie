@@ -56,7 +56,7 @@ console.log('Nothing else Booked For returns changes (v286 vs v287, same message
 const MSGS = CASES.map(c => c[0]).concat(NONE, ['book studio 7 for Drey tomorrow 2-4pm for Netflix', 'VO recording in studio 3 friday 1-3pm for Spotify, engineer HL',
   'are studios free tomorrow', 'is any room free tomorrow afternoon?']);
 for (const q of MSGS) {
-  const a = bookedFor(OLD, q), b = Object.assign({}, bookedFor(NEW, q)); delete b.askedRooms;
+  const a = bookedFor(OLD, q), b = Object.assign({}, bookedFor(NEW, q)); delete b.askedRooms; delete b.engineers; delete b.arrangers;   // main v291 adds the lists
   ok(JSON.stringify(a) === JSON.stringify(b), 'unchanged: ' + JSON.stringify(q), { v286: a, v287: b });
 }
 { const O = outs('is studio f and c free'); delete O['All Rooms'];

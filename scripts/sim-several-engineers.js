@@ -106,6 +106,32 @@ const blk = (v, id) => (v.blocks || []).find(b => b.block_id === id);
   ok(/\]\.flatMap\(x => String\(x \|\| ''\)\.split\(\/\\s\*,\\s\*\/\)\)\.map\(byName\)/.test(brJs), 'Reminders: every name on the Engineer / Arranger line looked up');
   const rqJs = RQ.nodes.find(n => n.name === 'Render').parameters.jsCode;
   ok(/const _named = \[\]\.concat\(_engL\.map/.test(rqJs) && /name: _nameAt\[i\], as: _named\[i\]/.test(rqJs), 'Request Messages: one role and name per person, in team: order');
+  // main v291 (Howard's Slack test, 6 Nov 4:12 PM): several engineers typed fill the form
+  const MAINF = process.argv[6] || (fs.existsSync('workflows/project-jessie-v291.json') ? 'workflows/project-jessie-v291.json' : '');
+  const MAIN = MAINF ? JSON.parse(fs.readFileSync(MAINF, 'utf8')) : null;
+  if (MAIN && /v291 \(Howard, 6 Nov/.test(JSON.stringify(MAIN.nodes))) {
+    console.log('main v291: several engineers typed');
+    const jsOf = n => MAIN.nodes.find(x => x.name === n).parameters.jsCode;
+    const $f = O => n => ({ first: () => { if (!(n in O)) throw new Error('not run: ' + n); return O[n][0]; }, all: () => O[n] || [] });
+    const STF = bookers.map(b => b.fields);
+    const offer = async text => {
+      const O = { 'Slack Trigger': [{ json: { text, user: 'U1', ts: '100.1', channel: 'D1' } }], 'Get Recent Messages': [{ json: { ts: '100.1', text, user: 'U1' } }], 'Gate Context': [{ json: { epoch: '', gate: {} } }],
+        'Get Booker': [{ json: { fields: STF[0] } }], 'All Bookers': STF.map(f => ({ json: { fields: f } })), 'All Rooms': FX.rooms.map(r => ({ json: r })), 'All Session Types': sessionTypes.map(t => ({ json: t })) };
+      const bf = new Function('$', '$input', jsOf('Booked For'))($f(O), { first: () => ({ json: {} }) })[0].json;
+      Object.assign(O, { 'Booked For': [{ json: bf }], 'Gate Context': [{ json: { datesInMessage: '2026-11-07', confirmed: false, gate: {}, todayIso: '2026-11-06' } }], 'Get Recent Messages': [] });
+      const r = await new Function('$', '$input', 'return (async function(){' + jsOf('Form Offer') + '\n})();')($f(O), { first: () => ({ json: {} }), all: () => [{ json: {} }] });
+      return { bf, F: r[0].json.formOffer }; };
+    let o = await offer('book a vo recording tomorrow 2-4pm for studio 7, engineers howard and eli. project two-eng test');
+    ok(o.F.prefill.en === 'U1,U5' && /Engineer: Howard Luistro, Elijah Gan/.test(o.F.text), '"engineers howard and eli" -> both pre-filled, "Engineer: Howard Luistro, Elijah Gan"', { en: o.F.prefill.en, t: o.F.text, bf: o.bf.engineers });
+    o = await offer('book studio 7 tomorrow 2-4pm vo recording, engineer: Howard, Drey');
+    ok(o.F.prefill.en === 'U1,U7', '"engineer: Howard, Drey" -> Howard + Daryl', o.F.prefill.en);
+    o = await offer('book studio f tomorrow 2-4pm music recording, engineers ana and eli, arrangers mike');
+    ok(o.F.prefill.en === 'U8,U5' && o.F.prefill.ar === 'U6', '"engineers ana and eli, arrangers mike" -> two engineers, one arranger', { F: o.F, bf: [o.bf.engineers, o.bf.engineer, o.bf.arranger] });
+    o = await offer('book studio 7 tomorrow 2-4pm vo recording, engineer eli');
+    ok(o.F.prefill.en === 'U5', '"engineer eli" -> Elijah only, as before', o.F.prefill.en);
+    o = await offer('book studio 7 tomorrow 2-4pm vo recording, engineers howard and somebody new');
+    ok(o.F.prefill.en !== 'U1,U5' && !/,/.test(String(o.F.prefill.en || '')), 'a name nobody on staff has in the list -> not a list (as before)', o.F.prefill.en);
+  }
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.log('  FAIL  crashed: ' + (e && e.stack || e)); process.exit(1); });
