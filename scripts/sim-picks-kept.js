@@ -10,8 +10,10 @@ const FX = require('./sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('  FAIL  ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 600))); } };
 const code = n => si.nodes.find(x => x.name === n).parameters.jsCode;
-const run = async (name, input, outs) => { const $ = n => ({ first: () => { if (!(n in outs)) throw new Error('not run: ' + n); return outs[n][0]; }, all: () => outs[n] || [] });
+const __runT0 = async (name, input, outs) => { const $ = n => ({ first: () => { if (!(n in outs)) throw new Error('not run: ' + n); return outs[n][0]; }, all: () => outs[n] || [] });
   return new Function('$', '$input', 'return (async function(){' + code(name) + '\n})();')($, { first: () => input[0], all: () => input }); };
+const { adapt: __roomsTick } = require('./sim-rooms-tick-adapter.js');   // v72: the Multiple studios tick shown as the v71 list
+const run = async (...a) => __roomsTick(await __runT0(...a));
 const j1 = async (...a) => ((await run(...a))[0] || {}).json;
 const cache = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Date().toISOString(), payload: JSON.stringify({ rooms: FX.rooms, sessionTypes: FX.sessionTypes, bookers: FX.bookers }) } }];
 const opt = n => ({ text: { type: 'plain_text', text: n }, value: n }), ms = a => ({ type: 'multi_static_select', selected_options: a.map(opt) });

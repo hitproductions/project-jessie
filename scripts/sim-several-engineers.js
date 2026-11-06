@@ -40,7 +40,7 @@ const blk = (v, id) => (v.blocks || []).find(b => b.block_id === id);
   } else {
     v = await step2(S('VO Recording', 'studio')); e = blk(v, 'engineer');
     const tk = blk(v, 'more_eng_toggle');
-    ok(e.element.type === 'static_select' && e.element.initial_option.value === 'U1' && tk && tk.elements[0].options[0].text.text === 'Add more engineers' && !tk.elements[0].initial_options && !blk(v, 'more_eng')
+    ok(e.element.type === 'static_select' && e.element.initial_option.value === 'U1' && tk && /^(?:Add more|Multiple) engineers$/.test(tk.elements[0].options[0].text.text) && !tk.elements[0].initial_options && !blk(v, 'more_eng')
        && v.blocks.indexOf(tk) === v.blocks.indexOf(e) + 1, 'v71 VO Recording: one Engineer dropdown (its name shows on a phone), "Add more engineers" under it, unticked', v.blocks.map(b => b.block_id));
     v = await step2(S('VO Recording', 'studio', { pre: { en: 'U1,U5' } }));
     const me = blk(v, 'more_eng');
@@ -148,6 +148,37 @@ const blk = (v, id) => (v.blocks || []).find(b => b.block_id === id);
   ok(/\]\.flatMap\(x => String\(x \|\| ''\)\.split\(\/\\s\*,\\s\*\/\)\)\.map\(byName\)/.test(brJs), 'Reminders: every name on the Engineer / Arranger line looked up');
   const rqJs = RQ.nodes.find(n => n.name === 'Render').parameters.jsCode;
   ok(/const _named = \[\]\.concat\(_engL\.map/.test(rqJs) && /name: _nameAt\[i\], as: _named\[i\]/.test(rqJs), 'Request Messages: one role and name per person, in team: order');
+  // v72 (Howard, 6 Nov): "Multiple engineers"; "+ Multiple studios" behind a "Multiple studios" tick
+  if (/v72 \(Howard, 6 Nov\)/.test(JSON.stringify(SI.nodes))) {
+    console.log('v72: the Multiple studios tick');
+    const FREE = ['Studio 7', 'Studio 8', 'Studio 1', 'Studio 2', 'Studio F'];
+    let w = await step2(S('VO Recording', 'studio'), { free_priority: ['Studio 7', 'Studio 8'], free_rooms: FREE });
+    const t = blk(w, 'more_rooms_toggle'), o = t && t.elements[0].options[0];
+    ok(t && o.text.text === 'Multiple studios' && /^mr:/.test(o.value) && o.value.length <= 150 && !t.elements[0].initial_options && !blk(w, 'more_rooms'), 'step 2: "Multiple studios" unticked, no list', w.blocks.map(b => b.block_id));
+    ok(blk(w, 'more_eng_toggle').elements[0].options[0].text.text === 'Multiple engineers', 'the engineers tick reads "Multiple engineers"');
+    w = await step2(S('VO Recording', 'studio', { pre: { r: 'Studio 7', mr: 'Studio 8' } }), { free_priority: ['Studio 7', 'Studio 8'], free_rooms: FREE });
+    ok((blk(w, 'more_rooms_toggle').elements[0].initial_options || []).length === 1 && (blk(w, 'more_rooms').element.initial_options || []).map(x => x.value).join() === 'Studio 8', 'a saved / typed second studio -> ticked, Studio 8 picked');
+    const tog = async (blocks, sel) => (await run(SI, 'Note Toggle', [], { 'Read Request': [{ json: { payload: { actions: [{ action_id: 'more_rooms_toggle', type: 'checkboxes', selected_options: sel }],
+      view: { id: 'V1', hash: 'h', callback_id: 'book_step2', title: { type: 'plain_text', text: 'Book a room' }, blocks, state: { values: {} } } } } }] }))[0].json;
+    const w0 = await step2(S('VO Recording', 'studio'), { free_priority: ['Studio 7', 'Studio 8'], free_rooms: FREE });
+    let nt = await tog(w0.blocks, [blk(w0, 'more_rooms_toggle').elements[0].options[0]]);
+    const ml = blk(nt.view, 'more_rooms');
+    ok(nt.ok && ml && ml.label.text === 'More studios' && ml.element.action_id === 'more_rooms_pick' && ml.element.options.map(x => x.value).indexOf('Studio 8') !== -1
+       && nt.view.blocks.indexOf(ml) === nt.view.blocks.findIndex(b => b.block_id === 'more_rooms_toggle') + 1, 'ticked -> "More studios" opens under it (the studios free then)', ml && ml.element.options.map(x => x.value));
+    nt = await tog(nt.view.blocks, []);
+    ok(!blk(nt.view, 'more_rooms'), 'unticked -> the list goes');
+    const wm = await step2(S('Meeting', 'meeting'), { free_rooms: ['Likha', 'Katha', 'Salin', 'Studio 7'], free_priority: ['Likha', 'Katha'] });
+    const tm = blk(wm, 'more_rooms_toggle');
+    ok(tm && tm.elements[0].options[0].text.text === 'Multiple rooms' && /^mm:/.test(tm.elements[0].options[0].value), 'a meeting: "Multiple rooms"', wm.blocks.map(b => b.block_id));
+    const chk2 = { json: { user: 'U1', triggerId: 'T1', channel: 'D1' } };
+    const bk2 = { id: 'e2', d: '2026-11-12', s: '13:00', e: '16:00', r: 'Studio 7, Studio 8', t: 'KUBA / HL', st: 'VO Recording' };
+    const cv2 = (await j1(SI, 'Build Change', [], { 'Check Signature': [chk2], 'Read Request': [{ json: { payload: { actions: [{ value: JSON.stringify(bk2) }], container: { channel_id: 'D1', message_ts: '1' } } } }], 'Read Cache 6': cacheRow })).view;
+    ok((blk(cv2, 'more_rooms_c_toggle').elements[0].initial_options || []).length === 1 && (blk(cv2, 'studios_c').element.initial_options || []).map(x => x.value).join() === 'Studio 8', 'Change on Studio 7 + 8: ticked, Studio 8 picked', cv2.blocks.map(b => b.block_id));
+    const rc2 = await j1(SI, 'Read Change', [], { 'Check Signature': [chk2], 'Read Request': [{ json: { payload: { view: { id: 'V1', private_metadata: cv2.private_metadata,
+      state: { values: { date: { date_pick: { selected_date: '2026-11-12' } }, start: { start_pick: tv('13:00') }, end: { end_pick: tv('16:00') }, room: { room_pick: tv('Studio 7') },
+        more_rooms_c_toggle: { more_rooms_c_toggle: { selected_options: [] } } } } } } } }], 'Read Cache 10': cacheRow });
+    ok(rc2.newRooms === 'Studio 7' && rc2.roomChanged, 'Change: unticked -> Studio 8 taken off (the booking is Studio 7 only)', { r: rc2.newRooms, c: rc2.roomChanged, e: rc2.answer && rc2.answer.errors });
+  }
   // main v291 (Howard's Slack test, 6 Nov 4:12 PM): several engineers typed fill the form
   const MAINF = process.argv[6] || (fs.existsSync('workflows/project-jessie-v291.json') ? 'workflows/project-jessie-v291.json' : '');
   const MAIN = MAINF ? JSON.parse(fs.readFileSync(MAINF, 'utf8')) : null;

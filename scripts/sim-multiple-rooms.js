@@ -11,11 +11,13 @@ if (!/more_rooms_pick/.test(JSON.stringify(SI.nodes))) { console.log('0 ok, 0 fa
 const FX = require('./sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('  FAIL  ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 600))); } };
-const run = async (wf, name, input, outs) => {
+const __runT0 = async (wf, name, input, outs) => {
   const js = wf.nodes.find(x => x.name === name).parameters.jsCode;
   const $ = n => ({ first: () => (outs[n] || [])[0], all: () => outs[n] || [] });
   const $input = { first: () => input[0], all: () => input };
   return new Function('$', '$input', 'return (async function(){' + js + '\n}).call(this);').call({ helpers: {} }, $, $input); };
+const { adapt: __roomsTick } = require('./sim-rooms-tick-adapter.js');   // v72: the Multiple studios tick shown as the v71 list
+const run = async (...a) => __roomsTick(await __runT0(...a));
 const j1 = async (...a) => (await run(...a))[0].json;
 const ST = (t, req, pri, last, role) => ({ id: 'st-' + t, fields: { Type: t, 'Room Requirements': req, Priority: pri, 'Last Resort': last || [], 'Engineer Role Required': role ? [role] : [] } });
 const sessionTypes = FX.sessionTypes.concat([ST('Van Recording', '', ['sm'], [], 'Post Engineer'), ST('Atmos Mixing', 'Large', ['rc'], [], 'Post Engineer'), ST('Event', '', [])]);
