@@ -12,6 +12,7 @@ if (!/v70 \(Howard, 6 Nov\)/.test(JSON.stringify(SI.nodes))) { console.log('0 ok
 const FX = require('./sim-fixture-rooms.js');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('  FAIL  ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 700))); } };
+const quiet = x => !x.blocks.some(b => /_picked$/.test(b.block_id || '')) && !x.blocks.some(b => b.dispatch_action && b.element && b.element.type === 'multi_static_select');   // v75
 const run = async (wf, name, input, outs) => { const js = wf.nodes.find(x => x.name === name).parameters.jsCode;
   return new Function('$', '$input', 'return (async function(){' + js + '\n}).call(this);').call({ helpers: {} }, n => ({ first: () => (outs[n] || [])[0], all: () => outs[n] || [] }), { first: () => input[0], all: () => input }); };
 const j1 = async (...a) => ((await run(...a))[0] || {}).json;
@@ -125,6 +126,12 @@ const blk = (v, id) => (v.blocks || []).find(b => b.block_id === id);
     const de = blk(cv, 'det_engineer'), da = blk(cv, 'det_arranger');
     ok(de && de.element.type === 'multi_static_select' && (de.element.initial_options || []).map(o => o.value).sort().join() === 'U1,U5' && da && (da.element.initial_options || []).map(o => o.value).join() === 'U6',
       'Change opens with Howard + Elijah as engineers, Mike as arranger (from "HL AEG x MV")', { de: de && de.element, da: da && da.element.initial_options });
+    if (/v75 \(Howard\)/.test(JSON.stringify(SI.nodes))) {
+      const v5 = await step2(S('Localization Dubbing', 'loc', { pre: { r: 'Studio 1', bo: 'Studio A,Studio B', en: 'U1' } }), { free_priority: ['Studio 1'], free_rooms: ['Studio 1', 'Studio A', 'Studio B', 'Likha', 'Katha'] });
+      const bc = await j1(SI, 'Build Change', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { actions: [{ value: JSON.stringify({ id: 'e2', d: '2026-11-12', s: '13:00', e: '16:00', r: 'Studio 1, Studio A, Studio B', t: 'NET-KUBA / HL', st: 'Localization Dubbing' }) }], container: { channel_id: 'D1', message_ts: '1' } } } }], 'Read Cache 6': cacheRow });
+      ok([v5, cv, bc.view].every(x => x && quiet(x) && x.blocks.some(b => /^booth/.test(b.block_id || '') && b.element && b.element.type === 'multi_static_select')), 'v75: Book a room (booths picked), Change (people), Change (booths) - no "Picked:" line, no multi-select sends its picks',
+        [v5, cv, bc.view].map(x => x && x.blocks.map(b => b.block_id + (b.dispatch_action ? '*' : ''))));
+    }
     rc = await j1(SI, 'Read Change', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { view: { id: 'V1', private_metadata: cv.private_metadata,
       state: { values: { date: { date_pick: { selected_date: '2026-11-12' } }, start: { start_pick: tv('13:00') }, end: { end_pick: tv('16:00') }, room: { room_pick: tv('Studio 7') },
         det_project: { det_project_in: { value: 'KUBA' } }, det_client: { det_client_in: { value: 'Jem Lim' } }, det_engineer: { det_engineer_pick: ms(['U1', 'U7']) }, det_arranger: { det_arranger_pick: ms(['U6']) } } } } } } }], 'Read Cache 10': cacheRow });

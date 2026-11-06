@@ -116,8 +116,14 @@ const opt = n => ({ text: { type: 'plain_text', text: n }, value: n });
     const nt = async (sel, bl, st) => j1(SI, 'Note Toggle', [{ json: {} }], { 'Read Request': [{ json: { payload: { actions: [{ action_id: 'booth_pick', type: 'multi_static_select', selected_options: sel.map(opt) }],
       view: { id: 'V1', hash: 'h1', callback_id: 'book_step2', title: { type: 'plain_text', text: 'Book a room' }, close: { type: 'plain_text', text: 'Back' }, submit: { type: 'plain_text', text: 'Book' },
         private_metadata: '{}', blocks: bl || blocks, state: { values: st || {} } } } } }] });
+    const P75 = has(SI, 'v75 (Howard)');   // v75: no Picked: line anywhere, no multi-select sends its picks
     let r = await nt(['Studio A', 'Studio E']);
     const ids = r.view.blocks.map(b => b.block_id);
+    if (P75) {
+      ok(r.ok && ids.join() === 'room,booth~12,project' && !/Picked:/.test(JSON.stringify(r.view.blocks)), 'v75: a pick from a form drawn before v75 -> the same form, no "Picked:" line', ids);
+      r = await nt(['Studio A', 'Studio B', 'Studio E'], JSON.parse(JSON.stringify(blocks)).concat([{ type: 'context', block_id: 'booth_picked', elements: [{ type: 'mrkdwn', text: 'Picked: X, Y' }] }]));
+      ok(!r.view.blocks.some(b => /_picked$/.test(b.block_id || '')), 'v75: an old Picked: line on an open form is dropped');
+    } else {
     ok(r.ok && r.view_id === 'V1' && ids.join() === 'room,booth~12,booth_picked,project', 'two booths picked -> the same form, "Picked:" under Vocal booths', ids);
     ok(r.view.blocks[2].elements[0].text === 'Picked: Studio A, Studio E' && r.view.submit.text === 'Book' && r.view.callback_id === 'book_step2', '"Picked: Studio A, Studio E"; the Book button and the form kept');
     ok(JSON.stringify(r.view.blocks[1]) === JSON.stringify(blocks[1]), 'the field itself untouched (same block_id - Slack keeps the picks)');
@@ -125,6 +131,7 @@ const opt = n => ({ text: { type: 'plain_text', text: n }, value: n });
     ok(r.view.blocks.map(b => b.block_id).join() === 'room,booth~12,project', 'down to one pick -> the line goes (one pick shows its name)', r.view.blocks.map(b => b.block_id));
     r = await nt(['Studio A', 'Studio B', 'Studio E'], JSON.parse(JSON.stringify(blocks)).concat([{ type: 'context', block_id: 'more_rooms_picked', elements: [{ type: 'mrkdwn', text: 'Picked: X, Y' }] }]));
     ok(!r.view.blocks.some(b => b.block_id === 'more_rooms_picked') && /Studio A, Studio B, Studio E/.test(JSON.stringify(r.view.blocks)), 'a stale line with no field above it is dropped');
+    }
 
     console.log('Slack Interactions v64: step 2 drawn with picks - the line, dispatch_action');
     const cache = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Date().toISOString(), payload: JSON.stringify({ rooms, sessionTypes: FX.sessionTypes, bookers: FX.bookers }) } }];
@@ -133,8 +140,10 @@ const opt = n => ({ text: { type: 'plain_text', text: n }, value: n });
     const S = { date: '2026-11-05', t0: '13:00', t1: '16:00', kind: 'loc', purpose: 'Localization Dubbing', requester: 'U1', when: 'x' };
     let v = await step2(Object.assign({}, S, { pre: { r: 'Studio 1', bo: 'Studio A,Studio E' } }), { free_priority: ['Studio 1', 'Studio 2'], free_rooms: FREE });
     const bb = v.blocks.find(b => /^booth/.test(b.block_id || '') && b.type === 'input');
-    ok(bb && bb.dispatch_action === true && (bb.element.initial_options || []).map(o => o.value).join() === 'Studio A,Studio E', 'Localization Dubbing in Studio 1: Studio A + Studio E picked as booths (E is a booth now)', bb);
+    ok(bb && (P75 ? !bb.dispatch_action : bb.dispatch_action === true) && (bb.element.initial_options || []).map(o => o.value).join() === 'Studio A,Studio E', 'Localization Dubbing in Studio 1: Studio A + Studio E picked as booths (E is a booth now)', bb);
     const bi = v.blocks.indexOf(bb);
+    if (P75) { ok(!v.blocks.some(b => /_picked$/.test(b.block_id || '')) && !v.blocks.some(b => b.dispatch_action && b.element && b.element.type === 'multi_static_select'),
+      'v75: drawn with two booths -> no "Picked:" line; no multi-select sends its picks', v.blocks.map(b => b.block_id)); } else
     ok(v.blocks[bi + 1] && v.blocks[bi + 1].block_id === 'booth_picked' && v.blocks[bi + 1].elements[0].text === 'Picked: Studio A, Studio E', 'drawn with two picks -> the line is there from the start', v.blocks[bi + 1]);
     if (has(SI, 'v65 (Howard')) {   // v65: Howard's Slack test 4 Nov - Studio 1 + Studio A both held by an 11 AM - 5 PM booking
       const FREE2 = FREE.filter(n => n !== 'Studio 1' && n !== 'Studio A' && n !== 'Studio 2');
