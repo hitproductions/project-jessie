@@ -58,6 +58,10 @@ const blk = (v, id) => (v.blocks || []).find(b => b.block_id === id);
       view: { id: 'V1', hash: 'h', callback_id: 'book_step2', title: { type: 'plain_text', text: 'Book a room' }, blocks: nv.blocks, state: { values: {} } } } } }] });
     ok(!blk(NT2[0].json.view, 'more_eng'), 'v71: unticked -> More engineers goes');
   }
+  if (/v73: a person from one pick/.test(JSON.stringify(SI.nodes))) {   // v73: back to v70's fields; the Picked: line from one pick
+    const w1 = await step2(S('VO Recording', 'studio'));
+    ok(blk(w1, 'engineer').element.type === 'multi_static_select' && blk(w1, 'engineer_picked') && blk(w1, 'engineer_picked').elements[0].text === 'Picked: Howard Luistro' && !blk(w1, 'more_eng_toggle') && !blk(w1, 'more_rooms_toggle'),
+      'v73: Engineer a multi-select with "Picked: Howard Luistro" from one pick (a phone shows "1 selected"); no ticks', w1.blocks.map(b => b.block_id)); }
   v = await step2(S('Localization Dubbing', 'loc'));
   ok(blk(v, 'engineer').element.type === 'static_select', 'Localization: one engineer, the dropdown as before');
 
