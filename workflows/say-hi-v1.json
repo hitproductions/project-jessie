@@ -1,0 +1,125 @@
+{
+  "name": "Jessie — Say Hi — v1",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "f724f8d4-db32-5b36-a46d-71f0a2fefef8",
+      "name": "Run by hand",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Who Jessie says hi to - one line each: the Slack member id (profile -> ⋯ -> Copy member ID), then a name for the report.\n// Edit this list and run the workflow (Execute workflow) - each person gets one message per run.\nconst WHO = [\n  ['U026JML76', 'Letty'],\n];\n// The greeting main sends (Menu Check, main v275+): \"Hi, I’m Jessie!\" + Book a room / My bookings.\nconst blocks = [\n  { type: 'section', text: { type: 'mrkdwn', text: 'Hi, I’m Jessie!' } },\n  { type: 'actions', elements: [\n    { type: 'button', style: 'primary', action_id: 'open_book', value: 'menu', text: { type: 'plain_text', text: 'Book a room' } },\n    { type: 'button', action_id: 'my_bookings', value: 'menu', text: { type: 'plain_text', text: 'My bookings' } } ] }\n];\nconst seen = new Set(), out = [];\nfor (const [id0, name] of WHO) {\n  const id = String(id0 || '').trim();\n  if (!/^[UW][A-Z0-9]{6,}$/.test(id)) throw new Error('Not a Slack member id: \"' + id + '\" (' + name + ')');\n  if (seen.has(id)) continue;\n  seen.add(id);\n  out.push({ json: { channel: id, name: String(name || id), text: 'Hi, I’m Jessie!', blocks } });\n}\nif (!out.length) throw new Error('The list in Who is empty');\nreturn out;\n"
+      },
+      "id": "f4c5538e-ebd1-5fda-aad4-2605e2cac527",
+      "name": "Who",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.text, blocks: $json.blocks }) }}",
+        "options": {}
+      },
+      "id": "ddbdd68d-5a4a-50c4-8f90-f5771fc6d2d7",
+      "name": "Send Hi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "EcX8szEJrOLYLUfl",
+          "name": "Jessie Slack (signed)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// One line per person: sent, or why Slack refused (e.g. user_not_found, not_allowed_token_type).\nconst who = $('Who').all();\nconst lines = $input.all().map((r, i) => {\n  const j = r.json || {}, p = (who[i] || {}).json || {};\n  const ok = j.ok === true;\n  return { json: { name: p.name, id: p.channel, sent: ok, dm: ok ? j.channel : '', error: ok ? '' : String(j.error || (j.message) || 'no answer') } };\n});\nreturn lines;\n"
+      },
+      "id": "132aa465-163b-58f1-99d5-6a6af3fcfefd",
+      "name": "Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Jessie — Say Hi\nRun by hand (Execute workflow). Jessie DMs everyone listed in **Who** her greeting with Book a room / My bookings, so she shows up in their Slack DMs (easier to find on a phone).\n\nEdit the list in **Who**, run once, read **Report**. Each run sends again - take people off the list once they have it. No need to publish.",
+        "height": 220,
+        "width": 440
+      },
+      "id": "9f0e38d5-54e1-510e-8aad-d2734410e557",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -260
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run by hand": {
+      "main": [
+        [
+          {
+            "node": "Who",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Who": {
+      "main": [
+        [
+          {
+            "node": "Send Hi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Hi": {
+      "main": [
+        [
+          {
+            "node": "Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
