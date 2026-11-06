@@ -28,12 +28,36 @@ const blk = (v, id) => (v.blocks || []).find(b => b.block_id === id);
 (async () => {
   console.log('Book a room, step 2: the people fields');
   const step2 = async (s, ra) => (await j1(SI, 'Build Step 2', [{ json: Object.assign({ status: 'OK', busy: [], free_priority: ['Studio 7'] }, ra) }], { 'Read Step 1': [{ json: { s } }], 'Read Cache 2': cacheRow, 'Loc Projects 2': [] })).view;
-  let v = await step2(S('VO Recording', 'studio'));
-  let e = blk(v, 'engineer');
-  ok(e && e.element.type === 'multi_static_select' && e.dispatch_action === true && (e.element.initial_options || []).map(o => o.value).join() === 'U1' && !e.element.options.some(o => o.value === 'none'),
-    'VO Recording: Engineer is a multi-select, you picked (as before), no "No engineer" option (a phone can clear it)', e && e.element);
-  v = await step2(S('VO Recording', 'studio', { pre: { en: 'U1,U5' } }));
-  ok((blk(v, 'engineer').element.initial_options || []).map(o => o.value).sort().join() === 'U1,U5' && /Picked: Elijah Gan, Howard Luistro/.test(JSON.stringify(v.blocks)), 'saved answers "U1,U5" -> both picked, "Picked: Elijah Gan, Howard Luistro"');
+  const V71 = /v71 \(Howard, 6 Nov\)/.test(JSON.stringify(SI.nodes));   // one engineer + "Add more engineers"
+  let v, e;
+  if (!V71) {
+    v = await step2(S('VO Recording', 'studio'));
+    e = blk(v, 'engineer');
+    ok(e && e.element.type === 'multi_static_select' && e.dispatch_action === true && (e.element.initial_options || []).map(o => o.value).join() === 'U1' && !e.element.options.some(o => o.value === 'none'),
+      'VO Recording: Engineer is a multi-select, you picked (as before), no "No engineer" option (a phone can clear it)', e && e.element);
+    v = await step2(S('VO Recording', 'studio', { pre: { en: 'U1,U5' } }));
+    ok((blk(v, 'engineer').element.initial_options || []).map(o => o.value).sort().join() === 'U1,U5' && /Picked: Elijah Gan, Howard Luistro/.test(JSON.stringify(v.blocks)), 'saved answers "U1,U5" -> both picked, "Picked: Elijah Gan, Howard Luistro"');
+  } else {
+    v = await step2(S('VO Recording', 'studio')); e = blk(v, 'engineer');
+    const tk = blk(v, 'more_eng_toggle');
+    ok(e.element.type === 'static_select' && e.element.initial_option.value === 'U1' && tk && tk.elements[0].options[0].text.text === 'Add more engineers' && !tk.elements[0].initial_options && !blk(v, 'more_eng')
+       && v.blocks.indexOf(tk) === v.blocks.indexOf(e) + 1, 'v71 VO Recording: one Engineer dropdown (its name shows on a phone), "Add more engineers" under it, unticked', v.blocks.map(b => b.block_id));
+    v = await step2(S('VO Recording', 'studio', { pre: { en: 'U1,U5' } }));
+    const me = blk(v, 'more_eng');
+    ok(blk(v, 'engineer').element.initial_option.value === 'U1' && (blk(v, 'more_eng_toggle').elements[0].initial_options || []).length === 1 && me && (me.element.initial_options || []).map(o => o.value).join() === 'U5'
+       && !me.element.options.some(o => o.value === 'U1'), 'v71 saved "U1,U5": Howard the engineer, the box ticked, Elijah under More engineers', v.blocks.map(b => b.block_id));
+    v = await step2(S('Music Recording', 'studio', { pre: { ar: 'U6' } }));
+    ok(blk(v, 'engineer').element.type === 'static_select' && !blk(v, 'more_eng_toggle') && blk(v, 'arranger').element.type === 'multi_static_select' && blk(v, 'arranger_picked')
+       && blk(v, 'arranger_picked').elements[0].text === 'Picked: Mike Villegas', 'v71 Music: one engineer, no tick; Arranger a multi-select with "Picked: Mike Villegas" from one pick', v.blocks.map(b => b.block_id));
+    const NT = await run(SI, 'Note Toggle', [], { 'Read Request': [{ json: { payload: { actions: [{ action_id: 'more_eng_toggle', type: 'checkboxes', selected_options: [{ value: 'more' }] }],
+      view: { id: 'V1', hash: 'h', callback_id: 'book_step2', title: { type: 'plain_text', text: 'Book a room' }, blocks: (await step2(S('VO Recording', 'studio'))).blocks, state: { values: { engineer: { engineer_pick: tv('U1') } } } } } } }] });
+    const nv = NT[0].json.view, nm = blk(nv, 'more_eng');
+    ok(NT[0].json.ok && nm && nm.element.type === 'multi_static_select' && nv.blocks.indexOf(nm) === nv.blocks.findIndex(b => b.block_id === 'more_eng_toggle') + 1 && !nm.element.options.some(o => o.value === 'U1' || o.value === 'none'),
+      'v71: ticking opens "More engineers" under it (everyone but the engineer picked)', nv.blocks.map(b => b.block_id));
+    const NT2 = await run(SI, 'Note Toggle', [], { 'Read Request': [{ json: { payload: { actions: [{ action_id: 'more_eng_toggle', type: 'checkboxes', selected_options: [] }],
+      view: { id: 'V1', hash: 'h', callback_id: 'book_step2', title: { type: 'plain_text', text: 'Book a room' }, blocks: nv.blocks, state: { values: {} } } } } }] });
+    ok(!blk(NT2[0].json.view, 'more_eng'), 'v71: unticked -> More engineers goes');
+  }
   v = await step2(S('Localization Dubbing', 'loc'));
   ok(blk(v, 'engineer').element.type === 'static_select', 'Localization: one engineer, the dropdown as before');
 
@@ -47,6 +71,9 @@ const blk = (v, id) => (v.blocks || []).find(b => b.block_id === id);
   ok(r.team.split(' ').sort().join() === 'U1,U5,U6' && r.engineerId === 'U1,U5' && r.again.en === 'U1,U5', 'team: all three; the saved answers keep both engineers', { team: r.team, en: r.engineerId });
   const r1 = await read2({ room: { room_radio: tv('Studio 7') }, project: { project_in: { value: 'kuba' } }, engineer: { engineer_pick: ms(['U1']) } }, S('VO Recording', 'studio'));
   ok(r1.valid && r1.calTitle === 'KUBA / HL' && /^Engineer: Howard Luistro/.test(r1.prep.description) && r1.team === 'U1', 'one engineer -> "KUBA / HL", as before', { t: r1.calTitle, d: r1.prep.description });
+  if (V71) { const r2 = await read2({ room: { room_radio: tv('Studio 7') }, project: { project_in: { value: 'kuba' } }, engineer: { engineer_pick: tv('U1') }, more_eng: { more_eng_pick: ms(['U5']) } }, S('VO Recording', 'studio'));
+    ok(r2.valid && r2.calTitle === 'KUBA / HL AEG' && r2.engineerId === 'U1,U5' && r2.team.split(' ').sort().join() === 'U1,U5' && /^Engineer: Howard Luistro, Elijah Gan/.test(r2.prep.description),
+      'v71: Engineer Howard + More engineers Elijah -> "KUBA / HL AEG", both on the event and the team', { t: r2.calTitle, en: r2.engineerId, d: r2.prep.description }); }
   const rl = await read2({ room: { room_radio: tv('Studio 1') }, code: { code_in: { value: 'NET-KUBA' } }, engineer: { engineer_pick: tv('U3') } }, S('Localization Dubbing', 'loc'));
   ok(rl.calTitle === 'NET-KUBA / JT', 'Localization (one dropdown) -> "NET-KUBA / JT", as before', rl.calTitle);
 
@@ -80,17 +107,32 @@ const blk = (v, id) => (v.blocks || []).find(b => b.block_id === id);
 
   console.log('Change: the people kept, changed, told');
   const chk = { json: { user: 'U1', triggerId: 'T1', channel: 'D1' } };
-  const bk = { id: 'e1', d: '2026-11-12', s: '13:00', e: '16:00', r: 'Studio 7', t: 'KUBA / Jem Lim / HL AEG x MV', st: 'Music Recording' };
-  const cv = (await j1(SI, 'Build Change', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { actions: [{ value: JSON.stringify(bk) }], container: { channel_id: 'D1', message_ts: '1' } } } }], 'Read Cache 6': cacheRow })).view;
-  const de = blk(cv, 'det_engineer'), da = blk(cv, 'det_arranger');
-  ok(de && de.element.type === 'multi_static_select' && (de.element.initial_options || []).map(o => o.value).sort().join() === 'U1,U5' && da && (da.element.initial_options || []).map(o => o.value).join() === 'U6',
-    'Change opens with Howard + Elijah as engineers, Mike as arranger (from "HL AEG x MV")', { de: de && de.element, da: da && da.element.initial_options });
-  const rc = await j1(SI, 'Read Change', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { view: { id: 'V1', private_metadata: cv.private_metadata,
-    state: { values: { date: { date_pick: { selected_date: '2026-11-12' } }, start: { start_pick: tv('13:00') }, end: { end_pick: tv('16:00') }, room: { room_pick: tv('Studio 7') },
-      det_project: { det_project_in: { value: 'KUBA' } }, det_client: { det_client_in: { value: 'Jem Lim' } }, det_engineer: { det_engineer_pick: ms(['U1', 'U7']) }, det_arranger: { det_arranger_pick: ms(['U6']) } } } } } } }], 'Read Cache 10': cacheRow });
-  ok(rc.newTitle === 'KUBA / Jem Lim / HL DR x MV' && rc.newDetails && rc.newDetails.Engineer === 'Howard Luistro, Daryl Reyes' && rc.newDetails.team.split(' ').sort().join() === 'U1,U6,U7',
-    'Elijah swapped for Daryl -> "KUBA / Jem Lim / HL DR x MV", Engineer: Howard Luistro, Daryl Reyes, team: all three', { t: rc.newTitle, nd: rc.newDetails, e: rc.answer && rc.answer.errors });
-  ok(rc.oldTeam.sort().join() === 'U1,U5,U6', 'who was on it before: Howard, Elijah, Mike (each one id)', rc.oldTeam);
+  let rc;
+  if (!V71) {
+    const bk = { id: 'e1', d: '2026-11-12', s: '13:00', e: '16:00', r: 'Studio 7', t: 'KUBA / Jem Lim / HL AEG x MV', st: 'Music Recording' };
+    const cv = (await j1(SI, 'Build Change', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { actions: [{ value: JSON.stringify(bk) }], container: { channel_id: 'D1', message_ts: '1' } } } }], 'Read Cache 6': cacheRow })).view;
+    const de = blk(cv, 'det_engineer'), da = blk(cv, 'det_arranger');
+    ok(de && de.element.type === 'multi_static_select' && (de.element.initial_options || []).map(o => o.value).sort().join() === 'U1,U5' && da && (da.element.initial_options || []).map(o => o.value).join() === 'U6',
+      'Change opens with Howard + Elijah as engineers, Mike as arranger (from "HL AEG x MV")', { de: de && de.element, da: da && da.element.initial_options });
+    rc = await j1(SI, 'Read Change', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { view: { id: 'V1', private_metadata: cv.private_metadata,
+      state: { values: { date: { date_pick: { selected_date: '2026-11-12' } }, start: { start_pick: tv('13:00') }, end: { end_pick: tv('16:00') }, room: { room_pick: tv('Studio 7') },
+        det_project: { det_project_in: { value: 'KUBA' } }, det_client: { det_client_in: { value: 'Jem Lim' } }, det_engineer: { det_engineer_pick: ms(['U1', 'U7']) }, det_arranger: { det_arranger_pick: ms(['U6']) } } } } } } }], 'Read Cache 10': cacheRow });
+    ok(rc.newTitle === 'KUBA / Jem Lim / HL DR x MV' && rc.newDetails && rc.newDetails.Engineer === 'Howard Luistro, Daryl Reyes' && rc.newDetails.team.split(' ').sort().join() === 'U1,U6,U7',
+      'Elijah swapped for Daryl -> "KUBA / Jem Lim / HL DR x MV", Engineer: Howard Luistro, Daryl Reyes, team: all three', { t: rc.newTitle, nd: rc.newDetails, e: rc.answer && rc.answer.errors });
+    ok(rc.oldTeam.sort().join() === 'U1,U5,U6', 'who was on it before: Howard, Elijah, Mike (each one id)', rc.oldTeam);
+  } else {
+    const bk = { id: 'e1', d: '2026-11-12', s: '13:00', e: '16:00', r: 'Studio 7', t: 'KUBA / Jem Lim / HL AEG', st: 'VO Recording' };
+    const cv = (await j1(SI, 'Build Change', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { actions: [{ value: JSON.stringify(bk) }], container: { channel_id: 'D1', message_ts: '1' } } } }], 'Read Cache 6': cacheRow })).view;
+    const de = blk(cv, 'det_engineer'), dm = blk(cv, 'det_more_eng'), dt = blk(cv, 'more_eng_c_toggle');
+    ok(de && de.element.type === 'static_select' && de.element.initial_option.value === 'U1' && dt && (dt.elements[0].initial_options || []).length === 1 && dm && (dm.element.initial_options || []).map(o => o.value).join() === 'U5',
+      'v71 Change opens with Howard as the engineer, the box ticked, Elijah under More engineers (from "HL AEG")', cv.blocks.map(b => b.block_id));
+    rc = await j1(SI, 'Read Change', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { view: { id: 'V1', private_metadata: cv.private_metadata,
+      state: { values: { date: { date_pick: { selected_date: '2026-11-12' } }, start: { start_pick: tv('13:00') }, end: { end_pick: tv('16:00') }, room: { room_pick: tv('Studio 7') },
+        det_project: { det_project_in: { value: 'KUBA' } }, det_client: { det_client_in: { value: 'Jem Lim' } }, det_engineer: { det_engineer_pick: tv('U1') }, det_more_eng: { more_eng_c_pick: ms(['U7']) } } } } } } }], 'Read Cache 10': cacheRow });
+    ok(rc.newTitle === 'KUBA / Jem Lim / HL DR' && rc.newDetails && rc.newDetails.Engineer === 'Howard Luistro, Daryl Reyes' && rc.newDetails.team.split(' ').sort().join() === 'U1,U7',
+      'v71: Elijah swapped for Daryl under More engineers -> "KUBA / Jem Lim / HL DR", Engineer: Howard Luistro, Daryl Reyes', { t: rc.newTitle, nd: rc.newDetails, e: rc.answer && rc.answer.errors });
+    ok(rc.oldTeam.sort().join() === 'U1,U5', 'who was on it before: Howard, Elijah', rc.oldTeam);
+  }
   const cn = (await run(SI, 'Change Notices', [{ json: {} }], { 'Read Change': [{ json: rc }], 'After Move': [{ json: { ok: true, card: '✅ *Changed.*\n\n*KUBA*', nb: null } }], 'Read Cache 7': cacheRow }).catch(e => [{ json: { err: String(e) } }])) || [];
   ok(JSON.stringify(cn).indexOf('U7') !== -1 || JSON.stringify(cn).indexOf('U08V3CKDGJF') !== -1, 'Change Notices: Daryl (added) is told', JSON.stringify(cn).slice(0, 300));
 
