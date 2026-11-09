@@ -36,16 +36,17 @@ const CAL = 'c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com';
   const ctx = { 'Read Step 2': [{ json: { s: { date: '2026-11-12', t0: '14:00', t1: '16:00', when: 'Thursday, November 12, 2026 · 2:00 PM – 4:00 PM', purpose: 'Music Recording', kind: 'studio' }, room: 'Studio 7', viewId: 'V1', channel: 'D1' } }],
     'After Prepare': [{ json: { F: { Room: 'Studio 7' }, book: { start_iso: REQ.start_iso, end_iso: REQ.end_iso } } }] };
   const ab = await j1(si, 'After Book', [{ json: { status: 'CREATED', event_id: 'abc123def', title: 'SONG / Jem Lim / MV', html_link: ev.htmlLink } }], ctx);
-  const line = '<' + ev.htmlLink + '|Check your booking in Google Calendar>';
+  const V78 = Number((si.name.match(/v(\d+)/) || [])[1]) >= 78;   // v78: "🔗 Check your booking in GCal"
+  const line = V78 ? '🔗 <' + ev.htmlLink + '|Check your booking in GCal>' : '<' + ev.htmlLink + '|Check your booking in Google Calendar>';
   const dmCard = ab.blocks.find(b => b.block_id === 'bk_abc123def'), formCard = ab.view.blocks[0];
-  ok(dmCard && dmCard.text.text.endsWith('\n\n' + line) && /^✅ \*Booked\.\*\n\n\*SONG \/ Jem Lim \/ MV\*/.test(dmCard.text.text), 'the DM card ends with "Check your booking in Google Calendar" (the link), after the details', dmCard && dmCard.text.text);
+  ok(dmCard && dmCard.text.text.endsWith('\n\n' + line) && /^✅ \*Booked\.\*\n\n\*SONG \/ Jem Lim \/ MV\*/.test(dmCard.text.text), 'the DM card ends with ' + (V78 ? '"🔗 Check your booking in GCal"' : '"Check your booking in Google Calendar"') + ' (the link), after the details', dmCard && dmCard.text.text);
   ok(formCard.text.text === dmCard.text.text, 'the form\'s Booked screen shows the same');
   ok(!/google\.com/.test(ab.text) && /^✅ \*Booked\.\*/.test(ab.text), 'the message\'s plain text (notifications, Booked Notices, what Jessie reads back) has no link', ab.text);
   ok(ab.blocks.map(b => b.block_id || b.type).join() === 'bk_abc123def,bka_abc123def,nav', 'the rest of the DM as before: Change / Cancel, Book another / My bookings');
   const ab0 = await j1(si, 'After Book', [{ json: { status: 'CREATED', event_id: 'abc123def', title: 'SONG / Jem Lim / MV' } }], ctx);
-  ok(!/Google Calendar/.test(JSON.stringify(ab0.blocks)) && ab0.blocks[0].text.text === ab0.text, 'no link from Book Session (v128) -> the card exactly as before');
+  ok(!/Google Calendar|GCal/.test(JSON.stringify(ab0.blocks)) && ab0.blocks[0].text.text === ab0.text, 'no link from Book Session (v128) -> the card exactly as before');
   const ab1 = await j1(si, 'After Book', [{ json: { status: 'CREATED', event_id: 'abc123def', title: 'X', html_link: 'https://evil.example/x|Click' } }], ctx);
-  ok(!/evil|Google Calendar/.test(JSON.stringify(ab1.blocks)), 'anything not a Google Calendar event link is left out');
+  ok(!/evil|Google Calendar|GCal/.test(JSON.stringify(ab1.blocks)), 'anything not a Google Calendar event link is left out');
   if (/v7[7-9]|v[89]\d/.test(si.name.match(/v\d+/)[0])) {   // v77: no link preview under the Booked DM
     const jb = si.nodes.find(n => n.name === 'DM Booked').parameters.jsonBody.replace(/^=\{\{\s*/, '').replace(/\s*\}\}$/, '');
     const body = JSON.parse(new Function('$', 'return (' + jb + ');')(n => ({ first: () => ({ json: n === 'After Book' ? ab : {} }) })));
