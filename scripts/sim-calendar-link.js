@@ -46,6 +46,12 @@ const CAL = 'c_re5mcrg9om0macp9doqhlsi83g@group.calendar.google.com';
   ok(!/Google Calendar/.test(JSON.stringify(ab0.blocks)) && ab0.blocks[0].text.text === ab0.text, 'no link from Book Session (v128) -> the card exactly as before');
   const ab1 = await j1(si, 'After Book', [{ json: { status: 'CREATED', event_id: 'abc123def', title: 'X', html_link: 'https://evil.example/x|Click' } }], ctx);
   ok(!/evil|Google Calendar/.test(JSON.stringify(ab1.blocks)), 'anything not a Google Calendar event link is left out');
+  if (/v7[7-9]|v[89]\d/.test(si.name.match(/v\d+/)[0])) {   // v77: no link preview under the Booked DM
+    const jb = si.nodes.find(n => n.name === 'DM Booked').parameters.jsonBody.replace(/^=\{\{\s*/, '').replace(/\s*\}\}$/, '');
+    const body = JSON.parse(new Function('$', 'return (' + jb + ');')(n => ({ first: () => ({ json: n === 'After Book' ? ab : {} }) })));
+    ok(body.unfurl_links === false && body.unfurl_media === false && (body.blocks || []).length === ab.blocks.length && body.channel === 'D1',
+      'v77: the Booked DM is posted with unfurl_links / unfurl_media false (no Google Workspace preview), the card as built', body);
+  }
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.log('  FAIL  crashed: ' + (e && e.stack || e)); process.exit(1); });
