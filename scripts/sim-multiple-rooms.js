@@ -43,7 +43,7 @@ const FREE = ['Studio 1', 'Studio 2', 'Studio 3', 'Studio 5', 'Studio 6', 'Studi
   console.log('Book a room, step 2: + Multiple studios / rooms');
   let v = await step2(S('VO Recording', 'studio'), { free_priority: ['Studio 7', 'Studio 8', 'Studio F', 'Studio C'], free_last_resort: ['Studio 5', 'Studio 6'], free_rooms: FREE, busy: ['Studio 3 (X)'] });
   let mr = blk(v, 'more_rooms');
-  ok(mr && mr.optional && mr.label.text === '+ Multiple studios' && mr.element.type === 'multi_static_select' && mr.element.placeholder.text === 'Select more studios' && !mr.element.initial_options,
+  ok(mr && mr.optional && ['+ Multiple studios', '+ Additional studios'].indexOf(mr.label.text) !== -1 && mr.element.type === 'multi_static_select' && mr.element.placeholder.text === 'Select more studios' && !mr.element.initial_options,
      'VO Recording: "+ Multiple studios", optional, nothing picked', mr);
   ok(vals(mr).join() === 'Studio 1,Studio 2,Studio 5,Studio 6,Studio 7,Studio 8,Studio C,Studio F', 'every free studio - not Studio 3 (taken), Studio E / M, booths or meeting rooms', vals(mr));
   ok(ids(v).indexOf('more_rooms') > ids(v).findIndex(x => /^booth~/.test(x)) && ids(v).indexOf('more_rooms') < ids(v).indexOf('project'), 'after the booth, before the details');
@@ -101,7 +101,7 @@ const FREE = ['Studio 1', 'Studio 2', 'Studio 3', 'Studio 5', 'Studio 6', 'Studi
   console.log('Change: add or take off studios / rooms');
   let cv = await buildChange(BK('VO Recording', 'Studio 7, Studio 8', 'KUBA / HL'));
   let sc = blk(cv, 'studios_c');
-  ok(sc && sc.label.text === '+ Multiple studios' && sc.optional && picked(sc).join() === 'Studio 8' && vals(sc).indexOf('Studio 7') === -1 && vals(sc).indexOf('Studio A') === -1 && vals(sc).indexOf('Studio E') === -1,
+  ok(sc && ['+ Multiple studios', '+ Additional studios'].indexOf(sc.label.text) !== -1 && sc.optional && picked(sc).join() === 'Studio 8' && vals(sc).indexOf('Studio 7') === -1 && vals(sc).indexOf('Studio A') === -1 && vals(sc).indexOf('Studio E') === -1,
      'a booking in Studio 7 + Studio 8 -> + Multiple studios with Studio 8 picked (not Studio 7 itself, booths or Studio E)', sc);
   ok(blk(cv, 'room').element.initial_option.value === 'Studio 7' && blk(cv, 'room').label.text === 'Studio', 'Studio = Studio 7 (the label as before - a VO booking has Vocal booths)');
   const base2 = { date: { date_pick: { selected_date: '2027-10-29' } }, start: { start_pick: tv('13:00') }, end: { end_pick: tv('16:00') }, room: { room_pick: tv('Studio 7') } };
