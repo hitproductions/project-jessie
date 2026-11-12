@@ -44,7 +44,8 @@ if (/v247 \(brevity\)/.test(node('Prepared Cancel').parameters.jsCode)) {
 }
 const card = '*QATEST / Jem Lim / TL*\n*Date:* Thursday, October 7, 2027\n*Time:* 2:00 PM – 3:00 PM\n*Room:* Studio 7\n*Booked by:* Tara Lim\n_check 1234abcd_\n\nCancel it? Reply yes or no.';
 const c = run('yes', true, card, true);
-ok(c._cancelDirect.use === true && c._alreadyDone === '', 'a yes to a cancel card still goes to Cancel Direct');
+if (/no typed cancel/.test(JSON.stringify(M.nodes))) ok(c._cancelDirect.use === false && /open \*My bookings\* and tap \*Cancel\*/.test(c._alreadyDone), 'v292: a yes to an old cancel card never cancels - it points to My bookings');
+else ok(c._cancelDirect.use === true && c._alreadyDone === '', 'a yes to a cancel card still goes to Cancel Direct');
 ok(run('yes', true, 'Booked.').x === 1, 'input passed through unchanged');
 const to = (n, b = 0) => ((((M.connections[n] || {}).main || [])[b]) || []).map(t => t.node);
 // v202: Move Direct? sits between Cancel Direct? and Already Done? (a confirmed move card goes to Move Booking directly)

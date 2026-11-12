@@ -6,6 +6,7 @@
 const fs = require('fs');
 const main = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v269.json', 'utf8'));
 const si = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/slack-interactions-v17.json', 'utf8'));
+const V292 = /no cancelling from typed text/.test(JSON.stringify(main.nodes));   // main v292: a typed cancel points to My bookings, no card
 const V275 = /Hi, I’m Jessie!/.test(JSON.stringify(main.nodes));   // main v275: short menu lines, reset answered by the menu, shorter change / cancel lead
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
@@ -52,21 +53,27 @@ const j1 = async (...a) => (await run(...a))[0].json;
     ev('ev3', 'ORANGE / Jem Lim / HL', '2027-10-20T10:00:00+08:00', '2027-10-20T12:00:00+08:00', 'ref: U1'),
     ev('ev4', 'THEIRS / X / DR', '2027-10-16T09:00:00+08:00', '2027-10-16T10:00:00+08:00', 'ref: U9')] };
   const reply = async (co, res) => j1(main, 'Change Reply', [{ json: res || cal }], { 'Change Offer': [{ json: { changeOffer: co } }] });
+  const NOC = r => r.count === 0 && r.blocks.length === 2 && r.blocks[0].text.text === 'To cancel a booking, open *My bookings* and tap *Cancel* on it.'
+    && r.blocks[1].elements[0].action_id === 'my_bookings' && !/bk_cancel|bk_change/.test(JSON.stringify(r.blocks));
+  const okC = (r, c, m) => V292 ? ok(NOC(r), 'v292: ' + m.split(' -> ')[0] + ' -> "open My bookings and tap Cancel", no card') : c();
   let r = await reply(await offerOf('cancel ORANGE saturday', { dates: '2027-10-16' }));
+  if (V292) ok(NOC(r) && r.channel === 'D1', 'v292: cancel ORANGE saturday -> "open My bookings and tap Cancel", no card');
+  else {
   ok(r.count === 1 && ['Here it is - press *Cancel* to cancel it.', 'Here’s the booking – press *Cancel* to cancel it.', 'Here’s the booking:'].indexOf(r.blocks[0].text.text) !== -1 && r.blocks[1].block_id === 'bk_ev1'
      && r.blocks[1].text.text === '*ORANGE / Jem Lim / HL*\nSat, Oct 16 · 2:00 PM – 4:00 PM · Studio 7', 'cancel ORANGE saturday -> that one booking');
   const bt = r.blocks[2].elements;
   ok(bt.map(x => x.action_id).join() === 'bk_change,bk_cancel' && bt[1].confirm && bt[1].confirm.confirm.text === 'Cancel booking' && r.channel === 'D1',
      'its Change / Cancel (Cancel asks first) - the blocks Slack Interactions handles');
+  }
   r = await reply(await offerOf('cancel orange', {}));
-  ok(r.count === 2 && r.blocks[0].text.text === 'Which one?' && r.blocks.filter(b => /^bk_/.test(b.block_id || '')).map(b => b.block_id).join() === 'bk_ev1,bk_ev3', 'two ORANGE -> which one, in date order');
+  okC(r, () => ok(r.count === 2 && r.blocks[0].text.text === 'Which one?' && r.blocks.filter(b => /^bk_/.test(b.block_id || '')).map(b => b.block_id).join() === 'bk_ev1,bk_ev3', 'two ORANGE -> which one, in date order'), 'two ORANGE -> which one, in date order');
   r = await reply(await offerOf('cancel kiwi', {}));
-  ok(r.count === 1 && r.blocks[1].block_id === 'bk_ev2', 'a booking they engineer (team) counts');
+  okC(r, () => ok(r.count === 1 && r.blocks[1].block_id === 'bk_ev2', 'a booking they engineer (team) counts'), 'a booking they engineer (team) counts');
   r = await reply(await offerOf('cancel theirs', {}));
-  ok(r.count === 0 && r.blocks[0].text.text === 'I couldn’t find a booking of yours called "theirs" from today on.' && r.blocks[1].elements[0].action_id === 'my_bookings',
-     'someone else\'s -> not found, with My bookings');
+  okC(r, () => ok(r.count === 0 && r.blocks[0].text.text === 'I couldn’t find a booking of yours called "theirs" from today on.' && r.blocks[1].elements[0].action_id === 'my_bookings',
+     'someone else\'s -> not found, with My bookings'), 's -> not found, with My bookings');
   r = await reply(await offerOf('cancel my 2pm on saturday', { dates: '2027-10-16' }));
-  ok(r.count === 1 && r.blocks[1].block_id === 'bk_ev1', 'by date and time');
+  okC(r, () => ok(r.count === 1 && r.blocks[1].block_id === 'bk_ev1', 'by date and time'), 'by date and time');
   co = await offerOf('make it 3-5pm', { bf: { timeInNewest: true, timeStart: '15:00', timeEnd: '17:00' }, history: [bookedDM] });
   r = await reply(co);
   ok(r.count === 1 && ['Here it is - press *Change* to check the new time.', 'Here’s your proposed change – press *Change* to check the new time.', 'Your change so far:'].indexOf(r.blocks[0].text.text) !== -1
@@ -80,7 +87,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
   r = await reply(await offerOf('make it 3-5pm', { bf: { timeInNewest: true, timeStart: '15:00', timeEnd: '17:00' }, history: [bookedDM] }), { error: 'x' });
   ok(r.count === 1 && r.blocks[1].block_id === 'bk_ev1', 'calendar unreadable but the recent booking known -> still offered (Move checks)');
   r = await reply(await offerOf('cancel orange', {}), { error: 'x' });
-  ok(/couldn’t be read/.test(r.blocks[0].text.text), 'calendar unreadable, nothing known -> said');
+  okC(r, () => ok(/couldn’t be read/.test(r.blocks[0].text.text), 'calendar unreadable, nothing known -> said'), 'calendar unreadable, nothing known -> said');
 
   // ---- Menu Check: everything else -> the menu
   const menuFor = async (text, o) => {

@@ -160,7 +160,7 @@ const C = si.connections, nx = n => (C[n].main || []).map(o => o.map(c => c.node
   ok(fo.formOffer.prefill.c === 'John Smithy' && /Client: John Smithy/.test(fo.formOffer.text), 'main v270: the reply\'s client capitalised');
   const cr = await j1(main, 'Change Reply', [{ json: { items: [{ id: 'evL', summary: 'LIKHA - haist meeting', start: { dateTime: '2027-10-21T10:00:00+08:00' }, end: { dateTime: '2027-10-21T11:00:00+08:00' }, description: 'ref: U1',
     attendees: [{ resource: true, email: 'x@resource.calendar.google.com', displayName: 'KDC Plaza-Top Level-Likha (Big Room)' }] }] } }],
-    { 'Change Offer': [{ json: { changeOffer: { kind: 'cancel', user: 'U1', channel: 'D1', words: ['haist'], fDates: [], fRooms: [], n: {} } } }] });
+    { 'Change Offer': [{ json: { changeOffer: { kind: 'change', user: 'U1', channel: 'D1', words: ['haist'], fDates: [], fRooms: [], n: {} } }   /* main v292: a typed cancel shows no card - the room label is checked on a change */ }] });
   ok(/· Likha$/.test(cr.blocks[1].text.text) && JSON.parse(cr.blocks[2].elements[0].value).r === 'Likha', 'main v270: the typed reply names Likha (not "Likha (Big Room)")');
 
   console.log(pass + ' ok, ' + fail + ' failed');
