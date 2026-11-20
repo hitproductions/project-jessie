@@ -177,17 +177,31 @@ const tv = v => ({ selected_option: { value: v } });
   const ro = t.view.blocks.find(b => b.block_id === 'room_other');
   ok(ro && ro.element.type === 'static_select' && ro.element.options.length > 0 && ro.element.options.every(o => !o.description) && (V26 ? !ro.hint : /Not a usual room for Music Mixing/.test(ro.hint.text)) && (!V25 || ro.optional),
      '1: Use another room -> a dropdown Slack accepts (no option descriptions; v19 had them on every option)');
-  // M booth all day in step 1
+  // M booth all day in step 1 (v86: picking M booth ticks it - the box under a new block_id, "allday_toggle~<ms>")
+  const V86 = /v86 \(Howard, 20 Nov\): an M booth is all day/.test(JSON.stringify(si.nodes));
+  const adOf = v => v.blocks.find(b => String(b.block_id || '').split('~')[0] === 'allday_toggle');
+  const stemIx = v => v.blocks.map(b => String(b.block_id || '').split('~')[0]);
   t = await toggle(s1.view, 'purpose_pick', { selected_option: { value: '__booth' } }, { purpose: { purpose_pick: tv('__booth') } });
-  ix = t.view.blocks.map(b => b.block_id);
+  ix = stemIx(t.view);
   ok(ix.indexOf('allday_toggle') === ix.indexOf('purpose') + 1 && t.view.blocks.find(b => b.block_id === 'purpose').element.initial_option.value === '__booth', '6: M booth picked -> All day booking appears under it');
+  if (V86) ok(adOf(t.view).elements[0].initial_options && !t.view.blocks.some(b => b.block_id === 'start' || b.block_id === 'end') && /^allday_toggle~\d+$/.test(adOf(t.view).block_id),
+     'v86: M booth picked -> All day ticked, Start and End gone (a new block_id, so an earlier untick cannot stick)', adOf(t.view));
   const ad = await toggle(t.view, 'allday_toggle', { selected_options: [{ value: 'allday' }] }, { purpose: { purpose_pick: tv('__booth') } });
-  ok(!ad.view.blocks.some(b => b.block_id === 'start' || b.block_id === 'end') && ad.view.blocks.find(b => b.block_id === 'allday_toggle').elements[0].initial_options, '6: All day ticked -> Start and End go');
+  ok(!ad.view.blocks.some(b => b.block_id === 'start' || b.block_id === 'end') && adOf(ad.view).elements[0].initial_options, '6: All day ticked -> Start and End go');
   let un = await toggle(ad.view, 'allday_toggle', { selected_options: [] }, { purpose: { purpose_pick: tv('__booth') } });
   ix = un.view.blocks.map(b => b.block_id);
-  ok(ix.indexOf('start') === ix.indexOf('date') + 1 && ix.indexOf('end') === ix.indexOf('start') + 1, '6: unticked -> Start and End back under the date');
+  ok(ix.indexOf('start') === ix.indexOf('date') + 1 && ix.indexOf('end') === ix.indexOf('start') + 1, '6: unticked -> Start and End back under the date', ix);
   un = await toggle(ad.view, 'purpose_pick', { selected_option: { value: 'VO Recording' } }, { purpose: { purpose_pick: tv('VO Recording') } });
-  ok(!un.view.blocks.some(b => b.block_id === 'allday_toggle') && un.view.blocks.some(b => b.block_id === 'start'), '6: another purpose -> the box goes, the times come back');
+  ok(!adOf(un.view) && un.view.blocks.some(b => b.block_id === 'start'), '6: another purpose -> the box goes, the times come back');
+  if (V86) { const ev = await toggle(s1.view, 'purpose_pick', { selected_option: { value: 'Event' } }, { purpose: { purpose_pick: tv('Event') } });
+    ok(adOf(ev.view) && !adOf(ev.view).elements[0].initial_options && ev.view.blocks.some(b => b.block_id === 'start'), 'v86: an Event -> the box unticked, times kept (as before)');
+    const bo = await toggle(ev.view, 'purpose_pick', { selected_option: { value: '__booth' } }, { purpose: { purpose_pick: tv('__booth') } });
+    ok(adOf(bo.view).elements[0].initial_options && !bo.view.blocks.some(b => b.block_id === 'start'), 'v86: Event, then M booth -> ticked, times gone');
+    const k = adOf(bo.view).block_id;
+    r1 = await read1({ date: { date_pick: { selected_date: '2027-10-19' } }, purpose: { purpose_pick: tv('__booth') }, [k]: { allday_toggle: { selected_options: [{ value: 'allday' }] } } });
+    ok(r1.valid && r1.s.allDay === true, 'v86: Read Step 1 reads the re-keyed box - all day', r1.s);
+    r1 = await read1({ date: { date_pick: { selected_date: '2027-10-19' } }, start: { start_pick: tv('10:00') }, end: { end_pick: tv('12:00') }, purpose: { purpose_pick: tv('__booth') }, [k]: { allday_toggle: { selected_options: [] } } });
+    ok(r1.valid && !r1.s.allDay && r1.s.t0 === '10:00', 'v86: unticked -> the times picked', r1.s); }
 
   // ---- Read Step 2: every room on the booking
   const read2 = async (vv, meta) => j1('Read Step 2', [], { 'Check Signature': [chk], 'Read Request': [{ json: { payload: { type: 'view_submission', view: { id: 'V1', private_metadata: JSON.stringify(meta), state: { values: vv } } } } }], 'Read Cache 3': cacheRow });

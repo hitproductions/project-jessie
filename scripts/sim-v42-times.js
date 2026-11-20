@@ -74,7 +74,10 @@ const V1 = (p, s, e, ad) => Object.assign({ date: { date_pick: { selected_date: 
   t = await tog('Meeting'); tv2 = t.view || t;
   ok(!blk(tv2, 'allday_toggle') && blk(tv2, 'start'), 'Meeting picked: no box');
   t = await tog('__booth'); tv2 = t.view || t;
-  ok(blk(tv2, 'allday_toggle').elements[0].options[0].text.text === 'All day booking', 'M booth picked: All day booking, as before');
+  { const _ab = (tv2.blocks || []).find(b => String(b.block_id || '').split('~')[0] === 'allday_toggle');   // v86: re-keyed and ticked
+    const V86 = /v86 \(Howard, 20 Nov\): an M booth is all day/.test(JSON.stringify(si.nodes));
+    ok(_ab && _ab.elements[0].options[0].text.text === 'All day booking' && (!V86 || (_ab.elements[0].initial_options && !blk(tv2, 'start'))),
+      V86 ? 'M booth picked: All day booking, ticked, no Start / End (v86)' : 'M booth picked: All day booking, as before'); }
   // step 2: an all-day Event - the rooms Room Availability has free all day, as for any Event
   const step2 = async (s, ra) => (await j1(si, 'Build Step 2', [{ json: Object.assign({ status: 'OK', busy: [] }, ra) }], { 'Read Step 1': [{ json: { s } }], 'Read Cache 2': cacheRow, 'Loc Projects 2': [] })).view;
   const S = { date: '2027-10-23', t0: '00:00', t1: '23:59', purpose: 'Event', kind: 'meeting', requester: 'U1', channel: 'D1', ext: 'x', allDay: true };
