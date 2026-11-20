@@ -43,7 +43,7 @@ const ST = st.fields.Type;
   r = await read2({ room: { room_radio: tv('Likha') }, title: { title_in: { value: 'Plan / review' } } }, S('Meeting', 'meeting'));
   ok(r.calTitle === 'LIKHA - Plan - review' && !/\//.test(r.calTitle), 'a meeting title -> LIKHA - Plan - review', { t: r.calTitle, e: r.answer && r.answer.errors });
   r = await read2({ room: { room_radio: tv('Studio E') }, forname: { forname_in: { value: 'Sasa/Lyn' } }, project: { project_in: { value: 'trailer' } } }, S('Post Processing', 'post'));
-  ok(/^POST PROCESSING - TRAILER \/ Sasa - Lyn$/.test(r.calTitle), 'Post Processing "Who is it for?" -> POST PROCESSING - TRAILER / Sasa - Lyn', { t: r.calTitle, e: r.answer && r.answer.errors });
+  ok(/^(?:POST PROCESSING|MULTIMEDIA POST) - TRAILER \/ Sasa - Lyn$/.test(r.calTitle), 'Post Processing "Who is it for?" -> POST PROCESSING - TRAILER / Sasa - Lyn', { t: r.calTitle, e: r.answer && r.answer.errors });
 
   console.log('Change');
   const js = si.nodes.find(x => x.name === 'Read Change').parameters.jsCode;

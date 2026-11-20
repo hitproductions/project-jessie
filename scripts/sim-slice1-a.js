@@ -65,11 +65,11 @@ async function __run0(wf, name, input, outs) {
   const s1 = (await run(si, 'Build Step 1', [], { 'Check Signature': [chk], 'Read Cache': cacheRow }))[0].json;
   { const B = s1.view.blocks, pi = B.findIndex(b => b.block_id === 'purpose'); if (pi === 1) { const [pb] = B.splice(1, 1); B.splice(4, 0, pb); } }   // v24 moved it first: the old index checks below read the old order
   const grp = s1.view.blocks.find(b => b.block_id === 'purpose').element.option_groups;   // v24: it moved first
-  ok(s1.cacheOk && grp[0].options.map(o => o.value).join() === 'Music Mixing,VO Recording', 'step 1: sessions from the cache, sorted');
-  ok(grp[1].options.map(o => o.value).join() === 'Meeting,Event,__booth', 'step 1: not-a-session group');
-  if (JSON.stringify(s1.view).indexOf("'M booth'") !== -1 || s1.view.blocks[4].element.option_groups[1].options.some(o => o.text.text === 'M booth')) {
+  ok(s1.cacheOk && grp.find(x => x.label.text === 'Sessions').options.map(o => o.value).join() === 'Music Mixing,VO Recording'   /* SI v82: by label */, 'step 1: sessions from the cache, sorted');
+  ok(['Meeting,Event,__booth', '__booth,Meeting,Event'].indexOf(grp.find(x => x.label.text !== 'Sessions').options.map(o => o.value).join()) !== -1   /* SI v82: Bookings - M booth, Meeting, Event */, 'step 1: not-a-session group');
+  if (JSON.stringify(s1.view).indexOf("'M booth'") !== -1 || s1.view.blocks[4].element.option_groups.some(gr => gr.options.some(o => o.text.text === 'M booth'))   /* SI v82: any group */) {
     ok(!s1.view.blocks[2].element.timezone && !s1.view.blocks[3].element.timezone, 'v6: time pickers carry no time zone (no note); times read as PHT');
-    ok(grp[1].options.find(o => o.value === '__booth').text.text === 'M booth', 'v6: "M booth", not "Booth time"');
+    ok([].concat(...grp.map(gr => gr.options)).find(o => o.value === '__booth').text.text === 'M booth', 'v6: "M booth", not "Booth time"');
   }
   ok(s1.view.blocks[1].element.initial_date.startsWith(String(new Date(Date.now() + 8 * 3600e3).getUTCFullYear() + 1)), 'step 1: date a year ahead');
 

@@ -11,7 +11,7 @@ function __jColour(type, dept, rooms) {
   if (t === 'meeting') return '5';
   if (t === 'event') return '6';
   if (t === 'van recording') return '4';
-  if (t === 'post processing') return '1';
+  if (t === 'post processing' || t === 'multimedia post') return '1';
   if (/[,&\/+]|\band\b/.test(d)) return '2';
   if (/locali[sz]ation/.test(d)) return '7';
   if (/audio post|post production|^post$/.test(d)) return '9';

@@ -60,7 +60,7 @@ const offer = async (text, dates) => {
   ({ F } = await offer('book studio e tomorrow 2-4pm post processing for dylan'));
   ok(F.prefill.fn === 'Dylan' && !F.prefill.en && !F.prefill.c && /Post Processing(?: · |\n)For: Dylan/.test(F.text), 'Post Processing for dylan -> Who is it for? Dylan (Howard: no Booker dropdown)', F.text);
   ({ F } = await offer('hi book studio e for dylan tomorrow 12-2pm'));
-  ok(F.prefill.p === 'Post Processing' && F.prefill.fn === 'Dylan', 'Howard\'s 21:31 message (Studio E, no type) -> Post Processing, For: Dylan (Studio E is only for Post Processing)', F.prefill);
+  ok(/^(?:Post Processing|Multimedia Post)$/.test(F.prefill.p) && F.prefill.fn === 'Dylan', 'Howard\'s 21:31 message (Studio E, no type) -> Post Processing, For: Dylan (Studio E is only for Post Processing)', F.prefill);
   ({ F } = await offer('book studio 7 tomorrow 2-4pm for josiah'));
   ok(!F.prefill.p && F.prefill.fid === 'U044A89SGQY' && F.prefill.fn === 'Josiah' && !F.prefill.en && /For: Josiah Lateo/.test(F.text), 'no type yet -> Josiah rides along (fid / fn) for step 2', F.prefill);
   ({ F } = await offer('book m4 tomorrow for japs'));
@@ -126,12 +126,12 @@ const offer = async (text, dates) => {
     const r4 = async vals => (await run(si, 'Read Step 2', [], { 'Check Signature': [{ json: { user: 'U1' } }], 'Read Cache 3': cache3,
       'Read Request': [{ json: { payload: { type: 'view_submission', view: { id: 'V1', private_metadata: JSON.stringify(PM), blocks: [], state: { values: Object.assign({ room: { room_radio: { selected_option: { value: 'Studio E' } } } }, vals) } } } } }] }))[0].json;
     let q = await r4({ forname: { forname_in: { value: 'dilan' } }, project: { project_in: { value: 'trailer cut' } } });
-    ok(q.valid && q.calTitle === 'POST PROCESSING - TRAILER CUT / Dilan' && q.engineerId === 'U0BQ77XKWA3' && !/For: /.test(q.prep.description), 'for dilan, project trailer cut -> POST PROCESSING - TRAILER CUT / Dilan (Dilan is in Bookers)', { t: q.calTitle, e: q.engineerId, d: q.prep && q.prep.description });
+    ok(q.valid && /^(?:POST PROCESSING|MULTIMEDIA POST) - TRAILER\ CUT\ \/\ Dilan$/.test(q.calTitle) && q.engineerId === 'U0BQ77XKWA3' && !/For: /.test(q.prep.description), 'for dilan, project trailer cut -> POST PROCESSING - TRAILER CUT / Dilan (Dilan is in Bookers)', { t: q.calTitle, e: q.engineerId, d: q.prep && q.prep.description });
     q = await r4({ forname: { forname_in: { value: 'sasa' } }, project: { project_in: { value: 'teaser' } } });
-    ok(q.valid && q.calTitle === 'POST PROCESSING - TEASER / Sasa' && q.engineerId === 'U1' && /For: Sasa/.test(q.prep.description), 'for sasa (not staff) -> POST PROCESSING - TEASER / Sasa, "For: Sasa" in the notes, booked under you', { t: q.calTitle, d: q.prep && q.prep.description });
+    ok(q.valid && /^(?:POST PROCESSING|MULTIMEDIA POST) - TEASER\ \/\ Sasa$/.test(q.calTitle) && q.engineerId === 'U1' && /For: Sasa/.test(q.prep.description), 'for sasa (not staff) -> POST PROCESSING - TEASER / Sasa, "For: Sasa" in the notes, booked under you', { t: q.calTitle, d: q.prep && q.prep.description });
     q = await r4({ forname: { forname_in: { value: 'Dilan' } }, project: { project_in: { value: '' } } });
-    ok(q.valid && q.calTitle === 'POST PROCESSING - Dilan', 'no project (optional) -> POST PROCESSING - Dilan', { v: q.valid, t: q.calTitle, e: q.answer && q.answer.errors });
-    ok(q.prep.session_type === 'Post Processing' && q.prep.summary === 'POST PROCESSING - Dilan' && q.again.fn === 'Dilan', 'Book Session gets that title; Book a room again keeps the name');
+    ok(q.valid && /^(?:POST PROCESSING|MULTIMEDIA POST) - Dilan$/.test(q.calTitle), 'no project (optional) -> POST PROCESSING - Dilan', { v: q.valid, t: q.calTitle, e: q.answer && q.answer.errors });
+    ok(/^(?:Post Processing|Multimedia Post)$/.test(q.prep.session_type) && /^(?:POST PROCESSING|MULTIMEDIA POST) - Dilan$/.test(q.prep.summary) && q.again.fn === 'Dilan', 'Book Session gets that title; Book a room again keeps the name');
     const v4 = await (async () => (await run(si, 'Build Step 2', [{ json: { status: 'OK', busy: [], free_priority: ['Studio E'] } }], { 'Read Step 1': [{ json: { s: S('Post Processing', 'post', { fn: 'Dilan' }) } }], 'Read Cache 2': cache3, 'Loc Projects 2': [] }))[0].json.view)();
     const fb4 = v4.blocks.find(b => b.block_id === 'forname'), pj4 = v4.blocks.find(b => b.block_id === 'project');
     ok(fb4 && fb4.label.text === 'Who is it for?' && fb4.element.initial_value === 'Dilan' && pj4.optional && !v4.blocks.find(b => b.block_id === 'booker'), 'step 2: Who is it for? (Dilan, typed), Project title optional, no Booker dropdown');
@@ -144,9 +144,9 @@ const offer = async (text, dates) => {
     const rcv = async vals => (await run(si, 'Read Change', [], { 'Check Signature': [{ json: { user: 'U1' } }], 'Read Cache 10': cache3,
       'Read Request': [{ json: { payload: { view: { id: 'V1', private_metadata: cv.private_metadata, state: { values: Object.assign({ date: { date_pick: { selected_date: '2027-10-21' } }, start: { start_pick: { selected_option: { value: '13:00' } } }, end: { end_pick: { selected_option: { value: '15:00' } } }, room: { room_pick: { selected_option: { value: 'Studio E' } } }, purpose_c: { purpose_c: { selected_option: { value: 'Post Processing' } } } }, vals) } } } } }] }))[0].json;
     let rc = await rcv({ det_project: { det_project_in: { value: 'TRAILER' } }, det_forname: { det_forname_in: { value: 'sasa' } } });
-    ok(rc.valid && rc.newTitle === 'POST PROCESSING - TRAILER / Sasa', 'Change the name to sasa -> POST PROCESSING - TRAILER / Sasa', { v: rc.valid, t: rc.newTitle, e: rc.answer && rc.answer.errors });
+    ok(rc.valid && /^(?:POST PROCESSING|MULTIMEDIA POST) - TRAILER\ \/\ Sasa$/.test(rc.newTitle), 'Change the name to sasa -> POST PROCESSING - TRAILER / Sasa', { v: rc.valid, t: rc.newTitle, e: rc.answer && rc.answer.errors });
     rc = await rcv({ det_project: { det_project_in: { value: '' } }, det_forname: { det_forname_in: { value: 'Dilan' } } });
-    ok(rc.valid && rc.newTitle === 'POST PROCESSING - Dilan', 'Change: project emptied -> POST PROCESSING - Dilan (optional)', { v: rc.valid, t: rc.newTitle, e: rc.answer && rc.answer.errors });
+    ok(rc.valid && /^(?:POST PROCESSING|MULTIMEDIA POST) - Dilan$/.test(rc.newTitle), 'Change: project emptied -> POST PROCESSING - Dilan (optional)', { v: rc.valid, t: rc.newTitle, e: rc.answer && rc.answer.errors });
     rc = await rcv({ det_project: { det_project_in: { value: 'TRAILER' } }, det_forname: { det_forname_in: { value: 'Dilan' } } });
     ok(!rc.valid && rc.answer.errors.date === 'Nothing changed.', 'Change with nothing changed -> "Nothing changed."', { v: rc.valid, t: rc.newTitle, nd: rc.newDetails, rcng: rc.roomChanged, e: rc.answer && rc.answer.errors });
     cv = await bc({ id: 'e1', d: '2027-10-21', s: '13:00', e: '15:00', r: 'Studio E', t: 'TRAILER / DD', st: 'Post Processing' });
@@ -171,7 +171,7 @@ const offer = async (text, dates) => {
     const vals8 = { room: { room_radio: { selected_option: { value: 'Studio E' } } }, forname: { forname_in: { value: 'lyn' } } };
     const view8 = { id: 'V1', private_metadata: JSON.stringify(PM), blocks: [], state: { values: vals8 } };
     q = (await run(si, 'Read Step 2', [], { 'Check Signature': [{ json: { user: 'U1' } }], 'Read Cache 3': cache7, 'Read Request': [{ json: { payload: { type: 'view_submission', view: view8 } } }] }))[0].json;
-    ok(q.valid && q.engineerId === 'U8' && q.calTitle === 'POST PROCESSING - Lyn', 'a typed name still matches anyone (Howard): "lyn" -> Lyn Sajonas', { t: q.calTitle, e: q.engineerId });
+    ok(q.valid && q.engineerId === 'U8' && /^(?:POST PROCESSING|MULTIMEDIA POST) - Lyn$/.test(q.calTitle), 'a typed name still matches anyone (Howard): "lyn" -> Lyn Sajonas', { t: q.calTitle, e: q.engineerId });
   } else ok(true, '(SI v33 not in this build - the booth name check skipped)');
 
   console.log('\n' + pass + ' ok, ' + fail + ' failed');

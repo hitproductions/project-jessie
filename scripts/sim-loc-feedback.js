@@ -50,7 +50,7 @@ const opt = n => ({ text: { type: 'plain_text', text: n }, value: n });
     F = await offer('book studio 2 and e tomorrow 2-4pm for dubbing');
     ok(F.prefill.r === 'Studio 2' && F.prefill.bo === 'Studio E' && F.prefill.p !== 'Post Processing', 'Studio 2 + Studio E -> E is the booth, not Post Processing', F.prefill);
     F = await offer('book studio e tomorrow 2-4pm');
-    ok(F.prefill.r === 'Studio E' && F.prefill.p === 'Post Processing', 'Studio E alone -> Post Processing, as before', F.prefill);
+    ok(F.prefill.r === 'Studio E' && /^(?:Post Processing|Multimedia Post)$/.test(F.prefill.p), 'Studio E alone -> Post Processing, as before', F.prefill);
     for (const [l, k, room] of [['b', 'bo', 'Studio B'], ['c', 'mr', 'Studio C'], ['d', 'bo', 'Studio D'], ['e', 'bo', 'Studio E'], ['f', 'mr', 'Studio F']]) {
       const G = await offer('book studio 1 and ' + l); ok(G.prefill.r === 'Studio 1' && G.prefill[k] === room, '"book studio 1 and ' + l + '" -> Studio 1 + ' + room + (k === 'bo' ? ' (booth)' : ' (+ Multiple studios)'), G.prefill); }
     if (has(MAIN, 'v290 (Howard, 4 Nov)')) {   // main v290: Studio M is only for Van Recording - said, not dropped silently
@@ -164,7 +164,7 @@ const opt = n => ({ text: { type: 'plain_text', text: n }, value: n });
     ok(!ro || !JSON.stringify(ro).includes('"Studio E"'), 'Studio E is not offered as the room for Localization Dubbing', ro);
     v = await step2({ date: '2026-11-05', t0: '13:00', t1: '16:00', kind: 'post', purpose: 'Post Processing', requester: 'U1', when: 'x' }, { free_priority: ['Studio E'], free_rooms: FREE });
     ok(/"value":"Studio E"/.test(JSON.stringify(v.blocks.filter(b => b.block_id && /^room/.test(b.block_id)))), 'Post Processing: Studio E still its room (a booth for everything else)', v.blocks.map(b => b.block_id));
-    ok(jsOf(SI, 'Build Change').indexOf("!(/^studio e$/i.test(n) && /^post processing$/i.test(String(T0 || '')))") !== -1, 'Change: Studio E is a studio for Post Processing');
+    ok((jsOf(SI, 'Build Change').indexOf("!(/^studio e$/i.test(n) && /^post processing$/i.test(String(T0 || '')))") !== -1 || jsOf(SI, 'Build Change').indexOf("!(/^studio e$/i.test(n) && /^(?:post processing|multimedia post)$/i.test(String(T0 || '')))") !== -1), 'Change: Studio E is a studio for Post Processing');
 
     console.log('Slack Interactions v64: My bookings');
     const mw = await j1(SI, 'My Window', [{ json: {} }], { 'Check Signature': [{ json: { user: 'U1' } }], 'Read Request': [{ json: { payload: { actions: [{ action_id: 'my_page_jump', type: 'datepicker', selected_date: '2027-11-15' }], container: { channel_id: 'D1', message_ts: '5.5' } } } }] });
@@ -195,7 +195,7 @@ const opt = n => ({ text: { type: 'plain_text', text: n }, value: n });
     let c = cc(REQ('Localization Dubbing', 'Studio 1, Studio E'));
     ok(!(c.reason === 'ROOM_UNSUITABLE' && /Studio E/.test(c.human || '')), 'Studio 1 + Studio E (Localization Dubbing) -> not refused for Studio E', { v: c.verdict, r: c.reason, h: c.human });
     c = cc(REQ('Localization Dubbing', 'Studio E'));
-    ok(c.reason === 'ROOM_UNSUITABLE' && /Studio E is only for Post Processing/.test(c.human || ''), 'Studio E as the room (not Post Processing) -> still refused', { v: c.verdict, r: c.reason, h: c.human });
+    ok(c.reason === 'ROOM_UNSUITABLE' && /Studio E is only for (?:Post Processing|Multimedia Post)/.test(c.human || ''), 'Studio E as the room (not Post Processing) -> still refused', { v: c.verdict, r: c.reason, h: c.human });
     c = cc(REQ('Post Processing', 'Studio E'));
     ok(!(c.reason === 'ROOM_UNSUITABLE' && /Studio E/.test(c.human || '')), 'Post Processing in Studio E -> as before', { v: c.verdict, r: c.reason });
   }

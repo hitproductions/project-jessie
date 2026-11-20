@@ -111,7 +111,7 @@ const views = [];
   const i = cc.indexOf('// v112 (round 8): single-room'), j = cc.indexOf('const keys = Object.keys(ROOMS);', i);
   const rule = new Function('REQ', 'wantedNames', cc.slice(i, j) + '\nreturn null;');
   const x = rule({ session_type: 'VO Recording' }, ['Studio E']);
-  ok(x && x[0].json.human === 'Studio E is only for Post Processing. Nothing was booked.', 'Book Session: Studio E refused for anything else');
+  ok(x && /^Studio E is only for (?:Post Processing|Multimedia Post)\. Nothing was booked\.$/.test(x[0].json.human), 'Book Session: Studio E refused for anything else');
   ok(rule({ session_type: 'Post Processing' }, ['Studio E']) === null, 'Book Session: Post Processing in Studio E -> on');
 
   console.log('5 / 6: optional dropdowns that read "No …"; no "pick one or both"');

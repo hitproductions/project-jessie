@@ -168,7 +168,7 @@ async function __run0(wf, name, input, outs) {
   const el = id => v.blocks.find(b => b.block_id === id).element;
   ok(el('date').initial_date === '2027-10-14', 'step 1: the date');
   ok(el('start').initial_option.value === '14:00' && el('start').options.includes(el('start').initial_option) && el('end').initial_option.value === '16:00', 'step 1: start and end chosen (one of the options)');
-  ok(el('purpose').initial_option.value === 'VO Recording' && el('purpose').option_groups[0].options.some(o => o === el('purpose').initial_option), 'step 1: the session type chosen');
+  ok(el('purpose').initial_option.value === 'VO Recording' && el('purpose').option_groups.some(gr => gr.options.some(o => o === el('purpose').initial_option))   /* SI v82: any group */, 'step 1: the session type chosen');
   ok(JSON.parse(v.private_metadata).pre.r === 'Studio 7', 'step 1 carries what was read');
   v = await step1(JSON.stringify({ s: '14:15', e: '15:45', p: '__booth' }));
   const o = el('start').options.map(x => x.value);

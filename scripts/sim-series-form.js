@@ -74,7 +74,7 @@ const j1 = async (...a) => (await run(...a))[0].json;
     ok((V60 ? !tgu.view.blocks.find(b => /^rep_until(~\d+)?$/.test(b.block_id || '')).element.initial_date : tgu.view.blocks.find(b => /^rep_until(~\d+)?$/.test(b.block_id || '')).element.initial_date === '2027-11-16') && (V17 ? tgu.view.blocks.find(b => /^rep_until(~\d+)?$/.test(b.block_id || '')).hint.text === 'Only applies if "How many times" is empty.' : /How many times is empty/.test(tgu.view.blocks.find(b => /^rep_until(~\d+)?$/.test(b.block_id || '')).hint.text)),
        'v15: Or until starts 4 weeks after the first date (v60: empty), and says when it is used');
     const pur = s1.blocks.find(b => b.block_id === 'purpose');
-    ok((V25 ? pur.hint.text === 'You’ll get a recommendation based on the booking details.' : pur.hint.text === 'A room will be recommended to you based on your session details.') && pur.element.option_groups.map(g => g.label.text).join() === 'Sessions,Other bookings', 'v15: step 1 wording');
+    ok((V25 ? pur.hint.text === 'You’ll get a recommendation based on the booking details.' : pur.hint.text === 'A room will be recommended to you based on your session details.') && pur.element.['Sessions,Other bookings', 'Bookings,Sessions'].indexOf(pur.element.option_groups.map(g => g.label.text).join()) !== -1   /* 20 Nov: SI v82: Bookings first */, 'v15: step 1 wording');
   }
   const err = async (rep, bid, re) => { const x = await read1(rep); ok(!x.valid && x.answer.response_action === 'errors' && re.test(x.answer.errors[bid] || ''), bid + ': ' + JSON.stringify(x.answer.errors)); };
   await err(F('weekly', [], 4), 'rep_days', /at least one day/);
