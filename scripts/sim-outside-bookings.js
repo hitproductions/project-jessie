@@ -16,7 +16,8 @@ const wrap = a => ({ first: () => a[0] || { json: {} }, all: () => a });
 const RES = { 'Studio 7': 'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.google.com', 'Studio 8': 'c_18863v8hd6f42isegdh9i30psuo9q@resource.calendar.google.com',
   'Studio B': 'c_1881vgb66tkpujjelnn3rniugd9pk@resource.calendar.google.com', M3: 'c_188d7dkqgnfs6hu4iunlu5ogftct0@resource.calendar.google.com',
   M4: 'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com' };
-const Z = s => new Date(Date.parse(s)).toISOString();   // free/busy answers in UTC
+const Z = s => new Date(Date.parse(s)).toISOString();
+const RES_ALL = (() => { const o = {}, t = require('fs').readFileSync(require('path').join(__dirname, '..', 'workflows', 'room-availability-v26.json'), 'utf8'); let m; const re = /'([^'\\]+)':\s*'([^'\\]+@resource\.calendar\.google\.com)'/g; while ((m = re.exec(t))) o[m[1]] = m[2]; return o; })();   // free/busy answers in UTC
 
 console.log('Wiring');
 for (const [w, into] of [[RA, ['When Executed by Another Workflow']], [BS, ['Cached?', 'Client Unmatched?', 'All Client Names']]]) {
@@ -35,7 +36,7 @@ const NAMES = ['Studio 1', 'Studio 2', 'Studio 3', 'Studio 4', 'Studio 5', 'Stud
   'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'Salin', 'Katha', 'Likha', 'Lobby'];
 const REF = JSON.stringify({ rooms: NAMES.map((n, i) => ({ id: 'r' + i, name: n, vocalBooth: false, common: /Salin|Katha|Likha|Lobby/.test(n) })), types: [] });
 const ev = (id, title, s, e, rooms, att) => ({ id, summary: title, location: rooms.join(', '), start: s.length === 10 ? { date: s } : { dateTime: s }, end: e.length === 10 ? { date: e } : { dateTime: e },
-  attendees: (att || []).map(r => ({ email: RES[r], resource: true, responseStatus: 'accepted' })), description: 'Booked by: X | ref: U9' });
+  attendees: (att || rooms).map(r => ({ email: RES[r] || RES_ALL[r], resource: true, responseStatus: 'accepted' })), description: 'Booked by: X | ref: U9' });   // RA v27 / BS v132: a room is held by its resource, so test bookings book theirs
 const CAL = [ev('trish', 'M3 - Trish', '2026-10-30', '2026-10-31', ['M3'], ['M3']), ev('bonj', 'NET-BONJOUR6', '2026-10-30T09:00:00+08:00', '2026-10-30T21:00:00+08:00', ['Studio B', 'Studio 2']),
   ev('s8a', 'ORANGE / HL', '2026-10-30T10:00:00+08:00', '2026-10-30T12:00:00+08:00', ['Studio 8'], ['Studio 8'])];
 const FB = { calendars: {

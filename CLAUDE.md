@@ -335,6 +335,7 @@ only script that writes to n8n.
 | `node scripts/sim-typed-ranges.js` · `[main]` | main v294 (PENDING 157): typed date spans ("dec 9 to 25", "november 24 to nov 28", "24-28 nov", "dec 28 to jan 2") and day ranges ("wed to fri") through Gate Context / Booked For / Form Offer, "days:" lists, a resent request re-offered, the code not also the client, "engr" = engineer; times are not spans |
 | `node scripts/sim-reminders-hand-made.js` · `[reminders] [reminders-before]` | Reminders v11: a booking made by hand is reminded to its creator (Bookers Email / Alt email), with or without `ref:`; everyone else's reminder exactly v10's |
 | `node scripts/sim-multimedia-post.js` | PENDING 158 (20 Nov): Post Processing renamed Multimedia Post (Post Mixing kept, counted in every build) - Studio E, the post kind, titles (new MULTIMEDIA POST, old POST PROCESSING read and kept), Lavender, no client lookups, the AI's type list, typed "post processing"; Slack Interactions v82's "Bookings" group first |
+| `node scripts/sim-rooms-booked.js` | PENDING 159 / 115 / 147: a room is held only by its resource on the event, not declined - no room, a declined room, a room only in the location or title never blocks (Book Session v132, Room Availability v27, Move v46), free/busy still does; main v296 coordinators find their department's bookings by typing; Room Check v4's alert when the room-declined DM is refused |
 | `node scripts/sim-say-hi.js` · `[say-hi] [main] [si]` | Jessie — Say Hi: the greeting equals main's Menu Check, posted to the member id with Reminders' credential, each person once, a bad id stops the run, the Report |
 | `node scripts/sim-skip-step1.js` · `[si]` | PENDING 152: Slack Interactions v68 - which Book a room buttons skip step 1 (date, times or all day, type, no Repeats), Read Step 1 builds the booking from the button, step 2's Change date or time reopens step 1 in the same window |
 | `node scripts/sim-colours.js` · `[book-session] [move]` | PENDING 151: the calendar colour rule (`scripts/jessie_colour.py`) - Book Session v127's final_color on Create Event, Move v43's replacement keeps a hand-set colour and recolours only Jessie's bookings |
@@ -596,6 +597,9 @@ Known contradictions in Rooms & Studios, and which field Jessie trusts:
   Airtable view does not hide it from Jessie**: the API returns every field, which is how a hidden preference and
   Jem Lim's hidden Technical Requirements kept reaching replies. Book Session v50 no longer writes "Tech
   requirements" into event descriptions; main v162's prompt no longer mentions any of these fields.
+- **A room is taken only when its resource is booked on the event and has not declined** (20 Nov, PENDING 159; Book Session v132,
+  Room Availability v27, Move v46). The location text and the title never hold a room, and an event with no room blocks nothing; each
+  room's own calendar (free/busy, since Book Session v125 / RA v25) catches rooms booked from personal calendars or Envoy.
 - **Rooms that belong to one booking type are a code rule, not Airtable** (19 Oct, round 8-9): Studio M (the van) only for Van
   Recording, Studio E only for Multimedia Post (called Post Processing until 20 Nov - the code accepts both names), and any type with "Atmos" in its name only in Studio C. Slack Interactions'
   `roomAllowed` / `onlyRoom` and Book Session's Check Conflicts (the backstop). Change them there, not in Airtable.

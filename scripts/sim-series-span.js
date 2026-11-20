@@ -16,12 +16,13 @@ const RES = { 'Studio 7': 'c_188dupcj6cqfaipohqffj07ruq8de@resource.calendar.goo
   'Studio 1': 'hitproductions.net_3737303833303637363538@resource.calendar.google.com', 'Studio A': 'c_18843dclutqm6hl9nbeg002phapfu@resource.calendar.google.com',
   M4: 'c_18869nhmsj2uki8mljoi48v1cj7l4@resource.calendar.google.com' };
 const Z = s => new Date(Date.parse(s)).toISOString();
+const RES_ALL = (() => { const o = {}, t = require('fs').readFileSync(require('path').join(__dirname, '..', 'workflows', 'room-availability-v26.json'), 'utf8'); let m; const re = /'([^'\\]+)':\s*'([^'\\]+@resource\.calendar\.google\.com)'/g; while ((m = re.exec(t))) o[m[1]] = m[2]; return o; })();
 const NAMES = ['Studio 1', 'Studio 2', 'Studio 3', 'Studio 4', 'Studio 5', 'Studio 6', 'Studio 7', 'Studio 8', 'Studio A', 'Studio B', 'Studio C', 'Studio D', 'Studio E', 'Studio F', 'Studio M',
   'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'Salin', 'Katha', 'Likha', 'Lobby'];
 const REF = JSON.stringify({ rooms: NAMES.map((n, i) => ({ id: 'r' + i, name: n, vocalBooth: /^Studio [ABDE]$/.test(n), booth: /^Studio [ABDE]$/.test(n), common: /Salin|Katha|Likha|Lobby/.test(n) })),
   types: [{ type: 'Localization Dubbing', priority: ['r0', 'r1', 'r5'], last: ['r6'] }] });
 const ev = (id, title, s, e, rooms, att) => ({ id, summary: title, location: rooms.join(', '), start: s.length === 10 ? { date: s } : { dateTime: s }, end: e.length === 10 ? { date: e } : { dateTime: e },
-  attendees: (att || []).map(r => ({ email: RES[r], resource: true, responseStatus: 'accepted' })), description: 'Booked by: X | ref: U9' });
+  attendees: (att || rooms).map(r => ({ email: RES[r] || RES_ALL[r], resource: true, responseStatus: 'accepted' })), description: 'Booked by: X | ref: U9' });   // RA v27 / BS v132: a room is held by its resource, so test bookings book theirs
 const CAL = [
   ev('a', 'NRT-BONJOUR6 | JT', '2026-11-05T11:00:00+08:00', '2026-11-05T17:00:00+08:00', ['Studio A', 'Studio 1'], ['Studio A', 'Studio 1']),
   ev('b', 'NET-ISLA6', '2026-11-05T13:00:00+08:00', '2026-11-05T23:00:00+08:00', ['Studio 2']),
