@@ -11,7 +11,8 @@ const mv = JSON.parse(fs.readFileSync(process.argv[3] || 'workflows/move-booking
 const main = JSON.parse(fs.readFileSync(process.argv[4] || 'workflows/project-jessie-v274.json', 'utf8'));
 const V29 = !si.nodes.some(n => n.name === 'Suggest Codes');   // v29: the project-code search route removed (a text box since v25)
 const FX = require('./sim-fixture-rooms.js');
-const V25 = /function onlyRoom\(/.test(JSON.stringify(si.nodes));   // round 8: no "for someone else", a typed project code, an M booth name
+const V25 = /function onlyRoom\(/.test(JSON.stringify(si.nodes));
+const V85 = /v85 \(Howard, 20 Nov\): no Department field/.test(JSON.stringify(si.nodes));   // v85: no Department field on meetings (the booker's own, unseen)   // round 8: no "for someone else", a typed project code, an M booth name
 const V30 = /function pairBlocksC\(/.test(JSON.stringify(si.nodes));   // round 12: Booker dropdown, code without Enter (sim-round-12)
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
@@ -76,8 +77,8 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
 
   // ---- 7-8: meetings, events, M booths
   v = await step2(S('Meeting', 'meeting'), { free_priority: ['Likha'] });
-  ok(blk(v, 'title').label.text === 'Meeting title' && blk(v, 'department').element.initial_option.value === 'Audio Post' && (V25 ? !blk(v, 'forwho_toggle') : blk(v, 'forwho_toggle')) && blk(v, 'notes'),
-     '8: Meeting - title, Department set to yours (Audio Post), "Booking this for someone else?", Note');
+  ok(blk(v, 'title').label.text === 'Meeting title' && (V85 ? !blk(v, 'department') : blk(v, 'department').element.initial_option.value === 'Audio Post') && (V25 ? !blk(v, 'forwho_toggle') : blk(v, 'forwho_toggle')) && blk(v, 'notes'),
+     '8: Meeting - title, Department set to yours (Audio Post; none shown since v85), "Booking this for someone else?", Note');
   v = await step2(S('Event', 'meeting'), { free_priority: ['Lobby'] });
   ok(blk(v, 'title').label.text === 'Event title' && !blk(v, 'department') && (V25 ? !blk(v, 'forwho_toggle') : blk(v, 'forwho_toggle')), '8: Event - no department');
   v = await step2(S('', 'booth'), { free_rooms: ['M1', 'M2'] });
@@ -152,6 +153,8 @@ const blk = (v, id) => v.blocks.find(b => b.block_id === id);
      '7: an M booth for Daryl - "M2 - Daryl", "Booked by: Howard Luistro (for Daryl Reyes)", Daryl on the booking');
   r = await read2({ room: { room_radio: tv('Likha') }, title: { title_in: { value: 'Sync' } }, department: { department_pick: tv('Music') } }, M('Meeting', 'meeting'));
   ok(r.valid && r.prep.department === 'Music', '8: the meeting\'s department goes to Book Session ("Dept: Music")');
+  if (V85) { r = await read2({ room: { room_radio: tv('Likha') }, title: { title_in: { value: 'Sync' } } }, M('Meeting', 'meeting'));
+    ok(r.valid && r.prep.department === 'Audio Post', 'v85: no Department field - the booker\'s own (Audio Post) goes to Book Session', r.prep.department); }
   r = await read2({ room: { room_radio: tv('Studio 1') }, code: { code_pick: tv('new:NET-NEWSHOW') }, engineer: { engineer_pick: tv('U3') } }, M('Localization Dubbing', 'loc'));
   ok(r.valid && r.calTitle === 'NET-NEWSHOW / JT', '11: a new code books as typed - NET-NEWSHOW / JT');
   const bn = await runIn(si, 'Booked Notices', [{ json: {} }], { 'Read Step 2': [{ json: { forId: 'U2', s: S('', 'booth'), engineerId: '', arrangerId: '' } }], 'Read Cache 3': cacheRow,

@@ -131,7 +131,7 @@ const views = [];
   console.log('Meetings, events, M booths (9, 13, 20, 22)');
   v = await step2(S('Meeting', 'meeting'), { free_priority: ['Likha', 'Salin'] });
   views.push(v);
-  ok(!blk(v, 'forwho_toggle') && blk(v, 'department') && !blk(v, 'department').hint && blk(v, 'department').element.placeholder.text === 'Select a department', '9 / 4: Meeting - no "for someone else", Department without a hint');
+  ok(!blk(v, 'forwho_toggle') && (/v85 \(Howard, 20 Nov\): no Department field/.test(JSON.stringify(si.nodes)) ? !blk(v, 'department') : (blk(v, 'department') && !blk(v, 'department').hint && blk(v, 'department').element.placeholder.text === 'Select a department')), '9 / 4: Meeting - no "for someone else", Department without a hint (none at all since v85)');
   const mo = blk(v, 'room_other').element.options.map(o => o.value);
   ok(mo.indexOf('Studio F') !== -1 && mo.indexOf('Studio C') !== -1 && mo.indexOf('Katha') !== -1 && mo.indexOf('Studio M') === -1 && mo.indexOf('M1') === -1 && mo.indexOf('Studio A') === -1
      && (V26 ? !blk(v, 'room_other').hint : blk(v, 'room_other').hint.text === 'Not a usual room for meetings.'), '22: a meeting\'s Another room lists the free studios too (never Studio M, booths) - "Not a usual room for meetings."');
