@@ -8,7 +8,7 @@
 // Every name, email and Slack id here is made up.
 const fs = require('fs');
 const L = (p, d) => JSON.parse(fs.readFileSync(p || d, 'utf8'));
-const SI = L(process.argv[2], 'workflows/slack-interactions-v83.json'), BS = L(process.argv[3], 'workflows/book-session-v133.json');
+const SI = L(process.argv[2], 'workflows/slack-interactions-v84.json'), BS = L(process.argv[3], 'workflows/book-session-v133.json');
 const BSER = L(process.argv[4], 'workflows/book-series-v13.json'), MV = L(process.argv[5], 'workflows/move-booking-v47.json');
 const CX = L(process.argv[6], 'workflows/cancel-booking-v36.json'), RC = L(process.argv[7], 'workflows/room-check-v5.json');
 let pass = 0, fail = 0;
@@ -48,8 +48,8 @@ const MEET = (extra) => Object.assign({ room: { room_radio: tv('Likha') }, title
   ok(g && g.element.options.map(o => o.text.text).join() === 'Ana Guest,Ben Guest,Booker Person,Carla Alt,Eng Person,No Email' && g.element.options[0].value === 'UANA01',
      'everyone in Bookers with a Slack id, by name; the value is the Slack id', g && g.element.options);
   ok(g && /invite/.test(g.hint.text) && /message from Jessie/.test(g.hint.text), 'its hint: the Google invite and a message from Jessie', g && g.hint);
-  ok(ge && ge.optional && ge.label.text === 'Other guests (emails)' && ge.element.type === 'plain_text_input' && ge.element.action_id === 'guest_emails_in' && /outside/.test(ge.hint.text) && /commas/.test(ge.hint.text),
-     '"Other guests (emails)" - optional, typed; hint: inside or outside, commas, the invite', ge);
+  ok(ge && ge.optional && ge.label.text === 'Other guests (emails)' && ge.element.type === 'plain_text_input' && ge.element.action_id === 'guest_emails_in' && /outside Hit/.test(ge.hint.text) && /commas/.test(ge.hint.text) && /invite/.test(ge.hint.text),
+     '"Other guests (emails)" - optional, typed; hint: outside Hit, the invite, commas', ge && ge.hint);
   ok(ids(v).indexOf('guests') > ids(v).indexOf('title') && ids(v).indexOf('guest_emails') === ids(v).indexOf('guests') + 1 && ids(v).indexOf('notes') === ids(v).indexOf('guest_emails') + 1,
      'after the title / department, before the note', ids(v));
   v = await step2(S('Event', 'meeting'));
