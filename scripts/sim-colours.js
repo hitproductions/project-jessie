@@ -15,14 +15,21 @@ const NAME = { 1: 'Lavender', 2: 'Sage', 3: 'Grape', 4: 'Flamingo', 5: 'Banana',
 
 console.log('The rule');
 const CC = node(BS, 'Check Conflicts').parameters.jsCode;
+const V134 = /conference room booking/.test(CC);   // Book Session v134 / Move v48 (20 Nov): meetings and conference rooms Sage
 const jc = new Function(CC.slice(0, CC.indexOf('\n}\n', CC.indexOf('function __jColour')) + 3) + '\nreturn __jColour;')();
 for (const [t, d, r, want, why] of [
   ['Localization Dubbing', 'Localization', 'Studio 1, Studio A', 7, 'Localization'], ['QC', 'Localization', 'Studio 5', 7, 'Localization QC'],
   ['VO Recording', 'Audio Post', 'Studio 7', 9, 'Audio Post'], ['Music Recording', 'Music', 'Studio F', 3, 'Music'], ['Music Mixing', 'Music', 'Studio C', 3, 'Music'],
   ['', '', 'M4', 10, 'an M booth (no type)'], ['__booth', 'Marketing', 'M6', 10, 'an M booth'], ['Celebrity Recording', 'Audio Post', 'Studio F', 11, 'a celebrity booking'],
-  ['Meeting', 'Marketing', 'Likha', 5, 'a meeting'], ['Event', 'IT', 'Lobby', 6, 'an event'], ['Van Recording', 'Audio Post', 'Studio M', 4, 'Van Recording'],
+  ['Meeting', 'Marketing', 'Likha', V134 ? 2 : 5, 'a meeting'], ['Meeting', 'Marketing', 'Studio 7', V134 ? 2 : 5, 'a meeting in a studio'], ['Event', 'IT', 'Lobby', 6, 'an event'], ['Van Recording', 'Audio Post', 'Studio M', 4, 'Van Recording'],
   ['Post Processing', 'Video Post', 'Studio E', 1, 'Post Processing'], ['Atmos Mixing', 'Localization, Music', 'Studio C', 2, 'several departments'],
   ['VO Recording', '', 'Studio 7', 8, 'no department'], ['VO Recording', 'Advertising', 'Studio 7', 8, 'another department'], ['Band Recording', 'Post Production', 'Studio F', 9, '"Post Production" = Audio Post']])
+  ok(jc(t, d, r.split(',')) === String(want), why + ' -> ' + NAME[want], jc(t, d, r.split(',')));
+if (V134) for (const [t, d, r, want, why] of [
+  ['', 'Marketing', 'Likha', 2, 'v134: a booking in a conference room (no type)'], ['', 'Sales & Accounts', 'Katha, Salin', 2, 'v134: Katha + Salin'],
+  ['Event', 'Marketing', 'Likha', 6, 'v134: an Event in Likha stays Tangerine'], ['Event', 'IT', 'Lobby', 6, 'v134: the Lobby is not a conference room'],
+  ['VO Recording', 'Audio Post', 'Studio 7, Likha', 9, 'v134: a studio session with Likha as its holding room stays Audio Post'],
+  ['Celebrity Recording', 'Audio Post', 'Likha', 11, 'v134: a celebrity booking stays Tomato'], ['__booth', 'Marketing', 'M6', 10, 'v134: M booths stay Basil']])
   ok(jc(t, d, r.split(',')) === String(want), why + ' -> ' + NAME[want], jc(t, d, r.split(',')));
 
 console.log('Book Session v127 - the colour on the event');
@@ -55,7 +62,16 @@ const resolve = (e, nd) => run(MV, 'Resolve Booking', [{ json: { items: [e] } }]
 let rb = resolve(ev(DESC));
 ok(rb.verdict === 'CLEAR' && rb.color_id === '7', 'a Jessie booking with no colour yet (made before v127) -> Peacock on its change', { v: rb.verdict, c: rb.color_id, h: rb.human });
 rb = resolve(ev(DESC, '7'), { SType: 'Meeting' });
-ok(rb.color_id === '5', 'Jessie\'s colour + the type changed to Meeting -> Banana', rb.color_id);
+ok(rb.color_id === (V134 ? '2' : '5'), 'Jessie\'s colour + the type changed to Meeting -> ' + (V134 ? 'Sage' : 'Banana'), rb.color_id);
+if (V134) {
+  const MDESC = 'Booked by: Howard Luistro | ref: U1 | Dept: Marketing\nSType: Meeting';
+  rb = resolve(Object.assign(ev(MDESC, '5'), { location: 'KDC Plaza-Top Level-Likha (Big Room)', summary: 'LIKHA - Sync' }));
+  ok(rb.color_id === '2', 'v48: a meeting still Banana (Jessie\'s old meeting colour) -> Sage on its change, not kept as hand-set', rb.color_id);
+  rb = resolve(Object.assign(ev('Booked by: Howard Luistro | ref: U1 | Dept: Marketing', '8'), { location: 'KDC Plaza-Top Level-Likha (Big Room)', summary: 'LIKHA - Sync' }));
+  ok(rb.color_id === '2', 'v48: Graphite from the old rule on a Likha booking -> Sage', rb.color_id);
+  rb = resolve(Object.assign(ev(MDESC, '4'), { location: 'KDC Plaza-Top Level-Likha (Big Room)', summary: 'LIKHA - Sync' }));
+  ok(rb.color_id === '4', 'v48: a meeting set to Flamingo by hand -> kept', rb.color_id);
+}
 rb = resolve(ev(DESC, '4'));
 ok(rb.color_id === '4', 'a colour set by hand (Flamingo on a Localization booking) -> kept', rb.color_id);
 rb = resolve(ev('Booked by: Howard Luistro | ref: U1', '11'));   // made by hand (no Dept / SType), the requester's own
