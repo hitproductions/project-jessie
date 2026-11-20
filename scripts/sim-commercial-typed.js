@@ -4,8 +4,9 @@
 // / "this week" spans, "a client presentation" not a client, and meetings / events / studios for others as before.
 //   node scripts/sim-commercial-typed.js [main v297]
 const fs = require('fs');
-const MAIN = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v297.json', 'utf8'));
+const MAIN = JSON.parse(fs.readFileSync(process.argv[2] || 'workflows/project-jessie-v298.json', 'utf8'));
 const FX = require('./sim-fixture-rooms.js');
+const V298 = /v298 \(Howard, 20 Nov\): an M booth with no times typed is All day/.test(JSON.stringify(MAIN.nodes));
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ok    ' + m); } else { fail++; console.log('  FAIL  ' + m + (d === undefined ? '' : '  :: ' + JSON.stringify(d).slice(0, 500))); } };
 const jsOf = n => MAIN.nodes.find(x => x.name === n).parameters.jsCode;
@@ -27,6 +28,10 @@ const has = (p, want) => Object.keys(want).every(k => JSON.stringify(p[k]) === J
 (async () => {
   for (const [t, want, no, why] of [
     ['book an m booth for tomorrow', { d: '2026-11-21', p: '__booth' }, [], '"an m booth" -> an M booth (was: no type)'],
+    ...(V298 ? [['book an m booth for tomorrow', { d: '2026-11-21', p: '__booth', ad: 1 }, ['s', 'e'], 'v298: an M booth with no times -> All day'],
+      ['book M3 friday', { r: 'M3', p: '__booth', ad: 1 }, ['s', 'e'], 'v298: "M3 friday" -> All day'],
+      ['book m booth mon to fri next week', { d: '2026-11-23', p: '__booth', ad: 1, rep: { f: 'weekdays', u: '2026-11-29' } }, ['s', 'e'], 'v298: a week of M booth -> All day each day'],
+      ['book M3 tomorrow 2-4pm', { r: 'M3', p: '__booth', s: '14:00', e: '16:00' }, ['ad'], 'v298: times typed are kept (not All day)']] : []),
     ['book m booth all day tomorrow', { d: '2026-11-21', p: '__booth', ad: 1 }, ['s', 'e'], '"m booth all day" -> All day (was: 12:00 AM - 11:59 PM, no type)'],
     ['book m booth mon to fri next week', { d: '2026-11-23', p: '__booth', rep: { f: 'weekdays', u: '2026-11-29' } }, [], '"mon to fri next week" -> weekdays 23-29 Nov (was: Fri 27 only)'],
     ['I need an M booth every day next week', { d: '2026-11-23', p: '__booth', rep: { f: 'daily', u: '2026-11-29' } }, [], '"every day next week" -> 23-29 Nov (was: open-ended, no type)'],
