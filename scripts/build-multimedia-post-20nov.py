@@ -6,7 +6,9 @@
 2. **Post Processing is renamed Multimedia Post** (Airtable Session Types, done 20 Nov). **Post Mixing is unchanged.** Everything
    that reads the types from Airtable followed on its own; every rule written in code for Post Processing now holds for Multimedia
    Post (and still for "Post Processing", which older bookings and calendar titles carry):
-   - Studio E only for it; its own form fields (Booker, Who is it for?) and title; no client lookups; department Audio Post;
+   - Studio E only for it; its own form fields (Booker, Who is it for?) and title; no client lookups; department **Marketing**
+     (Howard: its Airtable role, Multimedia Specialist, now maps to Marketing - before, it mapped to nothing and the booking had no
+     department; Book Session's type list moves it from Audio Post to Marketing);
      the Lavender colour; "Studio E is only for Multimedia Post." - Slack Interactions v82, Book Session v131, Move v45,
      Book Series v12, Room Check v3, main v295.
    - New calendar titles read "MULTIMEDIA POST - <PROJECT> / <who>"; "POST PROCESSING - ..." titles are still read, and a change to
@@ -31,7 +33,12 @@ RULES = [   # (old, new) on every Code node's text - each must hit at least once
     ("/^(localization|qc|post processing|meeting|event)\\b/i", "/^(localization|qc|post processing|multimedia post|meeting|event)\\b/i"),
     ("P.p = 'Post Processing';", "P.p = 'Multimedia Post';"),
     ("again.p = again.p || 'Post Processing';", "again.p = again.p || 'Multimedia Post';"),
-    ("'Post Processing', 'Celebrity Recording', 'Atmos Mixing'],", "'Post Processing', 'Multimedia Post', 'Celebrity Recording', 'Atmos Mixing'],"),
+    # Multimedia Post is Marketing (Howard, 20 Nov) - its Airtable role is Multimedia Specialist (Dilan, Marketing)
+    ("'audio post': ['VO Recording', 'Post Mixing', 'Post Processing', 'Celebrity Recording', 'Atmos Mixing'],",
+     "'audio post': ['VO Recording', 'Post Mixing', 'Celebrity Recording', 'Atmos Mixing'], 'marketing': ['Multimedia Post', 'Post Processing'],"),
+    ("'music arranger': 'Music' }", "'music arranger': 'Music', 'multimedia specialist': 'Marketing' }"),
+    ("  'music':        ['music engineer', 'music arranger']\n};", "  'music':        ['music engineer', 'music arranger'],\n  'marketing':    ['multimedia specialist']\n};"),
+    ("'localization': /loc(?:alization)? engineer/i })", "'localization': /loc(?:alization)? engineer/i, 'marketing': /multimedia specialist/i })"),
 ]
 
 
@@ -59,7 +66,7 @@ def code_refs(wf):   # Post Processing in code (not // comments), outside the ac
             code = line.split("//")[0] if "//" in line and "://" not in line else line
             code = code.replace("post processing|multimedia post", "").replace("POST PROCESSING|MULTIMEDIA POST", "") \
                        .replace("'post processing' || t === 'multimedia post'", "").replace("replace(/^multimedia post$/, 'post processing')", "") \
-                       .replace("|post processing|multimedia post|", "").replace("'Post Processing', 'Multimedia Post'", "") \
+                       .replace("|post processing|multimedia post|", "").replace("'Multimedia Post', 'Post Processing'", "") \
                        .replace("'studio e': 'post processing'", "")   # roomAllowed's map - its comparison reads Multimedia Post as it (checked below)
             if re.search(r"(?i)post[ _-]?processing", code):
                 out.append(n["name"] + ": " + line.strip()[:160])

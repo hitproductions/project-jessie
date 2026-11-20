@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The 20 Nov round: Slack Interactions v82 ("Bookings" first in What's it for? - M booth, Meeting, Event - then the session types)
 // and **Post Processing renamed Multimedia Post** in Airtable (Post Mixing unchanged): every Post Processing rule holds for
-// Multimedia Post - Studio E, the title "MULTIMEDIA POST - <PROJECT> / <who>", the colour, no client lookups, the AI's type list, a
+// Multimedia Post - Studio E, department Marketing, the title "MULTIMEDIA POST - <PROJECT> / <who>", the colour, no client lookups, the AI's type list, a
 // typed "post processing" - across Slack Interactions v82, main v295, Book Session v131, Move v45, Book Series v12, Room Check v3.
 //   node scripts/sim-multimedia-post.js
 const fs = require('fs');
@@ -16,7 +16,7 @@ const $f = O => n => ({ first: () => { if (!(n in O)) throw new Error('not run: 
 const run = async (w, name, input, O) => new Function('$', '$input', 'return (async function(){' + jsOf(w, name) + '\n})();')($f(O), { first: () => input[0] || { json: {} }, all: () => input });
 const roomId = n => (FX.rooms.find(r => r.fields['Room Name'] === n) || {}).id;
 const TYPES = FX.sessionTypes.filter(t => !/^(Post Processing|Post Mixing)$/.test(t.fields.Type)).concat([
-  { id: 'stMP', fields: { Type: 'Multimedia Post', Priority: [roomId('Studio E')].filter(Boolean) } }, { id: 'stPM', fields: { Type: 'Post Mixing', Priority: [] } }, { id: 'stEv', fields: { Type: 'Event', Priority: [] } }]);
+  { id: 'stMP', fields: { Type: 'Multimedia Post', Priority: [roomId('Studio E')].filter(Boolean), 'Engineer Role Required': ['Multimedia Specialist'] } }, { id: 'stPM', fields: { Type: 'Post Mixing', Priority: [], 'Engineer Role Required': ['Post Engineer'] } }, { id: 'stEv', fields: { Type: 'Event', Priority: [] } }]);
 const cache = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Date().toISOString(), payload: JSON.stringify({ rooms: FX.rooms, sessionTypes: TYPES, bookers: FX.bookers }) } }];
 
 (async () => {
@@ -43,10 +43,10 @@ const cache = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Date()
 
   console.log('Book Session v131 (whole Check Conflicts)');
   const refRooms = FX.rooms.map(x => ({ id: x.id, name: x.fields['Room Name'], vocalBooth: !!x.fields['Vocal Booth'], booth: false, common: /conference|lobby/i.test(String(x.fields['Room Type'] || '')) }));
-  const refTypes = TYPES.map(s => ({ type: s.fields.Type, priority: [].concat(s.fields.Priority || []).map(id => (FX.rooms.find(x => x.id === id) || { fields: {} }).fields['Room Name']).filter(Boolean), lastResort: [], min: 30, max: 600, requirements: '' }));
-  const STAFF = [{ Name: 'Eng Person', Initials: 'EP', 'Slack User ID': 'U9', Info: 'Post Engineer', Department: ['Audio Post'] }];
+  const refTypes = TYPES.map(s => ({ type: s.fields.Type, priority: [].concat(s.fields.Priority || []).map(id => (FX.rooms.find(x => x.id === id) || { fields: {} }).fields['Room Name']).filter(Boolean), lastResort: [], min: 30, max: 600, requirements: '', roles: [].concat(s.fields['Engineer Role Required'] || []) }));
+  const STAFF = [{ Name: 'Eng Person', Initials: 'EP', 'Slack User ID': 'U9', Info: 'Post Engineer', Department: ['Audio Post'] }, { Name: 'Media Person', Initials: 'MP', 'Slack User ID': 'U7', Info: 'Multimedia Specialist, Goes by Media.', Department: ['Marketing'] }];
   const req = o => Object.assign({ mode: 'prepare', confirmed: false, summary: 'MULTIMEDIA POST - ORANGE / Juan', start_iso: '2026-11-24T10:00:00+08:00', end_iso: '2026-11-24T12:00:00+08:00', rooms: 'Studio E',
-    all_day: false, session_type: 'Multimedia Post', client: '', engineer: '', bookingType: '', department: 'Audio Post', authority: '', expected_date: '2026-11-24',
+    all_day: false, session_type: 'Multimedia Post', client: '', engineer: '', bookingType: '', department: '', authority: '', expected_date: '2026-11-24',
     requester_text: 'Multimedia Post in Studio E on 2026-11-24 10:00 am-12:00 pm, project ORANGE, for Juan, no client', staff_data: JSON.stringify(STAFF),
     reference_data: JSON.stringify({ rooms: refRooms, types: refTypes, preemptionRanks: {} }), description: 'Booked by: Eng Person | ref: U9 | Dept: Audio Post', exclude_event_id: '', room_override: false, series: false }, o);
   const cc = (w, r) => { const outs = { 'When Executed by Another Workflow': [r], 'Get Events In Window': [{ items: [] }], 'Room Free Busy': [{}], 'All Bookers': STAFF.map(f => ({ fields: f })), 'Client Cache': [{ use: true, gc: [], al: [], an: [], none: true }] };
@@ -59,6 +59,15 @@ const cache = [{ json: { cache_key: 'jessie-reference', refreshed_at: new Date()
   b = cc(OLD.BS, req({}));
   ok(b.verdict === 'REJECTED' && /Studio E is only for Post Processing/.test(b.human || ''), 'v130 (live) with Airtable already renamed: Multimedia Post in Studio E is refused - the gap this closes', { r: b.reason, h: b.human });
   ok(/multimedia post\|meeting\|event/.test(jsOf(BS, 'Client Cache')), 'no client lookups for Multimedia Post');
+  b = cc(BS, req({ engineer: 'Media Person', description: 'Booked by: Media Person | ref: U7' }));
+  ok(b.verdict !== 'REJECTED' && /Dept: Marketing/.test(JSON.stringify(b)) && !/Dept: Audio Post/.test(JSON.stringify(b)), 'Multimedia Post -> Dept: Marketing (its role, Multimedia Specialist)', String(JSON.stringify(b).match(/Dept: [A-Za-z ]+/)));
+  b = cc(OLD.BS, req({ engineer: 'Media Person', description: 'Booked by: Media Person | ref: U7' }));
+  ok(!/Dept: /.test(JSON.stringify(b)), 'v130 (live): no department at all on a Multimedia Post booking', String(JSON.stringify(b).match(/Dept: [A-Za-z ]+/)));
+  b = cc(BS, req({ session_type: 'Post Mixing', rooms: 'Studio 7', summary: 'ORANGE / EP', engineer: 'Eng Person', requester_text: 'Post Mixing in Studio 7 on 2026-11-24 10:00 am-12:00 pm, project ORANGE, no client, engineer Eng Person' }));
+  ok(/Dept: Audio Post/.test(JSON.stringify(b)), 'Post Mixing -> Dept: Audio Post, unchanged', String(JSON.stringify(b).match(/Dept: [A-Za-z ]+/)) + ' ' + b.reason);
+  ok(/'marketing': \['Multimedia Post', 'Post Processing'\]/.test(jsOf(BS, 'Check Conflicts')) && /'audio post': \['VO Recording', 'Post Mixing', 'Celebrity Recording', 'Atmos Mixing'\]/.test(jsOf(BS, 'Check Conflicts')), 'the type list: Multimedia Post under Marketing; Post Mixing still Audio Post');
+  for (const [w, nm] of [[SI, 'Read Step 2'], [SI, 'Build Step 2'], [MAIN, 'Room Table'], [BS, 'Check Conflicts']])
+    ok(/'multimedia specialist': 'Marketing'|'marketing':\s+\['multimedia specialist'\]/.test(jsOf(w, nm)), nm + ': Multimedia Specialist -> Marketing');
 
   console.log('Move v45, Book Series v12, Room Check v3');
   ok(/t === 'multimedia post'\) return '1'/.test(jsOf(MV, 'Resolve Booking')), 'Move: a changed Multimedia Post booking keeps Lavender');
