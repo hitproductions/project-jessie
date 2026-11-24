@@ -165,7 +165,7 @@ const HOWARD = 'U08V3CKDGJF';
   ok(lead(notice(older)[0]) === 'Your booking was moved by Camy:', 'an older Resolve Booking (no old_end) -> "moved", as before');
   ns = notice(Object.assign({}, CO, { team_changed: true, new_team: ['U4', 'U5'] }));
   ok(ns.length === 3 && lead(ns[1]) === 'You were taken off this session by Camy:' && lead(ns[2]) === 'A session you are on was changed by Camy:', 'an engineer taken off -> "You were taken off this session"', ns.map(lead));
-  ok(/old_end: .*old_location: ev\.location/.test(rb) && /new_team: \(\(_hd\(__desc\)/.test(rb) && /team_changed: __teamChanged/.test(rb), 'Resolve Booking returns old_end, old_location, new_team, team_changed');
+  ok(/old_end: .*old_location: ev\.location/.test(rb) && /new_team: \(\(_hd\((?:__desc|__outDesc)\)/.test(rb) && /team_changed: __teamChanged/.test(rb), 'Resolve Booking returns old_end, old_location, new_team, team_changed');
 
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
